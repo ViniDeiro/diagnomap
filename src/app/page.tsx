@@ -1,8 +1,6 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import Header from '@/components/Header'
-import Footer from '@/components/Footer'
 import LoadingScreen from '@/components/LoadingScreen'
 import DengueFlowchartComplete from '@/components/DengueFlowchartComplete'
 import PatientForm from '@/components/PatientForm'

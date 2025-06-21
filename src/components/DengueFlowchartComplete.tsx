@@ -66,7 +66,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     }
     
     setProgress(correctedProgress)
-  }, [patient])
+  }, [patient, onUpdate])
 
   // Função utilitária para calcular o progresso baseado no caminho específico
   const calculateProgress = (currentStep: string, history: string[]): number => {
