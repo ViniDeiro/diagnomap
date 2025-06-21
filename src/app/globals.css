@@ -1,4 +1,6 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --background: #ffffff;
@@ -22,5 +24,201 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222.2 84% 4.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222.2 84% 4.9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 84% 4.9%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 94.1%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  .flowchart-card {
+    @apply bg-white rounded-2xl shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-300;
+  }
+  
+  .flowchart-button {
+    @apply w-full p-4 rounded-xl text-left transition-all duration-200 border-2 hover:shadow-md hover:scale-[1.02] active:scale-[0.98] font-medium;
+  }
+  
+  .flowchart-button-primary {
+    @apply bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300 text-blue-800;
+  }
+  
+  .flowchart-button-secondary {
+    @apply bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300 text-gray-800;
+  }
+  
+  .group-badge {
+    @apply inline-block px-3 py-1 text-xs font-bold rounded-full uppercase tracking-wide;
+  }
+  
+  .group-a {
+    @apply bg-blue-100 text-blue-800;
+  }
+  
+  .group-b {
+    @apply bg-green-100 text-green-800;
+  }
+  
+  .group-c {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+  
+  .group-d {
+    @apply bg-red-100 text-red-800;
+  }
+  
+  .progress-bar {
+    @apply w-full bg-gray-200 rounded-full h-3 overflow-hidden;
+  }
+  
+  .progress-fill {
+    @apply h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-500 ease-out;
+  }
+  
+  .medical-icon {
+    @apply p-3 rounded-full text-white shadow-lg;
+  }
+  
+  .content-box {
+    @apply p-4 rounded-lg border-l-4 shadow-sm;
+  }
+  
+  .content-box-info {
+    @apply bg-blue-50 border-blue-400 text-blue-800;
+  }
+  
+  .content-box-success {
+    @apply bg-green-50 border-green-400 text-green-800;
+  }
+  
+  .content-box-warning {
+    @apply bg-yellow-50 border-yellow-400 text-yellow-800;
+  }
+  
+  .content-box-danger {
+    @apply bg-red-50 border-red-400 text-red-800;
+  }
+}
+
+/* Custom animations */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
+.animate-slide-out {
+  animation: slide-out 0.3s ease-out;
+}
+
+/* Responsive improvements */
+@media (max-width: 640px) {
+  .flowchart-card {
+    @apply mx-2 p-4;
+  }
+  
+  .flowchart-button {
+    @apply p-3 text-sm;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  .flowchart-card {
+    @apply shadow-none border-2 border-gray-300;
+  }
 }
