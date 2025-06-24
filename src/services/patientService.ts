@@ -3,6 +3,20 @@ import { Patient, PatientFormData, Prescription, DashboardStats } from '@/types/
 class PatientService {
   private storageKey = 'diagnomap_patients'
 
+  // Calcular idade a partir da data de nascimento
+  private calculateAge(birthDate: Date): number {
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    
+    return age
+  }
+
   // Salvar pacientes no localStorage
   private saveToStorage(patients: Patient[]): void {
     if (typeof window !== 'undefined') {
@@ -22,6 +36,7 @@ class PatientService {
       // Converter strings de data de volta para Date objects
       return patients.map((patient: Patient) => ({
         ...patient,
+        birthDate: new Date(patient.birthDate),
         admission: {
           ...patient.admission,
           date: new Date(patient.admission.date)
@@ -57,13 +72,18 @@ class PatientService {
   createPatient(formData: PatientFormData): Patient {
     const id = `patient_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const now = new Date()
+    const age = this.calculateAge(formData.birthDate)
     
     const patient: Patient = {
       id,
       name: formData.name,
-      age: formData.age,
+      birthDate: formData.birthDate,
+      age,
+      gender: formData.gender,
       weight: formData.weight,
       medicalRecord: formData.medicalRecord,
+      selectedFlowchart: formData.selectedFlowchart,
+      generalObservations: formData.generalObservations,
       admission: {
         date: now,
         time: now.toLocaleTimeString('pt-BR'),
@@ -131,9 +151,10 @@ class PatientService {
         ]
       }
       // Se chegou em um grupo que requer exames, mudar status
-      else if (['group_c_treatment', 'group_d_treatment'].includes(currentStep)) {
+      else if (['wait_labs_b', 'wait_reevaluation_c', 'wait_reevaluation_d'].includes(currentStep)) {
         patients[patientIndex].status = 'waiting_labs'
         patients[patientIndex].labResults = {
+          ...patients[patientIndex].labResults,
           status: 'pending',
           requestDate: new Date()
         }
@@ -198,69 +219,50 @@ class PatientService {
     })
 
     // Hidratação oral para grupos A e B
-    if (group === 'A' || group === 'B') {
-      const hydrationVolume = patient.age >= 18 ? '60ml/kg/dia' : this.getChildHydrationVolume(weight)
-      
+    if (['A', 'B'].includes(group)) {
       prescriptions.push({
-        medication: 'Soro de Reidratação Oral',
-        dosage: hydrationVolume,
-        frequency: 'Fracionado durante o dia',
-        duration: 'Até melhora clínica',
-        instructions: '1/3 com SRO, 2/3 com líquidos caseiros (água, chás, água de coco)',
+        medication: 'Solução de Reidratação Oral (SRO)',
+        dosage: patient.age >= 18 ? '200-400ml' : this.getChildHydrationVolume(weight),
+        frequency: 'A cada vômito/evacuação',
+        duration: 'Até melhora dos sintomas',
+        instructions: 'Oferecer em pequenos volumes e frequentemente. Se não tolerar via oral, retornar ao serviço.',
         prescribedBy: 'Sistema DiagnoMap'
       })
     }
 
     // Hidratação venosa para grupos C e D
-    if (group === 'C') {
+    if (['C', 'D'].includes(group)) {
       prescriptions.push({
         medication: 'Soro Fisiológico 0,9%',
-        dosage: '10ml/kg',
-        frequency: 'Nos primeiros 10 minutos',
+        dosage: patient.age >= 18 ? '500ml' : `${weight * 10}ml/kg`,
+        frequency: 'EV contínuo',
         duration: 'Conforme evolução',
-        instructions: 'Reavaliar após 1 hora. Monitorar sinais vitais.',
+        instructions: 'Controlar balanço hídrico rigorosamente. Reavaliar a cada 2-4 horas.',
         prescribedBy: 'Sistema DiagnoMap'
       })
     }
 
-    if (group === 'D') {
-      prescriptions.push({
-        medication: 'Soro Fisiológico 0,9%',
-        dosage: '20ml/kg',
-        frequency: 'Em até 20 minutos',
-        duration: 'Conforme evolução',
-        instructions: 'Cuidados intensivos. Monitoramento contínuo.',
-        prescribedBy: 'Sistema DiagnoMap'
-      })
-    }
-
-    // Adicionar as prescrições ao paciente
+    // Adicionar prescrições ao paciente
     prescriptions.forEach(prescription => {
       this.addPrescription(patientId, prescription)
     })
 
-    return prescriptions.map(p => ({
-      ...p,
-      id: `prescription_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      prescribedAt: new Date()
-    }))
+    return this.getPatientById(patientId)?.treatment.prescriptions || []
   }
 
   // Calcular volume de hidratação para crianças
   private getChildHydrationVolume(weight: number): string {
-    if (weight <= 10) return '100ml/kg/dia'
-    if (weight <= 20) return '150ml/kg/dia'
-    return '80ml/kg/dia'
+    const volume = Math.round(weight * 75) // 75ml/kg/dia
+    return `${volume}ml/dia dividido em pequenas quantidades`
   }
 
-  // Adicionar observação médica
+  // Adicionar observação
   addObservation(patientId: string, observation: string): void {
     const patients = this.loadFromStorage()
     const patientIndex = patients.findIndex(p => p.id === patientId)
     
     if (patientIndex !== -1) {
-      const timestampedObservation = `${new Date().toLocaleString('pt-BR')}: ${observation}`
-      patients[patientIndex].treatment.observations.push(timestampedObservation)
+      patients[patientIndex].treatment.observations.push(observation)
       patients[patientIndex].updatedAt = new Date()
       this.saveToStorage(patients)
     }
@@ -282,7 +284,7 @@ class PatientService {
 
   // Obter estatísticas do dashboard
   getDashboardStats(): DashboardStats {
-    const patients = this.loadFromStorage()
+    const patients = this.getAllPatients()
     
     return {
       totalPatients: patients.length,
@@ -297,22 +299,22 @@ class PatientService {
 
   // Buscar pacientes ativos
   getActivePatients(): Patient[] {
-    return this.loadFromStorage().filter(p => p.status === 'active' || p.status === 'waiting_labs')
+    return this.getAllPatients().filter(p => p.status === 'active')
   }
 
   // Buscar pacientes aguardando exames
   getPatientsWaitingLabs(): Patient[] {
-    return this.loadFromStorage().filter(p => p.status === 'waiting_labs')
+    return this.getAllPatients().filter(p => p.status === 'waiting_labs')
   }
 
-  // Deletar paciente (apenas para desenvolvimento)
+  // Deletar paciente
   deletePatient(patientId: string): void {
     const patients = this.loadFromStorage()
     const filteredPatients = patients.filter(p => p.id !== patientId)
     this.saveToStorage(filteredPatients)
   }
 
-  // Limpar todos os dados (apenas para desenvolvimento)
+  // Limpar todos os dados (usado para testes)
   clearAllData(): void {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(this.storageKey)
@@ -322,32 +324,23 @@ class PatientService {
   // Corrigir progresso de pacientes existentes
   fixExistingPatientsProgress(): void {
     const patients = this.loadFromStorage()
-    let updated = false
-
-    patients.forEach(patient => {
-      let newProgress = patient.flowchartState.progress
+    const updatedPatients = patients.map(patient => {
+      // Se o progresso está zerado mas tem histórico, calcular progresso baseado no histórico
+      if (patient.flowchartState.progress === 0 && patient.flowchartState.history.length > 0) {
+        const totalSteps = 15 // Número estimado de passos no fluxograma
+        const completedSteps = patient.flowchartState.history.length
+        patient.flowchartState.progress = Math.min((completedSteps / totalSteps) * 100, 100)
+      }
       
-      // Se o paciente foi finalizado (currentStep = 'end'), corrigir para 100%
-      if (patient.flowchartState.currentStep === 'end' && patient.flowchartState.progress !== 100) {
-        newProgress = 100
-        updated = true
+      // Se tem grupo definido mas progresso baixo, assumir que está quase completo
+      if (patient.flowchartState.group && patient.flowchartState.progress < 80) {
+        patient.flowchartState.progress = 85
       }
-      // Se está nos steps finais, corrigir para 95%
-      else if (patient.flowchartState.currentStep?.startsWith('end_group_') && patient.flowchartState.progress < 95) {
-        newProgress = 95
-        updated = true
-      }
-
-      // Atualizar se necessário
-      if (newProgress !== patient.flowchartState.progress) {
-        patient.flowchartState.progress = newProgress
-        patient.updatedAt = new Date()
-      }
+      
+      return patient
     })
-
-    if (updated) {
-      this.saveToStorage(patients)
-    }
+    
+    this.saveToStorage(updatedPatients)
   }
 }
 

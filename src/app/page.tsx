@@ -16,6 +16,7 @@ export default function Home() {
   const [appState, setAppState] = useState<AppState>('loading')
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [previousState, setPreviousState] = useState<AppState>('dashboard')
 
   useEffect(() => {
     // Simular carregamento inicial - tempo estendido para apreciar o design premium
@@ -46,11 +47,13 @@ export default function Home() {
   }
 
   const handleViewPrescriptions = (patient: Patient) => {
+    setPreviousState(appState) // Guardar o estado atual antes de mudar
     setCurrentPatient(patient)
     setAppState('prescriptions')
   }
 
   const handleViewReport = (patient: Patient) => {
+    setPreviousState(appState) // Guardar o estado atual antes de mudar
     setCurrentPatient(patient)
     setAppState('report')
   }
@@ -67,8 +70,11 @@ export default function Home() {
   }
 
   const handlePrescriptionsClose = () => {
-    setAppState('dashboard')
-    setCurrentPatient(null)
+    // Voltar para o estado anterior (dashboard ou flowchart)
+    setAppState(previousState)
+    if (previousState === 'dashboard') {
+      setCurrentPatient(null)
+    }
     setRefreshTrigger(prev => prev + 1)
   }
 
@@ -84,8 +90,11 @@ export default function Home() {
   }
 
   const handleReportClose = () => {
-    setAppState('dashboard')
-    setCurrentPatient(null)
+    // Voltar para o estado anterior (dashboard ou flowchart)
+    setAppState(previousState)
+    if (previousState === 'dashboard') {
+      setCurrentPatient(null)
+    }
     setRefreshTrigger(prev => prev + 1)
   }
 
@@ -120,6 +129,8 @@ export default function Home() {
             onComplete={handleFlowchartComplete}
             onUpdate={handleFlowchartUpdate}
             onBack={() => setAppState('dashboard')}
+            onViewPrescriptions={handleViewPrescriptions}
+            onViewReport={handleViewReport}
           />
         ) : null
 

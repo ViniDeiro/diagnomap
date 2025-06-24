@@ -17,10 +17,12 @@ import {
   Target,
   Zap,
   ArrowLeft,
-  RotateCcw
+  RotateCcw,
+  FileText
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Patient } from '@/types/patient'
+import { patientService } from '@/services/patientService'
 
 interface FlowchartStep {
   id: string
@@ -40,64 +42,53 @@ interface DengueFlowchartProps {
   onComplete: () => void
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, group?: 'A' | 'B' | 'C' | 'D') => void
   onBack?: () => void
+  onViewPrescriptions?: (patient: Patient) => void
+  onViewReport?: (patient: Patient) => void
 }
 
-const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onComplete, onUpdate, onBack }) => {
+const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onComplete, onUpdate, onBack, onViewPrescriptions, onViewReport }) => {
   const [currentStep, setCurrentStep] = useState(patient.flowchartState.currentStep || 'start')
   const [history, setHistory] = useState<string[]>(patient.flowchartState.history || [])
   const [answers, setAnswers] = useState<Record<string, string>>(patient.flowchartState.answers || {})
   const [progress, setProgress] = useState(patient.flowchartState.progress || 0)
+  const [isTransitioning, setIsTransitioning] = useState(false)
 
+  // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
-    setCurrentStep(patient.flowchartState.currentStep || 'start')
-    setHistory(patient.flowchartState.history || [])
-    setAnswers(patient.flowchartState.answers || {})
-    
-    // Corrigir progresso para pacientes já finalizados
-    let correctedProgress = patient.flowchartState.progress || 0
-    if (patient.flowchartState.currentStep === 'end') {
-      correctedProgress = 100
-      // Atualizar no storage também
-      onUpdate(patient.id, patient.flowchartState.currentStep, patient.flowchartState.history || [], patient.flowchartState.answers || {}, 100, patient.flowchartState.group)
-    } else if (patient.flowchartState.currentStep?.startsWith('end_group_')) {
-      correctedProgress = 95
-      // Atualizar no storage também
-      onUpdate(patient.id, patient.flowchartState.currentStep, patient.flowchartState.history || [], patient.flowchartState.answers || {}, 95, patient.flowchartState.group)
-    }
-    
-    setProgress(correctedProgress)
-  }, [patient, onUpdate])
+    const flowchartState = patient.flowchartState
+    setCurrentStep(flowchartState.currentStep || 'start')
+    setHistory(flowchartState.history || [])
+    setAnswers(flowchartState.answers || {})
+    setProgress(flowchartState.progress || 0)
+  }, [patient.id, patient.flowchartState])
 
   // Função utilitária para calcular o progresso baseado no caminho específico
   const calculateProgress = (currentStep: string, history: string[]): number => {
     const pathSteps = [...history, currentStep]
+    
+    // Determinar o tipo de caminho baseado nos steps visitados
+    let expectedTotalSteps = 6 // Caminho mínimo (Grupo A)
+    
+    if (pathSteps.includes('group_b') || pathSteps.includes('wait_labs_b')) {
+      expectedTotalSteps = 8 // Grupo B básico
+    } else if (pathSteps.includes('group_c') || pathSteps.includes('treatment_c')) {
+      expectedTotalSteps = 10 // Grupos C mais complexos
+    } else if (pathSteps.includes('group_d') || pathSteps.includes('treatment_d')) {
+      expectedTotalSteps = 12 // Grupo D mais complexo
+    } else if (pathSteps.includes('wait_reevaluation_c') || pathSteps.includes('wait_reevaluation_d')) {
+      expectedTotalSteps = 14 // Casos com reavaliações
+    }
     
     // Se chegamos ao final, é 100%
     if (currentStep === 'end') {
       return 100
     }
     
-    // Se chegamos aos steps finais específicos de cada grupo, é quase 100%
-    if (currentStep.startsWith('end_group_')) {
-      return 95
-    }
-    
-    // Determinar o tipo de caminho baseado nos steps visitados
-    let expectedTotalSteps = 6 // Caminho mínimo (Grupo A): start -> alarm_check -> bleeding_check -> group_a -> end_group_a -> end
-    
-    if (pathSteps.includes('group_b') || pathSteps.includes('end_group_b')) {
-      expectedTotalSteps = 6 // Grupo B: start -> alarm_check -> bleeding_check -> group_b -> end_group_b -> end
-    } else if (pathSteps.includes('group_c') || pathSteps.includes('end_group_c')) {
-      expectedTotalSteps = 7 // Grupo C: start -> alarm_check -> group_c_d_classification -> group_c -> end_group_c -> end
-    } else if (pathSteps.includes('group_d') || pathSteps.includes('end_group_d')) {
-      expectedTotalSteps = 7 // Grupo D: start -> alarm_check -> group_c_d_classification -> group_d -> end_group_d -> end
-    }
-    
     // Calcular progresso baseado no número de steps completados
     const completedSteps = pathSteps.length
-    const progress = Math.round((completedSteps / expectedTotalSteps) * 100)
+    const progress = Math.min((completedSteps / expectedTotalSteps) * 100, 95) // Máximo 95% até chegar ao final
     
-    return Math.min(progress, 90) // Máximo 90% até chegar aos steps finais
+    return Math.round(progress)
   }
 
   const steps: Record<string, FlowchartStep> = {
@@ -115,108 +106,244 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
     alarm_check: {
       id: 'alarm_check',
-      title: 'Tem sinal de alarme ou gravidade?',
-      description: 'Verificar presença de sinais de alarme',
+      title: 'Avaliação de Sinais de Alarme e Gravidade',
+      description: 'Selecione todos os sinais de alarme e gravidade presentes no paciente',
       type: 'question',
       icon: <AlertTriangle className="w-6 h-6" />,
-      color: 'bg-gradient-to-r from-amber-500 to-orange-600',
+      color: 'bg-gradient-to-r from-amber-500 to-red-600',
+      content: (
+        <div className="space-y-6">
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Grupo C - Sinais de Alarme */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-300">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">C</span>
+                </div>
+                <h4 className="font-bold text-amber-800">SINAIS DE ALARME</h4>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { id: 'dor_abdominal', label: 'Dor abdominal intensa' },
+                  { id: 'vomitos_persistentes', label: 'Vômitos persistentes' },
+                  { id: 'acumulo_liquidos', label: 'Acúmulo de líquidos' },
+                  { id: 'hipotensao_postural', label: 'Hipotensão postural' },
+                  { id: 'hepatomegalia', label: 'Hepatomegalia > 2cm' },
+                  { id: 'sangramento_mucosa', label: 'Sangramento de mucosa' },
+                  { id: 'letargia_irritabilidade', label: 'Letargia/irritabilidade' }
+                ].map((sinal) => (
+                  <label key={sinal.id} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-amber-600 bg-white border-amber-300 rounded focus:ring-amber-500 focus:ring-2"
+                      onChange={(e) => {
+                        let currentAnswers: { grupoC: string[], grupoD: string[] } = { grupoC: [], grupoD: [] }
+                        if (answers.alarm_check) {
+                          try {
+                            // Verificar se é um JSON válido
+                            if (answers.alarm_check.startsWith('{')) {
+                              currentAnswers = JSON.parse(answers.alarm_check)
+                            }
+                          } catch (error) {
+                            console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
+                          }
+                        }
+                        
+                        if (e.target.checked) {
+                          currentAnswers.grupoC = [...(currentAnswers.grupoC || []), sinal.id]
+                        } else {
+                          currentAnswers.grupoC = (currentAnswers.grupoC || []).filter((id: string) => id !== sinal.id)
+                        }
+                        setAnswers(prev => ({ ...prev, alarm_check: JSON.stringify(currentAnswers) }))
+                      }}
+                    />
+                    <span className="text-amber-700 font-medium group-hover:text-amber-800 transition-colors">
+                      {sinal.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            
+            {/* Grupo D - Sinais de Gravidade */}
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-xl border border-red-400">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+                  <span className="text-white font-bold text-sm">D</span>
+                </div>
+                <h4 className="font-bold text-red-800">SINAIS DE GRAVIDADE</h4>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { id: 'extravasamento_plasma', label: 'Extravasamento grave de plasma' },
+                  { id: 'choque_taquicardia', label: 'Choque com taquicardia' },
+                  { id: 'sangramento_grave', label: 'Sangramento grave' },
+                  { id: 'comprometimento_orgaos', label: 'Comprometimento de órgãos' }
+                ].map((sinal) => (
+                  <label key={sinal.id} className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-red-600 bg-white border-red-300 rounded focus:ring-red-500 focus:ring-2"
+                      onChange={(e) => {
+                        let currentAnswers: { grupoC: string[], grupoD: string[] } = { grupoC: [], grupoD: [] }
+                        if (answers.alarm_check) {
+                          try {
+                            // Verificar se é um JSON válido
+                            if (answers.alarm_check.startsWith('{')) {
+                              currentAnswers = JSON.parse(answers.alarm_check)
+                            }
+                          } catch (error) {
+                            console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
+                          }
+                        }
+                        
+                        if (e.target.checked) {
+                          currentAnswers.grupoD = [...(currentAnswers.grupoD || []), sinal.id]
+                        } else {
+                          currentAnswers.grupoD = (currentAnswers.grupoD || []).filter((id: string) => id !== sinal.id)
+                        }
+                        setAnswers(prev => ({ ...prev, alarm_check: JSON.stringify(currentAnswers) }))
+                      }}
+                    />
+                    <span className="text-red-700 font-medium group-hover:text-red-800 transition-colors">
+                      {sinal.label}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center space-x-2 mb-2">
+              <Brain className="w-5 h-5 text-blue-600" />
+              <h5 className="font-semibold text-blue-800">Critério de Classificação</h5>
+            </div>
+            <p className="text-blue-700 text-sm">
+              <strong>Grupo D:</strong> Presença de qualquer sinal de gravidade<br/>
+              <strong>Grupo C:</strong> Presença apenas de sinais de alarme (sem sinais de gravidade)<br/>
+              <strong>Grupo A/B:</strong> Ausência de sinais de alarme e gravidade
+            </p>
+          </div>
+          
+          {/* Mostrar status da seleção */}
+          {(() => {
+            let classificationData = { grupoC: [], grupoD: [] }
+            if (answers.alarm_check) {
+              try {
+                if (answers.alarm_check.startsWith('{')) {
+                  classificationData = JSON.parse(answers.alarm_check)
+                }
+              } catch (error) {
+                console.warn('Erro ao parsear alarm_check para exibição:', error)
+              }
+            }
+            const hasGrupoD = classificationData.grupoD && classificationData.grupoD.length > 0
+            const hasGrupoC = classificationData.grupoC && classificationData.grupoC.length > 0
+            
+            if (hasGrupoD) {
+              return (
+                <div className="bg-red-100 border border-red-300 rounded-xl p-4 flex items-center space-x-3">
+                  <AlertTriangle className="w-6 h-6 text-red-600" />
+                  <div>
+                    <p className="font-bold text-red-800">Classificação: GRUPO D</p>
+                    <p className="text-red-700 text-sm">Sinais de gravidade detectados - Requer cuidados intensivos</p>
+                  </div>
+                </div>
+              )
+            } else if (hasGrupoC) {
+              return (
+                <div className="bg-amber-100 border border-amber-300 rounded-xl p-4 flex items-center space-x-3">
+                  <Shield className="w-6 h-6 text-amber-600" />
+                  <div>
+                    <p className="font-bold text-amber-800">Classificação: GRUPO C</p>
+                    <p className="text-amber-700 text-sm">Sinais de alarme presentes - Requer internação</p>
+                  </div>
+                </div>
+              )
+            } else {
+              return (
+                <div className="bg-green-100 border border-green-300 rounded-xl p-4 flex items-center space-x-3">
+                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <div>
+                    <p className="font-bold text-green-800">Classificação: GRUPO A ou B</p>
+                    <p className="text-green-700 text-sm">Sem sinais de alarme - Continuar avaliação</p>
+                  </div>
+                </div>
+              )
+            }
+          })()}
+        </div>
+      ),
       options: [
-        { text: 'NÃO', nextStep: 'bleeding_check', value: 'no' },
-        { text: 'SIM', nextStep: 'group_c_d_classification', value: 'yes' }
+        { text: 'Confirmar Avaliação', nextStep: 'auto_classify_alarm', value: 'classify' }
       ]
+    },
+
+    auto_classify_alarm: {
+      id: 'auto_classify_alarm',
+      title: 'Processando Classificação...',
+      description: 'Determinando grupo baseado nos sinais selecionados',
+      type: 'action',
+      icon: <Brain className="w-6 h-6" />,
+      color: 'bg-gradient-to-r from-blue-500 to-blue-700',
+      content: (
+        <div className="text-center py-8">
+          <div className="animate-spin w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Analisando sinais clínicos...</p>
+        </div>
+      ),
+      options: [] // Será determinado automaticamente
     },
 
     bleeding_check: {
       id: 'bleeding_check',
-      title: 'Pesquisar sangramento espontâneo',
-      description: 'Avaliar sangramento, condições especiais, risco social',
+      title: 'Avaliação de Fatores de Risco',
+      description: 'Pesquisar sangramento espontâneo da pele ou induzido (prova do laço), condições clínicas especiais, risco social ou comorbidades',
       type: 'question',
       icon: <Activity className="w-6 h-6" />,
-      color: 'bg-gradient-to-r from-orange-500 to-red-600',
-      options: [
-        { text: 'NÃO', nextStep: 'group_a', value: 'no' },
-        { text: 'SIM', nextStep: 'group_b', value: 'yes' }
-      ]
-    },
-
-    group_c_d_classification: {
-      id: 'group_c_d_classification',
-      title: 'CLASSIFICAÇÃO - GRUPO C ou D',
-      description: 'Determinar grau de gravidade',
-      type: 'question',
-      icon: <AlertTriangle className="w-6 h-6" />,
-      color: 'bg-gradient-to-r from-red-500 to-red-700',
+      color: 'bg-gradient-to-r from-orange-500 to-red-500',
       content: (
-        <div className="grid lg:grid-cols-2 gap-6">
-          <div className="bg-gradient-to-br from-amber-50 to-yellow-50 p-6 rounded-2xl border border-amber-200 shadow-lg">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200/50">
+          <h4 className="font-bold text-orange-800 mb-4 flex items-center">
+            <Shield className="w-5 h-5 mr-2" />
+            Condições Clínicas Especiais e/ou Risco Social ou Comorbidades:
+          </h4>
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-orange-700 text-sm font-medium">Lactentes (&lt; 24 meses)</span>
               </div>
-              <h4 className="font-bold text-amber-800 text-lg">GRUPO C - Sinais de alarme</h4>
-            </div>
-            <ul className="text-amber-700 space-y-2">
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Dor abdominal intensa</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Vômitos persistentes</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Acúmulo de líquidos</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Hipotensão postural</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Hepatomegalia &gt; 2cm</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Sangramento de mucosa</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
-                <span>Letargia/irritabilidade</span>
-              </li>
-            </ul>
-          </div>
-          <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-red-500 to-red-700 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-white" />
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-orange-700 text-sm font-medium">Gestantes</span>
               </div>
-              <h4 className="font-bold text-red-800 text-lg">GRUPO D - Dengue grave</h4>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-orange-700 text-sm font-medium">Adultos &gt; 65 anos</span>
+              </div>
             </div>
-            <ul className="text-red-700 space-y-2">
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Extravasamento grave de plasma</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Choque com taquicardia</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Sangramento grave</span>
-              </li>
-              <li className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                <span>Comprometimento de órgãos</span>
-              </li>
-            </ul>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-orange-700 text-sm font-medium">Hipertensão arterial</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-orange-700 text-sm font-medium">Diabetes mellitus</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                <span className="text-orange-700 text-sm font-medium">Asma brônquica</span>
+              </div>
+            </div>
           </div>
         </div>
       ),
       options: [
-        { text: 'GRUPO C - Sinais de alarme', nextStep: 'group_c', value: 'group_c' },
-        { text: 'GRUPO D - Dengue grave', nextStep: 'group_d', value: 'group_d' }
+        { text: 'NÃO - Sem fatores de risco', nextStep: 'group_a', value: 'no' },
+        { text: 'SIM - Presença de fatores de risco', nextStep: 'group_b', value: 'yes' }
       ]
     },
 
@@ -274,22 +401,117 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       color: 'bg-blue-500',
       content: (
         <div className="space-y-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-blue-800 mb-2">Adultos:</h4>
-            <p className="text-blue-700 text-sm">60 ml/kg/dia (1/3 SRO + 2/3 líquidos caseiros)</p>
-          </div>
-          
-          {patient.age < 18 && (
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-semibold text-blue-800 mb-2">Crianças:</h4>
-              <p className="text-blue-700 text-sm">Até 10kg: 100ml/kg/dia • 10-20kg: 150ml/kg/dia • &gt;20kg: 80ml/kg/dia</p>
-            </div>
-          )}
+          {/* Cálculo automático baseado no peso */}
+          {(() => {
+            const peso = patient.weight || (patient.age >= 18 ? 70 : patient.age * 2 + 10) // Peso estimado se não informado
+            let volumeTotal = 0
+            let volumeSRO = 0
+            let volumeLiquidos = 0
+            let faixaEtaria = ''
 
-          <div className="bg-red-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-red-800 mb-2">IMPORTANTE:</h4>
-            <p className="text-red-700 text-sm">Retornar se sinais de alarme ou no dia da melhora da febre. Entregar cartão de acompanhamento.</p>
-          </div>
+            if (patient.age >= 18) {
+              // Adultos: 60ml/kg/dia
+              volumeTotal = peso * 60
+              volumeSRO = Math.round(volumeTotal / 3) // 1/3 SRO
+              volumeLiquidos = volumeTotal - volumeSRO // 2/3 líquidos caseiros
+              faixaEtaria = 'Adulto'
+            } else {
+              // Crianças
+              if (peso <= 10) {
+                volumeTotal = peso * 100 // 100ml/kg/dia
+                faixaEtaria = 'Criança até 10kg'
+              } else if (peso <= 20) {
+                volumeTotal = peso * 150 // 150ml/kg/dia
+                faixaEtaria = 'Criança 10-20kg'
+              } else {
+                volumeTotal = peso * 80 // 80ml/kg/dia
+                faixaEtaria = 'Criança acima de 20kg'
+              }
+              volumeSRO = Math.round(volumeTotal / 3)
+              volumeLiquidos = volumeTotal - volumeSRO
+            }
+
+            return (
+              <div className="space-y-4">
+                {/* Dados do paciente */}
+                <div className="bg-gradient-to-r from-blue-100 to-cyan-100 p-4 rounded-xl border border-blue-300">
+                  <div className="flex items-center space-x-3 mb-3">
+                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">📊</span>
+                    </div>
+                    <h4 className="font-bold text-blue-900">Cálculo Personalizado</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700 font-medium">Paciente:</span>
+                      <span className="text-blue-900 ml-2">{faixaEtaria}</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700 font-medium">Peso:</span>
+                      <span className="text-blue-900 ml-2">{peso}kg {!patient.weight && '(estimado)'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Volume total calculado */}
+                <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl border border-green-300">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
+                      <Droplets className="w-5 h-5 text-white" />
+                    </div>
+                    <h4 className="font-bold text-green-900 text-lg">Volume Total Diário</h4>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-4xl font-bold text-green-800 mb-2">{volumeTotal.toLocaleString('pt-BR')} ml</p>
+                    <p className="text-green-700 font-medium">({peso}kg × {patient.age >= 18 ? '60' : peso <= 10 ? '100' : peso <= 20 ? '150' : '80'} ml/kg/dia)</p>
+                  </div>
+                </div>
+
+                {/* Distribuição da hidratação */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
+                      <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs mr-2">1/3</span>
+                      Sais de Reidratação Oral (SRO)
+                    </h5>
+                    <p className="text-2xl font-bold text-blue-700 mb-1">{volumeSRO.toLocaleString('pt-BR')} ml</p>
+                    <p className="text-blue-600 text-sm">Dividir em pequenos volumes frequentes</p>
+                  </div>
+
+                  <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
+                    <h5 className="font-semibold text-cyan-800 mb-3 flex items-center">
+                      <span className="w-6 h-6 bg-cyan-600 rounded-full flex items-center justify-center text-white text-xs mr-2">2/3</span>
+                      Líquidos Caseiros
+                    </h5>
+                    <p className="text-2xl font-bold text-cyan-700 mb-1">{volumeLiquidos.toLocaleString('pt-BR')} ml</p>
+                    <p className="text-cyan-600 text-sm">Água, chás, água de coco, sucos naturais</p>
+                  </div>
+                </div>
+
+                {/* Orientações práticas */}
+                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-300">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <span className="text-yellow-600 text-lg">💡</span>
+                    <h5 className="font-semibold text-yellow-800">Orientações Práticas</h5>
+                  </div>
+                  <div className="space-y-2 text-sm text-yellow-700">
+                    <p>• <strong>SRO:</strong> Oferecer {Math.round(volumeSRO / 8)} ml a cada hora (dividido em 8 tomadas)</p>
+                    <p>• <strong>Líquidos:</strong> {Math.round(volumeLiquidos / 12)} ml por hora (ao longo do dia)</p>
+                    <p>• <strong>Sinais de desidratação:</strong> Aumentar a oferta de líquidos</p>
+                    <p>• <strong>Vômitos:</strong> Oferecer em pequenos goles mais frequentes</p>
+                  </div>
+                </div>
+
+                <div className="bg-red-50 p-4 rounded-lg border border-red-300">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className="text-red-600 text-lg">⚠️</span>
+                    <h5 className="font-semibold text-red-800">IMPORTANTE</h5>
+                  </div>
+                  <p className="text-red-700 text-sm">Retornar se sinais de alarme ou no dia da melhora da febre. Entregar cartão de acompanhamento.</p>
+                </div>
+              </div>
+            )
+          })()}
         </div>
       ),
       options: [
@@ -352,11 +574,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       id: 'evaluate_labs_b',
       title: 'Avaliação dos Resultados - Grupo B',
       description: 'Avaliar resultados dos exames laboratoriais',
-      type: 'action',
+      type: 'question',
       icon: <Activity className="w-6 h-6" />,
       color: 'bg-green-500',
       content: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="bg-green-50 p-4 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">Avaliação dos Exames:</h4>
             <p className="text-green-700 text-sm">Verificar hemograma, hematócrito, plaquetas</p>
@@ -364,6 +586,139 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-yellow-50 p-4 rounded-lg">
             <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
             <p className="text-yellow-700 text-sm">Se alterações significativas, reavaliar classificação</p>
+          </div>
+
+          {/* Seção de Exames Opcionais - Grupo B */}
+          <div className="bg-white border-2 border-green-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-green-600" />
+              <h4 className="font-semibold text-green-800">Resultados dos Exames (Opcional)</h4>
+              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">Não obrigatório</span>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Hemograma Básico */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hemoglobin_b_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_hemoglobin_b_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hematocrit_b_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_hematocrit_b_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_platelets_b_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_platelets_b_${patient.id}`) || ''}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bioquímica Básica */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
+                
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="Ex: 3.5"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_albumin_b_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_albumin_b_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1000"
+                        placeholder="Ex: 45"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        onChange={(e) => {
+                          const value = e.target.value
+                          localStorage.setItem(`lab_alt_b_${patient.id}`, value)
+                        }}
+                        defaultValue={localStorage.getItem(`lab_alt_b_${patient.id}`) || ''}
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1000"
+                        placeholder="Ex: 40"
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        onChange={(e) => {
+                          const value = e.target.value
+                          localStorage.setItem(`lab_ast_b_${patient.id}`, value)
+                        }}
+                        defaultValue={localStorage.getItem(`lab_ast_b_${patient.id}`) || ''}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-green-50 rounded-lg">
+              <p className="text-xs text-green-700">
+                💡 <strong>Dica:</strong> Preencha os resultados disponíveis para melhor documentação. 
+                Baseie sua decisão clínica nos valores alterados conforme protocolo.
+              </p>
+            </div>
           </div>
         </div>
       ),
@@ -406,20 +761,129 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       type: 'group',
       group: 'C',
       icon: <AlertTriangle className="w-6 h-6" />,
-      color: 'bg-yellow-500',
+      color: 'bg-gradient-to-r from-amber-500 to-amber-700',
       content: (
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Acompanhamento:</h4>
-            <p className="text-yellow-700 text-sm">Internação - mínimo 48h</p>
+        <div className="space-y-6">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Acompanhamento */}
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-amber-700 rounded-xl flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-amber-800">Acompanhamento</h4>
+              </div>
+              <p className="text-amber-700 font-medium mb-4">Internação - mínimo 48h</p>
+              <button 
+                onClick={() => onViewPrescriptions?.(patient)}
+                className="w-full bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Ver Prescrições</span>
+              </button>
+            </div>
+
+            {/* Exames */}
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-amber-700 rounded-xl flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-amber-800">Exames</h4>
+              </div>
+              <div className="text-amber-700 text-sm space-y-1 mb-4">
+                <p>• Hemograma completo</p>
+                <p>• Albumina sérica</p>
+                <p>• Transaminases (ALT/AST)</p>
+                <p>• Raio-X de tórax</p>
+              </div>
+              <button 
+                onClick={() => onViewPrescriptions?.(patient)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                <Activity className="w-4 h-4" />
+                <span>Ver Exames</span>
+              </button>
+            </div>
+
+            {/* Conduta */}
+            <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-amber-500 to-amber-700 rounded-xl flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-amber-800">Conduta</h4>
+              </div>
+              
+              {/* Cálculos automáticos baseados no peso */}
+              {(() => {
+                const peso = patient.weight || 70 // peso padrão se não informado
+                const volumeReposicao = peso * 10 // 10ml/kg
+                const volumeManutencao = peso * 25 // 25ml/kg/dia para manutenção
+                
+                return (
+                  <div className="space-y-3">
+                    <div className="bg-amber-200/50 p-3 rounded-lg">
+                      <p className="font-semibold text-amber-800 text-sm">Reposição Volêmica Inicial:</p>
+                      <p className="text-amber-700 font-bold">
+                        {volumeReposicao}ml SF 0,9%
+                      </p>
+                      <p className="text-amber-600 text-xs">
+                        ({peso}kg × 10ml/kg) em 10 minutos
+                      </p>
+                    </div>
+                    
+                    <div className="bg-amber-200/50 p-3 rounded-lg">
+                      <p className="font-semibold text-amber-800 text-sm">Manutenção (24h):</p>
+                      <p className="text-amber-700 font-bold">
+                        {volumeManutencao}ml/dia
+                      </p>
+                      <p className="text-amber-600 text-xs">
+                        ({peso}kg × 25ml/kg/dia)
+                      </p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => onViewReport?.(patient)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 mt-3"
+                    >
+                      <Heart className="w-4 h-4" />
+                      <span>Protocolo Completo</span>
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
           </div>
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Exames:</h4>
-            <p className="text-yellow-700 text-sm">Hemograma, albumina, transaminases, RX tórax</p>
-          </div>
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
-            <p className="text-yellow-700 text-sm">Reposição 10ml/kg SF 0,9% em 10min</p>
+
+          {/* Resumo do protocolo */}
+          <div className="bg-gradient-to-r from-amber-100 to-orange-100 p-6 rounded-2xl border border-amber-300">
+            <div className="flex items-center space-x-3 mb-4">
+              <Shield className="w-6 h-6 text-amber-700" />
+              <h4 className="font-bold text-amber-800 text-lg">Protocolo de Internação - Grupo C</h4>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="font-semibold text-amber-800 mb-2">Monitorização Contínua:</h5>
+                <ul className="text-amber-700 text-sm space-y-1">
+                  <li>• Sinais vitais de 4/4h</li>
+                  <li>• Balanço hídrico rigoroso</li>
+                  <li>• Controle de diurese</li>
+                  <li>• Ausculta pulmonar</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h5 className="font-semibold text-amber-800 mb-2">Critérios de Melhora:</h5>
+                <ul className="text-amber-700 text-sm space-y-1">
+                  <li>• Estabilização dos sinais vitais</li>
+                  <li>• Melhora da dor abdominal</li>
+                  <li>• Cessação dos vômitos</li>
+                  <li>• Diurese adequada (&gt;1ml/kg/h)</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       ),
@@ -480,20 +944,144 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       type: 'group',
       group: 'D',
       icon: <AlertTriangle className="w-6 h-6" />,
-      color: 'bg-red-600',
+      color: 'bg-gradient-to-r from-red-600 to-red-800',
       content: (
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-red-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-red-800 mb-2">Acompanhamento:</h4>
-            <p className="text-red-700 text-sm">UTI - mínimo 48h</p>
+        <div className="space-y-6">
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Acompanhamento */}
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-red-800 rounded-xl flex items-center justify-center">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-red-800">Acompanhamento</h4>
+              </div>
+              <p className="text-red-700 font-medium mb-4">UTI - mínimo 48h</p>
+              <button 
+                onClick={() => onViewPrescriptions?.(patient)}
+                className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Ver Prescrições UTI</span>
+              </button>
+            </div>
+
+            {/* Exames */}
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-red-800 rounded-xl flex items-center justify-center">
+                  <Brain className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-red-800">Exames</h4>
+              </div>
+              <div className="text-red-700 text-sm space-y-1 mb-4">
+                <p>• Hemograma completo</p>
+                <p>• Gasometria arterial</p>
+                <p>• Eletrólitos (Na, K, Cl)</p>
+                <p>• Função renal (Cr, Ur)</p>
+                <p>• Albumina e transaminases</p>
+                <p>• Raio-X de tórax</p>
+              </div>
+              <button 
+                onClick={() => onViewPrescriptions?.(patient)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
+              >
+                <Activity className="w-4 h-4" />
+                <span>Ver Exames UTI</span>
+              </button>
+            </div>
+
+            {/* Conduta */}
+            <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-2xl border border-red-200 shadow-lg">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-10 h-10 bg-gradient-to-r from-red-600 to-red-800 rounded-xl flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <h4 className="font-bold text-red-800">Conduta</h4>
+              </div>
+              
+              {/* Cálculos automáticos baseados no peso para UTI */}
+              {(() => {
+                const peso = patient.weight || 70 // peso padrão se não informado
+                const volumeReposicaoUTI = peso * 20 // 20ml/kg para UTI
+                const volumeManutencaoUTI = peso * 30 // 30ml/kg/dia para manutenção UTI
+                const dopamax = peso * 20 // 20 mcg/kg/min (dose máxima)
+                
+                return (
+                  <div className="space-y-3">
+                    <div className="bg-red-200/50 p-3 rounded-lg">
+                      <p className="font-semibold text-red-800 text-sm">Reposição Volêmica Emergencial:</p>
+                      <p className="text-red-700 font-bold">
+                        {volumeReposicaoUTI}ml SF 0,9%
+                      </p>
+                      <p className="text-red-600 text-xs">
+                        ({peso}kg × 20ml/kg) em até 20 minutos
+                      </p>
+                    </div>
+                    
+                    <div className="bg-red-200/50 p-3 rounded-lg">
+                      <p className="font-semibold text-red-800 text-sm">Manutenção UTI (24h):</p>
+                      <p className="text-red-700 font-bold">
+                        {volumeManutencaoUTI}ml/dia
+                      </p>
+                      <p className="text-red-600 text-xs">
+                        ({peso}kg × 30ml/kg/dia)
+                      </p>
+                    </div>
+                    
+                    <div className="bg-red-200/50 p-3 rounded-lg">
+                      <p className="font-semibold text-red-800 text-sm">Dopamina (se necessário):</p>
+                      <p className="text-red-700 font-bold">
+                        Até {dopamax} mcg/kg/min
+                      </p>
+                      <p className="text-red-600 text-xs">
+                        Peso: {peso}kg × 20 mcg/kg/min
+                      </p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => onViewReport?.(patient)}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 mt-3"
+                    >
+                      <Heart className="w-4 h-4" />
+                      <span>Protocolo UTI</span>
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
           </div>
-          <div className="bg-red-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-red-800 mb-2">Exames:</h4>
-            <p className="text-red-700 text-sm">Idem Grupo C + gasometria</p>
-          </div>
-          <div className="bg-red-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-red-800 mb-2">Conduta:</h4>
-            <p className="text-red-700 text-sm">Reposição 20ml/kg SF 0,9% em 20min</p>
+
+          {/* Resumo do protocolo UTI */}
+          <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 rounded-2xl border border-red-300">
+            <div className="flex items-center space-x-3 mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-700" />
+              <h4 className="font-bold text-red-800 text-lg">Protocolo de UTI - Grupo D</h4>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h5 className="font-semibold text-red-800 mb-2">Monitorização Intensiva:</h5>
+                <ul className="text-red-700 text-sm space-y-1">
+                  <li>• Monitor multiparamétrico contínuo</li>
+                  <li>• Pressão arterial invasiva</li>
+                  <li>• Balanço hídrico horário</li>
+                  <li>• Controle de diurese (sonda vesical)</li>
+                  <li>• Gasometria de 6/6h</li>
+                </ul>
+              </div>
+              
+              <div>
+                <h5 className="font-semibold text-red-800 mb-2">Suporte Avançado:</h5>
+                <ul className="text-red-700 text-sm space-y-1">
+                  <li>• Suporte ventilatório se necessário</li>
+                  <li>• Drogas vasoativas conforme PA</li>
+                  <li>• Hemoderivados se indicado</li>
+                  <li>• Controle rigoroso glicemia</li>
+                  <li>• Prevenção de complicações</li>
+                </ul>
+              </div>
+            </div>
           </div>
         </div>
       ),
@@ -551,11 +1139,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       id: 'reevaluation_c_1h',
       title: 'Reavaliação após 1h - Grupo C',
       description: 'Avaliação da resposta ao tratamento',
-      type: 'action',
+      type: 'question',
       icon: <Clock className="w-6 h-6" />,
       color: 'bg-yellow-500',
       content: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="bg-yellow-50 p-4 rounded-lg">
             <h4 className="font-semibold text-yellow-800 mb-2">Verificar:</h4>
             <ul className="text-yellow-700 text-sm space-y-1">
@@ -564,6 +1152,138 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <li>• Melhora dos sintomas</li>
               <li>• Ausência de novos sinais de alarme</li>
             </ul>
+          </div>
+
+          {/* Seção de Exames Opcionais */}
+          <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-800">Resultados dos Exames (Opcional)</h4>
+              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">Não obrigatório</span>
+            </div>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Hemograma */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Salvar no localStorage temporariamente para não perder os dados
+                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_hemoglobin_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_hematocrit_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_platelets_${patient.id}`) || ''}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Outros Exames */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="Ex: 3.5"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_albumin_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_albumin_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 45"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_alt_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_alt_${patient.id}`) || ''}
+                    />
+                  </div>
+                  
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 40"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_ast_${patient.id}`, value)
+                      }}
+                      defaultValue={localStorage.getItem(`lab_ast_${patient.id}`) || ''}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
+                Os dados dos exames serão salvos automaticamente no prontuário do paciente.
+              </p>
+            </div>
           </div>
         </div>
       ),
@@ -695,11 +1415,106 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   }
 
   const handleAnswer = (nextStep: string, value?: string) => {
+    // Evitar cliques duplos durante transição
+    if (isTransitioning) return
+    
+    setIsTransitioning(true)
+    
     const newAnswers = value ? { ...answers, [currentStep]: value } : answers
     const newHistory = [...history, currentStep]
     
     if (value) {
       setAnswers(newAnswers)
+    }
+    
+    // Capturar dados dos exames se estamos saindo da reavaliação
+    if (currentStep === 'reevaluation_c_1h' || currentStep === 'evaluate_labs_b') {
+      // Capturar dados dos exames do localStorage (diferente para cada grupo)
+      const suffix = currentStep === 'evaluate_labs_b' ? '_b' : ''
+      const labData = {
+        hemoglobin: localStorage.getItem(`lab_hemoglobin${suffix}_${patient.id}`),
+        hematocrit: localStorage.getItem(`lab_hematocrit${suffix}_${patient.id}`),
+        platelets: localStorage.getItem(`lab_platelets${suffix}_${patient.id}`),
+        albumin: localStorage.getItem(`lab_albumin${suffix}_${patient.id}`),
+        alt: localStorage.getItem(`lab_alt${suffix}_${patient.id}`),
+        ast: localStorage.getItem(`lab_ast${suffix}_${patient.id}`)
+      }
+      
+      // Salvar dados dos exames no serviço se algum foi preenchido
+      const hasLabData = Object.values(labData).some(value => value && value.trim() !== '')
+      if (hasLabData) {
+        try {
+          // Salvar os dados dos exames usando o patientService
+          patientService.updateLabResults(patient.id, {
+            hemoglobin: labData.hemoglobin ? parseFloat(labData.hemoglobin) : undefined,
+            hematocrit: labData.hematocrit ? parseFloat(labData.hematocrit) : undefined,
+            platelets: labData.platelets ? parseInt(labData.platelets) : undefined,
+            albumin: labData.albumin ? parseFloat(labData.albumin) : undefined,
+            transaminases: {
+              alt: labData.alt ? parseInt(labData.alt) : undefined,
+              ast: labData.ast ? parseInt(labData.ast) : undefined
+            },
+            status: 'completed',
+            resultDate: new Date()
+          })
+          
+          // Limpar localStorage após salvar
+          Object.keys(labData).forEach(key => {
+            localStorage.removeItem(`lab_${key}${suffix}_${patient.id}`)
+          })
+        } catch (error) {
+          console.error('Erro ao salvar resultados dos exames:', error)
+        }
+      }
+    }
+    
+    // Lógica especial para classificação automática
+    if (nextStep === 'auto_classify_alarm') {
+      // Analisar os sinais selecionados
+      let classificationData = { grupoC: [], grupoD: [] }
+      if (answers.alarm_check) {
+        try {
+          if (answers.alarm_check.startsWith('{')) {
+            classificationData = JSON.parse(answers.alarm_check)
+          }
+        } catch (error) {
+          console.warn('Erro ao parsear alarm_check na classificação:', error)
+        }
+      }
+      const hasGrupoD = classificationData.grupoD && classificationData.grupoD.length > 0
+      const hasGrupoC = classificationData.grupoC && classificationData.grupoC.length > 0
+      
+      let finalStep = 'bleeding_check' // Se não tem sinais de alarme, vai para avaliação de sangramento
+      let group: 'A' | 'B' | 'C' | 'D' | undefined = undefined
+      
+      if (hasGrupoD) {
+        finalStep = 'group_d'
+        group = 'D'
+      } else if (hasGrupoC) {
+        finalStep = 'group_c'
+        group = 'C'
+      }
+      // Se não tem sinais de alarme nem gravidade, vai para bleeding_check para determinar A ou B
+      
+      // Usar setTimeout para simular processamento
+      setTimeout(() => {
+        setHistory([...newHistory, currentStep])
+        setCurrentStep(finalStep)
+        
+        const finalProgress = calculateProgress(finalStep, [...newHistory, currentStep])
+        setProgress(finalProgress)
+        
+        try {
+          onUpdate(patient.id, finalStep, [...newHistory, currentStep], newAnswers, finalProgress, group)
+        } catch (error) {
+          console.error('Erro ao atualizar estado do paciente:', error)
+        }
+        
+        setIsTransitioning(false)
+      }, 1500) // 1.5 segundos para mostrar o processamento
+      
+      // Não continuar com o fluxo normal
+      return
     }
     
     setHistory(newHistory)
@@ -712,19 +1527,24 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     let group: 'A' | 'B' | 'C' | 'D' | undefined
     if (nextStep === 'group_a' || nextStep === 'hydration_a') group = 'A'
     else if (nextStep === 'group_b' || nextStep === 'wait_labs_b') group = 'B'
-    else if (nextStep === 'group_c' || nextStep === 'treatment_c' || value === 'group_c') group = 'C'
-    else if (nextStep === 'group_d' || nextStep === 'treatment_d' || value === 'group_d') group = 'D'
+    else if (nextStep === 'group_c' || nextStep === 'treatment_c') group = 'C'
+    else if (nextStep === 'group_d' || nextStep === 'treatment_d') group = 'D'
     
     // Atualizar estado
-    onUpdate(patient.id, nextStep, newHistory, newAnswers, newProgress, group)
+    try {
+      onUpdate(patient.id, nextStep, newHistory, newAnswers, newProgress, group)
+    } catch (error) {
+      console.error('Erro ao atualizar estado do paciente:', error)
+    }
     
-    // Completar se necessário
-    if (nextStep === 'end' || steps[nextStep]?.requiresLabs) {
-      if (steps[nextStep]?.requiresLabs) {
-        setTimeout(() => onComplete(), 1000)
-      } else {
-        onComplete()
-      }
+    // Resetar transição após um pequeno delay
+    setTimeout(() => {
+      setIsTransitioning(false)
+    }, 300)
+    
+    // Completar apenas quando realmente finalizar
+    if (nextStep === 'end') {
+      setTimeout(() => onComplete(), 500)
     }
   }
 
@@ -741,11 +1561,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   }
 
   const restart = () => {
+    setIsTransitioning(true)
     setCurrentStep('start')
     setHistory([])
     setAnswers({})
     setProgress(0)
-    onUpdate(patient.id, 'start', [], {}, 0)
+    
+    try {
+      onUpdate(patient.id, 'start', [], {}, 0)
+    } catch (error) {
+      console.error('Erro ao reiniciar fluxograma:', error)
+    }
+    
+    setTimeout(() => {
+      setIsTransitioning(false)
+    }, 300)
   }
 
   const step = steps[currentStep]
@@ -754,6 +1584,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   if (!step) {
     console.error(`Step '${currentStep}' não encontrado. Redirecionando para 'start'.`)
     setCurrentStep('start')
+    setHistory([])
+    setAnswers({})
+    setProgress(0)
     return null
   }
 
@@ -950,15 +1783,19 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       <motion.button
                         key={index}
                         onClick={() => handleAnswer(option.nextStep, option.value)}
+                        disabled={isTransitioning}
                         className={clsx(
                           "group relative p-6 rounded-2xl text-left transition-all duration-300 border-2 hover:shadow-2xl overflow-hidden",
-                          step.type === 'question' && "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:from-blue-100 hover:to-blue-200 text-blue-900",
-                          step.type === 'group' && "bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 text-green-900",
-                          step.type === 'action' && "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:from-amber-100 hover:to-amber-200 text-amber-900",
-                          step.type === 'result' && "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 hover:from-slate-100 hover:to-slate-200 text-slate-900"
+                          isTransitioning && "opacity-50 cursor-not-allowed",
+                          !isTransitioning && (
+                            step.type === 'question' ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:from-blue-100 hover:to-blue-200 text-blue-900" :
+                            step.type === 'group' ? "bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 text-green-900" :
+                            step.type === 'action' ? "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:from-amber-100 hover:to-amber-200 text-amber-900" :
+                            "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 hover:from-slate-100 hover:to-slate-200 text-slate-900"
+                          )
                         )}
-                        whileHover={{ scale: 1.02, y: -2 }}
-                        whileTap={{ scale: 0.98 }}
+                        whileHover={!isTransitioning ? { scale: 1.02, y: -2 } : {}}
+                        whileTap={!isTransitioning ? { scale: 0.98 } : {}}
                       >
                         {/* Background Effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>

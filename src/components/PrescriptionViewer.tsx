@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { 
   FileText, 
@@ -12,11 +12,15 @@ import {
   Stethoscope,
   Calendar,
   Award,
-  Target
+  Target,
+  Download,
+  FlaskConical
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
 import { clsx } from 'clsx'
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
 
 interface PrescriptionViewerProps {
   patient: Patient
@@ -30,6 +34,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   onUpdate
 }) => {
   const [showAddForm, setShowAddForm] = useState(false)
+  const prescriptionRef = useRef<HTMLDivElement>(null)
+  const labRef = useRef<HTMLDivElement>(null)
   const [newPrescription, setNewPrescription] = useState({
     medication: '',
     dosage: '',
@@ -62,6 +68,129 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
       patientService.generatePrescriptions(patient.id, patient.flowchartState.group)
       onUpdate()
     }
+  }
+
+  const downloadPrescriptions = async () => {
+    if (!prescriptionRef.current) return
+
+    try {
+      const canvas = await html2canvas(prescriptionRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+
+      let position = 0
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save(`receita_${patient.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
+    } catch (error) {
+      console.error('Erro ao gerar PDF da receita:', error)
+      alert('Erro ao gerar PDF da receita. Tente novamente.')
+    }
+  }
+
+  const downloadLabOrders = async () => {
+    if (!labRef.current) return
+
+    try {
+      const canvas = await html2canvas(labRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff'
+      })
+
+      const imgData = canvas.toDataURL('image/png')
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      
+      const imgWidth = 210
+      const pageHeight = 295
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      let heightLeft = imgHeight
+
+      let position = 0
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight
+        pdf.addPage()
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+        heightLeft -= pageHeight
+      }
+
+      pdf.save(`exames_${patient.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`)
+    } catch (error) {
+      console.error('Erro ao gerar PDF dos exames:', error)
+      alert('Erro ao gerar PDF dos exames. Tente novamente.')
+    }
+  }
+
+  const formatDate = (date: Date) => {
+    return new Date(date).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getLabOrdersForGroup = (group?: 'A' | 'B' | 'C' | 'D') => {
+    const labOrders = {
+      A: [],
+      B: [
+        'Hemograma completo',
+        'Hematócrito',
+        'Contagem de plaquetas',
+        'Albumina sérica',
+        'Transaminases (ALT/AST)'
+      ],
+      C: [
+        'Hemograma completo',
+        'Hematócrito',
+        'Contagem de plaquetas',
+        'Albumina sérica',
+        'Transaminases (ALT/AST)',
+        'Tempo de protrombina',
+        'Tempo de tromboplastina parcial ativada',
+        'Gasometria arterial'
+      ],
+      D: [
+        'Hemograma completo',
+        'Hematócrito',
+        'Contagem de plaquetas',
+        'Albumina sérica',
+        'Transaminases (ALT/AST)',
+        'Tempo de protrombina',
+        'Tempo de tromboplastina parcial ativada',
+        'Gasometria arterial',
+        'Lactato',
+        'Ureia e creatinina',
+        'Eletrólitos'
+      ]
+    }
+    return group ? labOrders[group] : []
   }
 
   return (
@@ -177,6 +306,30 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 <Plus className="w-5 h-5" />
                 <span>Nova Prescrição</span>
               </motion.button>
+
+              {patient.treatment.prescriptions.length > 0 && (
+                <motion.button
+                  onClick={downloadPrescriptions}
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-3"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <Download className="w-5 h-5" />
+                  <span>Baixar Receita</span>
+                </motion.button>
+              )}
+
+              {patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
+                <motion.button
+                  onClick={downloadLabOrders}
+                  className="bg-gradient-to-r from-orange-600 to-red-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-3"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <FlaskConical className="w-5 h-5" />
+                  <span>Baixar Pedido de Exames</span>
+                </motion.button>
+              )}
             </div>
           </div>
 
@@ -203,11 +356,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                       type="text"
                       value={newPrescription.medication}
                       onChange={(e) => setNewPrescription(prev => ({ ...prev, medication: e.target.value }))}
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
-                      placeholder="Ex: Paracetamol"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Nome do medicamento"
                     />
                   </div>
-                  
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider">
                       Dosagem *
@@ -216,11 +368,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                       type="text"
                       value={newPrescription.dosage}
                       onChange={(e) => setNewPrescription(prev => ({ ...prev, dosage: e.target.value }))}
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
                       placeholder="Ex: 500mg"
                     />
                   </div>
-                  
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider">
                       Frequência
@@ -229,11 +380,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                       type="text"
                       value={newPrescription.frequency}
                       onChange={(e) => setNewPrescription(prev => ({ ...prev, frequency: e.target.value }))}
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
-                      placeholder="Ex: 8/8h"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                      placeholder="Ex: 3x ao dia"
                     />
                   </div>
-                  
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider">
                       Duração
@@ -242,143 +392,213 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                       type="text"
                       value={newPrescription.duration}
                       onChange={(e) => setNewPrescription(prev => ({ ...prev, duration: e.target.value }))}
-                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
                       placeholder="Ex: 7 dias"
+                    />
+                  </div>
+                  <div className="lg:col-span-2">
+                    <label className="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider">
+                      Instruções de Uso
+                    </label>
+                    <textarea
+                      value={newPrescription.instructions}
+                      onChange={(e) => setNewPrescription(prev => ({ ...prev, instructions: e.target.value }))}
+                      className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 resize-none"
+                      placeholder="Instruções detalhadas para o paciente"
+                      rows={3}
                     />
                   </div>
                 </div>
                 
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2 uppercase tracking-wider">
-                    Instruções Especiais
-                  </label>
-                  <textarea
-                    value={newPrescription.instructions}
-                    onChange={(e) => setNewPrescription(prev => ({ ...prev, instructions: e.target.value }))}
-                    className="w-full px-4 py-3 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium h-24 resize-none"
-                    placeholder="Instruções adicionais para o paciente..."
-                  />
-                </div>
-                
-                <div className="flex space-x-4">
-                  <motion.button
-                    onClick={handleAddPrescription}
-                    className="bg-gradient-to-r from-emerald-600 to-green-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <CheckCircle className="w-5 h-5" />
-                    <span>Adicionar Prescrição</span>
-                  </motion.button>
-                  
-                  <motion.button
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
                     onClick={() => setShowAddForm(false)}
-                    className="bg-slate-200 text-slate-700 px-6 py-3 rounded-xl font-semibold hover:bg-slate-300 transition-all duration-200"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    className="px-6 py-3 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-colors duration-200 font-medium"
                   >
                     Cancelar
-                  </motion.button>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddPrescription}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-slate-700 text-white rounded-xl hover:shadow-lg transition-all duration-200 font-semibold"
+                  >
+                    Adicionar Prescrição
+                  </button>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* Prescriptions List */}
-          <div className="p-8">
-            {patient.treatment.prescriptions.length > 0 ? (
-              <div>
-                <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-3 h-12 bg-gradient-to-b from-blue-600 to-slate-700 rounded-full"></div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-800">
-                      Prescrições Médicas
-                    </h3>
-                    <p className="text-slate-600">{patient.treatment.prescriptions.length} prescrição(ões) ativa(s)</p>
+          {/* Prescriptions List - For Download */}
+          {patient.treatment.prescriptions.length > 0 && (
+            <div className="p-8 border-b border-slate-200">
+              <div ref={prescriptionRef} className="bg-white p-8">
+                {/* Prescription Header */}
+                <div className="text-center mb-8 border-b-2 border-slate-200 pb-6">
+                  <h1 className="text-3xl font-bold text-slate-800 mb-2">PRESCRIÇÃO MÉDICA</h1>
+                  <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
+                  <p className="text-sm text-slate-500">Data: {formatDate(new Date())}</p>
+                </div>
+
+                {/* Patient Info */}
+                <div className="mb-8 p-6 bg-slate-50 rounded-lg">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">Dados do Paciente</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-slate-600">Nome:</p>
+                      <p className="text-lg font-semibold text-slate-800">{patient.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Idade:</p>
+                      <p className="text-lg font-semibold text-slate-800">{patient.age} anos</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Prontuário:</p>
+                      <p className="text-lg font-semibold text-slate-800">{patient.medicalRecord}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Classificação:</p>
+                      <p className="text-lg font-semibold text-slate-800">Grupo {patient.flowchartState.group}</p>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="grid gap-6">
+
+                {/* Prescriptions */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold text-slate-800">Medicamentos Prescritos</h3>
                   {patient.treatment.prescriptions.map((prescription, index) => (
-                    <motion.div
-                      key={prescription.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-gradient-to-r from-white to-slate-50 border border-slate-200 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-all duration-200"
-                    >
-                      <div className="flex items-start space-x-4">
-                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-slate-600 rounded-xl flex items-center justify-center flex-shrink-0">
-                          <Pill className="w-6 h-6 text-white" />
+                    <div key={prescription.id} className="border border-slate-300 rounded-lg p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <h4 className="text-lg font-bold text-slate-800">{index + 1}. {prescription.medication}</h4>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-slate-600">Dosagem:</p>
+                          <p className="font-semibold text-slate-800">{prescription.dosage}</p>
                         </div>
-                        
-                        <div className="flex-1">
-                          <h4 className="text-xl font-bold text-slate-800 mb-4">{prescription.medication}</h4>
-                          
-                          <div className="grid lg:grid-cols-4 gap-4 mb-4">
-                            <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
-                              <p className="text-sm font-semibold text-blue-600 uppercase tracking-wider">Dosagem</p>
-                              <p className="text-lg font-bold text-blue-800 mt-1">{prescription.dosage}</p>
-                            </div>
-                            
-                            <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
-                              <p className="text-sm font-semibold text-emerald-600 uppercase tracking-wider">Frequência</p>
-                              <p className="text-lg font-bold text-emerald-800 mt-1">{prescription.frequency}</p>
-                            </div>
-                            
-                            <div className="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                              <p className="text-sm font-semibold text-amber-600 uppercase tracking-wider">Duração</p>
-                              <p className="text-lg font-bold text-amber-800 mt-1">{prescription.duration}</p>
-                            </div>
-                            
-                            <div className="bg-purple-50 p-4 rounded-xl border border-purple-200">
-                              <p className="text-sm font-semibold text-purple-600 uppercase tracking-wider">Prescrito por</p>
-                              <p className="text-sm font-bold text-purple-800 mt-1">{prescription.prescribedBy}</p>
-                            </div>
-                          </div>
-                          
-                          {prescription.instructions && (
-                            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                              <p className="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">Instruções</p>
-                              <p className="text-slate-800">{prescription.instructions}</p>
-                            </div>
-                          )}
-                          
-                          <div className="flex items-center space-x-2 mt-4 text-sm text-slate-600">
-                            <Calendar className="w-4 h-4" />
-                            <span>Prescrito em: {new Date(prescription.prescribedAt).toLocaleDateString('pt-BR')}</span>
-                          </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Frequência:</p>
+                          <p className="font-semibold text-slate-800">{prescription.frequency}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Duração:</p>
+                          <p className="font-semibold text-slate-800">{prescription.duration}</p>
                         </div>
                       </div>
-                    </motion.div>
+                      <div className="bg-slate-50 rounded-lg p-4">
+                        <p className="text-sm text-slate-600 mb-1">Instruções:</p>
+                        <p className="text-slate-800">{prescription.instructions}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
+
+                {/* Footer */}
+                <div className="mt-12 pt-8 border-t-2 border-slate-200 text-center">
+                  <p className="text-sm text-slate-600">Prescrição gerada automaticamente pelo Sistema DiagnoMap Pro</p>
+                  <p className="text-xs text-slate-500 mt-2">Data de emissão: {formatDate(new Date())}</p>
+                </div>
               </div>
-            ) : (
-              <div className="text-center py-16">
-                <div className="relative mb-6">
-                  <div className="absolute inset-0 bg-gradient-to-r from-slate-300 to-blue-300 rounded-2xl blur-xl opacity-20"></div>
-                  <div className="relative w-24 h-24 bg-gradient-to-br from-slate-200 to-blue-200 rounded-2xl flex items-center justify-center mx-auto">
-                    <Pill className="w-12 h-12 text-slate-500" />
+            </div>
+          )}
+
+          {/* Lab Orders - For Download */}
+          {patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
+            <div className="p-8">
+              <div ref={labRef} className="bg-white p-8">
+                {/* Lab Order Header */}
+                <div className="text-center mb-8 border-b-2 border-slate-200 pb-6">
+                  <h1 className="text-3xl font-bold text-slate-800 mb-2">SOLICITAÇÃO DE EXAMES</h1>
+                  <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
+                  <p className="text-sm text-slate-500">Data: {formatDate(new Date())}</p>
+                </div>
+
+                {/* Patient Info */}
+                <div className="mb-8 p-6 bg-slate-50 rounded-lg">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">Dados do Paciente</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm text-slate-600">Nome:</p>
+                      <p className="text-lg font-semibold text-slate-800">{patient.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Idade:</p>
+                      <p className="text-lg font-semibold text-slate-800">{patient.age} anos</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Prontuário:</p>
+                      <p className="text-lg font-semibold text-slate-800">{patient.medicalRecord}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Classificação:</p>
+                      <p className="text-lg font-semibold text-slate-800">Grupo {patient.flowchartState.group}</p>
+                    </div>
                   </div>
                 </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Nenhuma Prescrição</h3>
-                <p className="text-slate-600 mb-6">Ainda não há prescrições cadastradas para este paciente</p>
-                
-                {patient.flowchartState.group && (
-                  <motion.button
-                    onClick={handleGenerateAutomaticPrescriptions}
-                    className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 inline-flex items-center space-x-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <Target className="w-5 h-5" />
-                    <span>Gerar Prescrições Automáticas</span>
-                  </motion.button>
-                )}
+
+                {/* Lab Tests */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-bold text-slate-800">Exames Solicitados</h3>
+                  <div className="grid grid-cols-1 gap-4">
+                    {getLabOrdersForGroup(patient.flowchartState.group).map((test, index) => (
+                      <div key={index} className="flex items-center p-4 border border-slate-300 rounded-lg">
+                        <div className="w-6 h-6 border-2 border-slate-400 rounded mr-4"></div>
+                        <span className="text-lg text-slate-800">{test}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="mt-12 pt-8 border-t-2 border-slate-200 text-center">
+                  <p className="text-sm text-slate-600">Solicitação gerada automaticamente pelo Sistema DiagnoMap Pro</p>
+                  <p className="text-xs text-slate-500 mt-2">Data de emissão: {formatDate(new Date())}</p>
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+
+          {/* Current Prescriptions Display */}
+          {patient.treatment.prescriptions.length > 0 && (
+            <div className="p-8">
+              <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center">
+                <Pill className="w-6 h-6 mr-3 text-green-600" />
+                Prescrições Ativas
+              </h3>
+              <div className="space-y-4">
+                {patient.treatment.prescriptions.map((prescription, index) => (
+                  <div key={prescription.id} className="bg-green-50 rounded-xl p-6 border border-green-200">
+                    <div className="flex items-start justify-between mb-4">
+                      <h4 className="text-lg font-bold text-green-800">{prescription.medication}</h4>
+                      <span className="text-sm text-slate-600">#{index + 1}</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-slate-600">Dosagem</p>
+                        <p className="font-semibold text-slate-800">{prescription.dosage}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-600">Frequência</p>
+                        <p className="font-semibold text-slate-800">{prescription.frequency}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-slate-600">Duração</p>
+                        <p className="font-semibold text-slate-800">{prescription.duration}</p>
+                      </div>
+                    </div>
+                    <div className="bg-white rounded-lg p-4 border border-green-200">
+                      <p className="text-sm text-slate-600 mb-1">Instruções</p>
+                      <p className="text-slate-800">{prescription.instructions}</p>
+                    </div>
+                    <div className="mt-4 text-sm text-slate-600">
+                      Prescrito em: {formatDate(prescription.prescribedAt)} | Por: {prescription.prescribedBy}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

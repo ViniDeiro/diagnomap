@@ -20,7 +20,9 @@ import {
   Award,
   Clock,
   Target,
-  Zap
+  Zap,
+  Clipboard,
+  ClipboardCheck
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import jsPDF from 'jspdf'
@@ -33,6 +35,7 @@ interface ReportViewerProps {
 
 const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   const reportRef = useRef<HTMLDivElement>(null)
+  const [copied, setCopied] = React.useState(false)
 
   const generatePDF = async () => {
     if (!reportRef.current) return
@@ -73,6 +76,52 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     }
   }
 
+  const copyReportText = async () => {
+    try {
+      const narrative = generateNarrativeReport()
+      
+      // Construir texto completo do relatório
+      const fullText = `RELATÓRIO MÉDICO
+Sistema DiagnoMap Pro
+Protocolo de Diagnóstico Clínico - ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}
+
+Data do relatório: ${formatDate(new Date())}
+Número do protocolo: ${patient.id}
+
+${narrative.introduction}
+
+${narrative.complaints}${narrative.observations ? ` ${narrative.observations}` : ''}
+
+${narrative.physicalExam}
+
+${narrative.laboratoryResults ? `${narrative.laboratoryResults}
+
+` : ''}${narrative.classification ? `${narrative.classification}
+
+` : ''}${narrative.treatment}${narrative.prescriptions ? ` ${narrative.prescriptions}` : ''}
+
+${narrative.followUp}
+
+${narrative.conclusion}
+
+---
+Relatório gerado automaticamente pelo Sistema DiagnoMap Pro
+${formatDate(new Date())}`
+
+      await navigator.clipboard.writeText(fullText)
+      setCopied(true)
+      
+      // Reset do feedback após 2 segundos
+      setTimeout(() => {
+        setCopied(false)
+      }, 2000)
+      
+    } catch (error) {
+      console.error('Erro ao copiar texto:', error)
+      alert('Erro ao copiar texto. Tente novamente.')
+    }
+  }
+
   const formatDate = (date: Date) => {
     return new Date(date).toLocaleString('pt-BR', {
       day: '2-digit',
@@ -83,6 +132,14 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     })
   }
 
+  const formatDateOnly = (date: Date) => {
+    return new Date(date).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })
+  }
+
   const getGroupInfo = (group?: 'A' | 'B' | 'C' | 'D') => {
     const groupData = {
       A: { 
@@ -90,56 +147,286 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         color: 'text-blue-600', 
         bg: 'bg-blue-50',
         description: 'Dengue sem sinais de alarme, sem comorbidades. Tratamento ambulatorial com hidratação oral.',
-        icon: <CheckCircle className="w-5 h-5" />
+        risk: 'baixo risco',
+        treatment: 'tratamento ambulatorial com hidratação oral'
       },
       B: { 
         name: 'Grupo B - Dengue com fatores de risco', 
         color: 'text-green-600', 
         bg: 'bg-green-50',
         description: 'Dengue com fatores de risco ou comorbidades. Observação até resultado dos exames.',
-        icon: <Heart className="w-5 h-5" />
+        risk: 'risco moderado com necessidade de observação',
+        treatment: 'acompanhamento hospitalar até resultado dos exames laboratoriais'
       },
       C: { 
         name: 'Grupo C - Dengue com sinais de alarme', 
         color: 'text-amber-600', 
         bg: 'bg-amber-50',
         description: 'Dengue com sinais de alarme. Internação hospitalar para monitorização.',
-        icon: <AlertTriangle className="w-5 h-5" />
+        risk: 'alto risco com sinais de alarme',
+        treatment: 'internação hospitalar para monitorização contínua'
       },
       D: { 
         name: 'Grupo D - Dengue grave', 
         color: 'text-red-600', 
         bg: 'bg-red-50',
         description: 'Dengue grave com extravasamento de plasma ou choque. Tratamento intensivo.',
-        icon: <Shield className="w-5 h-5" />
+        risk: 'risco crítico com dengue grave',
+        treatment: 'tratamento em unidade de terapia intensiva'
       }
     }
     return group ? groupData[group] : null
   }
 
-  const getStepName = (stepId: string) => {
-    const stepNames: Record<string, string> = {
-      start: 'Início da Avaliação',
-      alarm_check: 'Verificação de Sinais de Alarme',
-      bleeding_check: 'Pesquisa de Sangramento',
-      group_c_d_classification: 'Classificação Grupos C/D',
-      group_a: 'Classificação Grupo A',
-      group_b: 'Classificação Grupo B',
-      group_c: 'Classificação Grupo C',
-      group_d: 'Classificação Grupo D',
-      hydration_a: 'Hidratação Oral (Grupo A)',
-      wait_labs_b: 'Aguardando Exames (Grupo B)',
-      evaluate_labs_b: 'Avaliação de Exames (Grupo B)',
-      treatment_c: 'Tratamento Grupo C',
-      treatment_d: 'Tratamento Grupo D',
-      reevaluation_c_1h: 'Reavaliação 1h (Grupo C)',
-      reevaluation_d: 'Reavaliação (Grupo D)',
-      end: 'Protocolo Finalizado'
+  const generateNarrativeReport = () => {
+    const groupInfo = getGroupInfo(patient.flowchartState.group)
+    const admissionDate = formatDateOnly(patient.admission.date)
+    const admissionTime = patient.admission.time
+    
+    // Usar o sexo definido no cadastro do paciente
+    const isFemale = patient.gender === 'feminino'
+    const gender = patient.gender
+    
+    // Construir lista de sintomas de forma mais fluida
+    const symptoms = patient.admission.symptoms
+    let symptomsText = ''
+    if (symptoms.length > 0) {
+      const symptomsList = symptoms.map(s => s.toLowerCase())
+      if (symptomsList.includes('febre')) {
+        symptomsText = 'quadro febril'
+        if (symptomsList.length > 1) {
+          const otherSymptoms = symptomsList.filter(s => s !== 'febre')
+          if (otherSymptoms.length === 1) {
+            symptomsText += ` associado a ${otherSymptoms[0]}`
+          } else {
+            symptomsText += ` acompanhado de ${otherSymptoms.slice(0, -1).join(', ')} e ${otherSymptoms[otherSymptoms.length - 1]}`
+          }
+        }
+      } else {
+        if (symptomsList.length === 1) {
+          symptomsText = `manifestações clínicas caracterizadas por ${symptomsList[0]}`
+        } else if (symptomsList.length === 2) {
+          symptomsText = `sintomatologia constituída por ${symptomsList[0]} e ${symptomsList[1]}`
+        } else {
+          symptomsText = `sintomatologia polimórfica incluindo ${symptomsList.slice(0, -1).join(', ')} e ${symptomsList[symptomsList.length - 1]}`
+        }
+      }
     }
-    return stepNames[stepId] || stepId
+
+    // Construir informações sobre febre de forma mais técnica
+    let feverInfo = ''
+    if (patient.admission.vitalSigns?.temperature) {
+      const temp = patient.admission.vitalSigns.temperature
+      const days = patient.admission.vitalSigns.feverDays
+      
+      if (temp >= 39) {
+        feverInfo = `hipertermia significativa (${temp}°C)`
+      } else if (temp >= 37.8) {
+        feverInfo = `febre moderada (${temp}°C)`
+      } else {
+        feverInfo = `estado subfebril (${temp}°C)`
+      }
+      
+      if (days) {
+        if (days === 1) {
+          feverInfo += ' com início há 24 horas'
+        } else if (days <= 3) {
+          feverInfo += ` com evolução de ${days} dias, caracterizando fase febril aguda`
+        } else if (days <= 7) {
+          feverInfo += ` persistente há ${days} dias, compatível com síndrome febril prolongada`
+        } else {
+          feverInfo += ` com duração prolongada de ${days} dias`
+        }
+      }
+    }
+
+    // Construir informações sobre sinais vitais de forma mais técnica
+    let vitalSignsInfo = ''
+    const vs = patient.admission.vitalSigns
+    if (vs) {
+      const vitals = []
+      
+      if (vs.bloodPressure) {
+        const [systolic, diastolic] = vs.bloodPressure.split('/').map(p => parseInt(p.trim()))
+        if (systolic && diastolic) {
+          if (systolic < 90 || diastolic < 60) {
+            vitals.push(`hipotensão arterial (${vs.bloodPressure} mmHg)`)
+          } else if (systolic > 140 || diastolic > 90) {
+            vitals.push(`hipertensão arterial (${vs.bloodPressure} mmHg)`)
+          } else {
+            vitals.push(`pressão arterial dentro dos parâmetros de normalidade (${vs.bloodPressure} mmHg)`)
+          }
+        }
+      }
+      
+      if (vs.heartRate) {
+        if (vs.heartRate > 100) {
+          vitals.push(`taquicardia (${vs.heartRate} bpm)`)
+        } else if (vs.heartRate < 60) {
+          vitals.push(`bradicardia (${vs.heartRate} bpm)`)
+        } else {
+          vitals.push(`frequência cardíaca regular (${vs.heartRate} bpm)`)
+        }
+      }
+      
+      if (vs.respiratoryRate) {
+        if (vs.respiratoryRate > 20) {
+          vitals.push(`taquipneia (${vs.respiratoryRate} rpm)`)
+        } else if (vs.respiratoryRate < 12) {
+          vitals.push(`bradipneia (${vs.respiratoryRate} rpm)`)
+        } else {
+          vitals.push(`padrão respiratório regular (${vs.respiratoryRate} rpm)`)
+        }
+      }
+      
+      if (vitals.length > 0) {
+        if (vitals.length === 1) {
+          vitalSignsInfo = `evidenciando ${vitals[0]}`
+        } else if (vitals.length === 2) {
+          vitalSignsInfo = `demonstrando ${vitals[0]} e ${vitals[1]}`
+        } else {
+          vitalSignsInfo = `revelando ${vitals.slice(0, -1).join(', ')} e ${vitals[vitals.length - 1]}`
+        }
+      }
+    }
+
+    // Construir informações sobre exames de forma mais técnica
+    let labInfo = ''
+    if (patient.labResults && patient.labResults.status === 'completed') {
+      const findings = []
+      
+      if (patient.labResults.hemoglobin) {
+        const hb = patient.labResults.hemoglobin
+        if (hb < 12) {
+          findings.push(`anemia leve com hemoglobina de ${hb} g/dL`)
+        } else if (hb < 10) {
+          findings.push(`anemia moderada com hemoglobina de ${hb} g/dL`)
+        } else {
+          findings.push(`níveis de hemoglobina dentro da normalidade (${hb} g/dL)`)
+        }
+      }
+      
+      if (patient.labResults.hematocrit) {
+        const ht = patient.labResults.hematocrit
+        findings.push(`hematócrito de ${ht}%`)
+      }
+      
+      if (patient.labResults.platelets) {
+        const plt = patient.labResults.platelets
+        if (plt < 100000) {
+          findings.push(`trombocitopenia severa (${plt.toLocaleString()}/mm³)`)
+        } else if (plt < 150000) {
+          findings.push(`trombocitopenia leve (${plt.toLocaleString()}/mm³)`)
+        } else {
+          findings.push(`contagem plaquetária preservada (${plt.toLocaleString()}/mm³)`)
+        }
+      }
+      
+      if (patient.labResults.albumin) {
+        const alb = patient.labResults.albumin
+        if (alb < 3.5) {
+          findings.push(`hipoalbuminemia (${alb} g/dL)`)
+        } else {
+          findings.push(`níveis de albumina normais (${alb} g/dL)`)
+        }
+      }
+      
+      if (patient.labResults.transaminases?.alt || patient.labResults.transaminases?.ast) {
+        const alt = patient.labResults.transaminases.alt
+        const ast = patient.labResults.transaminases.ast
+        if ((alt && alt > 40) || (ast && ast > 40)) {
+          findings.push(`elevação das transaminases (ALT: ${alt || 'NR'}, AST: ${ast || 'NR'} U/L)`)
+        } else {
+          findings.push(`função hepática preservada`)
+        }
+      }
+      
+      if (findings.length > 0) {
+        labInfo = `A investigação laboratorial complementar evidenciou ${findings.join(', ')}, achados compatíveis com o quadro clínico apresentado.`
+      }
+    } else if (patient.labResults && patient.labResults.status === 'pending') {
+      labInfo = 'Foram solicitados exames laboratoriais complementares para elucidação diagnóstica e estratificação de risco, encontrando-se pendentes de resultado no momento desta avaliação.'
+    }
+
+    // Construir informações sobre prescrições de forma mais técnica
+    let prescriptionInfo = ''
+    if (patient.treatment.prescriptions.length > 0) {
+      const medications = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
+      
+      // Categorizar medicamentos
+      const analgesicos = medications.filter(m => m.includes('paracetamol') || m.includes('dipirona'))
+      const hidratacao = medications.filter(m => m.includes('soro') || m.includes('hidratação'))
+      const outros = medications.filter(m => !analgesicos.includes(m) && !hidratacao.includes(m))
+      
+      const treatments = []
+      
+      if (analgesicos.length > 0) {
+        treatments.push('terapia analgésica e antitérmica')
+      }
+      
+      if (hidratacao.length > 0) {
+        treatments.push('suporte hidroeletrolítico')
+      }
+      
+      if (outros.length > 0) {
+        treatments.push('terapia adjuvante específica')
+      }
+      
+      if (treatments.length > 0) {
+        prescriptionInfo = `Instituiu-se protocolo terapêutico baseado em ${treatments.join(', ')}, conforme diretrizes clínicas estabelecidas.`
+      }
+    }
+
+    // Observações de forma mais técnica
+    let observationsInfo = ''
+    const allObservations = []
+    
+    if (patient.generalObservations && patient.generalObservations.trim()) {
+      allObservations.push(patient.generalObservations)
+    }
+    
+    if (patient.treatment.observations.length > 0) {
+      allObservations.push(...patient.treatment.observations)
+    }
+    
+    if (allObservations.length > 0) {
+      observationsInfo = `Observações clínicas relevantes incluem: ${allObservations.join('. ')}.`
+    }
+
+    return {
+      introduction: `Trata-se de paciente do sexo ${gender}, ${patient.name}, com ${patient.age} anos de idade, ${isFemale ? 'portadora' : 'portador'} do registro hospitalar ${patient.medicalRecord}, que procurou atendimento médico nesta unidade assistencial em ${admissionDate}, às ${admissionTime}, para avaliação de quadro clínico sugestivo de síndrome febril aguda.`,
+      
+      complaints: symptomsText ? 
+        `À anamnese, ${isFemale ? 'a paciente relatou' : 'o paciente relatou'} ${symptomsText}${feverInfo ? `, apresentando ${feverInfo}` : ''}. A história clínica atual sugere processo infeccioso de etiologia viral, com características epidemiológicas compatíveis com arbovirose.` : 
+        `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à avaliação clínica sistemática para investigação de síndrome febril aguda.`,
+      
+      physicalExam: vitalSignsInfo ? 
+        `O exame físico geral revelou paciente em regular estado geral, ${isFemale ? 'consciente e orientada' : 'consciente e orientado'}, com sinais vitais ${vitalSignsInfo}. O exame segmentar não evidenciou alterações significativas nos demais aparelhos e sistemas.` : 
+        `Ao exame físico, ${isFemale ? 'a paciente apresentava-se' : 'o paciente apresentava-se'} em bom estado geral, com exame segmentar dentro dos parâmetros de normalidade.`,
+      
+      laboratoryResults: labInfo,
+      
+      classification: groupInfo ? 
+        `Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.` : 
+        `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional.`,
+      
+      treatment: groupInfo ? 
+        `O plano terapêutico instituído contempla ${groupInfo.treatment}, seguindo rigorosamente as diretrizes clínicas preconizadas. Esta abordagem visa otimizar o prognóstico e minimizar o risco de complicações.` : 
+        'Foi estabelecido plano terapêutico individualizado conforme necessidades clínicas identificadas.',
+      
+      prescriptions: prescriptionInfo,
+      
+      observations: observationsInfo,
+      
+      followUp: patient.treatment.nextEvaluation ? 
+        `Programou-se reavaliação clínica para ${formatDateOnly(patient.treatment.nextEvaluation)}, com orientações específicas para retorno imediato em caso de surgimento de sinais de alarme ou deterioração do quadro clínico.` : 
+        `${isFemale ? 'A paciente foi orientada' : 'O paciente foi orientado'} quanto aos sinais de alarme e critérios para retorno, estabelecendo-se seguimento ambulatorial conforme evolução clínica e protocolo assistencial vigente.`,
+      
+      conclusion: `O atendimento prestado seguiu integralmente os protocolos clínicos estabelecidos pelo Ministério da Saúde, garantindo abordagem baseada em evidências científicas. ${isFemale ? 'A paciente' : 'O paciente'} e/ou responsáveis legais receberam orientações detalhadas sobre a patologia, sinais de alarme, medidas de suporte domiciliar e critérios para retorno ao serviço de saúde. A conduta adotada visa assegurar desfecho clínico favorável e prevenção de complicações, mantendo-se vigilância epidemiológica adequada conforme preconizado pelas autoridades sanitárias.`
+    }
   }
 
-  const groupInfo = getGroupInfo(patient.flowchartState.group)
+  const narrative = generateNarrativeReport()
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -158,16 +445,40 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                 <FileText className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Relatório Médico Completo</h2>
+                <h2 className="text-2xl font-bold">Relatório Médico Narrativo</h2>
                 <p className="text-blue-100">Sistema DiagnoMap Pro - Protocolo MS 2024</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <motion.button
+                onClick={copyReportText}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200 ${
+                  copied 
+                    ? 'bg-green-500/20 hover:bg-green-500/30 text-green-100' 
+                    : 'bg-white/20 backdrop-blur-sm hover:bg-white/30'
+                }`}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Copiar texto do relatório"
+              >
+                {copied ? (
+                  <>
+                    <ClipboardCheck className="w-5 h-5" />
+                    <span className="font-medium">Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Clipboard className="w-5 h-5" />
+                    <span className="font-medium">Copiar Texto</span>
+                  </>
+                )}
+              </motion.button>
+              <motion.button
                 onClick={generatePDF}
                 className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 py-2 rounded-xl transition-colors duration-200"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Baixar PDF do relatório"
               >
                 <Download className="w-5 h-5" />
                 <span className="font-medium">Baixar PDF</span>
@@ -177,6 +488,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                 className="p-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-colors duration-200"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
+                title="Fechar relatório"
               >
                 <X className="w-5 h-5" />
               </motion.button>
@@ -190,307 +502,67 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             
             {/* Report Header */}
             <div className="border-b-2 border-slate-200 pb-6 mb-8">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-4">
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center mb-4">
                   <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-slate-700 rounded-2xl flex items-center justify-center">
                     <Stethoscope className="w-8 h-8 text-white" />
                   </div>
-                  <div>
-                    <h1 className="text-3xl font-bold text-slate-800">DiagnoMap Pro</h1>
-                    <p className="text-slate-600">Sistema de Diagnóstico Clínico - Dengue</p>
-                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">Data do Relatório</p>
-                  <p className="text-lg font-bold text-slate-800">{formatDate(new Date())}</p>
-                </div>
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">RELATÓRIO MÉDICO</h1>
+                <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
+                <p className="text-sm text-slate-500">Protocolo de Diagnóstico Clínico - {patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}</p>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-50 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                    <User className="w-5 h-5 mr-2 text-blue-600" />
-                    Dados do Paciente
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Nome:</span>
-                      <span className="font-semibold text-slate-800">{patient.name}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Idade:</span>
-                      <span className="font-semibold text-slate-800">{patient.age} anos</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Prontuário:</span>
-                      <span className="font-semibold text-slate-800">{patient.medicalRecord}</span>
-                    </div>
-                    {patient.weight && (
-                      <div className="flex justify-between">
-                        <span className="text-slate-600">Peso:</span>
-                        <span className="font-semibold text-slate-800">{patient.weight} kg</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="bg-slate-50 rounded-xl p-6">
-                  <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
-                    <Calendar className="w-5 h-5 mr-2 text-blue-600" />
-                    Dados do Atendimento
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Data de Admissão:</span>
-                      <span className="font-semibold text-slate-800">{formatDate(patient.admission.date)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Status:</span>
-                      <span className="font-semibold text-slate-800">
-                        {patient.status === 'active' ? 'Em Atendimento' : 
-                         patient.status === 'discharged' ? 'Finalizado' : 
-                         patient.status === 'waiting_labs' ? 'Aguardando Exames' : 'Aguardando Avaliação'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-600">Progresso:</span>
-                      <span className="font-semibold text-slate-800">{Math.round(patient.flowchartState.progress)}%</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="text-right">
+                <p className="text-sm text-slate-600">Data do relatório: {formatDate(new Date())}</p>
+                <p className="text-sm text-slate-600">Número do protocolo: {patient.id}</p>
               </div>
             </div>
 
-            {/* Sintomas Relatados */}
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                <Activity className="w-6 h-6 mr-3 text-red-600" />
-                Sintomas Relatados
-              </h3>
-              <div className="bg-red-50 rounded-xl p-6 border border-red-200">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {patient.admission.symptoms.map((symptom, index) => (
-                    <div key={index} className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <span className="text-red-800 font-medium">{symptom}</span>
-                    </div>
-                  ))}
+            {/* Narrative Report - Formato Contínuo como Redação Médica */}
+            <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
+              <div className="prose prose-lg max-w-none">
+                <div className="space-y-6 text-slate-800">
+                  <p className="text-lg leading-10 text-justify indent-8 font-medium">
+                    {narrative.introduction}
+                  </p>
+                  
+                  <p className="text-lg leading-10 text-justify indent-8">
+                    {narrative.complaints}
+                    {narrative.observations && ` ${narrative.observations}`}
+                  </p>
+                  
+                  <p className="text-lg leading-10 text-justify indent-8">
+                    {narrative.physicalExam}
+                  </p>
+                  
+                  {narrative.laboratoryResults && (
+                    <p className="text-lg leading-10 text-justify indent-8">
+                      {narrative.laboratoryResults}
+                    </p>
+                  )}
+                  
+                  {narrative.classification && (
+                    <p className="text-lg leading-10 text-justify indent-8">
+                      {narrative.classification}
+                    </p>
+                  )}
+                  
+                  <p className="text-lg leading-10 text-justify indent-8">
+                    {narrative.treatment}
+                    {narrative.prescriptions && ` ${narrative.prescriptions}`}
+                  </p>
+                  
+                  <p className="text-lg leading-10 text-justify indent-8">
+                    {narrative.followUp}
+                  </p>
+                  
+                  <p className="text-lg leading-10 text-justify indent-8 font-medium">
+                    {narrative.conclusion}
+                  </p>
                 </div>
               </div>
             </div>
-
-            {/* Sinais Vitais */}
-            {patient.admission.vitalSigns && (
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                  <Thermometer className="w-6 h-6 mr-3 text-blue-600" />
-                  Sinais Vitais
-                </h3>
-                <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {patient.admission.vitalSigns.temperature && (
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                          <Thermometer className="w-6 h-6 text-white" />
-                        </div>
-                        <p className="text-sm text-slate-600">Temperatura</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.admission.vitalSigns.temperature}°C</p>
-                      </div>
-                    )}
-                    {patient.admission.vitalSigns.bloodPressure && (
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                          <Activity className="w-6 h-6 text-white" />
-                        </div>
-                        <p className="text-sm text-slate-600">Pressão Arterial</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.admission.vitalSigns.bloodPressure}</p>
-                      </div>
-                    )}
-                    {patient.admission.vitalSigns.heartRate && (
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                          <Heart className="w-6 h-6 text-white" />
-                        </div>
-                        <p className="text-sm text-slate-600">Frequência Cardíaca</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.admission.vitalSigns.heartRate} bpm</p>
-                      </div>
-                    )}
-                    {patient.admission.vitalSigns.respiratoryRate && (
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center mx-auto mb-2">
-                          <Droplets className="w-6 h-6 text-white" />
-                        </div>
-                        <p className="text-sm text-slate-600">Freq. Respiratória</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.admission.vitalSigns.respiratoryRate} rpm</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Classificação de Risco */}
-            {groupInfo && (
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                  <Award className="w-6 h-6 mr-3 text-amber-600" />
-                  Classificação de Risco
-                </h3>
-                <div className={`${groupInfo.bg} rounded-xl p-6 border-l-4 border-${groupInfo.color.replace('text-', '')}`}>
-                  <div className="flex items-start space-x-4">
-                    <div className={`w-12 h-12 ${groupInfo.color.replace('text-', 'bg-')} rounded-xl flex items-center justify-center text-white`}>
-                      {groupInfo.icon}
-                    </div>
-                    <div>
-                      <h4 className={`text-xl font-bold ${groupInfo.color} mb-2`}>{groupInfo.name}</h4>
-                      <p className="text-slate-700 leading-relaxed">{groupInfo.description}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Histórico do Fluxograma */}
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                <Target className="w-6 h-6 mr-3 text-green-600" />
-                Histórico do Fluxograma
-              </h3>
-              <div className="bg-slate-50 rounded-xl p-6">
-                <div className="space-y-4">
-                  {patient.flowchartState.history.map((stepId, index) => (
-                    <div key={index} className="flex items-center space-x-4">
-                      <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-semibold text-slate-800">{getStepName(stepId)}</p>
-                        {patient.flowchartState.answers[stepId] && (
-                          <p className="text-sm text-slate-600">Resposta: {patient.flowchartState.answers[stepId]}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {/* Current Step */}
-                  <div className="flex items-center space-x-4">
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
-                      {patient.flowchartState.history.length + 1}
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-slate-800">{getStepName(patient.flowchartState.currentStep)}</p>
-                      <p className="text-sm text-blue-600">Em andamento</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Exames Laboratoriais */}
-            {patient.labResults && (
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                  <Brain className="w-6 h-6 mr-3 text-purple-600" />
-                  Exames Laboratoriais
-                </h3>
-                <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {patient.labResults.hemoglobin && (
-                      <div className="bg-white rounded-lg p-4 border border-purple-200">
-                        <p className="text-sm text-slate-600">Hemoglobina</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.labResults.hemoglobin} g/dL</p>
-                      </div>
-                    )}
-                    {patient.labResults.hematocrit && (
-                      <div className="bg-white rounded-lg p-4 border border-purple-200">
-                        <p className="text-sm text-slate-600">Hematócrito</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.labResults.hematocrit}%</p>
-                      </div>
-                    )}
-                    {patient.labResults.platelets && (
-                      <div className="bg-white rounded-lg p-4 border border-purple-200">
-                        <p className="text-sm text-slate-600">Plaquetas</p>
-                        <p className="text-lg font-bold text-slate-800">{patient.labResults.platelets.toLocaleString()}/mm³</p>
-                      </div>
-                    )}
-                  </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm text-slate-600">
-                        Status: {patient.labResults.status === 'completed' ? 'Concluído' : 
-                                patient.labResults.status === 'pending' ? 'Pendente' : 'Não solicitado'}
-                      </span>
-                    </div>
-                    {patient.labResults.resultDate && (
-                      <span className="text-sm text-slate-600">
-                        Resultado: {formatDate(patient.labResults.resultDate)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Prescrições */}
-            {patient.treatment.prescriptions.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                  <FileText className="w-6 h-6 mr-3 text-green-600" />
-                  Prescrições Médicas
-                </h3>
-                <div className="space-y-4">
-                  {patient.treatment.prescriptions.map((prescription, index) => (
-                    <div key={prescription.id} className="bg-green-50 rounded-xl p-6 border border-green-200">
-                      <div className="flex items-start justify-between mb-4">
-                        <h4 className="text-lg font-bold text-green-800">{prescription.medication}</h4>
-                        <span className="text-sm text-slate-600">#{index + 1}</span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-slate-600">Dosagem</p>
-                          <p className="font-semibold text-slate-800">{prescription.dosage}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600">Frequência</p>
-                          <p className="font-semibold text-slate-800">{prescription.frequency}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600">Duração</p>
-                          <p className="font-semibold text-slate-800">{prescription.duration}</p>
-                        </div>
-                      </div>
-                      <div className="bg-white rounded-lg p-4 border border-green-200">
-                        <p className="text-sm text-slate-600 mb-1">Instruções</p>
-                        <p className="text-slate-800">{prescription.instructions}</p>
-                      </div>
-                      <div className="mt-4 text-sm text-slate-600">
-                        Prescrito em: {formatDate(prescription.prescribedAt)} | Por: {prescription.prescribedBy}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Observações */}
-            {patient.treatment.observations.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center">
-                  <FileText className="w-6 h-6 mr-3 text-amber-600" />
-                  Observações Médicas
-                </h3>
-                <div className="bg-amber-50 rounded-xl p-6 border border-amber-200">
-                  <ul className="space-y-2">
-                    {patient.treatment.observations.map((observation, index) => (
-                      <li key={index} className="flex items-start space-x-3">
-                        <div className="w-2 h-2 bg-amber-500 rounded-full mt-2"></div>
-                        <span className="text-amber-800">{observation}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            )}
 
             {/* Footer do Relatório */}
             <div className="border-t-2 border-slate-200 pt-6 mt-8">
@@ -505,7 +577,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-slate-600">Gerado automaticamente pelo sistema</p>
+                  <p className="text-sm text-slate-600">Relatório gerado automaticamente pelo sistema</p>
                   <p className="text-xs text-slate-500">{formatDate(new Date())}</p>
                 </div>
               </div>

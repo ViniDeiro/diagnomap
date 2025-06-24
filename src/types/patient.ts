@@ -1,15 +1,20 @@
 export interface Patient {
   id: string
   name: string
+  birthDate: Date
   age: number
+  gender: 'masculino' | 'feminino'
   weight?: number
   medicalRecord: string
+  selectedFlowchart: 'dengue' | 'zika' | 'chikungunya'
+  generalObservations?: string
   admission: {
     date: Date
     time: string
     symptoms: string[]
     vitalSigns?: {
       temperature?: number
+      feverDays?: number
       bloodPressure?: string
       heartRate?: number
       respiratoryRate?: number
@@ -61,12 +66,16 @@ export interface Prescription {
 
 export interface PatientFormData {
   name: string
-  age: number
+  birthDate: Date
+  gender: 'masculino' | 'feminino'
   weight?: number
   medicalRecord: string
+  selectedFlowchart: 'dengue' | 'zika' | 'chikungunya'
+  generalObservations?: string
   symptoms: string[]
   vitalSigns?: {
     temperature?: number
+    feverDays?: number
     bloodPressure?: string
     heartRate?: number
     respiratoryRate?: number

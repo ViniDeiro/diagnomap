@@ -18,7 +18,11 @@ import {
   Award,
   Brain,
   Target,
-  BarChart3
+  BarChart3,
+  Trash2,
+  AlertTriangle,
+  ChevronLeft,
+  MoreHorizontal
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
@@ -41,6 +45,9 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const patientsPerPage = 10
 
   useEffect(() => {
     loadPatients()
@@ -61,6 +68,11 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.medicalRecord.includes(searchTerm)
   )
+
+  // Reset página quando busca mudar
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm])
 
   const getStatusIcon = (status: Patient['status']) => {
     switch (status) {
@@ -112,6 +124,24 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
       year: 'numeric'
     })
   }
+
+  const handleDeletePatient = (patientId: string) => {
+    patientService.deletePatient(patientId)
+    setPatients(prev => prev.filter(p => p.id !== patientId))
+    setShowDeleteConfirm(null)
+    
+    // Ajustar página se necessário
+    const newTotalPages = Math.ceil((filteredPatients.length - 1) / patientsPerPage)
+    if (currentPage > newTotalPages && newTotalPages > 0) {
+      setCurrentPage(newTotalPages)
+    }
+  }
+
+  // Calcular paginação
+  const totalPages = Math.ceil(filteredPatients.length / patientsPerPage)
+  const startIndex = (currentPage - 1) * patientsPerPage
+  const endIndex = startIndex + patientsPerPage
+  const currentPatients = filteredPatients.slice(startIndex, endIndex)
 
 
 
@@ -288,7 +318,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 )}
               </motion.div>
             ) : (
-              filteredPatients.map((patient, index) => (
+              currentPatients.map((patient, index) => (
                 <motion.div
                   key={patient.id}
                   initial={{ opacity: 0, y: 20, scale: 0.98 }}
@@ -377,6 +407,16 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                               <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 group-hover/btn:text-amber-700 mx-auto" />
                             </motion.button>
                           )}
+                          
+                          <motion.button
+                            onClick={() => setShowDeleteConfirm(patient.id)}
+                            className="relative p-3 sm:p-4 bg-gradient-to-br from-red-50 to-rose-50 hover:from-red-100 hover:to-rose-100 rounded-xl border border-red-200 hover:border-red-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            title="Excluir Prontuário"
+                          >
+                            <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 group-hover/btn:text-red-700 mx-auto" />
+                          </motion.button>
                         </div>
                         
                         <motion.button
@@ -408,7 +448,157 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
             )}
           </AnimatePresence>
         </div>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="mt-12 flex justify-center"
+          >
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6">
+              <div className="flex items-center space-x-4">
+                <motion.button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className={clsx(
+                    "p-3 rounded-xl transition-all duration-200 flex items-center justify-center",
+                    currentPage === 1
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-lg"
+                  )}
+                  whileHover={currentPage > 1 ? { scale: 1.05 } : {}}
+                  whileTap={currentPage > 1 ? { scale: 0.95 } : {}}
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </motion.button>
+
+                <div className="flex items-center space-x-2">
+                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                    let pageNumber: number
+                    
+                    if (totalPages <= 5) {
+                      pageNumber = i + 1
+                    } else if (currentPage <= 3) {
+                      pageNumber = i + 1
+                    } else if (currentPage >= totalPages - 2) {
+                      pageNumber = totalPages - 4 + i
+                    } else {
+                      pageNumber = currentPage - 2 + i
+                    }
+
+                    return (
+                      <motion.button
+                        key={pageNumber}
+                        onClick={() => setCurrentPage(pageNumber)}
+                        className={clsx(
+                          "w-12 h-12 rounded-xl font-semibold transition-all duration-200",
+                          currentPage === pageNumber
+                            ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white shadow-lg"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        )}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {pageNumber}
+                      </motion.button>
+                    )
+                  })}
+                  
+                  {totalPages > 5 && currentPage < totalPages - 2 && (
+                    <>
+                      <div className="px-2 text-slate-400">
+                        <MoreHorizontal className="w-5 h-5" />
+                      </div>
+                      <motion.button
+                        onClick={() => setCurrentPage(totalPages)}
+                        className="w-12 h-12 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all duration-200"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {totalPages}
+                      </motion.button>
+                    </>
+                  )}
+                </div>
+
+                <motion.button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className={clsx(
+                    "p-3 rounded-xl transition-all duration-200 flex items-center justify-center",
+                    currentPage === totalPages
+                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                      : "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-lg"
+                  )}
+                  whileHover={currentPage < totalPages ? { scale: 1.05 } : {}}
+                  whileTap={currentPage < totalPages ? { scale: 0.95 } : {}}
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </motion.button>
+              </div>
+              
+              <div className="mt-4 text-center text-sm text-slate-600">
+                Página {currentPage} de {totalPages} • {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
+
+      {/* Modal de Confirmação de Exclusão */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-8"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <AlertTriangle className="w-8 h-8 text-red-600" />
+                </div>
+                
+                <h3 className="text-2xl font-bold text-slate-800 mb-4">
+                  Confirmar Exclusão
+                </h3>
+                
+                <p className="text-slate-600 mb-8 leading-relaxed">
+                  Tem certeza que deseja excluir este prontuário? Esta ação não pode ser desfeita e todos os dados do paciente serão perdidos permanentemente.
+                </p>
+                
+                <div className="flex space-x-4">
+                  <motion.button
+                    onClick={() => setShowDeleteConfirm(null)}
+                    className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-200 transition-colors duration-200"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Cancelar
+                  </motion.button>
+                  
+                  <motion.button
+                    onClick={() => handleDeletePatient(showDeleteConfirm)}
+                    className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Excluir
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
