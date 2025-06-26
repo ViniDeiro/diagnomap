@@ -7,10 +7,11 @@ import PatientForm from '@/components/PatientForm'
 import PatientDashboard from '@/components/PatientDashboard'
 import PrescriptionViewer from '@/components/PrescriptionViewer'
 import ReportViewer from '@/components/ReportViewer'
+import MedicalPrescriptionViewer from '@/components/MedicalPrescriptionViewer'
 import { Patient, PatientFormData } from '@/types/patient'
 import { patientService } from '@/services/patientService'
 
-type AppState = 'loading' | 'dashboard' | 'new-patient' | 'flowchart' | 'prescriptions' | 'report'
+type AppState = 'loading' | 'dashboard' | 'new-patient' | 'flowchart' | 'prescriptions' | 'report' | 'medical-prescription'
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('loading')
@@ -58,6 +59,12 @@ export default function Home() {
     setAppState('report')
   }
 
+  const handleViewMedicalPrescription = (patient: Patient) => {
+    setPreviousState(appState) // Guardar o estado atual antes de mudar
+    setCurrentPatient(patient)
+    setAppState('medical-prescription')
+  }
+
   const handleFlowchartComplete = () => {
     setAppState('dashboard')
     setCurrentPatient(null)
@@ -98,6 +105,15 @@ export default function Home() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  const handleMedicalPrescriptionClose = () => {
+    // Voltar para o estado anterior (dashboard ou flowchart)
+    setAppState(previousState)
+    if (previousState === 'dashboard') {
+      setCurrentPatient(null)
+    }
+    setRefreshTrigger(prev => prev + 1)
+  }
+
   const renderContent = () => {
     switch (appState) {
       case 'loading':
@@ -111,6 +127,7 @@ export default function Home() {
             onSelectPatient={handleSelectPatient}
             onViewPrescriptions={handleViewPrescriptions}
             onViewReport={handleViewReport}
+            onViewMedicalPrescription={handleViewMedicalPrescription}
           />
         )
 
@@ -148,6 +165,14 @@ export default function Home() {
           <ReportViewer
             patient={currentPatient}
             onClose={handleReportClose}
+          />
+        ) : null
+
+      case 'medical-prescription':
+        return currentPatient ? (
+          <MedicalPrescriptionViewer
+            patient={currentPatient}
+            onClose={handleMedicalPrescriptionClose}
           />
         ) : null
 

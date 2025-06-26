@@ -18,11 +18,11 @@ import {
   Award,
   Brain,
   Target,
-  BarChart3,
   Trash2,
   AlertTriangle,
   ChevronLeft,
-  MoreHorizontal
+  MoreHorizontal,
+  Pill
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
@@ -33,13 +33,15 @@ interface PatientDashboardProps {
   onSelectPatient: (patient: Patient) => void
   onViewPrescriptions: (patient: Patient) => void
   onViewReport: (patient: Patient) => void
+  onViewMedicalPrescription: (patient: Patient) => void
 }
 
 const PatientDashboard: React.FC<PatientDashboardProps> = ({
   onNewPatient,
   onSelectPatient,
   onViewPrescriptions,
-  onViewReport
+  onViewReport,
+  onViewMedicalPrescription
 }) => {
   const [patients, setPatients] = useState<Patient[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -261,7 +263,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
             </div>
             <input
               type="text"
-              placeholder="Buscar paciente por nome ou prontuário..."
+              placeholder="Buscar paciente por nome ou ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-12 sm:pl-16 pr-4 sm:pr-8 py-4 sm:py-6 bg-transparent text-slate-800 placeholder-slate-500 text-base sm:text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-xl transition-all duration-200"
@@ -350,7 +352,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                                 {patient.name}
                               </h3>
                               <p className="text-sm sm:text-base text-slate-600 font-medium">
-                                Prontuário: {patient.medicalRecord}
+                                ID: {patient.medicalRecord}
                               </p>
                             </div>
                           </motion.div>
@@ -393,7 +395,17 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                             whileTap={{ scale: 0.95 }}
                             title="Gerar Relatório Completo"
                           >
-                            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 group-hover/btn:text-purple-700 mx-auto" />
+                            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 group-hover/btn:text-purple-700 mx-auto" />
+                          </motion.button>
+                          
+                          <motion.button
+                            onClick={() => onViewMedicalPrescription(patient)}
+                            className="relative p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl border border-green-200 hover:border-green-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            title="Gerar Receituário Médico"
+                          >
+                            <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 group-hover/btn:text-green-700 mx-auto" />
                           </motion.button>
                           
                           {patient.treatment.prescriptions.length > 0 && (
@@ -413,7 +425,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                             className="relative p-3 sm:p-4 bg-gradient-to-br from-red-50 to-rose-50 hover:from-red-100 hover:to-rose-100 rounded-xl border border-red-200 hover:border-red-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            title="Excluir Prontuário"
+                            title="Excluir Paciente"
                           >
                             <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 group-hover/btn:text-red-700 mx-auto" />
                           </motion.button>
@@ -572,7 +584,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 </h3>
                 
                 <p className="text-slate-600 mb-8 leading-relaxed">
-                  Tem certeza que deseja excluir este prontuário? Esta ação não pode ser desfeita e todos os dados do paciente serão perdidos permanentemente.
+                  Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita e todos os dados do paciente serão perdidos permanentemente.
                 </p>
                 
                 <div className="flex space-x-4">

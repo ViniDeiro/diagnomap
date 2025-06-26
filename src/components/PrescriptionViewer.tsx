@@ -193,6 +193,22 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
     return group ? labOrders[group] : []
   }
 
+  // Função para calcular hidratação oral baseada no peso
+  const calculateHydration = (weight?: number) => {
+    if (!weight) return null
+    
+    const totalDaily = Math.round(weight * 60) // mL/dia
+    const withSalts = Math.round(totalDaily / 3) // 1/3 com sais
+    const withLiquids = Math.round((totalDaily * 2) / 3) // 2/3 com líquidos caseiros
+    
+    return {
+      totalDaily,
+      withSalts,
+      withLiquids,
+      liters: (totalDaily / 1000).toFixed(1)
+    }
+  }
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
@@ -255,7 +271,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                   <p className="text-lg font-bold text-slate-800 mt-1">{patient.age} anos</p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                  <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider">Prontuário</p>
+                  <p className="text-sm text-slate-600 font-semibold uppercase tracking-wider">ID do Paciente</p>
                   <p className="text-lg font-bold text-slate-800 mt-1">{patient.medicalRecord}</p>
                 </div>
                 <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
@@ -307,17 +323,15 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 <span>Nova Prescrição</span>
               </motion.button>
 
-              {patient.treatment.prescriptions.length > 0 && (
-                <motion.button
-                  onClick={downloadPrescriptions}
-                  className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-3"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <Download className="w-5 h-5" />
-                  <span>Baixar Receita</span>
-                </motion.button>
-              )}
+              <motion.button
+                onClick={downloadPrescriptions}
+                className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-3"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <Download className="w-5 h-5" />
+                <span>Baixar Receituário</span>
+              </motion.button>
 
               {patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
                 <motion.button
@@ -430,78 +444,132 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
             </motion.div>
           )}
 
-          {/* Prescriptions List - For Download */}
-          {patient.treatment.prescriptions.length > 0 && (
-            <div className="p-8 border-b border-slate-200">
-              <div ref={prescriptionRef} className="bg-white p-8">
-                {/* Prescription Header */}
-                <div className="text-center mb-8 border-b-2 border-slate-200 pb-6">
-                  <h1 className="text-3xl font-bold text-slate-800 mb-2">PRESCRIÇÃO MÉDICA</h1>
-                  <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
-                  <p className="text-sm text-slate-500">Data: {formatDate(new Date())}</p>
+          {/* Medical Prescription - New Format */}
+          <div className="p-8 border-b border-slate-200">
+            <div ref={prescriptionRef} className="bg-white p-8 font-serif">
+              {/* Header */}
+              <div className="text-center mb-8 border-b-2 border-slate-800 pb-6">
+                <h1 className="text-4xl font-bold text-slate-800 mb-4">RECEITUÁRIO MÉDICO</h1>
+              </div>
+
+              {/* Patient Information */}
+              <div className="mb-8">
+                <div className="grid grid-cols-2 gap-8 text-lg">
+                  <div>
+                    <strong>Paciente:</strong> {patient.name}
+                  </div>
+                  <div>
+                    <strong>Idade:</strong> {patient.age} anos
+                  </div>
+                </div>
+                <div className="mt-4 text-lg">
+                  <strong>Data:</strong> {new Date().toLocaleDateString('pt-BR')}
+                </div>
+              </div>
+
+              {/* Diagnosis */}
+              <div className="mb-8">
+                <div className="text-lg">
+                  <strong>Diagnóstico:</strong> Dengue
+                </div>
+              </div>
+
+              {/* Orientations */}
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-slate-800 mb-6">Orientações:</h2>
+                
+                {/* 1. Hydration */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">1. Hidratação Oral</h3>
+                  {patient.weight && calculateHydration(patient.weight) ? (
+                    <div className="ml-6 space-y-3 text-lg leading-relaxed">
+                      <div>
+                        <strong>• Recomendação:</strong> 60 mL/kg/dia
+                      </div>
+                      <div>
+                        <strong>• Cálculo para um paciente de {patient.weight} kg:</strong>
+                      </div>
+                      <div className="ml-8 space-y-2">
+                        <div>§ {patient.weight} kg × 60 mL = {calculateHydration(patient.weight)!.totalDaily} mL/dia ({calculateHydration(patient.weight)!.liters} litros/dia)</div>
+                        <div>§ 1/3 com sais de reidratação oral → {calculateHydration(patient.weight)!.withSalts} mL/dia</div>
+                        <div>§ 2/3 com líquidos caseiros → {calculateHydration(patient.weight)!.withLiquids} mL/dia (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
+                        <div>§ Inicialmente, oferecer maior volume para evitar desidratação.</div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="ml-6 space-y-3 text-lg leading-relaxed">
+                      <div>
+                        <strong>• Recomendação:</strong> 60 mL/kg/dia
+                      </div>
+                      <div>
+                        <strong>• Orientação geral:</strong>
+                      </div>
+                      <div className="ml-8 space-y-2">
+                        <div>§ 1/3 com sais de reidratação oral</div>
+                        <div>§ 2/3 com líquidos caseiros (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
+                        <div>§ Inicialmente, oferecer maior volume para evitar desidratação.</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Patient Info */}
-                <div className="mb-8 p-6 bg-slate-50 rounded-lg">
-                  <h3 className="text-xl font-bold text-slate-800 mb-4">Dados do Paciente</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-slate-600">Nome:</p>
-                      <p className="text-lg font-semibold text-slate-800">{patient.name}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Idade:</p>
-                      <p className="text-lg font-semibold text-slate-800">{patient.age} anos</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Prontuário:</p>
-                      <p className="text-lg font-semibold text-slate-800">{patient.medicalRecord}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-600">Classificação:</p>
-                      <p className="text-lg font-semibold text-slate-800">Grupo {patient.flowchartState.group}</p>
-                    </div>
+                {/* 2. Immediate Return */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">2. Retorno Imediato na presença de sinais de alarme, incluindo:</h3>
+                  <div className="ml-6 space-y-2 text-lg leading-relaxed">
+                    <div>• Dor abdominal intensa e contínua</div>
+                    <div>• Vômitos persistentes</div>
+                    <div>• Sangramentos de mucosa ou outros sinais de hemorragia</div>
+                    <div>• Letargia ou irritabilidade</div>
+                    <div>• Hipotensão ou tontura</div>
+                    <div>• Diminuição repentina da diurese (urina reduzida)</div>
                   </div>
                 </div>
 
-                {/* Prescriptions */}
-                <div className="space-y-6">
-                  <h3 className="text-xl font-bold text-slate-800">Medicamentos Prescritos</h3>
-                  {patient.treatment.prescriptions.map((prescription, index) => (
-                    <div key={prescription.id} className="border border-slate-300 rounded-lg p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <h4 className="text-lg font-bold text-slate-800">{index + 1}. {prescription.medication}</h4>
-                      </div>
-                      <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-slate-600">Dosagem:</p>
-                          <p className="font-semibold text-slate-800">{prescription.dosage}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600">Frequência:</p>
-                          <p className="font-semibold text-slate-800">{prescription.frequency}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-slate-600">Duração:</p>
-                          <p className="font-semibold text-slate-800">{prescription.duration}</p>
-                        </div>
-                      </div>
-                      <div className="bg-slate-50 rounded-lg p-4">
-                        <p className="text-sm text-slate-600 mb-1">Instruções:</p>
-                        <p className="text-slate-800">{prescription.instructions}</p>
-                      </div>
-                    </div>
-                  ))}
+                {/* 3. Outpatient Follow-up */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">3. Seguimento Ambulatorial</h3>
+                  <div className="ml-6 space-y-2 text-lg leading-relaxed">
+                    <div>• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.</div>
+                    <div>• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.</div>
+                  </div>
                 </div>
+              </div>
 
-                {/* Footer */}
-                <div className="mt-12 pt-8 border-t-2 border-slate-200 text-center">
-                  <p className="text-sm text-slate-600">Prescrição gerada automaticamente pelo Sistema DiagnoMap Pro</p>
-                  <p className="text-xs text-slate-500 mt-2">Data de emissão: {formatDate(new Date())}</p>
+              {/* Additional Prescriptions */}
+              {patient.treatment.prescriptions.length > 0 && (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-bold text-slate-800 mb-6">Medicamentos Prescritos:</h2>
+                  <div className="space-y-4">
+                    {patient.treatment.prescriptions.map((prescription, index) => (
+                      <div key={prescription.id} className="border-l-4 border-slate-400 pl-6 text-lg">
+                        <div className="font-bold">{index + 1}. {prescription.medication}</div>
+                        <div className="ml-4 mt-2 space-y-1">
+                          <div>Dosagem: {prescription.dosage}</div>
+                          <div>Frequência: {prescription.frequency}</div>
+                          <div>Duração: {prescription.duration}</div>
+                          {prescription.instructions && (
+                            <div>Instruções: {prescription.instructions}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Doctor Signature */}
+              <div className="mt-16 pt-8 border-t border-slate-400">
+                <div className="text-lg">
+                  <strong>Assinatura do Médico:</strong>
+                </div>
+                <div className="mt-8 space-y-2 text-lg">
+                  <div>__________________________________________________</div>
+                  <div>Dr. Sistema DiagnoMap / CRM: XXXX.XXX</div>
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Lab Orders - For Download */}
           {patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
@@ -527,7 +595,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                       <p className="text-lg font-semibold text-slate-800">{patient.age} anos</p>
                     </div>
                     <div>
-                      <p className="text-sm text-slate-600">Prontuário:</p>
+                      <p className="text-sm text-slate-600">ID do Paciente:</p>
                       <p className="text-lg font-semibold text-slate-800">{patient.medicalRecord}</p>
                     </div>
                     <div>

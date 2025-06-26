@@ -81,12 +81,16 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const narrative = generateNarrativeReport()
       
       // Construir texto completo do relatório
+      const groupInfo = getGroupInfo(patient.flowchartState.group)
+      const classificationText = groupInfo ? `\nCLASSIFICAÇÃO: ${groupInfo.name}
+${groupInfo.description}\n` : ''
+      
       const fullText = `RELATÓRIO MÉDICO
 Sistema DiagnoMap Pro
 Protocolo de Diagnóstico Clínico - ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}
 
 Data do relatório: ${formatDate(new Date())}
-Número do protocolo: ${patient.id}
+Número do protocolo: ${patient.id}${classificationText}
 
 ${narrative.introduction}
 
@@ -394,7 +398,7 @@ ${formatDate(new Date())}`
     }
 
     return {
-      introduction: `Trata-se de paciente do sexo ${gender}, ${patient.name}, com ${patient.age} anos de idade, ${isFemale ? 'portadora' : 'portador'} do registro hospitalar ${patient.medicalRecord}, que procurou atendimento médico nesta unidade assistencial em ${admissionDate}, às ${admissionTime}, para avaliação de quadro clínico sugestivo de síndrome febril aguda.`,
+      introduction: `Paciente ${patient.name}, sexo ${gender}, ${patient.age} anos de idade, sendo realizado atendimento médico às ${admissionTime} do dia ${admissionDate}, para avaliação de quadro clínico sugestivo de síndrome febril aguda.`,
       
       complaints: symptomsText ? 
         `À anamnese, ${isFemale ? 'a paciente relatou' : 'o paciente relatou'} ${symptomsText}${feverInfo ? `, apresentando ${feverInfo}` : ''}. A história clínica atual sugere processo infeccioso de etiologia viral, com características epidemiológicas compatíveis com arbovirose.` : 
@@ -407,7 +411,30 @@ ${formatDate(new Date())}`
       laboratoryResults: labInfo,
       
       classification: groupInfo ? 
-        `Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.` : 
+        (() => {
+          // Recuperar fatores de risco específicos do localStorage
+          const savedRiskFactors = localStorage.getItem(`risk_factors_${patient.id}`)
+          let riskFactorsText = ''
+          
+          if (savedRiskFactors && groupInfo.name.includes('Grupo B')) {
+            try {
+              const riskFactors = JSON.parse(savedRiskFactors) as string[]
+              if (riskFactors.length > 0) {
+                if (riskFactors.length === 1) {
+                  riskFactorsText = ` Os fatores de risco identificados incluem: ${riskFactors[0].toLowerCase()}.`
+                } else if (riskFactors.length === 2) {
+                  riskFactorsText = ` Os fatores de risco identificados incluem: ${riskFactors[0].toLowerCase()} e ${riskFactors[1].toLowerCase()}.`
+                } else {
+                  riskFactorsText = ` Os fatores de risco identificados incluem: ${riskFactors.slice(0, -1).map(f => f.toLowerCase()).join(', ')} e ${riskFactors[riskFactors.length - 1].toLowerCase()}.`
+                }
+              }
+            } catch (error) {
+              console.warn('Erro ao recuperar fatores de risco:', error)
+            }
+          }
+          
+          return `Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.${riskFactorsText}`
+        })() : 
         `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional.`,
       
       treatment: groupInfo ? 
@@ -518,6 +545,27 @@ ${formatDate(new Date())}`
                 <p className="text-sm text-slate-600">Número do protocolo: {patient.id}</p>
               </div>
             </div>
+
+            {/* Classificação em Destaque */}
+            {patient.flowchartState.group && (
+              <div className="mb-8">
+                <div className={`${getGroupInfo(patient.flowchartState.group)?.bg} p-6 rounded-xl border-2 ${getGroupInfo(patient.flowchartState.group)?.color.replace('text-', 'border-')}`}>
+                  <div className="flex items-center space-x-4">
+                    <div className={`w-16 h-16 ${getGroupInfo(patient.flowchartState.group)?.color.replace('text-', 'bg-')} rounded-2xl flex items-center justify-center`}>
+                      <span className="text-white text-2xl font-bold">{patient.flowchartState.group}</span>
+                    </div>
+                    <div>
+                      <h3 className={`text-xl font-bold ${getGroupInfo(patient.flowchartState.group)?.color} mb-1`}>
+                        {getGroupInfo(patient.flowchartState.group)?.name}
+                      </h3>
+                      <p className={`text-sm ${getGroupInfo(patient.flowchartState.group)?.color.replace('600', '700')}`}>
+                        {getGroupInfo(patient.flowchartState.group)?.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Narrative Report - Formato Contínuo como Redação Médica */}
             <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">

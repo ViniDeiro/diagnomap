@@ -110,15 +110,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
             transition={{ delay: 1.3, duration: 1.5 }}
           />
           
-          <motion.p
-            className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.6, duration: 1 }}
-          >
-            Protocolo oficial do Ministério da Saúde para classificação 
-            de risco em pacientes com suspeita de dengue
-          </motion.p>
+
         </motion.div>
 
         {/* Loading card com estilo do site */}

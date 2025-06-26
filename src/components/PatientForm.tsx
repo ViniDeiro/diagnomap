@@ -30,14 +30,21 @@ interface PatientFormProps {
 }
 
 const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
+  // Função para gerar ID automático
+  const generatePatientId = (): string => {
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase()
+    const timestamp = Date.now().toString().slice(-3)
+    return `${random}${timestamp}`
+  }
+
   const [formData, setFormData] = useState<PatientFormData>({
     name: '',
-    birthDate: new Date(),
+    birthDate: new Date('2000-01-01'), // Data padrão ao invés de data atual
     gender: 'masculino',
     selectedFlowchart: 'dengue',
     generalObservations: '',
     weight: undefined,
-    medicalRecord: '',
+    medicalRecord: generatePatientId(),
     symptoms: [],
     vitalSigns: {
       temperature: undefined,
@@ -114,9 +121,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
       newErrors.gender = 'Sexo é obrigatório'
     }
 
-    if (!formData.medicalRecord.trim()) {
-      newErrors.medicalRecord = 'Prontuário é obrigatório'
-    }
+    // ID do paciente é gerado automaticamente, não precisa validar
 
     if (formData.symptoms.length === 0) {
       newErrors.symptoms = 'Selecione pelo menos um sintoma'
@@ -414,12 +419,10 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
                         value={formData.birthDate && !isNaN(formData.birthDate.getTime()) ? formData.birthDate.toISOString().split('T')[0] : ''}
                         onChange={(e) => {
                           if (e.target.value) {
-                            const newDate = new Date(e.target.value)
+                            const newDate = new Date(e.target.value + 'T00:00:00')
                             if (!isNaN(newDate.getTime())) {
                               setFormData(prev => ({ ...prev, birthDate: newDate }))
                             }
-                          } else {
-                            setFormData(prev => ({ ...prev, birthDate: new Date() }))
                           }
                         }}
                         className={clsx(
@@ -465,34 +468,25 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
                     </div>
                   </div>
 
-                  {/* Prontuário */}
+                  {/* ID do Paciente */}
                   <div className="lg:col-span-2">
                     <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
-                      Número do Prontuário *
+                      ID do Paciente *
                     </label>
                     <div className="relative">
                       <FileText className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                       <input
                         type="text"
                         value={formData.medicalRecord}
-                        onChange={(e) => setFormData(prev => ({ ...prev, medicalRecord: e.target.value }))}
-                        className={clsx(
-                          "w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium",
-                          errors.medicalRecord ? "border-red-400 bg-red-50" : ""
-                        )}
-                        placeholder="Ex: 2024001234"
+                        readOnly
+                        className="w-full pl-12 pr-6 py-4 bg-slate-100 border border-slate-300 rounded-xl text-slate-600 font-medium cursor-not-allowed"
+                        placeholder="ID gerado automaticamente"
                       />
                     </div>
-                    {errors.medicalRecord && (
-                      <motion.p
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-2 text-sm text-red-600 flex items-center bg-red-50 px-3 py-2 rounded-lg"
-                      >
-                        <AlertCircle className="w-4 h-4 mr-2" />
-                        {errors.medicalRecord}
-                      </motion.p>
-                    )}
+                    <p className="mt-2 text-sm text-slate-500 flex items-center">
+                      <Shield className="w-4 h-4 mr-2" />
+                      ID gerado automaticamente e não pode ser alterado
+                    </p>
                   </div>
                 </div>
 

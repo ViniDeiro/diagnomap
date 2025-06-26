@@ -304,47 +304,406 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       icon: <Activity className="w-6 h-6" />,
       color: 'bg-gradient-to-r from-orange-500 to-red-500',
       content: (
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 p-6 rounded-2xl border border-orange-200/50">
-          <h4 className="font-bold text-orange-800 mb-4 flex items-center">
-            <Shield className="w-5 h-5 mr-2" />
-            Condições Clínicas Especiais e/ou Risco Social ou Comorbidades:
-          </h4>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700 text-sm font-medium">Lactentes (&lt; 24 meses)</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700 text-sm font-medium">Gestantes</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700 text-sm font-medium">Adultos &gt; 65 anos</span>
+        <div className="space-y-6">
+          {/* Sangramento */}
+          <div className="bg-gradient-to-r from-red-50 to-pink-50 p-6 rounded-2xl border border-red-200">
+            <h4 className="font-bold text-red-800 mb-4 flex items-center">
+              <Droplets className="w-5 h-5 mr-2" />
+              Sangramento Espontâneo ou Induzido
+            </h4>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  id="sangramento_espontaneo"
+                  className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                  onChange={(e) => {
+                    const checkbox = e.target as HTMLInputElement
+                    if (checkbox.checked) {
+                      checkbox.setAttribute('data-checked', 'true')
+                    } else {
+                      checkbox.removeAttribute('data-checked')
+                    }
+                  }}
+                />
+                <span className="text-red-700 font-medium">Sangramento espontâneo da pele</span>
+              </label>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="prova_laco"
+                    className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-red-700 font-medium">Prova do laço positiva</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Criar e mostrar modal
+                    const modal = document.createElement('div')
+                    modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
+                    modal.innerHTML = `
+                      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                        <div class="bg-gradient-to-r from-red-600 to-pink-600 text-white p-6">
+                          <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                              <div class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                              </div>
+                              <div>
+                                <h2 class="text-xl font-bold">Como Realizar a Prova do Laço</h2>
+                                <p class="text-red-100 text-sm">Procedimento técnico padronizado</p>
+                              </div>
+                            </div>
+                            <button 
+                              onclick="this.closest('.fixed').remove()"
+                              class="p-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-colors duration-200"
+                            >
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                              </svg>
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div class="p-6 space-y-6">
+                          <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                            <h3 class="font-bold text-blue-800 mb-3 flex items-center">
+                              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                              </svg>
+                              Procedimento Passo a Passo
+                            </h3>
+                            <div class="space-y-3 text-blue-700">
+                              <div class="flex items-start space-x-3">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">1</div>
+                                <p><strong>Verificar a PA:</strong> Medir pressão arterial com paciente deitado ou sentado</p>
+                              </div>
+                              <div class="flex items-start space-x-3">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
+                                <p><strong>Calcular valor médio:</strong> (PA sistólica + PA diastólica) ÷ 2</p>
+                              </div>
+                              <div class="flex items-start space-x-3">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">3</div>
+                                <p><strong>Insuflar manguito:</strong> Até o valor médio calculado</p>
+                              </div>
+                              <div class="flex items-start space-x-3">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">4</div>
+                                <p><strong>Manter pressão:</strong> 5 minutos (adultos) ou 3 minutos (crianças)</p>
+                              </div>
+                              <div class="flex items-start space-x-3">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">5</div>
+                                <p><strong>Desenhar quadrado:</strong> 2,5 cm no antebraço (ou área ao redor da falange distal do polegar)</p>
+                              </div>
+                              <div class="flex items-start space-x-3">
+                                <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">6</div>
+                                <p><strong>Contar petéquias:</strong> Número de micro petéquias no quadrado desenhado</p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div class="grid md:grid-cols-2 gap-4">
+                            <div class="bg-green-50 p-4 rounded-xl border border-green-200">
+                              <h4 class="font-bold text-green-800 mb-2 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Resultado Positivo
+                              </h4>
+                              <div class="space-y-1 text-green-700 text-sm">
+                                <p>• <strong>Adultos:</strong> ≥ 20 petéquias</p>
+                                <p>• <strong>Crianças:</strong> ≥ 10 petéquias</p>
+                              </div>
+                            </div>
+                            
+                            <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                              <h4 class="font-bold text-amber-800 mb-2 flex items-center">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                                </svg>
+                                Observação
+                              </h4>
+                              <p class="text-amber-700 text-sm">Interromper se aparecerem micro petéquias ou equimoses antes do tempo</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div class="border-t border-slate-200 p-4">
+                          <button 
+                            onclick="this.closest('.fixed').remove()"
+                            class="w-full bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200"
+                          >
+                            Entendi - Fechar
+                          </button>
+                        </div>
+                      </div>
+                    `
+                    document.body.appendChild(modal)
+                  }}
+                  className="ml-2 p-1.5 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                  title="Como realizar a prova do laço"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </button>
               </div>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700 text-sm font-medium">Hipertensão arterial</span>
+          </div>
+
+          {/* Condições Clínicas */}
+          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 p-6 rounded-2xl border border-orange-200">
+            <h4 className="font-bold text-orange-800 mb-4 flex items-center">
+              <Shield className="w-5 h-5 mr-2" />
+              Condições Clínicas Especiais e/ou Risco Social ou Comorbidades
+            </h4>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="lactentes"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Lactentes (&lt; 24 meses)</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="gestantes"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Gestantes</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="idosos"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Adultos &gt; 65 anos</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="hipertensao"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Hipertensão arterial</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="diabetes"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Diabetes mellitus</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="asma"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Asma brônquica</span>
+                </label>
               </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700 text-sm font-medium">Diabetes mellitus</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                <span className="text-orange-700 text-sm font-medium">Asma brônquica</span>
+              <div className="space-y-3">
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="dpoc"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">DPOC</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="obesidade"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Obesidade</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="hematologicas"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Doenças hematológicas</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="renal"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Doença renal crônica</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="hepatopatias"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Hepatopatias</span>
+                </label>
+                <label className="flex items-center space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="autoimunes"
+                    className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
+                    onChange={(e) => {
+                      const checkbox = e.target as HTMLInputElement
+                      if (checkbox.checked) {
+                        checkbox.setAttribute('data-checked', 'true')
+                      } else {
+                        checkbox.removeAttribute('data-checked')
+                      }
+                    }}
+                  />
+                  <span className="text-orange-700 font-medium">Doenças autoimunes</span>
+                </label>
               </div>
             </div>
+          </div>
+
+          {/* Instruções */}
+          <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+            <p className="text-blue-800 text-sm font-medium flex items-center">
+              <Brain className="w-4 h-4 mr-2" />
+              Marque todas as condições que se aplicam ao paciente e clique em "Avaliar Classificação"
+            </p>
           </div>
         </div>
       ),
       options: [
-        { text: 'NÃO - Sem fatores de risco', nextStep: 'group_a', value: 'no' },
-        { text: 'SIM - Presença de fatores de risco', nextStep: 'group_b', value: 'yes' }
+        { text: 'Avaliar Classificação', nextStep: 'auto_classify_risk', value: 'evaluate' }
       ]
+    },
+
+    auto_classify_risk: {
+      id: 'auto_classify_risk',
+      title: 'Processando Classificação...',
+      description: 'Analisando fatores de risco identificados',
+      type: 'action',
+      icon: <Brain className="w-6 h-6" />,
+      color: 'bg-gradient-to-r from-blue-500 to-purple-500',
+      content: (
+        <div className="text-center space-y-6">
+          <div className="relative">
+            <div className="w-20 h-20 mx-auto">
+              <div className="absolute inset-0 border-4 border-blue-200 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-slate-800 mb-2">Processando Dados Clínicos</h3>
+            <p className="text-slate-600">Analisando fatores de risco para determinar classificação...</p>
+          </div>
+        </div>
+      ),
+      options: [] // Será determinado automaticamente
     },
 
     // GRUPO A
@@ -400,114 +759,85 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       icon: <Droplets className="w-6 h-6" />,
       color: 'bg-blue-500',
       content: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           {/* Cálculo automático baseado no peso */}
           {(() => {
             const peso = patient.weight || (patient.age >= 18 ? 70 : patient.age * 2 + 10) // Peso estimado se não informado
             let volumeTotal = 0
             let volumeSRO = 0
             let volumeLiquidos = 0
-            let faixaEtaria = ''
 
             if (patient.age >= 18) {
               // Adultos: 60ml/kg/dia
               volumeTotal = peso * 60
               volumeSRO = Math.round(volumeTotal / 3) // 1/3 SRO
               volumeLiquidos = volumeTotal - volumeSRO // 2/3 líquidos caseiros
-              faixaEtaria = 'Adulto'
             } else {
               // Crianças
               if (peso <= 10) {
                 volumeTotal = peso * 100 // 100ml/kg/dia
-                faixaEtaria = 'Criança até 10kg'
               } else if (peso <= 20) {
                 volumeTotal = peso * 150 // 150ml/kg/dia
-                faixaEtaria = 'Criança 10-20kg'
               } else {
                 volumeTotal = peso * 80 // 80ml/kg/dia
-                faixaEtaria = 'Criança acima de 20kg'
               }
               volumeSRO = Math.round(volumeTotal / 3)
               volumeLiquidos = volumeTotal - volumeSRO
             }
 
             return (
-              <div className="space-y-4">
-                {/* Dados do paciente */}
-                <div className="bg-gradient-to-r from-blue-100 to-cyan-100 p-4 rounded-xl border border-blue-300">
-                  <div className="flex items-center space-x-3 mb-3">
-                    <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-bold text-sm">📊</span>
+              <div className="space-y-6">
+                {/* Volume total - destaque principal */}
+                <div className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white p-6 rounded-2xl text-center">
+                  <h3 className="text-2xl font-bold mb-2">Volume Total Diário</h3>
+                  <p className="text-4xl font-bold mb-2">{(volumeTotal / 1000).toFixed(1)} L</p>
+                  <p className="text-lg opacity-90">{volumeTotal.toLocaleString('pt-BR')} ml para {peso}kg</p>
+                </div>
+
+                {/* Distribuição simplificada */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-xl border border-blue-200 text-center">
+                    <div className="text-blue-600 mb-2">
+                      <Droplets className="w-6 h-6 mx-auto" />
                     </div>
-                    <h4 className="font-bold text-blue-900">Cálculo Personalizado</h4>
+                    <h4 className="font-bold text-blue-800 mb-1">Soro Oral</h4>
+                    <p className="text-xl font-bold text-blue-700">{(volumeSRO / 1000).toFixed(1)} L</p>
+                    <p className="text-xs text-blue-600 mt-1">1/3 do total</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-blue-700 font-medium">Paciente:</span>
-                      <span className="text-blue-900 ml-2">{faixaEtaria}</span>
+
+                  <div className="bg-cyan-50 p-4 rounded-xl border border-cyan-200 text-center">
+                    <div className="text-cyan-600 mb-2">
+                      <Heart className="w-6 h-6 mx-auto" />
                     </div>
-                    <div>
-                      <span className="text-blue-700 font-medium">Peso:</span>
-                      <span className="text-blue-900 ml-2">{peso}kg {!patient.weight && '(estimado)'}</span>
-                    </div>
+                    <h4 className="font-bold text-cyan-800 mb-1">Líquidos</h4>
+                    <p className="text-xl font-bold text-cyan-700">{(volumeLiquidos / 1000).toFixed(1)} L</p>
+                    <p className="text-xs text-cyan-600 mt-1">2/3 do total</p>
                   </div>
                 </div>
 
-                {/* Volume total calculado */}
-                <div className="bg-gradient-to-r from-green-50 to-green-100 p-6 rounded-xl border border-green-300">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center">
-                      <Droplets className="w-5 h-5 text-white" />
-                    </div>
-                    <h4 className="font-bold text-green-900 text-lg">Volume Total Diário</h4>
-                  </div>
-                  <div className="text-center">
-                    <p className="text-4xl font-bold text-green-800 mb-2">{volumeTotal.toLocaleString('pt-BR')} ml</p>
-                    <p className="text-green-700 font-medium">({peso}kg × {patient.age >= 18 ? '60' : peso <= 10 ? '100' : peso <= 20 ? '150' : '80'} ml/kg/dia)</p>
-                  </div>
-                </div>
-
-                {/* Distribuição da hidratação */}
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                    <h5 className="font-semibold text-blue-800 mb-3 flex items-center">
-                      <span className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs mr-2">1/3</span>
-                      Sais de Reidratação Oral (SRO)
-                    </h5>
-                    <p className="text-2xl font-bold text-blue-700 mb-1">{volumeSRO.toLocaleString('pt-BR')} ml</p>
-                    <p className="text-blue-600 text-sm">Dividir em pequenos volumes frequentes</p>
-                  </div>
-
-                  <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
-                    <h5 className="font-semibold text-cyan-800 mb-3 flex items-center">
-                      <span className="w-6 h-6 bg-cyan-600 rounded-full flex items-center justify-center text-white text-xs mr-2">2/3</span>
-                      Líquidos Caseiros
-                    </h5>
-                    <p className="text-2xl font-bold text-cyan-700 mb-1">{volumeLiquidos.toLocaleString('pt-BR')} ml</p>
-                    <p className="text-cyan-600 text-sm">Água, chás, água de coco, sucos naturais</p>
+                {/* Orientações essenciais */}
+                <div className="bg-green-50 p-4 rounded-xl border border-green-200">
+                  <h4 className="font-bold text-green-800 mb-3 flex items-center">
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Orientações Principais
+                  </h4>
+                  <div className="space-y-2 text-sm text-green-700">
+                    <p>• Oferecer volumes pequenos e frequentes</p>
+                    <p>• Líquidos: água, chás, água de coco, sucos naturais</p>
+                    <p>• Se vômitos: volumes menores, mais vezes</p>
                   </div>
                 </div>
 
-                {/* Orientações práticas */}
-                <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-300">
-                  <div className="flex items-center space-x-2 mb-3">
-                    <span className="text-yellow-600 text-lg">💡</span>
-                    <h5 className="font-semibold text-yellow-800">Orientações Práticas</h5>
+                {/* Sinais de alerta - simplificado */}
+                <div className="bg-red-50 p-4 rounded-xl border border-red-200">
+                  <h4 className="font-bold text-red-800 mb-3 flex items-center">
+                    <AlertTriangle className="w-5 h-5 mr-2" />
+                    Retorno ao Serviço
+                  </h4>
+                  <div className="space-y-2 text-sm text-red-700">
+                    <p><strong>Imediatamente se:</strong> Vômitos persistentes • Dor abdominal intensa • Sangramentos • Tontura</p>
+                    <p><strong>No 5° dia se:</strong> Não houver defervescência (queda da febre)</p>
                   </div>
-                  <div className="space-y-2 text-sm text-yellow-700">
-                    <p>• <strong>SRO:</strong> Oferecer {Math.round(volumeSRO / 8)} ml a cada hora (dividido em 8 tomadas)</p>
-                    <p>• <strong>Líquidos:</strong> {Math.round(volumeLiquidos / 12)} ml por hora (ao longo do dia)</p>
-                    <p>• <strong>Sinais de desidratação:</strong> Aumentar a oferta de líquidos</p>
-                    <p>• <strong>Vômitos:</strong> Oferecer em pequenos goles mais frequentes</p>
-                  </div>
-                </div>
-
-                <div className="bg-red-50 p-4 rounded-lg border border-red-300">
-                  <div className="flex items-center space-x-2 mb-2">
-                    <span className="text-red-600 text-lg">⚠️</span>
-                    <h5 className="font-semibold text-red-800">IMPORTANTE</h5>
-                  </div>
-                  <p className="text-red-700 text-sm">Retornar se sinais de alarme ou no dia da melhora da febre. Entregar cartão de acompanhamento.</p>
                 </div>
               </div>
             )
@@ -741,7 +1071,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <h4 className="font-semibold text-green-800 mb-2">Orientações finais:</h4>
             <ul className="text-green-700 text-sm space-y-1">
               <li>• Retornar se sinais de alarme</li>
-              <li>• Retornar no dia da melhora da febre</li>
+              <li>• Retornar se não houver defervescência</li>
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
@@ -1281,7 +1611,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <div className="mt-4 p-3 bg-blue-50 rounded-lg">
               <p className="text-xs text-blue-700">
                 💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
-                Os dados dos exames serão salvos automaticamente no prontuário do paciente.
+                Os dados dos exames serão salvos automaticamente no cadastro do paciente.
               </p>
             </div>
           </div>
@@ -1384,7 +1714,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <h4 className="font-semibold text-green-800 mb-2">Orientações:</h4>
             <ul className="text-green-700 text-sm space-y-1">
               <li>• Retornar se sinais de alarme</li>
-              <li>• Retornar no dia da melhora da febre</li>
+              <li>• Retornar se não houver defervescência</li>
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
@@ -1468,6 +1798,70 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       }
     }
     
+    // Lógica especial para classificação automática de fatores de risco
+    if (nextStep === 'auto_classify_risk') {
+      // Capturar dados dos checkboxes marcados
+      const riskFactors: string[] = []
+      const checkboxes = [
+        { id: 'sangramento_espontaneo', label: 'Sangramento espontâneo da pele' },
+        { id: 'prova_laco', label: 'Prova do laço positiva' },
+        { id: 'lactentes', label: 'Lactentes (< 24 meses)' },
+        { id: 'gestantes', label: 'Gestantes' },
+        { id: 'idosos', label: 'Adultos > 65 anos' },
+        { id: 'hipertensao', label: 'Hipertensão arterial' },
+        { id: 'diabetes', label: 'Diabetes mellitus' },
+        { id: 'asma', label: 'Asma brônquica' },
+        { id: 'dpoc', label: 'DPOC' },
+        { id: 'obesidade', label: 'Obesidade' },
+        { id: 'hematologicas', label: 'Doenças hematológicas' },
+        { id: 'renal', label: 'Doença renal crônica' },
+        { id: 'hepatopatias', label: 'Hepatopatias' },
+        { id: 'autoimunes', label: 'Doenças autoimunes' }
+      ]
+      
+      // Capturar fatores de risco marcados
+      checkboxes.forEach(checkbox => {
+        const element = document.getElementById(checkbox.id) as HTMLInputElement
+        if (element && element.checked) {
+          riskFactors.push(checkbox.label)
+        }
+      })
+      
+      // Determinar classificação
+      let finalStep = 'group_a' // Padrão: sem fatores de risco
+      let group: 'A' | 'B' | 'C' | 'D' | undefined = 'A'
+      
+      if (riskFactors.length > 0) {
+        finalStep = 'group_b'
+        group = 'B'
+        // Salvar fatores de risco para usar no relatório
+        localStorage.setItem(`risk_factors_${patient.id}`, JSON.stringify(riskFactors))
+      } else {
+        // Limpar fatores de risco se não houver nenhum
+        localStorage.removeItem(`risk_factors_${patient.id}`)
+      }
+      
+      // Usar setTimeout para simular processamento
+      setTimeout(() => {
+        setHistory([...newHistory, currentStep])
+        setCurrentStep(finalStep)
+        
+        const finalProgress = calculateProgress(finalStep, [...newHistory, currentStep])
+        setProgress(finalProgress)
+        
+        try {
+          onUpdate(patient.id, finalStep, [...newHistory, currentStep], newAnswers, finalProgress, group)
+        } catch (error) {
+          console.error('Erro ao atualizar estado do paciente:', error)
+        }
+        
+        setIsTransitioning(false)
+      }, 1500) // 1.5 segundos para mostrar o processamento
+      
+      // Não continuar com o fluxo normal
+      return
+    }
+
     // Lógica especial para classificação automática
     if (nextStep === 'auto_classify_alarm') {
       // Analisar os sinais selecionados
