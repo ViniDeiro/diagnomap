@@ -1,7 +1,7 @@
 import { Patient, PatientFormData, Prescription, DashboardStats } from '@/types/patient'
 
 class PatientService {
-  private storageKey = 'diagnomap_patients'
+  private storageKey = 'siga_o_fluxo_patients'
 
   // Calcular idade a partir da data de nascimento
   private calculateAge(birthDate: Date): number {
@@ -215,7 +215,7 @@ class PatientService {
       frequency: '6/6 horas',
       duration: 'Conforme necessário',
       instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
-      prescribedBy: 'Sistema DiagnoMap'
+      prescribedBy: 'Sistema Siga o Fluxo'
     })
 
     // Hidratação oral para grupos A e B
@@ -226,7 +226,7 @@ class PatientService {
         frequency: 'A cada vômito/evacuação',
         duration: 'Até melhora dos sintomas',
         instructions: 'Oferecer em pequenos volumes e frequentemente. Se não tolerar via oral, retornar ao serviço.',
-        prescribedBy: 'Sistema DiagnoMap'
+        prescribedBy: 'Sistema Siga o Fluxo'
       })
     }
 
@@ -238,7 +238,7 @@ class PatientService {
         frequency: 'EV contínuo',
         duration: 'Conforme evolução',
         instructions: 'Controlar balanço hídrico rigorosamente. Reavaliar a cada 2-4 horas.',
-        prescribedBy: 'Sistema DiagnoMap'
+        prescribedBy: 'Sistema Siga o Fluxo'
       })
     }
 
@@ -344,4 +344,4 @@ class PatientService {
   }
 }
 
-export const patientService = new PatientService() 
+export const patientService = new PatientService()

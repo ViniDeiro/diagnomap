@@ -12,7 +12,7 @@ interface LoadingScreenProps {
 }
 
 const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
-  message = "Inicializando DiagnoMap Pro..." 
+  message = "Inicializando Siga o Fluxo..." 
 }) => {
   
   return (
@@ -85,7 +85,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
               ease: "easeInOut"
             }}
           >
-            DiagnoMap Pro
+            Siga o Fluxo
           </motion.h1>
           
           {/* Subtítulo igual ao Header */}
@@ -188,4 +188,4 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   )
 }
 
-export default LoadingScreen 
+export default LoadingScreen

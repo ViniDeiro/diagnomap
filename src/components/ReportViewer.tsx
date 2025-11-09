@@ -86,7 +86,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 ${groupInfo.description}\n` : ''
       
       const fullText = `RELATÓRIO MÉDICO
-Sistema DiagnoMap Pro
+Sistema Siga o Fluxo
 Protocolo de Diagnóstico Clínico - ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}
 
 Data do relatório: ${formatDate(new Date())}
@@ -109,7 +109,7 @@ ${narrative.followUp}
 ${narrative.conclusion}
 
 ---
-Relatório gerado automaticamente pelo Sistema DiagnoMap Pro
+Relatório gerado automaticamente pelo Sistema Siga o Fluxo
 ${formatDate(new Date())}`
 
       await navigator.clipboard.writeText(fullText)
@@ -473,7 +473,7 @@ ${formatDate(new Date())}`
               </div>
               <div>
                 <h2 className="text-2xl font-bold">Relatório Médico Narrativo</h2>
-                <p className="text-blue-100">Sistema DiagnoMap Pro - Protocolo MS 2024</p>
+                <p className="text-blue-100">Sistema Siga o Fluxo - Protocolo MS 2024</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -536,7 +536,7 @@ ${formatDate(new Date())}`
                   </div>
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">RELATÓRIO MÉDICO</h1>
-                <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
+                <p className="text-lg text-slate-600">Sistema Siga o Fluxo</p>
                 <p className="text-sm text-slate-500">Protocolo de Diagnóstico Clínico - {patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}</p>
               </div>
               
@@ -620,7 +620,7 @@ ${formatDate(new Date())}`
                     <Zap className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800">DiagnoMap Pro</p>
+                    <p className="font-bold text-slate-800">Siga o Fluxo</p>
                     <p className="text-sm text-slate-600">Protocolo Oficial - Ministério da Saúde 2024</p>
                   </div>
                 </div>
@@ -637,4 +637,4 @@ ${formatDate(new Date())}`
   )
 }
 
-export default ReportViewer 
+export default ReportViewer

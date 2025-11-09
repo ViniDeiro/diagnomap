@@ -25,7 +25,7 @@ const Footer: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                  DiagnoMap Pro
+                  Siga o Fluxo
                 </h3>
                 <p className="text-sm text-slate-400">Sistema Clínico</p>
               </div>
@@ -143,7 +143,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col lg:flex-row justify-between items-center space-y-6 lg:space-y-0">
           <div className="text-center lg:text-left">
             <p className="text-slate-300 font-medium">
-              &copy; 2024 DiagnoMap Pro. Sistema de Diagnóstico Clínico.
+              &copy; 2024 Siga o Fluxo. Sistema de Diagnóstico Clínico.
             </p>
             <p className="text-slate-500 text-sm mt-1">
               Desenvolvido para excelência em cuidados médicos.
@@ -184,4 +184,4 @@ const Footer: React.FC = () => {
   )
 }
 
-export default Footer 
+export default Footer

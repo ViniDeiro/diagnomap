@@ -25,7 +25,7 @@ const Header: React.FC = () => {
             
             <div>
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
-                DiagnoMap Pro
+                Siga o Fluxo
               </h1>
               <div className="flex items-center space-x-2 mt-1">
                 <Brain className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
@@ -120,4 +120,4 @@ const Header: React.FC = () => {
   )
 }
 
-export default Header 
+export default Header

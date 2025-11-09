@@ -18,18 +18,19 @@ import {
   Shield,
   MessageSquare,
   Clock,
-  FlaskConical,
   Users
 } from 'lucide-react'
 import { PatientFormData } from '@/types/patient'
 import { clsx } from 'clsx'
+import EmergencySelector from './EmergencySelector'
 
 interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
   onCancel: () => void
+  onEmergencySelector: () => void
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
+const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -58,11 +59,15 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentStep, setCurrentStep] = useState(1)
 
-  const flowchartOptions = [
-    { value: 'dengue', label: 'Dengue', color: 'from-red-500 to-orange-500', icon: <Thermometer className="w-8 h-8" /> },
-    { value: 'zika', label: 'Zika', color: 'from-yellow-500 to-amber-500', icon: <FlaskConical className="w-8 h-8" /> },
-    { value: 'chikungunya', label: 'Chikungunya', color: 'from-purple-500 to-pink-500', icon: <Activity className="w-8 h-8" /> }
-  ]
+  // Seleção de fluxograma é feita via EmergencySelector
+
+  const emergencyOption = {
+    value: 'emergency',
+    label: 'Emergência',
+    color: 'from-red-600 to-red-700',
+    icon: <Shield className="w-8 h-8" />,
+    description: 'Protocolos de emergência e urgência médica'
+  }
 
   const dengueSymptoms = [
     'Febre',
@@ -268,33 +273,13 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
                   </div>
                 </div>
 
-                <div className="grid md:grid-cols-3 gap-6">
-                  {flowchartOptions.map((option) => (
-                    <motion.button
-                      key={option.value}
-                      type="button"
-                      onClick={() => setFormData(prev => ({ ...prev, selectedFlowchart: option.value as 'dengue' | 'zika' | 'chikungunya' }))}
-                      className={clsx(
-                        "p-6 rounded-2xl border-2 transition-all duration-300 text-center",
-                        formData.selectedFlowchart === option.value
-                          ? "border-blue-500 bg-gradient-to-br from-blue-50 to-slate-50 shadow-lg"
-                          : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100"
-                      )}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <div className={clsx(
-                        "w-16 h-16 mx-auto mb-4 rounded-xl flex items-center justify-center text-white shadow-lg",
-                        `bg-gradient-to-r ${option.color}`
-                      )}>
-                        {option.icon}
-                      </div>
-                      <h3 className="text-xl font-bold text-slate-800 mb-2">{option.label}</h3>
-                      <p className="text-sm text-slate-600">
-                        Protocolo de atendimento para {option.label.toLowerCase()}
-                      </p>
-                    </motion.button>
-                  ))}
+                <div className="space-y-6">
+                  <EmergencySelector
+                    selectedFlowchart={formData.selectedFlowchart}
+                    onSelectFlowchart={(flowchart) =>
+                      setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id as "dengue" | "zika" | "chikungunya" }))
+                    }
+                  />
                 </div>
 
                 <div className="flex justify-end pt-6">
@@ -797,4 +782,4 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel }) => {
   )
 }
 
-export default PatientForm 
+export default PatientForm

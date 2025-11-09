@@ -187,7 +187,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                   transition={{ delay: 0.2, duration: 0.6 }}
                   className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent"
                 >
-                  DiagnoMap Pro
+                  Siga o Fluxo
                 </motion.h1>
                 
                 <motion.div
@@ -231,22 +231,24 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
               </div>
             </div>
             
-            <motion.button
-              onClick={onNewPatient}
-              className="group relative bg-gradient-to-r from-blue-600 to-slate-700 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center space-x-2 sm:space-x-3 font-semibold text-sm sm:text-base lg:text-lg overflow-hidden w-full xl:w-auto justify-center"
-              whileHover={{ scale: 1.02, y: -1 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-slate-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              
-              <div className="relative flex items-center space-x-2 sm:space-x-3">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+            <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
+              <motion.button
+                onClick={onNewPatient}
+                className="group relative bg-gradient-to-r from-blue-600 to-slate-700 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center space-x-2 sm:space-x-3 font-semibold text-sm sm:text-base lg:text-lg overflow-hidden justify-center"
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-slate-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                
+                <div className="relative flex items-center space-x-2 sm:space-x-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                  <span>Novo Atendimento</span>
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <span>Novo Atendimento</span>
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
-              </div>
-            </motion.button>
+              </motion.button>
+            </div>
           </div>
         </motion.div>
 
@@ -615,4 +617,4 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   )
 }
 
-export default PatientDashboard 
+export default PatientDashboard

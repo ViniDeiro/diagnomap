@@ -13,12 +13,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DiagnoMap Pro - Sistema de Diagnóstico Clínico",
+  title: "Siga o Fluxo - Sistema de Diagnóstico Clínico",
   description: "Sistema inteligente para classificação de risco em pacientes com suspeita de dengue - Protocolo MS 2024",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "DiagnoMap Pro"
+    title: "Siga o Fluxo"
   }
 }
 

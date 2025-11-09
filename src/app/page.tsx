@@ -3,19 +3,25 @@
 import React, { useState, useEffect } from 'react'
 import LoadingScreen from '@/components/LoadingScreen'
 import DengueFlowchartComplete from '@/components/DengueFlowchartComplete'
+import EmergencyFlowchart from '@/components/EmergencyFlowchart'
+import EmergencySelector from '@/components/EmergencySelector'
 import PatientForm from '@/components/PatientForm'
 import PatientDashboard from '@/components/PatientDashboard'
 import PrescriptionViewer from '@/components/PrescriptionViewer'
 import ReportViewer from '@/components/ReportViewer'
 import MedicalPrescriptionViewer from '@/components/MedicalPrescriptionViewer'
 import { Patient, PatientFormData } from '@/types/patient'
+import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
+import { getFlowchartById } from '@/data/emergencyFlowcharts'
 
-type AppState = 'loading' | 'dashboard' | 'new-patient' | 'flowchart' | 'prescriptions' | 'report' | 'medical-prescription'
+type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription'
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('loading')
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
+  const [currentEmergencyPatient, setCurrentEmergencyPatient] = useState<EmergencyPatient | null>(null)
+  const [selectedFlowchart, setSelectedFlowchart] = useState<EmergencyFlowchartType | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [previousState, setPreviousState] = useState<AppState>('dashboard')
 
@@ -30,6 +36,60 @@ export default function Home() {
 
   const handleNewPatient = () => {
     setAppState('new-patient')
+  }
+
+  const handleEmergencySelector = () => {
+    setAppState('emergency-selector')
+  }
+
+  const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
+    setSelectedFlowchart(flowchart)
+    
+    // Criar paciente de emergência se não existir
+    if (!currentEmergencyPatient) {
+      const emergencyPatient: EmergencyPatient = {
+        id: `emergency-${Date.now()}`,
+        name: 'Paciente de Emergência',
+        birthDate: new Date(),
+        age: 0,
+        gender: 'masculino',
+        medicalRecord: `EM-${Date.now()}`,
+        selectedFlowchart: 'dengue', // Mantido para compatibilidade
+        admission: {
+          date: new Date(),
+          time: new Date().toLocaleTimeString(),
+          symptoms: []
+        },
+        flowchartState: {
+          currentStep: flowchart.initialStep,
+          history: [],
+          answers: {},
+          progress: 0,
+          lastUpdate: new Date()
+        },
+        labResults: {
+          status: 'not_requested'
+        },
+        treatment: {
+          prescriptions: [],
+          observations: []
+        },
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        emergencyType: flowchart.id,
+        emergencyState: {
+          currentStep: flowchart.initialStep,
+          history: [],
+          answers: {},
+          progress: 0,
+          lastUpdate: new Date()
+        }
+      } as EmergencyPatient
+      setCurrentEmergencyPatient(emergencyPatient)
+    }
+    
+    setAppState('emergency-flowchart')
   }
 
   const handlePatientFormSubmit = (formData: PatientFormData) => {
@@ -71,8 +131,33 @@ export default function Home() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  const handleEmergencyFlowchartComplete = () => {
+    setAppState('dashboard')
+    setCurrentEmergencyPatient(null)
+    setSelectedFlowchart(null)
+    setRefreshTrigger(prev => prev + 1)
+  }
+
   const handleFlowchartUpdate = (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, group?: 'A' | 'B' | 'C' | 'D') => {
     patientService.updateFlowchartState(patientId, currentStep, history, answers, progress, group)
+    setRefreshTrigger(prev => prev + 1)
+  }
+
+  const handleEmergencyFlowchartUpdate = (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => {
+    if (currentEmergencyPatient) {
+      const updatedPatient: EmergencyPatient = {
+        ...currentEmergencyPatient,
+        emergencyState: {
+          currentStep,
+          history,
+          answers,
+          progress,
+          riskGroup,
+          lastUpdate: new Date()
+        }
+      }
+      setCurrentEmergencyPatient(updatedPatient)
+    }
     setRefreshTrigger(prev => prev + 1)
   }
 
@@ -131,11 +216,20 @@ export default function Home() {
           />
         )
 
+      case 'emergency-selector':
+        return (
+          <EmergencySelector
+            onSelectFlowchart={handleSelectEmergencyFlowchart}
+            selectedFlowchart={selectedFlowchart?.id}
+          />
+        )
+
       case 'new-patient':
         return (
           <PatientForm
             onSubmit={handlePatientFormSubmit}
             onCancel={handlePatientFormCancel}
+            onEmergencySelector={handleEmergencySelector}
           />
         )
 
@@ -148,6 +242,16 @@ export default function Home() {
             onBack={() => setAppState('dashboard')}
             onViewPrescriptions={handleViewPrescriptions}
             onViewReport={handleViewReport}
+          />
+        ) : null
+
+      case 'emergency-flowchart':
+        return currentEmergencyPatient && selectedFlowchart ? (
+          <EmergencyFlowchart
+            patient={currentEmergencyPatient}
+            flowchart={selectedFlowchart}
+            onComplete={handleEmergencyFlowchartComplete}
+            onUpdate={handleEmergencyFlowchartUpdate}
           />
         ) : null
 

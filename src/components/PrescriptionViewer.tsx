@@ -48,7 +48,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
     if (newPrescription.medication && newPrescription.dosage) {
       patientService.addPrescription(patient.id, {
         ...newPrescription,
-        prescribedBy: 'Dr. Sistema DiagnoMap Pro'
+        prescribedBy: 'Dr. Sistema Siga o Fluxo'
       })
       
       setNewPrescription({
@@ -534,6 +534,25 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     <div>• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.</div>
                   </div>
                 </div>
+
+                {/* 4. Antipyretics */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">4. Antitérmicos Permitidos</h3>
+                  <div className="ml-6 space-y-2 text-lg leading-relaxed">
+                    <div>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</div>
+                    <div>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</div>
+                    <div>• Crianças: 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</div>
+                  </div>
+                </div>
+
+                {/* 5. Contraindications */}
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">5. Medicamentos Contraindicados</h3>
+                  <div className="ml-6 space-y-2 text-lg leading-relaxed">
+                    <div>• Aspirina (ácido acetilsalicílico) e salicilatos</div>
+                    <div>• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros</div>
+                  </div>
+                </div>
               </div>
 
               {/* Additional Prescriptions */}
@@ -565,7 +584,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 </div>
                 <div className="mt-8 space-y-2 text-lg">
                   <div>__________________________________________________</div>
-                  <div>Dr. Sistema DiagnoMap / CRM: XXXX.XXX</div>
+                  <div>Dr. Sistema Siga o Fluxo / CRM: XXXX.XXX</div>
                 </div>
               </div>
             </div>
@@ -578,7 +597,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 {/* Lab Order Header */}
                 <div className="text-center mb-8 border-b-2 border-slate-200 pb-6">
                   <h1 className="text-3xl font-bold text-slate-800 mb-2">SOLICITAÇÃO DE EXAMES</h1>
-                  <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
+                  <p className="text-lg text-slate-600">Sistema Siga o Fluxo</p>
                   <p className="text-sm text-slate-500">Data: {formatDate(new Date())}</p>
                 </div>
 
@@ -620,7 +639,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
 
                 {/* Footer */}
                 <div className="mt-12 pt-8 border-t-2 border-slate-200 text-center">
-                  <p className="text-sm text-slate-600">Solicitação gerada automaticamente pelo Sistema DiagnoMap Pro</p>
+                  <p className="text-sm text-slate-600">Solicitação gerada automaticamente pelo Sistema Siga o Fluxo</p>
                   <p className="text-xs text-slate-500 mt-2">Data de emissão: {formatDate(new Date())}</p>
                 </div>
               </div>
@@ -673,4 +692,4 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   )
 }
 
-export default PrescriptionViewer 
+export default PrescriptionViewer

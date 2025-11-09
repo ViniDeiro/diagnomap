@@ -1,8 +1,8 @@
-# DiagnoMap - Sistema de Apoio à Decisão Médica
+# Siga o Fluxo - Sistema de Apoio à Decisão Médica
 
 ## 🩺 Sobre o Projeto
 
-O **DiagnoMap** é um sistema web moderno e responsivo desenvolvido para auxiliar profissionais de saúde na classificação de risco e manejo de pacientes com suspeita de dengue. O sistema implementa um fluxograma interativo baseado no protocolo oficial do Ministério da Saúde (2024).
+O **Siga o Fluxo** é um sistema web moderno e responsivo desenvolvido para auxiliar profissionais de saúde na classificação de risco e manejo de pacientes em emergências médicas. O sistema implementa fluxogramas interativos baseados nos protocolos oficiais do Ministério da Saúde, incluindo dengue, IAM, AVC, sepse e muitos outros.
 
 ### ✨ Características Principais
 
@@ -10,7 +10,8 @@ O **DiagnoMap** é um sistema web moderno e responsivo desenvolvido para auxilia
 - **Protocolo Oficial**: Baseado nas diretrizes do Ministério da Saúde de 2024
 - **Responsivo**: Funciona perfeitamente em dispositivos móveis e desktop
 - **Intuitivo**: Navegação simples e clara para uso em ambiente hospitalar
-- **Completo**: Implementa todo o fluxograma de classificação A, B, C e D
+- **Completo**: Implementa múltiplos fluxogramas de emergência com classificação de risco
+- **Escalável**: Arquitetura modular para adicionar novos protocolos facilmente
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -23,7 +24,29 @@ O **DiagnoMap** é um sistema web moderno e responsivo desenvolvido para auxilia
 
 ## 📋 Funcionalidades
 
-### Classificação de Risco por Grupos
+### Protocolos de Emergência Disponíveis
+
+#### 🩺 **Dengue** (Implementado)
+- Classificação de risco A, B, C e D
+- Protocolo completo do Ministério da Saúde 2024
+- Cálculos automáticos de hidratação
+
+#### ❤️ **Infarto Agudo do Miocárdio (IAM)**
+- Protocolo STEMI e NSTEMI
+- Tempo porta-balão ≤ 90 minutos
+- Medicações essenciais (AAS, Clopidogrel, Heparina)
+
+#### 🧠 **Acidente Vascular Cerebral (AVC)**
+- Avaliação FAST
+- Janela terapêutica para TPA
+- Protocolo de trombólise
+
+#### 🦠 **Sepse Grave**
+- Bundle de 1 hora
+- Antibioticoterapia de amplo espectro
+- Monitorização intensiva
+
+### Classificação de Risco por Grupos (Dengue)
 
 #### 🟦 Grupo A - Baixo Risco
 - Dengue sem sinais de alarme
@@ -48,12 +71,15 @@ O **DiagnoMap** é um sistema web moderno e responsivo desenvolvido para auxilia
 
 ### Funcionalidades do Sistema
 
+- ✅ **Múltiplos Fluxogramas**: Protocolos para diferentes emergências
+- ✅ **Seletor Inteligente**: Busca e filtros por categoria
 - ✅ **Fluxograma Interativo**: Navegação passo a passo
 - ✅ **Barra de Progresso**: Acompanhamento visual do processo
 - ✅ **Histórico de Navegação**: Botão voltar para revisar decisões
 - ✅ **Dosagem Automática**: Cálculos de hidratação por idade
 - ✅ **Critérios de Alta**: Avaliação completa para liberação
 - ✅ **Protocolos de Emergência**: Manejo de choque e sangramento
+- ✅ **Indicadores Visuais**: Criticidade, tempo sensível, especialista
 
 ## 🛠️ Instalação e Uso
 
@@ -67,7 +93,7 @@ O **DiagnoMap** é um sistema web moderno e responsivo desenvolvido para auxilia
 1. **Clone o repositório**
 ```bash
 git clone <url-do-repositorio>
-cd diagno-map
+cd siga-o-fluxo
 ```
 
 2. **Instale as dependências**
@@ -103,10 +129,17 @@ npm run lint
 
 ## 📱 Como Usar
 
+### Seleção de Protocolo
+
+1. **Dashboard**: Acesse o sistema e clique em "Emergências"
+2. **Busca**: Use a barra de busca ou filtros por categoria
+3. **Seleção**: Escolha o protocolo apropriado para o caso
+4. **Início**: O fluxograma será carregado automaticamente
+
 ### Navegação do Fluxograma
 
-1. **Início**: Confirme que o paciente apresenta sintomas compatíveis com dengue
-2. **Avaliação de Sinais**: Responda às perguntas sobre sinais de alarme
+1. **Início**: Confirme que o paciente apresenta sintomas compatíveis
+2. **Avaliação**: Responda às perguntas do protocolo
 3. **Classificação**: O sistema direcionará para o grupo de risco apropriado
 4. **Conduta**: Siga as orientações específicas para cada grupo
 5. **Reavaliação**: Use os critérios de reavaliação conforme necessário
@@ -118,6 +151,10 @@ npm run lint
 - **Reiniciar**: Inicia um novo caso a qualquer momento
 - **Progresso Visual**: Acompanhe onde está no fluxograma
 - **Informações Detalhadas**: Cada etapa contém orientações específicas
+- **Indicadores Visuais**: 
+  - 🔴 **CRÍTICO**: Ações que requerem atenção imediata
+  - ⏰ **TEMPO**: Decisões sensíveis ao tempo
+  - 👨‍⚕️ **ESPECIALISTA**: Requer consulta especializada
 
 ## 🏥 Grupos de Classificação
 
@@ -158,17 +195,24 @@ npm run lint
 ### Estrutura do Projeto
 
 ```
-diagno-map/
+siga-o-fluxo/
 ├── src/
 │   ├── app/
 │   │   ├── globals.css        # Estilos globais
 │   │   ├── layout.tsx         # Layout principal
 │   │   └── page.tsx           # Página inicial
-│   └── components/
-│       ├── DengueFlowchart.tsx # Componente principal
-│       ├── Header.tsx          # Cabeçalho
-│       ├── Footer.tsx          # Rodapé
-│       └── LoadingScreen.tsx   # Tela de carregamento
+│   ├── components/
+│   │   ├── EmergencyFlowchart.tsx    # Componente genérico
+│   │   ├── EmergencySelector.tsx     # Seletor de protocolos
+│   │   ├── DengueFlowchart.tsx       # Componente específico dengue
+│   │   ├── Header.tsx                # Cabeçalho
+│   │   ├── Footer.tsx                # Rodapé
+│   │   └── LoadingScreen.tsx         # Tela de carregamento
+│   ├── data/
+│   │   └── emergencyFlowcharts.ts    # Repositório de fluxogramas
+│   └── types/
+│       ├── patient.ts                # Tipos de paciente
+│       └── emergency.ts              # Tipos de emergência
 ├── public/                     # Arquivos estáticos
 ├── package.json               # Dependências
 └── README.md                  # Este arquivo
@@ -182,16 +226,30 @@ O sistema pode ser facilmente personalizado:
 - **Textos**: Edite as strings nos componentes
 - **Fluxograma**: Adicione ou modifique etapas no objeto `steps`
 - **Animações**: Ajuste as configurações do Framer Motion
+- **Novos Protocolos**: Adicione fluxogramas em `emergencyFlowcharts.ts`
 
-## 📊 Protocolo Base
+### Adicionando Novos Protocolos
 
-Este sistema implementa fielmente o **Fluxograma de Classificação de Risco e Manejo do Paciente com Suspeita de Dengue** do Ministério da Saúde, atualizado em 11/10/2024.
+Para adicionar um novo protocolo:
+
+1. **Defina o tipo** em `types/emergency.ts`
+2. **Crie o fluxograma** em `data/emergencyFlowcharts.ts`
+3. **Adicione à categoria** apropriada
+4. **Teste** a navegação e funcionalidades
+
+## 📊 Protocolos Base
+
+Este sistema implementa fielmente os fluxogramas oficiais do Ministério da Saúde:
 
 ### Referências
 
-- Ministério da Saúde - Protocolo de Dengue 2024
-- Diretrizes para Diagnóstico e Tratamento da Dengue
-- Manual de Manejo Clínico da Dengue
+- **Dengue**: Protocolo de Classificação de Risco e Manejo 2024
+- **IAM**: Diretrizes de Manejo do Infarto Agudo do Miocárdio
+- **AVC**: Protocolo de AVC Isquêmico Agudo
+- **Sepse**: Surviving Sepsis Campaign Guidelines
+- Ministério da Saúde - Protocolos de Emergência
+- Diretrizes para Diagnóstico e Tratamento
+- Manual de Manejo Clínico
 
 ## 🤝 Contribuições
 

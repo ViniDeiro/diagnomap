@@ -196,6 +196,42 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
               <p className="text-slate-700 font-medium">A critério médico</p>
             </div>
           </div>
+
+          <div className="grid lg:grid-cols-2 gap-4">
+            <div className="bg-gradient-to-br from-emerald-50 to-green-50 p-6 rounded-xl border border-emerald-200">
+              <div className="flex items-center space-x-3 mb-3">
+                <Stethoscope className="w-5 h-5 text-emerald-600" />
+                <h4 className="font-bold text-emerald-800">Antitérmicos permitidos</h4>
+              </div>
+              <div className="text-emerald-700 text-sm space-y-1">
+                <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
+                <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
+                <p>• Pediátrico (ambos): 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</p>
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 rounded-xl border border-red-200">
+              <div className="flex items-center space-x-3 mb-3">
+                <Shield className="w-5 h-5 text-red-600" />
+                <h4 className="font-bold text-red-800">Medicamentos contraindicados</h4>
+              </div>
+              <div className="text-red-700 text-sm space-y-1">
+                <p>• Aspirina (ácido acetilsalicílico) e salicilatos</p>
+                <p>• AINEs: ibuprofeno, diclofenaco, naproxeno, entre outros</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-50 to-slate-50 p-6 rounded-xl border border-blue-200">
+            <div className="flex items-center space-x-3 mb-3">
+              <Clock className="w-5 h-5 text-blue-600" />
+              <h4 className="font-bold text-blue-800">Orientações</h4>
+            </div>
+            <ul className="text-blue-700 text-sm space-y-1">
+              <li>• Hidratação oral frequente; evitar desidratação</li>
+              <li>• Retornar no 5º dia se febre persistir</li>
+              <li>• Retorno imediato se sinais de alarme</li>
+            </ul>
+          </div>
         </div>
       ),
       options: [
@@ -241,7 +277,31 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
         </div>
       ),
       options: [
-        { text: 'Aguardar Resultados e Reavaliar', nextStep: 'reevaluation_1h', value: 'continue' }
+        { text: 'Ver Resultados do Hemograma', nextStep: 'lab_results_b', value: 'labs' }
+      ]
+    },
+
+    lab_results_b: {
+      id: 'lab_results_b',
+      title: 'RESULTADOS DO HEMOGRAMA - GRUPO B',
+      description: 'Interpretar resultados do hemograma para decisão clínica',
+      type: 'question',
+      icon: <Brain className="w-6 h-6" />,
+      color: 'from-amber-500 to-amber-600',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-xl border border-amber-200">
+            <h4 className="font-bold text-amber-800 mb-2">Critérios de interpretação</h4>
+            <ul className="text-amber-700 text-sm space-y-1">
+              <li>• Normal: hematócrito estável e plaquetas adequadas</li>
+              <li>• Concentrado: hematócrito elevado e/ou plaquetas muito baixas</li>
+            </ul>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Normal', nextStep: 'discharge', value: 'labs_normal' },
+        { text: 'Hematócrito alto ou plaquetas baixas', nextStep: 'group_c_treatment', value: 'labs_abnormal' }
       ]
     },
 
@@ -649,6 +709,15 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
               <li>• Plaquetas em elevação</li>
             </ul>
           </div>
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-green-800 mb-2">Orientações de Alta:</h4>
+            <ul className="text-green-700 text-sm space-y-1">
+              <li>• Hidratação oral: manter oferta frequente de líquidos</li>
+              <li>• Antitérmicos permitidos: Dipirona ou Paracetamol conforme posologia clínica</li>
+              <li>• Contraindicações: evitar Aspirina/salicilatos e AINEs</li>
+              <li>• Retornar no 5º dia se febre persistir ou imediatamente se sinais de alarme</li>
+            </ul>
+          </div>
         </div>
       ),
       options: [
@@ -699,7 +768,7 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
     // Detectar grupo baseado no próximo passo
     let group: 'A' | 'B' | 'C' | 'D' | undefined
     if (nextStep === 'group_a' || nextStep === 'age_check') group = 'A'
-    else if (nextStep === 'group_b' || nextStep === 'reevaluation_1h') group = 'B'
+    else if (nextStep === 'group_b' || nextStep === 'reevaluation_1h' || nextStep === 'lab_results_b') group = 'B'
     else if (nextStep === 'group_c_treatment' || value === 'group_c') group = 'C'
     else if (nextStep === 'group_d_treatment' || value === 'group_d') group = 'D'
     
@@ -909,7 +978,7 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
           <div className="bg-gradient-to-r from-slate-800 to-blue-800 text-white px-8 py-6 rounded-2xl shadow-xl inline-block">
             <div className="flex items-center justify-center space-x-3 mb-2">
               <Shield className="w-5 h-5" />
-              <span className="font-bold">DiagnoMap Pro - Sistema Médico</span>
+              <span className="font-bold">Siga o Fluxo - Sistema Médico</span>
               <Shield className="w-5 h-5" />
             </div>
             <p className="text-slate-300 text-sm">
@@ -922,4 +991,4 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
   )
 }
 
-export default DengueFlowchart 
+export default DengueFlowchart

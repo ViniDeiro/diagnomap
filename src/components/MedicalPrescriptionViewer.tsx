@@ -108,7 +108,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     const hydration = calculateHydration(patient.weight)
     
     return `RECEITUÁRIO MÉDICO
-Sistema DiagnoMap Pro
+Sistema Siga o Fluxo
 
 Paciente: ${patient.name}
 Idade: ${patient.age} anos
@@ -140,6 +140,15 @@ ${hydration ?
 • Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.
 • Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.
 
+4. Antitérmicos Permitidos
+• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)
+• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)
+• Pediátrico (ambos): 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)
+
+5. Medicamentos Contraindicados
+• Aspirina (ácido acetilsalicílico) e salicilatos
+• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros
+
 ${patient.treatment.prescriptions.length > 0 ? 
 `Medicamentos Prescritos:
 ${patient.treatment.prescriptions.map((prescription, index) => 
@@ -154,7 +163,7 @@ __________________________________________________
 Dr. Rodrigo Machado / CRM: XXXX.XXX
 
 ---
-Receituário gerado automaticamente pelo Sistema DiagnoMap Pro
+Receituário gerado automaticamente pelo Sistema Siga o Fluxo
 ${formatDate(new Date())}`
   }
 
@@ -176,7 +185,7 @@ ${formatDate(new Date())}`
               </div>
               <div>
                 <h2 className="text-2xl font-bold">Receituário Médico</h2>
-                <p className="text-blue-100">Sistema DiagnoMap Pro - Protocolo MS 2024</p>
+                <p className="text-blue-100">Sistema Siga o Fluxo - Protocolo MS 2024</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -239,7 +248,7 @@ ${formatDate(new Date())}`
                   </div>
                 </div>
                 <h1 className="text-3xl font-bold text-slate-800 mb-2">RECEITUÁRIO MÉDICO</h1>
-                <p className="text-lg text-slate-600">Sistema DiagnoMap Pro</p>
+                <p className="text-lg text-slate-600">Sistema Siga o Fluxo</p>
                 <p className="text-sm text-slate-500">Protocolo de Diagnóstico Clínico - {patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}</p>
               </div>
               
@@ -309,14 +318,33 @@ ${formatDate(new Date())}`
                       </div>
                     </div>
 
-                    {/* 3. Outpatient Follow-up */}
-                    <div className="mb-6">
-                      <h3 className="font-bold mb-2">3. Seguimento Ambulatorial</h3>
-                      <div className="ml-4 space-y-1">
-                        <p>• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.</p>
-                        <p>• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.</p>
-                      </div>
+                  {/* 3. Outpatient Follow-up */}
+                  <div className="mb-6">
+                    <h3 className="font-bold mb-2">3. Seguimento Ambulatorial</h3>
+                    <div className="ml-4 space-y-1">
+                      <p>• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.</p>
+                      <p>• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.</p>
                     </div>
+                  </div>
+
+                  {/* 4. Antipyretics */}
+                  <div className="mb-6">
+                    <h3 className="font-bold mb-2">4. Antitérmicos Permitidos</h3>
+                    <div className="ml-4 space-y-1">
+                      <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
+                      <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
+                      <p>• Crianças: 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</p>
+                    </div>
+                  </div>
+
+                  {/* 5. Contraindications */}
+                  <div className="mb-6">
+                    <h3 className="font-bold mb-2">5. Medicamentos Contraindicados</h3>
+                    <div className="ml-4 space-y-1">
+                      <p>• Aspirina (ácido acetilsalicílico) e salicilatos</p>
+                      <p>• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros</p>
+                    </div>
+                  </div>
                   </div>
 
                   {/* Additional Prescriptions */}
@@ -362,7 +390,7 @@ ${formatDate(new Date())}`
                     <Zap className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800">DiagnoMap Pro</p>
+                    <p className="font-bold text-slate-800">Siga o Fluxo</p>
                     <p className="text-sm text-slate-600">Protocolo Oficial - Ministério da Saúde 2024</p>
                   </div>
                 </div>
@@ -379,4 +407,4 @@ ${formatDate(new Date())}`
   )
 }
 
-export default MedicalPrescriptionViewer 
+export default MedicalPrescriptionViewer
