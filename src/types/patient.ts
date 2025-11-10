@@ -18,6 +18,8 @@ export interface Patient {
       bloodPressure?: string
       heartRate?: number
       respiratoryRate?: number
+      oxygenSaturation?: number
+      glucose?: string
     }
   }
   flowchartState: {
@@ -79,6 +81,8 @@ export interface PatientFormData {
     bloodPressure?: string
     heartRate?: number
     respiratoryRate?: number
+    oxygenSaturation?: number
+    glucose?: string
   }
 }
 
@@ -105,4 +109,4 @@ export interface DashboardStats {
   groupB: number
   groupC: number
   groupD: number
-} 
+}

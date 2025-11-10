@@ -275,11 +275,56 @@ ${formatDate(new Date())}`
       
       if (vs.respiratoryRate) {
         if (vs.respiratoryRate > 20) {
-          vitals.push(`taquipneia (${vs.respiratoryRate} rpm)`)
+          vitals.push(`taquipneia (${vs.respiratoryRate} rpm)`) 
         } else if (vs.respiratoryRate < 12) {
-          vitals.push(`bradipneia (${vs.respiratoryRate} rpm)`)
+          vitals.push(`bradipneia (${vs.respiratoryRate} rpm)`) 
         } else {
-          vitals.push(`padrão respiratório regular (${vs.respiratoryRate} rpm)`)
+          vitals.push(`padrão respiratório regular (${vs.respiratoryRate} rpm)`) 
+        }
+      }
+
+      // Saturação periférica de oxigênio (SpO2)
+      if (vs.oxygenSaturation != null) {
+        const spo2 = vs.oxygenSaturation
+        if (spo2 <= 85) {
+          vitals.push(`hipoxemia severa (SpO₂ ${spo2}%)`)
+        } else if (spo2 <= 89) {
+          vitals.push(`hipoxemia moderada (SpO₂ ${spo2}%)`)
+        } else if (spo2 <= 94) {
+          vitals.push(`hipoxemia leve (SpO₂ ${spo2}%)`)
+        } else {
+          vitals.push(`saturação periférica de O₂ preservada (SpO₂ ${spo2}%)`)
+        }
+      }
+
+      // Glicemia capilar (mg/dL)
+      if (vs.glucose) {
+        const gStr = vs.glucose.trim().toUpperCase()
+        if (gStr === 'HI') {
+          vitals.push('hiperglicemia extrema (HI)')
+        } else if (gStr === 'LO') {
+          vitals.push('hipoglicemia extrema (LO)')
+        } else {
+          const gVal = parseFloat(gStr)
+          if (!isNaN(gVal)) {
+            if (gVal >= 200) {
+              vitals.push(`hiperglicemia severa (${gVal} mg/dL)`) 
+            } else if (gVal >= 151) {
+              vitals.push(`hiperglicemia moderada (${gVal} mg/dL)`) 
+            } else if (gVal >= 126) {
+              vitals.push(`hiperglicemia leve (${gVal} mg/dL)`) 
+            } else if (gVal >= 100) {
+              vitals.push(`glicemia em faixa de pré-diabetes (${gVal} mg/dL)`) 
+            } else if (gVal >= 75) {
+              vitals.push(`glicemia dentro da normalidade (${gVal} mg/dL)`) 
+            } else if (gVal >= 60) {
+              vitals.push(`hipoglicemia leve (${gVal} mg/dL)`) 
+            } else if (gVal >= 45) {
+              vitals.push(`hipoglicemia moderada (${gVal} mg/dL)`) 
+            } else {
+              vitals.push(`hipoglicemia severa (${gVal} mg/dL)`) 
+            }
+          }
         }
       }
       

@@ -106,6 +106,12 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
 
   const generatePrescriptionText = () => {
     const hydration = calculateHydration(patient.weight)
+    const chosenAntipyretic = (() => {
+      const meds = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
+      if (meds.find(m => m.includes('paracetamol'))) return 'Paracetamol'
+      if (meds.find(m => m.includes('dipirona'))) return 'Dipirona'
+      return null
+    })()
     
     return `RECEITUÁRIO MÉDICO
 Sistema Siga o Fluxo
@@ -115,6 +121,7 @@ Idade: ${patient.age} anos
 Data: ${new Date().toLocaleDateString('pt-BR')}
 
 Diagnóstico: Dengue
+Classificação: ${patient.flowchartState.group ? `Grupo ${patient.flowchartState.group}` : 'Não classificado'}
 
 Orientações:
 
@@ -140,10 +147,17 @@ ${hydration ?
 • Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.
 • Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.
 
-4. Antitérmicos Permitidos
-• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)
+4. ${chosenAntipyretic ? 'Antitérmico Prescrito' : 'Antitérmicos Permitidos'}
+${chosenAntipyretic === 'Paracetamol' ?
+`• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)
+• Pediátrico: 10–15 mg/kg VO a cada 6–8h${patient.weight ? ` (≈ ${Math.round(patient.weight)}–${Math.round(patient.weight * 1.5)} gotas/dose, sol. 200mg/mL)` : ''}`
+: chosenAntipyretic === 'Dipirona' ?
+`• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)
+• Pediátrico: 10 mg/kg VO a cada 6–8h${patient.weight ? ` (≈ ${Math.round((patient.weight * 10) / 25)} gotas/dose, sol. 500mg/mL)` : ''}`
+:
+`• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)
 • Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)
-• Pediátrico (ambos): 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)
+• Pediátrico (ambos): 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)`}
 
 5. Medicamentos Contraindicados
 • Aspirina (ácido acetilsalicílico) e salicilatos
@@ -166,6 +180,13 @@ Dr. Rodrigo Machado / CRM: XXXX.XXX
 Receituário gerado automaticamente pelo Sistema Siga o Fluxo
 ${formatDate(new Date())}`
   }
+
+  const chosenAntipyreticLabel = (() => {
+    const meds = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
+    if (meds.find(m => m.includes('paracetamol'))) return 'Paracetamol'
+    if (meds.find(m => m.includes('dipirona'))) return 'Dipirona'
+    return null
+  })()
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -273,6 +294,7 @@ ${formatDate(new Date())}`
                   {/* Diagnosis */}
                   <div className="text-lg leading-10 font-medium">
                     <p><strong>Diagnóstico:</strong> Dengue</p>
+                    <p><strong>Classificação:</strong> {patient.flowchartState.group ? `Grupo ${patient.flowchartState.group}` : 'Não classificado'}</p>
                   </div>
                   
                   {/* Orientations */}
@@ -329,11 +351,27 @@ ${formatDate(new Date())}`
 
                   {/* 4. Antipyretics */}
                   <div className="mb-6">
-                    <h3 className="font-bold mb-2">4. Antitérmicos Permitidos</h3>
+                    <h3 className="font-bold mb-2">4. {chosenAntipyreticLabel ? 'Antitérmico Prescrito' : 'Antitérmicos Permitidos'}</h3>
                     <div className="ml-4 space-y-1">
-                      <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
-                      <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
-                      <p>• Crianças: 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</p>
+                      {chosenAntipyreticLabel === 'Paracetamol' && (
+                        <>
+                          <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
+                          <p>• Crianças: 10–15 mg/kg VO a cada 6–8h{patient.weight ? ` (≈ ${Math.round(patient.weight)}–${Math.round(patient.weight * 1.5)} gotas/dose, sol. 200mg/mL)` : ''}</p>
+                        </>
+                      )}
+                      {chosenAntipyreticLabel === 'Dipirona' && (
+                        <>
+                          <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
+                          <p>• Crianças: 10 mg/kg VO a cada 6–8h{patient.weight ? ` (≈ ${Math.round((patient.weight * 10) / 25)} gotas/dose, sol. 500mg/mL)` : ''}</p>
+                        </>
+                      )}
+                      {!chosenAntipyreticLabel && (
+                        <>
+                          <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
+                          <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
+                          <p>• Crianças: 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</p>
+                        </>
+                      )}
                     </div>
                   </div>
 

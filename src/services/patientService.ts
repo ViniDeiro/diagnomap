@@ -201,28 +201,43 @@ class PatientService {
   }
 
   // Gerar prescrições automáticas baseadas no grupo
-  generatePrescriptions(patientId: string, group: 'A' | 'B' | 'C' | 'D'): Prescription[] {
+  generatePrescriptions(patientId: string, group: 'A' | 'B' | 'C' | 'D', antipyreticChoice?: 'paracetamol' | 'dipirona'): Prescription[] {
     const patient = this.getPatientById(patientId)
     if (!patient) return []
 
     const prescriptions: Omit<Prescription, 'id' | 'prescribedAt'>[] = []
     const weight = patient.weight || (patient.age >= 18 ? 70 : patient.age * 2 + 10) // Estimativa se não informado
 
-    // Prescrições base para todos os grupos
-    prescriptions.push({
-      medication: 'Paracetamol',
-      dosage: patient.age >= 18 ? '500mg' : '10-15mg/kg',
-      frequency: '6/6 horas',
-      duration: 'Conforme necessário',
-      instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
-      prescribedBy: 'Sistema Siga o Fluxo'
-    })
+    // Escolha de antitérmico único
+    const choice = (antipyreticChoice || 'paracetamol').toLowerCase()
+    if (choice === 'dipirona') {
+      const pediatricDrops = Math.round((weight * 10) / 25) // 10mg/kg | 500mg/mL ⇒ 25mg/gota
+      prescriptions.push({
+        medication: 'Dipirona',
+        dosage: patient.age >= 18 ? '500–1000 mg' : `10 mg/kg (≈ ${pediatricDrops} gotas/dose, sol. 500mg/mL)`,
+        frequency: '6/6 a 8/8 horas',
+        duration: 'Conforme necessário',
+        instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
+        prescribedBy: 'Sistema Siga o Fluxo'
+      })
+    } else {
+      const minDrops = Math.round(weight * 1) // 10mg/kg ⇒ ~1 gota/kg (200mg/mL, ~10mg/gota)
+      const maxDrops = Math.round(weight * 1.5) // 15mg/kg ⇒ ~1.5 gotas/kg
+      prescriptions.push({
+        medication: 'Paracetamol',
+        dosage: patient.age >= 18 ? '500–750 mg' : `10–15 mg/kg (≈ ${minDrops}–${maxDrops} gotas/dose, sol. 200mg/mL)`,
+        frequency: '6/6 a 8/8 horas',
+        duration: 'Conforme necessário',
+        instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
+        prescribedBy: 'Sistema Siga o Fluxo'
+      })
+    }
 
     // Hidratação oral para grupos A e B
     if (['A', 'B'].includes(group)) {
       prescriptions.push({
         medication: 'Solução de Reidratação Oral (SRO)',
-        dosage: patient.age >= 18 ? '200-400ml' : this.getChildHydrationVolume(weight),
+        dosage: patient.age >= 18 ? '200–400 ml' : this.getChildHydrationVolume(weight),
         frequency: 'A cada vômito/evacuação',
         duration: 'Até melhora dos sintomas',
         instructions: 'Oferecer em pequenos volumes e frequentemente. Se não tolerar via oral, retornar ao serviço.',

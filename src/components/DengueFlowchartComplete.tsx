@@ -378,6 +378,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         </div>
                         
                         <div class="p-6 space-y-6">
+                          <div class="rounded-xl overflow-hidden border border-slate-200">
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/BP_cuff_circumference.svg/640px-BP_cuff_circumference.svg.png" alt="Prova do laço - posicionamento do manguito" class="w-full h-auto" />
+                          </div>
                           <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                             <h3 class="font-bold text-blue-800 mb-3 flex items-center">
                               <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -396,7 +399,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                               </div>
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">3</div>
-                                <p><strong>Insuflar manguito:</strong> Até o valor médio calculado</p>
+                                <p><strong>Insuflar manguito:</strong> Até o valor médio calculado. Ex.: PA 120×80 → insuflar até 100 mmHg</p>
                               </div>
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">4</div>
@@ -434,7 +437,26 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                                 </svg>
                                 Observação
                               </h4>
-                              <p class="text-amber-700 text-sm">Interromper se aparecerem micro petéquias ou equimoses antes do tempo</p>
+                              <div class="space-y-2 text-amber-700 text-sm">
+                                <p>• Retirar o manguito imediatamente se o paciente apresentar dor, dormência ou palidez no braço</p>
+                                <p>• Interromper se aparecerem micro petéquias ou equimoses antes do tempo previsto</p>
+                                <p>• Cautela em plaquetopenia severa (plaquetas &lt; 20.000/mm³): risco de sangramento local</p>
+                                <p>• Resultado positivo reforça diagnóstico de dengue com manifestações hemorrágicas, mas deve ser interpretado no contexto clínico e laboratorial</p>
+                              </div>
+
+                          </div>
+                          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <h4 class="font-bold text-slate-800 mb-2">Resumo rápido</h4>
+                            <ol class="list-decimal list-inside text-slate-700 space-y-1">
+                              <li>Medir PA</li>
+                              <li>Inflar o manguito na média entre PAS e PAD</li>
+                              <li>Manter 5 min (adulto) / 3 min (criança)</li>
+                              <li>Soltar e esperar 1 min</li>
+                              <li>Delimitar 2,5 × 2,5 cm no antebraço</li>
+                              <li>Contar petéquias</li>
+                              <li>≥20 (adulto) ou ≥10 (criança) → positivo</li>
+                            </ol>
+                          </div>
                             </div>
                           </div>
                         </div>
@@ -742,7 +764,205 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               </div>
               <h4 className="font-bold text-blue-800">Conduta</h4>
             </div>
-            <p className="text-blue-700 font-medium">Hidratação oral</p>
+            <div className="flex items-center text-blue-700 font-medium">
+              <p>Hidratação oral</p>
+              <button
+                type="button"
+                onClick={() => {
+                  const modal = document.createElement('div')
+                  modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
+                  modal.innerHTML = `
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                      <div class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6">
+                        <div class="flex items-center justify-between">
+                          <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3v1H8a4 4 0 000 8h8a4 4 0 000-8h-1v-1c0-1.657-1.343-3-3-3z" />
+                              </svg>
+                            </div>
+                            <div>
+                              <h2 class="text-xl font-bold">Soro Oral (SRO) – O que é e como usar</h2>
+                              <p class="text-blue-100 text-sm">Informações práticas e protocolo institucional</p>
+                            </div>
+                          </div>
+                          <button onclick="this.closest('.fixed').remove()" class="p-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-colors duration-200">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="p-6 space-y-6 overflow-y-auto">
+                        <div class="rounded-xl overflow-hidden border border-slate-200">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto" />
+                        </div>
+                        <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                          <h3 class="font-bold text-blue-800 mb-3">O que é o Soro Oral (SRO)?</h3>
+                          <p class="text-blue-700 text-sm">Solução pronta de reidratação com eletrólitos e glicose, indicada para reposição hidroeletrolítica em quadros de desidratação por febre, diarreia e em suporte na dengue. Preferir formulação industrial (envelopes/solução pronta). Caso utilize soro caseiro, seguir estritamente a medida oficial institucional.</p>
+                        </div>
+                        <div class="bg-white p-4 rounded-xl border border-sky-200">
+                          <div class="flex items-center justify-between">
+                            <h4 class="font-bold text-sky-800">Como preparar a solução (SRO caseiro)</h4>
+                            <a href="https://rehydration.org/solutions/homemade.htm" target="_blank" rel="noopener noreferrer" class="text-sky-700 underline text-sm">Guia completo (externo)</a>
+                          </div>
+                          <ol class="text-sky-700 text-sm space-y-1 list-decimal list-inside mt-2">
+                            <li>Usar <strong>1 litro</strong> de água limpa (filtrada/fervida e resfriada).</li>
+                            <li>Adicionar <strong>6 colheres de chá rasas</strong> de açúcar.</li>
+                            <li>Adicionar <strong>1/2 colher de chá rasa</strong> de sal de cozinha.</li>
+                            <li>Misturar até completa dissolução. Ofertar em pequenos volumes.</li>
+                            <li>Descartar após <strong>24 horas</strong>. Não adicionar outros sais ou bicarbonato.</li>
+                          </ol>
+                          <p class="text-rose-700 text-xs mt-2">Atenção: evitar “colher cheia”. Excesso de sal/açúcar pode causar <strong>hipernatremia</strong> ou hiperglicemia. Preferir solução industrial sempre que disponível.</p>
+                        </div>
+                        <div class="grid md:grid-cols-2 gap-4">
+                          <div class="bg-cyan-50 p-4 rounded-xl border border-cyan-200">
+                            <h4 class="font-bold text-cyan-800 mb-2">Como oferecer</h4>
+                            <ul class="text-cyan-700 text-sm space-y-1">
+                              <li>• Pequenos volumes em intervalos frequentes</li>
+                              <li>• Adultos: 60–75 ml/kg/dia (dividir ao longo do dia)</li>
+                              <li>• Crianças: volume diário calculado por peso (ver card de hidratação)</li>
+                              <li>• Alternar com líquidos caseiros (água, sucos, chá, água de coco)</li>
+                            </ul>
+                          </div>
+                          <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                            <h4 class="font-bold text-emerald-800 mb-2">Quando usar</h4>
+                            <ul class="text-emerald-700 text-sm space-y-1">
+                              <li>• Febre com risco de desidratação</li>
+                              <li>• Diarreia aguda</li>
+                              <li>• Dengue grupos A/B em observação</li>
+                            </ul>
+                          </div>
+                        </div>
+                        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                          <h4 class="font-bold text-amber-800 mb-2">Cuidados</h4>
+                          <ul class="text-amber-700 text-sm space-y-1">
+                            <li>• Pausar se vômitos persistentes; retomar com microvolumes</li>
+                            <li>• Não substituir alimentação</li>
+                            <li>• Em hiponatremia sintomática moderada/grave, seguir protocolo específico abaixo</li>
+                          </ul>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                          <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hiponatremia</h3>
+                          <div class="text-slate-700 text-sm space-y-2">
+                            <p><strong>Escopo:</strong> pacientes pediátricos, adultos e idosos com hiponatremia hipotônica (Na &lt; 135 mmol/L).</p>
+                            <p><strong>Classificação:</strong> leve (130–134), moderada (125–129), grave (&lt;125 ou sintomas neurológicos).</p>
+                            <p><strong>Meta inicial:</strong> +4–6 mmol/L para alívio; <strong>limites:</strong> não ultrapassar 8–10 mmol/L/24h (6–8 se alto risco de ODS).</p>
+                            <div class="grid md:grid-cols-2 gap-4">
+                              <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <h4 class="font-semibold text-blue-800 mb-1">Tratamento imediato</h4>
+                                <ul class="text-blue-700 text-xs space-y-1">
+                                  <li>• Sintomas graves: NaCl 3% bolus 2 mL/kg em 10–20 min; repetir até +4–6 mmol/L</li>
+                                  <li>• Sintomas moderados: preferir bolus (RIB) conforme SALSA; monitorizar sNa 2–4 h</li>
+                                  <li>• Assintomático/leve: investigar causa, restrição hídrica, monitorizar</li>
+                                </ul>
+                              </div>
+                              <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                                <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
+                                <ul class="text-indigo-700 text-xs space-y-1">
+                                  <li>• Adultos/Idosos: usar 2 mL/kg para bolus; idosos com metas conservadoras</li>
+                                  <li>• Pediatria: bolus 2 mL/kg; evitar correção &gt; 8 mmol/L/24h; monitorização próxima</li>
+                                </ul>
+                              </div>
+                            </div>
+                            <div class="bg-rose-50 p-3 rounded-lg border border-rose-200">
+                              <h4 class="font-semibold text-rose-800 mb-1">Sobrecorreção</h4>
+                              <p class="text-rose-700 text-xs">Se &gt; 8–10 mmol/L/24h (conforme risco): desmopressina + água livre ou D5W para <em>relowering</em>. SALSA recomenda abordagem precoce.</p>
+                            </div>
+                          <p class="text-xs text-slate-500">Referências: SALSA Trial (JAMA 2021), diretrizes europeias de hiponatremia, revisões práticas.</p>
+                          </div>
+                        </div>
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                          <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hipernatremia</h3>
+                          <div class="text-slate-700 text-sm space-y-2">
+                            <p><strong>Definição e classificação:</strong> leve 146–149, moderada 150–159, grave ≥160; <em>aguda</em> &lt; 48h, <em>crônica</em> ≥ 48h.</p>
+                            <div class="grid md:grid-cols-2 gap-4">
+                              <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                                <h4 class="font-semibold text-orange-800 mb-1">Avaliação inicial</h4>
+                                <ul class="text-orange-700 text-xs space-y-1">
+                                  <li>• Confirmar Na sérico, osmolaridade plasmática e urinária, Na urinário</li>
+                                  <li>• Função renal (ureia/creatinina) e estado de volemia (hipo/eu/hipervolêmica)</li>
+                                  <li>• Sintomas neurológicos e causa de base (DI, perdas, soluções hipertônicas)</li>
+                                </ul>
+                              </div>
+                              <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-200">
+                                <h4 class="font-semibold text-cyan-800 mb-1">Déficit hídrico</h4>
+                                <p class="text-cyan-700 text-xs">Déficit = 0,6 × peso (kg) × (Na/140 − 1); em idosos/mulheres usar 0,5.</p>
+                                <p class="text-cyan-700 text-xs">Corrigir ao longo de 48–72 h conforme gravidade e tempo.</p>
+                              </div>
+                            </div>
+                            <div class="grid md:grid-cols-3 gap-4">
+                              <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                <h4 class="font-semibold text-blue-800 mb-1">Metas de correção</h4>
+                                <ul class="text-blue-700 text-xs space-y-1">
+                                  <li>• Aguda: 1–2 mmol/L/h; máx. 10–12 mmol/L/24h</li>
+                                  <li>• Crônica: 0,5 mmol/L/h; máx. 8–10 mmol/L/24h</li>
+                                  <li>• Alto risco: ≤ 8 mmol/L/24h</li>
+                                </ul>
+                              </div>
+                              <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                                <h4 class="font-semibold text-emerald-800 mb-1">Tratamento por volemia</h4>
+                                <ul class="text-emerald-700 text-xs space-y-1">
+                                  <li>• Hipovolêmica: SF 0,9% até estabilizar → D5W ou NaCl 0,45%</li>
+                                  <li>• Euvolêmica (DI): desmopressina 1–2 µg IV/SC (central) ou restrição de Na/proteínas + tiazídico ± amilorida (nefrógeno)</li>
+                                  <li>• Hipervolêmica: D5W + furosemida 20–40 mg IV; ajustar volume</li>
+                                </ul>
+                              </div>
+                              <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                                <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
+                                <ul class="text-indigo-700 text-xs space-y-1">
+                                  <li>• Pediatria: ≤0,5 mmol/L/h; máx. 10/24h; monitorar Na 2–4h</li>
+                                  <li>• Adultos: seguir déficit calculado; reavaliar função renal e diurese</li>
+                                  <li>• Idosos: usar 0,5 × peso; vigiar sobrecarga; monitorar glicemia/coração</li>
+                                </ul>
+                              </div>
+                            </div>
+                            <div class="grid md:grid-cols-2 gap-4">
+                              <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                <h4 class="font-semibold text-amber-800 mb-1">Monitorização</h4>
+                                <ul class="text-amber-700 text-xs space-y-1">
+                                  <li>• Na sérico a cada 2–4 h nas primeiras 12–24 h; depois 6–8 h</li>
+                                  <li>• Diurese, sinais de edema cerebral, PA e glicemia</li>
+                                  <li>• Se correção muito rápida: pausar infusão e considerar desmopressina</li>
+                                </ul>
+                              </div>
+                              <div class="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                                <h4 class="font-semibold text-slate-800 mb-1">Manutenção e situações especiais</h4>
+                                <ul class="text-slate-700 text-xs space-y-1">
+                                  <li>• Tratar a causa; repor perdas contínuas; dieta com menor Na</li>
+                                  <li>• Ventilação mecânica: ajustar perdas insensíveis</li>
+                                  <li>• Diabetes insipidus: reposição hormonal/monitorização intensiva</li>
+                                  <li>• Idoso institucionalizado: prevenção com oferta hídrica adequada</li>
+                                </ul>
+                              </div>
+                            </div>
+                            <div class="bg-teal-50 p-3 rounded-lg border border-teal-200">
+                              <h4 class="font-semibold text-teal-800 mb-1">Resumo rápido (cartão de bolso)</h4>
+                              <ul class="text-teal-700 text-xs space-y-1">
+                                <li>• Hipovolêmica: SF 0,9% → D5W; ≤10 mmol/L/24h</li>
+                                <li>• Euvolêmica (DI): desmopressina/tiazídico; D5W; ≤8–10/24h</li>
+                                <li>• Hipervolêmica: D5W + furosemida; ≤8/24h</li>
+                              </ul>
+                              <p class="text-xs text-slate-500 mt-2">Referências: Adrogué & Madias NEJM 2000; Verbalis 2013; Hoorn & Zietse 2017; Snyder 1987; Sterns 2015; Spasovski 2014; Berl 2020; Rondon-Berrios 2023; OpenEvidence 2024.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="border-t border-slate-200 p-4">
+                        <button onclick="this.closest('.fixed').remove()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200">Fechar</button>
+                      </div>
+                    </div>
+                  `
+                  document.body.appendChild(modal)
+                }}
+                className="ml-2 p-1.5 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200 flex items-center justify-center"
+                title="O que é Soro Oral?"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       ),
@@ -800,7 +1020,205 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     <div className="text-blue-600 mb-2">
                       <Droplets className="w-6 h-6 mx-auto" />
                     </div>
-                    <h4 className="font-bold text-blue-800 mb-1">Soro Oral</h4>
+                    <div className="flex items-center justify-center space-x-2">
+                      <h4 className="font-bold text-blue-800 mb-1">Soro Oral</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const modal = document.createElement('div')
+                          modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
+                          modal.innerHTML = `
+                            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                              <div class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6">
+                                <div class="flex items-center justify-between">
+                                  <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 1.343-3 3v1H8a4 4 0 000 8h8a4 4 0 000-8h-1v-1c0-1.657-1.343-3-3-3z" />
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <h2 class="text-xl font-bold">Soro Oral (SRO) – O que é e como usar</h2>
+                                      <p class="text-blue-100 text-sm">Informações práticas e protocolo institucional</p>
+                                    </div>
+                                  </div>
+                                  <button onclick="this.closest('.fixed').remove()" class="p-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-colors duration-200">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                              <div class="p-6 space-y-6 overflow-y-auto">
+                                <div class="rounded-xl overflow-hidden border border-slate-200">
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto" />
+                                </div>
+                                <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                                  <h3 class="font-bold text-blue-800 mb-3">O que é o Soro Oral (SRO)?</h3>
+                                  <p class="text-blue-700 text-sm">Solução pronta de reidratação com eletrólitos e glicose, indicada para reposição hidroeletrolítica em quadros de desidratação por febre, diarreia e em suporte na dengue. Preferir formulação industrial (envelopes/solução pronta). Caso utilize soro caseiro, seguir estritamente a medida oficial institucional.</p>
+                                </div>
+                                <div class="bg-white p-4 rounded-xl border border-sky-200">
+                                  <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-sky-800">Como preparar a solução (SRO caseiro)</h4>
+                                    <a href="https://rehydration.org/solutions/homemade.htm" target="_blank" rel="noopener noreferrer" class="text-sky-700 underline text-sm">Guia completo (externo)</a>
+                                  </div>
+                                  <ol class="text-sky-700 text-sm space-y-1 list-decimal list-inside mt-2">
+                                    <li>Usar <strong>1 litro</strong> de água limpa (filtrada/fervida e resfriada).</li>
+                                    <li>Adicionar <strong>6 colheres de chá rasas</strong> de açúcar.</li>
+                                    <li>Adicionar <strong>1/2 colher de chá rasa</strong> de sal de cozinha.</li>
+                                    <li>Misturar até completa dissolução. Ofertar em pequenos volumes.</li>
+                                    <li>Descartar após <strong>24 horas</strong>. Não adicionar outros sais ou bicarbonato.</li>
+                                  </ol>
+                                  <p class="text-rose-700 text-xs mt-2">Atenção: evitar “colher cheia”. Excesso de sal/açúcar pode causar <strong>hipernatremia</strong> ou hiperglicemia. Preferir solução industrial sempre que disponível.</p>
+                                </div>
+                                <div class="grid md:grid-cols-2 gap-4">
+                                  <div class="bg-cyan-50 p-4 rounded-xl border border-cyan-200">
+                                    <h4 class="font-bold text-cyan-800 mb-2">Como oferecer</h4>
+                                    <ul class="text-cyan-700 text-sm space-y-1">
+                                      <li>• Pequenos volumes em intervalos frequentes</li>
+                                      <li>• Adultos: 60–75 ml/kg/dia (dividir ao longo do dia)</li>
+                                      <li>• Crianças: volume diário calculado por peso (ver card de hidratação)</li>
+                                      <li>• Alternar com líquidos caseiros (água, sucos, chá, água de coco)</li>
+                                    </ul>
+                                  </div>
+                                  <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                                    <h4 class="font-bold text-emerald-800 mb-2">Quando usar</h4>
+                                    <ul class="text-emerald-700 text-sm space-y-1">
+                                      <li>• Febre com risco de desidratação</li>
+                                      <li>• Diarreia aguda</li>
+                                      <li>• Dengue grupos A/B em observação</li>
+                                    </ul>
+                                  </div>
+                                </div>
+                                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                  <h4 class="font-bold text-amber-800 mb-2">Cuidados</h4>
+                                  <ul class="text-amber-700 text-sm space-y-1">
+                                    <li>• Pausar se vômitos persistentes; retomar com microvolumes</li>
+                                    <li>• Não substituir alimentação</li>
+                                    <li>• Em hiponatremia sintomática moderada/grave, seguir protocolo específico abaixo</li>
+                                  </ul>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                  <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hiponatremia</h3>
+                                  <div class="text-slate-700 text-sm space-y-2">
+                                    <p><strong>Escopo:</strong> pacientes pediátricos, adultos e idosos com hiponatremia hipotônica (Na &lt; 135 mmol/L).</p>
+                                    <p><strong>Classificação:</strong> leve (130–134), moderada (125–129), grave (&lt;125 ou sintomas neurológicos).</p>
+                                    <p><strong>Meta inicial:</strong> +4–6 mmol/L para alívio; <strong>limites:</strong> não ultrapassar 8–10 mmol/L/24h (6–8 se alto risco de ODS).</p>
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                      <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                        <h4 class="font-semibold text-blue-800 mb-1">Tratamento imediato</h4>
+                                        <ul class="text-blue-700 text-xs space-y-1">
+                                          <li>• Sintomas graves: NaCl 3% bolus 2 mL/kg em 10–20 min; repetir até +4–6 mmol/L</li>
+                                          <li>• Sintomas moderados: preferir bolus (RIB) conforme SALSA; monitorizar sNa 2–4 h</li>
+                                          <li>• Assintomático/leve: investigar causa, restrição hídrica, monitorizar</li>
+                                        </ul>
+                                      </div>
+                                      <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                                        <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
+                                        <ul class="text-indigo-700 text-xs space-y-1">
+                                          <li>• Adultos/Idosos: usar 2 mL/kg para bolus; idosos com metas conservadoras</li>
+                                          <li>• Pediatria: bolus 2 mL/kg; evitar correção &gt; 8 mmol/L/24h; monitorização próxima</li>
+                                        </ul>
+                                      </div>
+                                    </div>
+                                    <div class="bg-rose-50 p-3 rounded-lg border border-rose-200">
+                                      <h4 class="font-semibold text-rose-800 mb-1">Sobrecorreção</h4>
+                                      <p class="text-rose-700 text-xs">Se &gt; 8–10 mmol/L/24h (conforme risco): desmopressina + água livre ou D5W para <em>relowering</em>. SALSA recomenda abordagem precoce.</p>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Referências: SALSA Trial (JAMA 2021), diretrizes europeias de hiponatremia, revisões práticas.</p>
+                                  </div>
+                                </div>
+                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                  <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hipernatremia</h3>
+                                  <div class="text-slate-700 text-sm space-y-2">
+                                    <p><strong>Definição e classificação:</strong> leve 146–149, moderada 150–159, grave ≥160; <em>aguda</em> &lt; 48h, <em>crônica</em> ≥ 48h.</p>
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                      <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                                        <h4 class="font-semibold text-orange-800 mb-1">Avaliação inicial</h4>
+                                        <ul class="text-orange-700 text-xs space-y-1">
+                                          <li>• Confirmar Na sérico, osmolaridade plasmática e urinária, Na urinário</li>
+                                          <li>• Função renal (ureia/creatinina) e estado de volemia (hipo/eu/hipervolêmica)</li>
+                                          <li>• Sintomas neurológicos e causa de base (DI, perdas, soluções hipertônicas)</li>
+                                        </ul>
+                                      </div>
+                                      <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-200">
+                                        <h4 class="font-semibold text-cyan-800 mb-1">Déficit hídrico</h4>
+                                        <p class="text-cyan-700 text-xs">Déficit = 0,6 × peso (kg) × (Na/140 − 1); em idosos/mulheres usar 0,5.</p>
+                                        <p class="text-cyan-700 text-xs">Corrigir ao longo de 48–72 h conforme gravidade e tempo.</p>
+                                      </div>
+                                    </div>
+                                    <div class="grid md:grid-cols-3 gap-4">
+                                      <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                        <h4 class="font-semibold text-blue-800 mb-1">Metas de correção</h4>
+                                        <ul class="text-blue-700 text-xs space-y-1">
+                                          <li>• Aguda: 1–2 mmol/L/h; máx. 10–12 mmol/L/24h</li>
+                                          <li>• Crônica: 0,5 mmol/L/h; máx. 8–10 mmol/L/24h</li>
+                                          <li>• Alto risco: ≤ 8 mmol/L/24h</li>
+                                        </ul>
+                                      </div>
+                                      <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
+                                        <h4 class="font-semibold text-emerald-800 mb-1">Tratamento por volemia</h4>
+                                        <ul class="text-emerald-700 text-xs space-y-1">
+                                          <li>• Hipovolêmica: SF 0,9% até estabilizar → D5W ou NaCl 0,45%</li>
+                                          <li>• Euvolêmica (DI): desmopressina 1–2 µg IV/SC (central) ou restrição de Na/proteínas + tiazídico ± amilorida (nefrógeno)</li>
+                                          <li>• Hipervolêmica: D5W + furosemida 20–40 mg IV; ajustar volume</li>
+                                        </ul>
+                                      </div>
+                                      <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
+                                        <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
+                                        <ul class="text-indigo-700 text-xs space-y-1">
+                                          <li>• Pediatria: ≤0,5 mmol/L/h; máx. 10/24h; monitorar Na 2–4h</li>
+                                          <li>• Adultos: seguir déficit calculado; reavaliar função renal e diurese</li>
+                                          <li>• Idosos: usar 0,5 × peso; vigiar sobrecarga; monitorar glicemia/coração</li>
+                                        </ul>
+                                      </div>
+                                    </div>
+                                    <div class="grid md:grid-cols-2 gap-4">
+                                      <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                                        <h4 class="font-semibold text-amber-800 mb-1">Monitorização</h4>
+                                        <ul class="text-amber-700 text-xs space-y-1">
+                                          <li>• Na sérico a cada 2–4 h nas primeiras 12–24 h; depois 6–8 h</li>
+                                          <li>• Diurese, sinais de edema cerebral, PA e glicemia</li>
+                                          <li>• Se correção muito rápida: pausar infusão e considerar desmopressina</li>
+                                        </ul>
+                                      </div>
+                                      <div class="bg-slate-100 p-3 rounded-lg border border-slate-200">
+                                        <h4 class="font-semibold text-slate-800 mb-1">Manutenção e situações especiais</h4>
+                                        <ul class="text-slate-700 text-xs space-y-1">
+                                          <li>• Tratar a causa; repor perdas contínuas; dieta com menor Na</li>
+                                          <li>• Ventilação mecânica: ajustar perdas insensíveis</li>
+                                          <li>• Diabetes insipidus: reposição hormonal/monitorização intensiva</li>
+                                          <li>• Idoso institucionalizado: prevenção com oferta hídrica adequada</li>
+                                        </ul>
+                                      </div>
+                                    </div>
+                                    <div class="bg-teal-50 p-3 rounded-lg border border-teal-200">
+                                      <h4 class="font-semibold text-teal-800 mb-1">Resumo rápido (cartão de bolso)</h4>
+                                      <ul class="text-teal-700 text-xs space-y-1">
+                                        <li>• Hipovolêmica: SF 0,9% → D5W; ≤10 mmol/L/24h</li>
+                                        <li>• Euvolêmica (DI): desmopressina/tiazídico; D5W; ≤8–10/24h</li>
+                                        <li>• Hipervolêmica: D5W + furosemida; ≤8/24h</li>
+                                      </ul>
+                                      <p class="text-xs text-slate-500 mt-2">Referências: Adrogué & Madias NEJM 2000; Verbalis 2013; Hoorn & Zietse 2017; Snyder 1987; Sterns 2015; Spasovski 2014; Berl 2020; Rondon-Berrios 2023; OpenEvidence 2024.</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="border-t border-slate-200 p-4">
+                                <button onclick="this.closest('.fixed').remove()" class="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200">Fechar</button>
+                              </div>
+                            </div>
+                          `
+                          document.body.appendChild(modal)
+                        }}
+                        className="ml-1 px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors duration-200"
+                        title="O que é Soro Oral?"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-xl font-bold text-blue-700">{(volumeSRO / 1000).toFixed(1)} L</p>
                     <p className="text-xs text-blue-600 mt-1">1/3 do total</p>
                   </div>
@@ -1796,6 +2214,24 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           console.error('Erro ao salvar resultados dos exames:', error)
         }
       }
+
+      // Avaliação automática dos exames para Grupo B
+      if (currentStep === 'evaluate_labs_b') {
+        const hemoglobin = labData.hemoglobin ? parseFloat(labData.hemoglobin) : undefined
+        const hematocrit = labData.hematocrit ? parseFloat(labData.hematocrit) : undefined
+        const platelets = labData.platelets ? parseInt(labData.platelets) : undefined
+        const albumin = labData.albumin ? parseFloat(labData.albumin) : undefined
+        const shouldUpgrade = (
+          (platelets !== undefined && platelets < 100000) ||
+          (hematocrit !== undefined && hematocrit >= 45) ||
+          (hemoglobin !== undefined && hemoglobin >= 16) ||
+          (albumin !== undefined && albumin < 3.5)
+        )
+        // Se critérios de gravidade laboratorial presentes e usuário tentar manter B, reclassificar para C
+        if (shouldUpgrade && nextStep === 'end_group_b') {
+          nextStep = 'group_c'
+        }
+      }
     }
     
     // Lógica especial para classificação automática de fatores de risco
@@ -1911,6 +2347,26 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       return
     }
     
+    // Ao entrar em espera de exames no Grupo B, gerar prescrição de hidratação
+    if (nextStep === 'wait_labs_b') {
+      try {
+        const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+        // Orientação de SRO 75 ml/kg/dia divididos em pequenas quantidades
+        const volumeInfantil = Math.round(peso * 75)
+        patientService.addPrescription(patient.id, {
+          medication: 'Solução de Reidratação Oral (SRO)',
+          dosage: patient.age >= 18 ? '200–400 ml por vez' : `${volumeInfantil} ml/dia dividido em pequenas quantidades`,
+          frequency: 'Oferecer em pequenos volumes, frequentemente',
+          duration: 'Até resultado do hemograma e melhora clínica',
+          instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
+          prescribedBy: 'Sistema Siga o Fluxo'
+        })
+        patientService.addObservation(patient.id, 'Manter hidratação oral enquanto aguarda hemograma (Grupo B).')
+      } catch (error) {
+        console.error('Erro ao gerar prescrição de hidratação em espera de exames:', error)
+      }
+    }
+
     setHistory(newHistory)
     setCurrentStep(nextStep)
     
@@ -1920,7 +2376,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     // Detectar grupo
     let group: 'A' | 'B' | 'C' | 'D' | undefined
     if (nextStep === 'group_a' || nextStep === 'hydration_a') group = 'A'
-    else if (nextStep === 'group_b' || nextStep === 'wait_labs_b') group = 'B'
+    else if (nextStep === 'group_b' || nextStep === 'wait_labs_b' || nextStep === 'end_group_b') group = 'B'
     else if (nextStep === 'group_c' || nextStep === 'treatment_c') group = 'C'
     else if (nextStep === 'group_d' || nextStep === 'treatment_d') group = 'D'
     
@@ -2243,4 +2699,4 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   )
 }
 
-export default DengueFlowchartComplete 
+export default DengueFlowchartComplete

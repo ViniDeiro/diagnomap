@@ -30,12 +30,95 @@ interface PatientFormProps {
   onEmergencySelector: () => void
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector }) => {
+  const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
     const timestamp = Date.now().toString().slice(-3)
     return `${random}${timestamp}`
+  }
+
+  // Helpers de classificação e cor de sinais vitais
+  const badge = (label: string, tone: 'blue' | 'blue-dark' | 'yellow' | 'orange' | 'red' | 'black') => {
+    const tones: Record<typeof tone, string> = {
+      blue: 'bg-blue-100 text-blue-700 border-blue-200',
+      'blue-dark': 'bg-blue-200 text-blue-900 border-blue-300',
+      yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      orange: 'bg-orange-100 text-orange-700 border-orange-200',
+      red: 'bg-red-100 text-red-700 border-red-200',
+      black: 'bg-black text-white border-black'
+    } as any
+    return (
+      <span className={clsx('ml-3 inline-flex items-center px-2 py-1 border rounded-full text-xs font-semibold', tones[tone])}>
+        {label}
+      </span>
+    )
+  }
+
+  const classifyHR = (hr?: number) => {
+    if (hr == null) return null
+    if (hr >= 160) return badge('Taquicardia severa', 'red')
+    if (hr >= 131) return badge('Taquicardia moderada', 'orange')
+    if (hr > 100) return badge('Taquicardia leve', 'yellow')
+    if (hr >= 60) return badge('Normal', 'blue')
+    if (hr >= 50) return badge('Bradicardia leve', 'yellow')
+    if (hr >= 35) return badge('Bradicardia moderada', 'orange')
+    return badge('Bradicardia severa', 'red')
+  }
+
+  const classifyRR = (rr?: number) => {
+    if (rr == null) return null
+    if (rr >= 40) return badge('Taquipneia severa', 'red')
+    if (rr >= 31) return badge('Taquipneia moderada', 'orange')
+    if (rr >= 21) return badge('Taquipneia leve', 'yellow')
+    if (rr >= 14) return badge('Normal', 'blue')
+    if (rr >= 12) return badge('Bradipneia leve', 'yellow')
+    if (rr >= 9) return badge('Bradipneia moderada', 'orange')
+    return badge('Bradipneia severa', 'red')
+  }
+
+  const classifySpO2 = (spo2?: number) => {
+    if (spo2 == null) return null
+    if (spo2 <= 85) return badge('Hipoxemia severa', 'red')
+    if (spo2 <= 89) return badge('Hipoxemia moderada', 'orange')
+    if (spo2 <= 94) return badge('Hipoxemia leve', 'yellow')
+    return badge('Normal', 'blue')
+  }
+
+  const classifyBP = (bp?: string) => {
+    if (!bp) return null
+    const [sStr, dStr] = bp.split('/')
+    const s = parseInt(sStr)
+    const d = parseInt(dStr)
+    if (isNaN(s) || isNaN(d)) return null
+    const scores: Array<{ cond: boolean; chip: JSX.Element }> = [
+      { cond: s >= 180 || d >= 110, chip: badge('Hipertensão estágio 2 (severa)', 'red') },
+      { cond: (s >= 160 && s <= 179) || (d >= 100 && d <= 109), chip: badge('Hipertensão estágio 2', 'orange') },
+      { cond: (s >= 140 && s <= 159) || (d >= 90 && d <= 99), chip: badge('Hipertensão estágio 1', 'yellow') },
+      { cond: (s >= 120 && s <= 139) || (d >= 80 && d <= 89), chip: badge('Pré-hipertensão', 'blue-dark') },
+      { cond: (s >= 100 && s <= 119) && (d >= 60 && d <= 79), chip: badge('Normal', 'blue') },
+      { cond: (s >= 85 && s <= 99) || (d >= 55 && d <= 59), chip: badge('Hipotensão leve', 'yellow') },
+      { cond: (s >= 70 && s <= 84) || (d >= 49 && d <= 54), chip: badge('Hipotensão moderada', 'orange') },
+      { cond: s < 70 || d < 49, chip: badge('Hipotensão severa', 'red') },
+    ]
+    return scores.find(sv => sv.cond)?.chip || null
+  }
+
+  const classifyGlucose = (g?: string) => {
+    if (!g) return null
+    const valStr = g.trim().toUpperCase()
+    if (valStr === 'HI') return badge('Hiperglicemia extrema (HI)', 'black')
+    if (valStr === 'LO') return badge('Hipoglicemia extrema (LO)', 'black')
+    const v = parseFloat(valStr)
+    if (isNaN(v)) return null
+    if (v >= 200) return badge('Hiperglicemia severa', 'red')
+    if (v >= 151) return badge('Hiperglicemia moderada', 'orange')
+    if (v >= 126) return badge('Hiperglicemia leve', 'yellow')
+    if (v >= 100) return badge('Pré-diabetes', 'blue-dark')
+    if (v >= 75) return badge('Normal', 'blue')
+    if (v >= 60) return badge('Hipoglicemia leve', 'yellow')
+    if (v >= 45) return badge('Hipoglicemia moderada', 'orange')
+    return badge('Hipoglicemia severa', 'red')
   }
 
   const [formData, setFormData] = useState<PatientFormData>({
@@ -58,6 +141,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentStep, setCurrentStep] = useState(1)
+  // Controle explícito: usuário deve clicar para selecionar o fluxo
+  const [hasSelectedFlow, setHasSelectedFlow] = useState(false)
 
   // Seleção de fluxograma é feita via EmergencySelector
 
@@ -276,19 +361,28 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                 <div className="space-y-6">
                   <EmergencySelector
                     selectedFlowchart={formData.selectedFlowchart}
-                    onSelectFlowchart={(flowchart) =>
+                    onSelectFlowchart={(flowchart) => {
                       setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id as "dengue" | "zika" | "chikungunya" }))
-                    }
+                      setHasSelectedFlow(true)
+                    }}
                   />
+                  {!hasSelectedFlow && (
+                    <p className="text-sm text-red-600 mt-2">Selecione um fluxograma para continuar.</p>
+                  )}
                 </div>
 
                 <div className="flex justify-end pt-6">
                   <motion.button
                     type="button"
-                    onClick={() => setCurrentStep(2)}
-                    className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    onClick={() => hasSelectedFlow && setCurrentStep(2)}
+                    className={`px-8 py-4 rounded-xl transition-all duration-300 font-semibold flex items-center space-x-2 ${
+                      hasSelectedFlow
+                        ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-xl"
+                        : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                    }`}
+                    whileHover={{ scale: hasSelectedFlow ? 1.02 : 1 }}
+                    whileTap={{ scale: hasSelectedFlow ? 0.98 : 1 }}
+                    disabled={!hasSelectedFlow}
                   >
                     <span>Próximo: Dados Pessoais</span>
                     <User className="w-5 h-5" />
@@ -699,6 +793,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
                         placeholder="Ex: 120/80"
                       />
+                      {classifyBP(formData.vitalSigns?.bloodPressure)}
                     </div>
                   </div>
 
@@ -724,6 +819,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                         min="30"
                         max="200"
                       />
+                      {classifyHR(formData.vitalSigns?.heartRate)}
                     </div>
                   </div>
 
@@ -749,6 +845,57 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                         min="10"
                         max="60"
                       />
+                      {classifyRR(formData.vitalSigns?.respiratoryRate)}
+                    </div>
+                  </div>
+
+                  {/* Saturação de O2 */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
+                      Saturação de O2 (SpO₂ %)
+                    </label>
+                    <div className="relative">
+                      <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        type="number"
+                        value={formData.vitalSigns?.oxygenSaturation ?? ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          vitalSigns: {
+                            ...prev.vitalSigns,
+                            oxygenSaturation: parseInt(e.target.value) || undefined
+                          }
+                        }))}
+                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                        placeholder="Ex: 97"
+                        min="50"
+                        max="100"
+                      />
+                      {classifySpO2(formData.vitalSigns?.oxygenSaturation)}
+                    </div>
+                  </div>
+
+                  {/* Glicemia Capilar */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
+                      Glicemia Capilar (mg/dL)
+                    </label>
+                    <div className="relative">
+                      <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                      <input
+                        type="text"
+                        value={formData.vitalSigns?.glucose ?? ''}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          vitalSigns: {
+                            ...prev.vitalSigns,
+                            glucose: e.target.value
+                          }
+                        }))}
+                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                        placeholder="Ex: 95 ou LO/HI"
+                      />
+                      {classifyGlucose(formData.vitalSigns?.glucose)}
                     </div>
                   </div>
                 </div>

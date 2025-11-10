@@ -43,6 +43,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
     duration: '',
     instructions: ''
   })
+  const [selectedAntipyretic, setSelectedAntipyretic] = useState<'paracetamol' | 'dipirona' | null>(null)
 
   const handleAddPrescription = () => {
     if (newPrescription.medication && newPrescription.dosage) {
@@ -64,8 +65,9 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   }
 
   const handleGenerateAutomaticPrescriptions = () => {
+    if (!selectedAntipyretic) return
     if (patient.flowchartState.group) {
-      patientService.generatePrescriptions(patient.id, patient.flowchartState.group)
+      patientService.generatePrescriptions(patient.id, patient.flowchartState.group, selectedAntipyretic)
       onUpdate()
     }
   }
@@ -297,15 +299,51 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons */}
+          {/* Antipyretic choice + Action Buttons */}
           <div className="p-8 border-b border-slate-200">
+            {/* Single antipyretic selection */}
+            <div className="mb-4">
+              <h4 className="text-sm font-semibold text-slate-700 mb-2">Escolha um antitérmico para a receita</h4>
+              <div className="flex items-center gap-4">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="antipyretic"
+                    value="paracetamol"
+                    checked={selectedAntipyretic === 'paracetamol'}
+                    onChange={() => setSelectedAntipyretic('paracetamol')}
+                  />
+                  <span className="text-slate-700">Paracetamol</span>
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="antipyretic"
+                    value="dipirona"
+                    checked={selectedAntipyretic === 'dipirona'}
+                    onChange={() => setSelectedAntipyretic('dipirona')}
+                  />
+                  <span className="text-slate-700">Dipirona</span>
+                </label>
+              </div>
+              {!selectedAntipyretic && (
+                <p className="text-xs text-red-600 mt-1">Selecione um antitérmico antes de gerar a receita automática.</p>
+              )}
+            </div>
+
             <div className="flex flex-wrap gap-4">
               {patient.flowchartState.group && patient.treatment.prescriptions.length === 0 && (
                 <motion.button
                   onClick={handleGenerateAutomaticPrescriptions}
-                  className="bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-3"
+                  className={clsx(
+                    "px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-3",
+                    selectedAntipyretic
+                      ? "bg-gradient-to-r from-emerald-500 to-green-600 text-white"
+                      : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                  )}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  disabled={!selectedAntipyretic}
                 >
                   <CheckCircle className="w-5 h-5" />
                   <span>Gerar Receitas Protocolo</span>
