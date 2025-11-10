@@ -579,7 +579,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                   <div className="ml-6 space-y-2 text-lg leading-relaxed">
                     <div>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</div>
                     <div>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</div>
-                    <div>• Crianças: 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</div>
+                    <div>• Crianças: Paracetamol 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia); Dipirona 10 mg/kg VO a cada 6–8h</div>
                   </div>
                 </div>
 

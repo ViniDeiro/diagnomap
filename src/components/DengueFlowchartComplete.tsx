@@ -352,7 +352,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     const modal = document.createElement('div')
                     modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
                     modal.innerHTML = `
-                      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
                         <div class="bg-gradient-to-r from-red-600 to-pink-600 text-white p-6">
                           <div class="flex items-center justify-between">
                             <div class="flex items-center space-x-3">
@@ -362,8 +362,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                                 </svg>
                               </div>
                               <div>
-                                <h2 class="text-xl font-bold">Como Realizar a Prova do Laço</h2>
-                                <p class="text-red-100 text-sm">Procedimento técnico padronizado</p>
+                                <h2 class="text-xl font-bold">PROVA DE LAÇO – TÉCNICA ILUSTRADA</h2>
+                                <p class="text-red-100 text-sm">Procedimento para detecção de fragilidade</p>
                               </div>
                             </div>
                             <button 
@@ -377,9 +377,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                           </div>
                         </div>
                         
-                        <div class="p-6 space-y-6">
-                          <div class="rounded-xl overflow-hidden border border-slate-200">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/BP_cuff_circumference.svg/640px-BP_cuff_circumference.svg.png" alt="Prova do laço - posicionamento do manguito" class="w-full h-auto" />
+                        <div class="p-6 space-y-6 overflow-y-auto modern-scroll pr-2 flex-1">
+                          <style>
+                            .modern-scroll{scrollbar-width:thin;scrollbar-color:#ef4444 #f1f5f9}
+                            .modern-scroll::-webkit-scrollbar{width:10px}
+                            .modern-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:9999px}
+                            .modern-scroll::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#ef4444,#ec4899);border-radius:9999px}
+                            .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#dc2626,#db2777)}
+                          </style>
+                          <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
+                            <img src="/prova%20de%20la%C3%A7o.png" alt="Prova do laço - técnica ilustrada" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                           </div>
                           <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                             <h3 class="font-bold text-blue-800 mb-3 flex items-center">
@@ -391,7 +398,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                             <div class="space-y-3 text-blue-700">
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">1</div>
-                                <p><strong>Verificar a PA:</strong> Medir pressão arterial com paciente deitado ou sentado</p>
+                                <p><strong>Verificar a PA:</strong> medir pressão arterial com paciente deitado ou sentado</p>
                               </div>
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
@@ -772,7 +779,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   const modal = document.createElement('div')
                   modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
                   modal.innerHTML = `
-                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
                       <div class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6">
                         <div class="flex items-center justify-between">
                           <div class="flex items-center space-x-3">
@@ -793,9 +800,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                           </button>
                         </div>
                       </div>
-                      <div class="p-6 space-y-6 overflow-y-auto">
-                        <div class="rounded-xl overflow-hidden border border-slate-200">
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto" />
+                      <div class="p-6 space-y-6 overflow-y-auto modern-scroll pr-2 flex-1">
+                        <style>
+                          .modern-scroll{scrollbar-width:thin;scrollbar-color:#2563eb #f1f5f9}
+                          .modern-scroll::-webkit-scrollbar{width:10px}
+                          .modern-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:9999px}
+                          .modern-scroll::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#2563eb,#06b6d4);border-radius:9999px}
+                          .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#1d4ed8,#0891b2)}
+                        </style>
+                        <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                         </div>
                         <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                           <h3 class="font-bold text-blue-800 mb-3">O que é o Soro Oral (SRO)?</h3>
@@ -1028,7 +1042,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                           const modal = document.createElement('div')
                           modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
                           modal.innerHTML = `
-                            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+                              <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
                               <div class="bg-gradient-to-r from-blue-600 to-cyan-600 text-white p-6">
                                 <div class="flex items-center justify-between">
                                   <div class="flex items-center space-x-3">
@@ -1049,9 +1063,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                                   </button>
                                 </div>
                               </div>
-                              <div class="p-6 space-y-6 overflow-y-auto">
-                                <div class="rounded-xl overflow-hidden border border-slate-200">
-                                  <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto" />
+                              <div class="p-6 space-y-6 overflow-y-auto modern-scroll pr-2 flex-1">
+                                <style>
+                                  .modern-scroll{scrollbar-width:thin;scrollbar-color:#2563eb #f1f5f9}
+                                  .modern-scroll::-webkit-scrollbar{width:10px}
+                                  .modern-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:9999px}
+                                  .modern-scroll::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#2563eb,#06b6d4);border-radius:9999px}
+                                  .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#1d4ed8,#0891b2)}
+                                </style>
+                                <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
+                                  <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                                   <h3 class="font-bold text-blue-800 mb-3">O que é o Soro Oral (SRO)?</h3>

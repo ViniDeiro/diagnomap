@@ -157,7 +157,7 @@ ${chosenAntipyretic === 'Paracetamol' ?
 :
 `• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)
 • Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)
-• Pediátrico (ambos): 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)`}
+• Crianças: Paracetamol 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia); Dipirona 10 mg/kg VO a cada 6–8h`}
 
 5. Medicamentos Contraindicados
 • Aspirina (ácido acetilsalicílico) e salicilatos
@@ -369,7 +369,7 @@ ${formatDate(new Date())}`
                         <>
                           <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
                           <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
-                          <p>• Crianças: 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</p>
+                          <p>• Crianças: Paracetamol 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia); Dipirona 10 mg/kg VO a cada 6–8h</p>
                         </>
                       )}
                     </div>

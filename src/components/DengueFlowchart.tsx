@@ -206,7 +206,7 @@ const DengueFlowchart: React.FC<DengueFlowchartProps> = ({ patient, onComplete, 
               <div className="text-emerald-700 text-sm space-y-1">
                 <p>• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)</p>
                 <p>• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)</p>
-                <p>• Pediátrico (ambos): 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia)</p>
+                <p>• Crianças: Paracetamol 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia); Dipirona 10 mg/kg VO a cada 6–8h</p>
               </div>
             </div>
             <div className="bg-gradient-to-br from-red-50 to-rose-50 p-6 rounded-xl border border-red-200">

@@ -349,11 +349,151 @@ export const sepsisFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Dengue (Emergência)
+export const dengueFlowchart: EmergencyFlowchart = {
+  id: 'dengue',
+  name: 'Dengue - Classificação de Risco (Emergência)',
+  description: 'Protocolo rápido de classificação e manejo inicial do paciente com suspeita de dengue.',
+  category: 'infectious',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-teal-600 to-green-700',
+  initialStep: 'start',
+  finalSteps: ['discharge', 'transfer', 'icu'],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Avaliação Inicial - Dengue',
+      description: 'Identificar sinais de alarme ou gravidade e definir conduta.',
+      type: 'question',
+      options: [
+        { text: 'Sem sinais de alarme/gravidade', nextStep: 'group_a', value: 'A' },
+        { text: 'Sangramento/Risco social/Comorbidades', nextStep: 'group_b', value: 'B' },
+        { text: 'Sinais de alarme', nextStep: 'group_c', value: 'C', critical: true },
+        { text: 'Sinais de gravidade', nextStep: 'group_d', value: 'D', critical: true }
+      ]
+    },
+    group_a: {
+      id: 'group_a',
+      title: 'Grupo A - Ambulatorial',
+      description: 'Sem sinais de alarme ou gravidade. Hidratação oral e orientações.',
+      type: 'group',
+      group: 'A',
+      content: `
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Hidratação oral e antitérmicos (dipirona/paracetamol).</li>
+          <li>Evitar AINEs e salicilatos.</li>
+          <li>Retorno imediato se surgirem sinais de alarme.</li>
+        </ul>
+      `,
+      options: [
+        { text: 'Alta com orientações', nextStep: 'discharge', value: 'discharge' }
+      ]
+    },
+    group_b: {
+      id: 'group_b',
+      title: 'Grupo B - Observação',
+      description: 'Sangramento cutâneo/PL positivo, risco social ou comorbidades.',
+      type: 'group',
+      group: 'B',
+      content: `
+        <ul class="list-disc pl-5 space-y-1">
+          <li>Hidratação oral enquanto aguarda hemograma.</li>
+          <li>Observação e reavaliação clínica após resultados.</li>
+          <li>Solicitar hemograma completo obrigatório.</li>
+        </ul>
+      `,
+      options: [
+        { text: 'Encaminhar para reavaliação', nextStep: 'transfer', value: 'observe' }
+      ]
+    },
+    group_c: {
+      id: 'group_c',
+      title: 'Grupo C - Sinais de Alarme',
+      description: 'Internação para hidratação venosa e monitorização.',
+      type: 'action',
+      critical: true,
+      group: 'C',
+      timeSensitive: true,
+      content: `
+        <div class="space-y-2">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Conduta:</strong> Internar, iniciar hidratação EV, monitorizar sinais vitais e hematócrito.
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Internar e tratar', nextStep: 'transfer', value: 'admit', critical: true }
+      ]
+    },
+    group_d: {
+      id: 'group_d',
+      title: 'Grupo D - Gravidade',
+      description: 'Sinais de gravidade: choque, sangramento grave ou comprometimento de órgãos.',
+      type: 'action',
+      critical: true,
+      group: 'D',
+      timeSensitive: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-2">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <strong>Conduta imediata:</strong> Reanimação com cristaloides, hemoderivados conforme necessidade e UTI.
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Encaminhar para UTI', nextStep: 'icu', value: 'icu', critical: true }
+      ]
+    },
+    discharge: {
+      id: 'discharge',
+      title: 'Alta com Orientações',
+      description: 'Paciente apto para alta com hidratação oral e sinais de alerta.',
+      type: 'result',
+      content: `
+        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
+          <h4 class="font-bold text-green-800">Protocolo Dengue Concluído</h4>
+          <p class="text-green-700">Alta ambulatorial com orientações de retorno.</p>
+        </div>
+      `,
+      options: []
+    },
+    transfer: {
+      id: 'transfer',
+      title: 'Encaminhamento/Internação',
+      description: 'Paciente encaminhado para observação ou internação conforme caso.',
+      type: 'result',
+      content: `
+        <div class="bg-blue-50 p-4 rounded border-l-4 border-blue-500">
+          <h4 class="font-bold text-blue-800">Encaminhamento Realizado</h4>
+          <p class="text-blue-700">Paciente sob observação/internação para manejo clínico.</p>
+        </div>
+      `,
+      options: []
+    },
+    icu: {
+      id: 'icu',
+      title: 'UTI',
+      description: 'Paciente encaminhado para unidade de terapia intensiva.',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
+          <h4 class="font-bold text-red-800">Gravidade - UTI</h4>
+          <p class="text-red-700">Monitorização intensiva e suporte avançado.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 // Mapa de todos os fluxogramas disponíveis
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
   sepsis: sepsisFlowchart,
+  dengue: dengueFlowchart,
   // Adicionar mais fluxogramas conforme implementados
 }
 

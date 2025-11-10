@@ -48,8 +48,9 @@ interface PatientFormProps {
       red: 'bg-red-100 text-red-700 border-red-200',
       black: 'bg-black text-white border-black'
     } as any
+    // Alinha o chip com a borda esquerda da caixa de input
     return (
-      <span className={clsx('ml-3 inline-flex items-center px-2 py-1 border rounded-full text-xs font-semibold', tones[tone])}>
+      <span className={clsx('mt-2 ml-0 inline-flex items-center px-2 py-1 border rounded-full text-xs font-semibold', tones[tone])}>
         {label}
       </span>
     )
