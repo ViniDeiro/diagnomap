@@ -86,6 +86,24 @@ interface PatientFormProps {
     return badge('Normal', 'blue')
   }
 
+  // Classificação detalhada de temperatura conforme parametrização institucional
+  const classifyTemp = (t?: number) => {
+    if (t == null || isNaN(t)) return null
+    // Hipotermias primeiro
+    if (t < 28) return badge('Hipotermia grave (< 28°C)', 'red')
+    if (t <= 31.9) return badge('Hipotermia moderada (28–31,9°C)', 'orange')
+    if (t <= 35.9) return badge('Hipotermia leve (32–35,9°C)', 'yellow')
+    // Faixas normais e febris
+    if (t <= 37.2 && t >= 36.0) return badge('Normal (36,0–37,2°C)', 'blue')
+    if (t <= 37.7) return badge('Sub-febril (37,3–37,7°C)', 'yellow')
+    if (t <= 39.9) return badge('Febre (37,8–39,9°C)', 'orange')
+    // Hipertermia
+    if (t > 40) return badge('Hipertermia (> 40°C)', 'red')
+    // Valores fora do padrão mas não encaixados (ex.: 37.25, 40 exatamente)
+    if (t > 39.9 && t <= 40) return badge('Febre alta (≈ 40°C)', 'orange')
+    return null
+  }
+
   const classifyBP = (bp?: string) => {
     if (!bp) return null
     const [sStr, dStr] = bp.split('/')
@@ -103,6 +121,36 @@ interface PatientFormProps {
       { cond: s < 70 || d < 49, chip: badge('Hipotensão severa', 'red') },
     ]
     return scores.find(sv => sv.cond)?.chip || null
+  }
+
+  // Calcula a Pressão Arterial Média (PAM) a partir da PA "sistolica/diastolica"
+  const calculatePAM = (bp?: string): number | undefined => {
+    if (!bp) return undefined
+    const [sStr, dStr] = bp.split('/')
+    const s = parseInt(sStr)
+    const d = parseInt(dStr)
+    if (isNaN(s) || isNaN(d)) return undefined
+    return Math.round((s + 2 * d) / 3)
+  }
+
+  // Exibe um chip com o valor da PAM calculada
+  const renderPAMChip = (bp?: string) => {
+    const pam = calculatePAM(bp)
+    if (pam == null) return null
+    return badge(`PAM ≈ ${pam} mmHg`, 'blue-dark')
+  }
+
+  // Formata a entrada da PA automaticamente para o padrão "120/80"
+  const formatBloodPressureInput = (value: string): string => {
+    // Mantém apenas dígitos para permitir digitação contínua (ex: 12080 -> 120/80)
+    const digits = (value || '').replace(/\D/g, '')
+    if (!digits) return ''
+    // Até 3 dígitos para sistólica
+    const s = digits.slice(0, 3)
+    // Próximos dígitos para diastólica (máx. 3)
+    const d = digits.slice(3, 6)
+    // Se ainda está digitando a diastólica, mostra a barra
+    return d.length > 0 ? `${s}/${d}` : `${s}/`
   }
 
   const classifyGlucose = (g?: string) => {
@@ -135,6 +183,7 @@ interface PatientFormProps {
       temperature: undefined,
       feverDays: undefined,
       bloodPressure: '',
+      pam: undefined,
       heartRate: undefined,
       respiratoryRate: undefined
     }
@@ -733,6 +782,7 @@ interface PatientFormProps {
                         min="30"
                         max="45"
                       />
+                      {classifyTemp(formData.vitalSigns?.temperature)}
                     </div>
                   </div>
 
@@ -784,17 +834,25 @@ interface PatientFormProps {
                       <input
                         type="text"
                         value={formData.vitalSigns?.bloodPressure || ''}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          vitalSigns: { 
-                            ...prev.vitalSigns, 
-                            bloodPressure: e.target.value 
-                          } 
-                        }))}
+                        onChange={(e) => {
+                          const formatted = formatBloodPressureInput(e.target.value)
+                          const pamVal = calculatePAM(formatted)
+                          setFormData(prev => ({
+                            ...prev,
+                            vitalSigns: {
+                              ...prev.vitalSigns,
+                              bloodPressure: formatted,
+                              pam: pamVal
+                            }
+                          }))
+                        }}
+                        inputMode="numeric"
+                        maxLength={7}
                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
                         placeholder="Ex: 120/80"
                       />
                       {classifyBP(formData.vitalSigns?.bloodPressure)}
+                      {renderPAMChip(formData.vitalSigns?.bloodPressure)}
                     </div>
                   </div>
 

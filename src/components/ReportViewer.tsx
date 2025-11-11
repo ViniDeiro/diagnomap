@@ -219,18 +219,30 @@ ${formatDate(new Date())}`
 
     // Construir informações sobre febre de forma mais técnica
     let feverInfo = ''
-    if (patient.admission.vitalSigns?.temperature) {
-      const temp = patient.admission.vitalSigns.temperature
+    if (patient.admission.vitalSigns?.temperature != null) {
+      const temp = patient.admission.vitalSigns.temperature as number
       const days = patient.admission.vitalSigns.feverDays
-      
-      if (temp >= 39) {
-        feverInfo = `hipertermia significativa (${temp}°C)`
-      } else if (temp >= 37.8) {
-        feverInfo = `febre moderada (${temp}°C)`
-      } else {
+
+      // Parametrização institucional para temperatura
+      if (temp < 28) {
+        feverInfo = `hipotermia grave (${temp}°C)`
+      } else if (temp <= 31.9) {
+        feverInfo = `hipotermia moderada (${temp}°C)`
+      } else if (temp <= 35.9) {
+        feverInfo = `hipotermia leve (${temp}°C)`
+      } else if (temp >= 36.0 && temp <= 37.2) {
+        feverInfo = `temperatura dentro da normalidade (${temp}°C)`
+      } else if (temp <= 37.7) {
         feverInfo = `estado subfebril (${temp}°C)`
+      } else if (temp <= 39.9) {
+        feverInfo = `febre (${temp}°C)`
+      } else if (temp > 40) {
+        feverInfo = `hipertermia (${temp}°C)`
+      } else {
+        // valor limítrofe (≈ 40°C)
+        feverInfo = `febre alta (${temp}°C)`
       }
-      
+
       if (days) {
         if (days === 1) {
           feverInfo += ' com início há 24 horas'
@@ -260,6 +272,9 @@ ${formatDate(new Date())}`
           } else {
             vitals.push(`pressão arterial dentro dos parâmetros de normalidade (${vs.bloodPressure} mmHg)`)
           }
+          // Adicionar cálculo da Pressão Arterial Média (PAM)
+          const pam = vs.pam != null ? Math.round(vs.pam) : Math.round((systolic + 2 * diastolic) / 3)
+          vitals.push(`pressão arterial média (PAM) ≈ ${pam} mmHg`)
         }
       }
       
@@ -477,10 +492,16 @@ ${formatDate(new Date())}`
               console.warn('Erro ao recuperar fatores de risco:', error)
             }
           }
+
+          const diseaseName = patient.selectedFlowchart 
+            ? patient.selectedFlowchart.charAt(0).toUpperCase() + patient.selectedFlowchart.slice(1)
+            : 'Dengue'
+          const groupLetter = patient.flowchartState.group || groupInfo.name.match(/Grupo\s([ABCD])/i)?.[1] || 'B'
+          const basePhrase = `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional, sendo ${isFemale ? 'classificada' : 'classificado'} como Grupo ${groupLetter} de ${diseaseName}.`
           
-          return `Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.${riskFactorsText}`
+          return `${basePhrase} Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.${riskFactorsText}`
         })() : 
-        `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional.`,
+        `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional, sendo ${isFemale ? 'classificada' : 'classificado'} como ${patient.selectedFlowchart ? 'Grupo A de ' + (patient.selectedFlowchart.charAt(0).toUpperCase() + patient.selectedFlowchart.slice(1)) : 'grupo A de Dengue'}.`,
       
       treatment: groupInfo ? 
         `O plano terapêutico instituído contempla ${groupInfo.treatment}, seguindo rigorosamente as diretrizes clínicas preconizadas. Esta abordagem visa otimizar o prognóstico e minimizar o risco de complicações.` : 

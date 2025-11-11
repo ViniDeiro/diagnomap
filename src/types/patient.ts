@@ -16,6 +16,8 @@ export interface Patient {
       temperature?: number
       feverDays?: number
       bloodPressure?: string
+      // Pressão Arterial Média (PAM) calculada a partir de PA sistólica/diastólica
+      pam?: number
       heartRate?: number
       respiratoryRate?: number
       oxygenSaturation?: number
@@ -79,6 +81,8 @@ export interface PatientFormData {
     temperature?: number
     feverDays?: number
     bloodPressure?: string
+    // Pressão Arterial Média (PAM) calculada a partir de PA sistólica/diastólica
+    pam?: number
     heartRate?: number
     respiratoryRate?: number
     oxygenSaturation?: number

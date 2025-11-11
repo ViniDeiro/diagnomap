@@ -52,6 +52,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const [answers, setAnswers] = useState<Record<string, string>>(patient.flowchartState.answers || {})
   const [progress, setProgress] = useState(patient.flowchartState.progress || 0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [hydrationObservPrescribed, setHydrationObservPrescribed] = useState(false)
 
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
@@ -60,6 +61,18 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     setHistory(flowchartState.history || [])
     setAnswers(flowchartState.answers || {})
     setProgress(flowchartState.progress || 0)
+    // Detectar se já existe prescrição de hidratação específica para observação (até retorno dos exames)
+    try {
+      const fresh = patientService.getPatientById(patient.id)
+      const exists = !!fresh?.treatment.prescriptions.some(p =>
+        p.medication.toLowerCase().includes('reidratação oral') &&
+        (p.duration.toLowerCase().includes('resultado do hemograma') || p.duration.toLowerCase().includes('retorno dos exames'))
+      )
+      setHydrationObservPrescribed(exists)
+    } catch (e) {
+      // Silencioso: apenas não marca como existente em caso de erro
+      setHydrationObservPrescribed(false)
+    }
   }, [patient.id, patient.flowchartState])
 
   // Função utilitária para calcular o progresso baseado no caminho específico
@@ -1310,6 +1323,41 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-green-50 p-4 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">Conduta:</h4>
             <p className="text-green-700 text-sm">Hidratação oral até resultado</p>
+            <div className="mt-3">
+              <button
+                type="button"
+                disabled={hydrationObservPrescribed}
+                onClick={() => {
+                  try {
+                    const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+                    const volumeInfantil = Math.round(peso * 75)
+                    const dosage = patient.age >= 18 ? '200–400 ml por vez' : `${volumeInfantil} ml/dia dividido em pequenas quantidades`
+                    const duration = 'Até retorno dos exames (hemograma) e melhora clínica'
+                    patientService.addPrescription(patient.id, {
+                      medication: 'Solução de Reidratação Oral (SRO)',
+                      dosage,
+                      frequency: 'Oferecer em pequenos volumes, frequentemente',
+                      duration,
+                      instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
+                      prescribedBy: 'Sistema Siga o Fluxo'
+                    })
+                    patientService.addObservation(patient.id, 'Orientar hidratação oral até o retorno dos exames (Grupo B).')
+                    setHydrationObservPrescribed(true)
+                  } catch (error) {
+                    console.error('Erro ao gerar prescrição de hidratação para observação:', error)
+                    alert('Não foi possível gerar a prescrição de hidratação. Tente novamente.')
+                  }
+                }}
+                className={clsx(
+                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  hydrationObservPrescribed ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed' : 'bg-white hover:bg-green-100 text-green-800 border-green-300'
+                )}
+                title={hydrationObservPrescribed ? 'Prescrição já gerada' : 'Gerar prescrição de hidratação (observação)'}
+              >
+                <Droplets className="w-4 h-4" />
+                <span>{hydrationObservPrescribed ? 'Prescrição gerada' : 'Gerar hidratação até exames'}</span>
+              </button>
+            </div>
           </div>
         </div>
       ),
@@ -2368,21 +2416,29 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       return
     }
     
-    // Ao entrar em espera de exames no Grupo B, gerar prescrição de hidratação
+    // Ao entrar em espera de exames no Grupo B, gerar prescrição de hidratação (evitar duplicação)
     if (nextStep === 'wait_labs_b') {
       try {
-        const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
-        // Orientação de SRO 75 ml/kg/dia divididos em pequenas quantidades
-        const volumeInfantil = Math.round(peso * 75)
-        patientService.addPrescription(patient.id, {
-          medication: 'Solução de Reidratação Oral (SRO)',
-          dosage: patient.age >= 18 ? '200–400 ml por vez' : `${volumeInfantil} ml/dia dividido em pequenas quantidades`,
-          frequency: 'Oferecer em pequenos volumes, frequentemente',
-          duration: 'Até resultado do hemograma e melhora clínica',
-          instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
-          prescribedBy: 'Sistema Siga o Fluxo'
-        })
-        patientService.addObservation(patient.id, 'Manter hidratação oral enquanto aguarda hemograma (Grupo B).')
+        const fresh = patientService.getPatientById(patient.id)
+        const alreadyHasObservHydration = !!fresh?.treatment.prescriptions.some(p =>
+          p.medication.toLowerCase().includes('reidratação oral') &&
+          (p.duration.toLowerCase().includes('resultado do hemograma') || p.duration.toLowerCase().includes('retorno dos exames'))
+        )
+
+        if (!alreadyHasObservHydration) {
+          const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+          const volumeInfantil = Math.round(peso * 75)
+          patientService.addPrescription(patient.id, {
+            medication: 'Solução de Reidratação Oral (SRO)',
+            dosage: patient.age >= 18 ? '200–400 ml por vez' : `${volumeInfantil} ml/dia dividido em pequenas quantidades`,
+            frequency: 'Oferecer em pequenos volumes, frequentemente',
+            duration: 'Até retorno dos exames (hemograma) e melhora clínica',
+            instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
+            prescribedBy: 'Sistema Siga o Fluxo'
+          })
+          patientService.addObservation(patient.id, 'Manter hidratação oral enquanto aguarda hemograma (Grupo B).')
+          setHydrationObservPrescribed(true)
+        }
       } catch (error) {
         console.error('Erro ao gerar prescrição de hidratação em espera de exames:', error)
       }
