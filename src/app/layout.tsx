@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Siga o Fluxo - Sistema de Diagnóstico Clínico",
+  title: "Siga o Fluxo - Fluxogramas de apoio para decisão terapêutica",
   description: "Sistema inteligente para classificação de risco em pacientes com suspeita de dengue - Protocolo MS 2024",
   appleWebApp: {
     capable: true,

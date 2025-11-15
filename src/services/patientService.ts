@@ -81,6 +81,7 @@ class PatientService {
       age,
       gender: formData.gender,
       weight: formData.weight,
+      allergies: formData.allergies || [],
       medicalRecord: formData.medicalRecord,
       selectedFlowchart: formData.selectedFlowchart,
       generalObservations: formData.generalObservations,
@@ -210,27 +211,47 @@ class PatientService {
 
     // Escolha de antitérmico único
     const choice = (antipyreticChoice || 'paracetamol').toLowerCase()
+
+    // Verificar alergias e bloquear antitérmicos quando aplicável
+    const allergies = (patient.allergies || []).map(a => a.toLowerCase())
+    const isAllergicTo = (key: 'paracetamol' | 'dipirona') => {
+      const synonyms: Record<'paracetamol' | 'dipirona', string[]> = {
+        paracetamol: ['paracetamol', 'acetaminofeno', 'acetaminophen'],
+        dipirona: ['dipirona', 'metamizol', 'metamizole']
+      }
+      const set = new Set(synonyms[key])
+      return allergies.some(a => set.has(a))
+    }
+
     if (choice === 'dipirona') {
-      const pediatricDrops = Math.round((weight * 10) / 25) // 10mg/kg | 500mg/mL ⇒ 25mg/gota
-      prescriptions.push({
-        medication: 'Dipirona',
-        dosage: patient.age >= 18 ? '500–1000 mg' : `10 mg/kg (≈ ${pediatricDrops} gotas/dose, sol. 500mg/mL)`,
-        frequency: '6/6 a 8/8 horas',
-        duration: 'Conforme necessário',
-        instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
-        prescribedBy: 'Sistema Siga o Fluxo'
-      })
+      if (isAllergicTo('dipirona')) {
+        this.addObservation(patientId, 'Antitérmico automático não incluído: alergia registrada à Dipirona/Metamizol.')
+      } else {
+        const pediatricDrops = Math.round((weight * 10) / 25) // 10mg/kg | 500mg/mL ⇒ 25mg/gota
+        prescriptions.push({
+          medication: 'Dipirona',
+          dosage: patient.age >= 18 ? '500–1000 mg' : `10 mg/kg (≈ ${pediatricDrops} gotas/dose, sol. 500mg/mL)`,
+          frequency: '6/6 a 8/8 horas',
+          duration: 'Conforme necessário',
+          instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
+          prescribedBy: 'Sistema Siga o Fluxo'
+        })
+      }
     } else {
-      const minDrops = Math.round(weight * 1) // 10mg/kg ⇒ ~1 gota/kg (200mg/mL, ~10mg/gota)
-      const maxDrops = Math.round(weight * 1.5) // 15mg/kg ⇒ ~1.5 gotas/kg
-      prescriptions.push({
-        medication: 'Paracetamol',
-        dosage: patient.age >= 18 ? '500–750 mg' : `10–15 mg/kg (≈ ${minDrops}–${maxDrops} gotas/dose, sol. 200mg/mL)`,
-        frequency: '6/6 a 8/8 horas',
-        duration: 'Conforme necessário',
-        instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
-        prescribedBy: 'Sistema Siga o Fluxo'
-      })
+      if (isAllergicTo('paracetamol')) {
+        this.addObservation(patientId, 'Antitérmico automático não incluído: alergia registrada a Paracetamol/Acetaminofeno.')
+      } else {
+        const minDrops = Math.round(weight * 1) // 10mg/kg ⇒ ~1 gota/kg (200mg/mL, ~10mg/gota)
+        const maxDrops = Math.round(weight * 1.5) // 15mg/kg ⇒ ~1.5 gotas/kg
+        prescriptions.push({
+          medication: 'Paracetamol',
+          dosage: patient.age >= 18 ? '500–750 mg' : `10–15 mg/kg (≈ ${minDrops}–${maxDrops} gotas/dose, sol. 200mg/mL)`,
+          frequency: '6/6 a 8/8 horas',
+          duration: 'Conforme necessário',
+          instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
+          prescribedBy: 'Sistema Siga o Fluxo'
+        })
+      }
     }
 
     // Hidratação oral para grupos A e B

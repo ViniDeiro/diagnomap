@@ -45,6 +45,16 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   })
   const [selectedAntipyretic, setSelectedAntipyretic] = useState<'paracetamol' | 'dipirona' | null>(null)
 
+  const allergies = (patient.allergies || []).map(a => a.toLowerCase())
+  const isAllergicTo = (key: 'paracetamol' | 'dipirona') => {
+    const synonyms: Record<'paracetamol' | 'dipirona', string[]> = {
+      paracetamol: ['paracetamol', 'acetaminofeno', 'acetaminophen'],
+      dipirona: ['dipirona', 'metamizol', 'metamizole']
+    }
+    const set = new Set(synonyms[key])
+    return allergies.some(a => set.has(a))
+  }
+
   const handleAddPrescription = () => {
     if (newPrescription.medication && newPrescription.dosage) {
       patientService.addPrescription(patient.id, {
@@ -312,8 +322,9 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     value="paracetamol"
                     checked={selectedAntipyretic === 'paracetamol'}
                     onChange={() => setSelectedAntipyretic('paracetamol')}
+                    disabled={isAllergicTo('paracetamol')}
                   />
-                  <span className="text-slate-700">Paracetamol</span>
+                  <span className={clsx("text-slate-700", isAllergicTo('paracetamol') && "text-red-600 line-through")}>Paracetamol{isAllergicTo('paracetamol') && ' (alergia)'}</span>
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -322,12 +333,16 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     value="dipirona"
                     checked={selectedAntipyretic === 'dipirona'}
                     onChange={() => setSelectedAntipyretic('dipirona')}
+                    disabled={isAllergicTo('dipirona')}
                   />
-                  <span className="text-slate-700">Dipirona</span>
+                  <span className={clsx("text-slate-700", isAllergicTo('dipirona') && "text-red-600 line-through")}>Dipirona{isAllergicTo('dipirona') && ' (alergia)'}</span>
                 </label>
               </div>
               {!selectedAntipyretic && (
                 <p className="text-xs text-red-600 mt-1">Selecione um antitérmico antes de gerar a receita automática.</p>
+              )}
+              {(isAllergicTo('paracetamol') || isAllergicTo('dipirona')) && (
+                <p className="text-xs text-red-700 mt-1">Atenção: antitérmicos com alergia estão desabilitados e serão bloqueados na receita automática.</p>
               )}
             </div>
 

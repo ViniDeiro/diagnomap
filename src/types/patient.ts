@@ -5,6 +5,8 @@ export interface Patient {
   age: number
   gender: 'masculino' | 'feminino'
   weight?: number
+  // Lista de alergias registradas para o paciente
+  allergies?: string[]
   medicalRecord: string
   selectedFlowchart: 'dengue' | 'zika' | 'chikungunya'
   generalObservations?: string
@@ -73,6 +75,7 @@ export interface PatientFormData {
   birthDate: Date
   gender: 'masculino' | 'feminino'
   weight?: number
+  allergies?: string[]
   medicalRecord: string
   selectedFlowchart: 'dengue' | 'zika' | 'chikungunya'
   generalObservations?: string

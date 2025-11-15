@@ -54,6 +54,68 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [hydrationObservPrescribed, setHydrationObservPrescribed] = useState(false)
 
+  // Helper: parse number safely from string/localStorage
+  const parseNum = (s: string | null): number | undefined => {
+    if (!s) return undefined
+    const n = Number(s)
+    return isNaN(n) ? undefined : n
+  }
+
+  // Local states to color-code lab inputs (Group B optional & general optional blocks)
+  const [labsB, setLabsB] = useState({
+    hb: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_b_${patient.id}`) : null),
+    ht: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_b_${patient.id}`) : null),
+    plt: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_b_${patient.id}`) : null),
+    alb: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_b_${patient.id}`) : null),
+    alt: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_b_${patient.id}`) : null),
+    ast: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_b_${patient.id}`) : null)
+  })
+
+  const [labs, setLabs] = useState({
+    hb: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) : null),
+    ht: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) : null),
+    plt: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) : null),
+    alb: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) : null),
+    alt: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) : null),
+    ast: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) : null)
+  })
+
+  // Determine label and color classes for each lab based on value
+  const labStatus = (kind: 'hb' | 'ht' | 'plt' | 'alb' | 'alt' | 'ast', value?: number) => {
+    if (value == null) return { label: '', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
+    switch (kind) {
+      case 'hb': {
+        if (value >= 12) return { label: 'Normal', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (value >= 10) return { label: 'Anemia leve', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        return { label: 'Anemia moderada/grave', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+      }
+      case 'ht': {
+        if (value >= 46) return { label: 'Hemoconcentração (alto)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (value < 36) return { label: 'Baixo', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        return { label: 'Normal', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+      }
+      case 'plt': {
+        if (value < 100000) return { label: 'Trombocitopenia severa', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (value < 150000) return { label: 'Trombocitopenia leve', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: 'Plaquetas normais', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+      }
+      case 'alb': {
+        if (value >= 3.5) return { label: 'Normal (3,5–5,5 g/dL)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (value >= 3.0) return { label: 'Hipoalbuminemia leve (3,0–3,4)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (value >= 2.1) return { label: 'Hipoalbuminemia moderada (2,1–2,9)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: 'Hipoalbuminemia grave (< 2,0)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+      }
+      case 'alt':
+      case 'ast': {
+        if (value <= 40) return { label: 'Normal (≤ 40 U/L)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (value <= 120) return { label: 'Elevação moderada (41–120)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: 'Elevação acentuada (> 120)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+      }
+      default:
+        return { label: '', input: 'border-slate-300', text: 'text-slate-500' }
+    }
+  }
+
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
     const flowchartState = patient.flowchartState
@@ -104,6 +166,36 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     return Math.round(progress)
   }
 
+  // Textos de apoio para os tooltips dos sinais
+  const infoTexts: Record<string, Record<string, string>> = {
+    grupoC: {
+      dor_abdominal:
+        'Dor abdominal intensa e contínua, especialmente em hipocôndrio direito ou difusa. Pode sinalizar sangramento, hepatomegalia ou extravasamento de plasma.',
+      vomitos_persistentes:
+        'Vômitos repetidos que impedem hidratação oral adequada, com risco de desidratação e piora clínica.',
+      acumulo_liquidos:
+        'Acúmulo de líquidos em cavidades (ascite, derrame pleural ou pericárdico), indicando extravasamento plasmático.',
+      hipotensao_postural:
+        'Hipotensão postural (ortostática) é queda acentuada da pressão ao se levantar, definida por redução da sistólica ≥ 20 mmHg ou da diastólica ≥ 10 mmHg em até 3 minutos. Ocorre por acúmulo de sangue nas pernas, podendo causar tontura, fraqueza ou desmaio.\n\nSintomas comuns\n• Tontura ou vertigem\n• Visão turva/embaçada\n• Sensação de fraqueza\n• Desmaio (síncope)\n• Náusea\n• Confusão mental',
+      hepatomegalia:
+        'Aumento do fígado maior que 2 cm do rebordo costal, associado a sofrimento hepático (elevação de transaminases, dor em hipocôndrio direito).',
+      sangramento_mucosa:
+        'Sangramento visível em mucosas (nariz, gengivas) e/ou aparecimento de petéquias; indica agravamento hemorrágico.',
+      letargia_irritabilidade:
+        'Alteração do estado de consciência com prostração importante ou irritabilidade anormal; pode indicar hipoperfusão ou comprometimento neurológico.'
+    },
+    grupoD: {
+      extravasamento_plasma:
+        'Perda significativa de plasma com sinais de choque e/ou disfunção de órgãos. Líquido sai dos vasos para os tecidos, levando a hemoconcentração (↑ hematócrito) e queda de plaquetas.\n\nSinais de choque\n• Hipotensão arterial\n• Pressão convergente (diferença sistólica–diastólica ≤ 20 mmHg)\n• Pulso rápido e fraco\n• Extremidades frias/cianose\n• Enchimento capilar lento (> 2 s)\n• Oligúria\n\nDisfunção orgânica\n• Dificuldade respiratória (edema de pulmão/SDRA)\n• Insuficiência hepática\n• Alterações neurológicas (delírio, sonolência ou coma)\n• Comprometimento de outros órgãos (miocardite, insuficiência renal)\n\nOutras características\n• Hemoconcentração ≥ 20%\n• Queda progressiva das plaquetas\n• Ascite/derrame pleural\n• Sangramentos de mucosas e/ou internos.',
+      choque_taquicardia:
+        'Choque na dengue é falha circulatória geralmente na fase de declínio da febre; a taquicardia é compensatória.\n\nSinais associados\n• Hipotensão arterial\n• Pressão convergente (Δ ≤ 20 mmHg)\n• Pulso rápido e fraco\n• Extremidades frias/cianose\n• Enchimento capilar lento (> 2 s)\n• Pele úmida e pegajosa\n• Oligúria\n• Agitação, irritabilidade, letargia ou sonolência.\n\nRequer reposição volêmica imediata.',
+      sangramento_grave:
+        'Hemorragia significativa com repercussão hemodinâmica (hematêmese, melena, metrorragia abundante, sangramento pulmonar ou intracraniano). Pode cursar com hipotensão e taquicardia.',
+      comprometimento_orgaos:
+        'Disfunção grave de órgãos por resposta inflamatória sistêmica e extravasamento de plasma.\n\nPrincipais órgãos\n• Fígado: hepatite/insuficiência hepática aguda\n• Rins: insuficiência renal aguda\n• Pulmões: derrame pleural e/ou SDRA\n• Coração: derrame pericárdico\n• Sistema circulatório: hipotensão, pulso rápido e fino, extremidades frias, enchimento capilar lento (choque)\n• Sistema nervoso: letargia, irritabilidade, sonolência ou confusão.\n\nReconhecimento precoce dos sinais de alarme ajuda a evitar essa progressão.'
+    }
+  }
+
   const steps: Record<string, FlowchartStep> = {
     start: {
       id: 'start',
@@ -145,35 +237,53 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   { id: 'sangramento_mucosa', label: 'Sangramento de mucosa' },
                   { id: 'letargia_irritabilidade', label: 'Letargia/irritabilidade' }
                 ].map((sinal) => (
-                  <label key={sinal.id} className="flex items-center space-x-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-amber-600 bg-white border-amber-300 rounded focus:ring-amber-500 focus:ring-2"
-                      onChange={(e) => {
-                        let currentAnswers: { grupoC: string[], grupoD: string[] } = { grupoC: [], grupoD: [] }
-                        if (answers.alarm_check) {
-                          try {
-                            // Verificar se é um JSON válido
-                            if (answers.alarm_check.startsWith('{')) {
-                              currentAnswers = JSON.parse(answers.alarm_check)
+                  <div key={sinal.id} className="flex items-center space-x-2">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-amber-600 bg-white border-amber-300 rounded focus:ring-amber-500 focus:ring-2"
+                        onChange={(e) => {
+                          let currentAnswers: { grupoC: string[], grupoD: string[] } = { grupoC: [], grupoD: [] }
+                          if (answers.alarm_check) {
+                            try {
+                              // Verificar se é um JSON válido
+                              if (answers.alarm_check.startsWith('{')) {
+                                currentAnswers = JSON.parse(answers.alarm_check)
+                              }
+                            } catch (error) {
+                              console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
                             }
-                          } catch (error) {
-                            console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
                           }
-                        }
-                        
-                        if (e.target.checked) {
-                          currentAnswers.grupoC = [...(currentAnswers.grupoC || []), sinal.id]
-                        } else {
-                          currentAnswers.grupoC = (currentAnswers.grupoC || []).filter((id: string) => id !== sinal.id)
-                        }
-                        setAnswers(prev => ({ ...prev, alarm_check: JSON.stringify(currentAnswers) }))
-                      }}
-                    />
-                    <span className="text-amber-700 font-medium group-hover:text-amber-800 transition-colors">
-                      {sinal.label}
-                    </span>
-                  </label>
+                          
+                          if (e.target.checked) {
+                            currentAnswers.grupoC = [...(currentAnswers.grupoC || []), sinal.id]
+                          } else {
+                            currentAnswers.grupoC = (currentAnswers.grupoC || []).filter((id: string) => id !== sinal.id)
+                          }
+                          setAnswers(prev => ({ ...prev, alarm_check: JSON.stringify(currentAnswers) }))
+                        }}
+                      />
+                      <span className="text-amber-700 font-medium hover:text-amber-800 transition-colors">
+                        {sinal.label}
+                      </span>
+                    </label>
+                    {/* Botão de informação */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        aria-label="Informações"
+                        className="w-5 h-5 rounded-full border border-amber-400 text-amber-700 text-xs leading-none flex items-center justify-center bg-white hover:bg-amber-50"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        title="Saiba mais"
+                      >
+                        i
+                      </button>
+                      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 hidden group-hover:block bg-white border border-amber-300 rounded-lg shadow-md p-3 text-amber-800 text-xs max-w-xs whitespace-pre-line">
+                        {infoTexts.grupoC[sinal.id]}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -193,35 +303,53 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   { id: 'sangramento_grave', label: 'Sangramento grave' },
                   { id: 'comprometimento_orgaos', label: 'Comprometimento de órgãos' }
                 ].map((sinal) => (
-                  <label key={sinal.id} className="flex items-center space-x-3 cursor-pointer group">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 text-red-600 bg-white border-red-300 rounded focus:ring-red-500 focus:ring-2"
-                      onChange={(e) => {
-                        let currentAnswers: { grupoC: string[], grupoD: string[] } = { grupoC: [], grupoD: [] }
-                        if (answers.alarm_check) {
-                          try {
-                            // Verificar se é um JSON válido
-                            if (answers.alarm_check.startsWith('{')) {
-                              currentAnswers = JSON.parse(answers.alarm_check)
+                  <div key={sinal.id} className="flex items-center space-x-2">
+                    <label className="flex items-center space-x-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 text-red-600 bg-white border-red-300 rounded focus:ring-red-500 focus:ring-2"
+                        onChange={(e) => {
+                          let currentAnswers: { grupoC: string[], grupoD: string[] } = { grupoC: [], grupoD: [] }
+                          if (answers.alarm_check) {
+                            try {
+                              // Verificar se é um JSON válido
+                              if (answers.alarm_check.startsWith('{')) {
+                                currentAnswers = JSON.parse(answers.alarm_check)
+                              }
+                            } catch (error) {
+                              console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
                             }
-                          } catch (error) {
-                            console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
                           }
-                        }
-                        
-                        if (e.target.checked) {
-                          currentAnswers.grupoD = [...(currentAnswers.grupoD || []), sinal.id]
-                        } else {
-                          currentAnswers.grupoD = (currentAnswers.grupoD || []).filter((id: string) => id !== sinal.id)
-                        }
-                        setAnswers(prev => ({ ...prev, alarm_check: JSON.stringify(currentAnswers) }))
-                      }}
-                    />
-                    <span className="text-red-700 font-medium group-hover:text-red-800 transition-colors">
-                      {sinal.label}
-                    </span>
-                  </label>
+                          
+                          if (e.target.checked) {
+                            currentAnswers.grupoD = [...(currentAnswers.grupoD || []), sinal.id]
+                          } else {
+                            currentAnswers.grupoD = (currentAnswers.grupoD || []).filter((id: string) => id !== sinal.id)
+                          }
+                          setAnswers(prev => ({ ...prev, alarm_check: JSON.stringify(currentAnswers) }))
+                        }}
+                      />
+                      <span className="text-red-700 font-medium hover:text-red-800 transition-colors">
+                        {sinal.label}
+                      </span>
+                    </label>
+                    {/* Botão de informação */}
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        aria-label="Informações"
+                        className="w-5 h-5 rounded-full border border-red-400 text-red-700 text-xs leading-none flex items-center justify-center bg-white hover:bg-red-50"
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                        title="Saiba mais"
+                      >
+                        i
+                      </button>
+                      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 hidden group-hover:block bg-white border border-red-300 rounded-lg shadow-md p-3 text-red-800 text-xs max-w-xs whitespace-pre-line">
+                        {infoTexts.grupoD[sinal.id]}
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
@@ -1427,13 +1555,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="20"
                       placeholder="Ex: 12.5"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labsB.hb).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_hemoglobin_b_${patient.id}`, value)
+                        setLabsB(prev => ({ ...prev, hb: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_hemoglobin_b_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_b_${patient.id}`) || '' : ''}
                     />
+                    {labsB.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', labsB.hb).text)}>{labStatus('hb', labsB.hb).label}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -1444,13 +1576,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="100"
                       placeholder="Ex: 38.0"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labsB.ht).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_hematocrit_b_${patient.id}`, value)
+                        setLabsB(prev => ({ ...prev, ht: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_hematocrit_b_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_b_${patient.id}`) || '' : ''}
                     />
+                    {labsB.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labsB.ht).text)}>{labStatus('ht', labsB.ht).label}</p>
+                    )}
                   </div>
                   
                   <div className="col-span-2">
@@ -1460,13 +1596,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="1000000"
                       placeholder="Ex: 150000"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labsB.plt).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_platelets_b_${patient.id}`, value)
+                        setLabsB(prev => ({ ...prev, plt: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_platelets_b_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_b_${patient.id}`) || '' : ''}
                     />
+                    {labsB.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', labsB.plt).text)}>{labStatus('plt', labsB.plt).label}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1484,13 +1624,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="10"
                       placeholder="Ex: 3.5"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labsB.alb).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_albumin_b_${patient.id}`, value)
+                        setLabsB(prev => ({ ...prev, alb: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_albumin_b_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_b_${patient.id}`) || '' : ''}
                     />
+                    {labsB.alb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alb', labsB.alb).text)}>{labStatus('alb', labsB.alb).label}</p>
+                    )}
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3">
@@ -1501,13 +1645,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         min="0"
                         max="1000"
                         placeholder="Ex: 45"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labsB.alt).input)}
                         onChange={(e) => {
                           const value = e.target.value
                           localStorage.setItem(`lab_alt_b_${patient.id}`, value)
+                          setLabsB(prev => ({ ...prev, alt: parseNum(value) }))
                         }}
-                        defaultValue={localStorage.getItem(`lab_alt_b_${patient.id}`) || ''}
+                        defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_b_${patient.id}`) || '' : ''}
                       />
+                      {labsB.alt != null && (
+                        <p className={clsx("text-xs mt-1", labStatus('alt', labsB.alt).text)}>{labStatus('alt', labsB.alt).label}</p>
+                      )}
                     </div>
                     
                     <div>
@@ -1517,13 +1665,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         min="0"
                         max="1000"
                         placeholder="Ex: 40"
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                        className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labsB.ast).input)}
                         onChange={(e) => {
                           const value = e.target.value
                           localStorage.setItem(`lab_ast_b_${patient.id}`, value)
+                          setLabsB(prev => ({ ...prev, ast: parseNum(value) }))
                         }}
-                        defaultValue={localStorage.getItem(`lab_ast_b_${patient.id}`) || ''}
+                        defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_b_${patient.id}`) || '' : ''}
                       />
+                      {labsB.ast != null && (
+                        <p className={clsx("text-xs mt-1", labStatus('ast', labsB.ast).text)}>{labStatus('ast', labsB.ast).label}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1993,14 +2145,18 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="20"
                       placeholder="Ex: 12.5"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         // Salvar no localStorage temporariamente para não perder os dados
                         localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_hemoglobin_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
                     />
+                    {labs.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -2011,13 +2167,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="100"
                       placeholder="Ex: 38.0"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_hematocrit_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
                     />
+                    {labs.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht).text)}>{labStatus('ht', labs.ht).label}</p>
+                    )}
                   </div>
                   
                   <div className="col-span-2">
@@ -2027,13 +2187,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="1000000"
                       placeholder="Ex: 150000"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_platelets_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_platelets_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
                     />
+                    {labs.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2051,13 +2215,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="10"
                       placeholder="Ex: 3.5"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labs.alb).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_albumin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alb: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_albumin_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) || '' : ''}
                     />
+                    {labs.alb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alb', labs.alb).text)}>{labStatus('alb', labs.alb).label}</p>
+                    )}
                   </div>
                   
                   <div>
@@ -2067,13 +2235,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="1000"
                       placeholder="Ex: 45"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labs.alt).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_alt_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alt: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_alt_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) || '' : ''}
                     />
+                    {labs.alt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alt', labs.alt).text)}>{labStatus('alt', labs.alt).label}</p>
+                    )}
                   </div>
                   
                   <div className="col-span-2">
@@ -2083,13 +2255,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="1000"
                       placeholder="Ex: 40"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labs.ast).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_ast_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ast: parseNum(value) }))
                       }}
-                      defaultValue={localStorage.getItem(`lab_ast_${patient.id}`) || ''}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) || '' : ''}
                     />
+                    {labs.ast != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ast', labs.ast).text)}>{labStatus('ast', labs.ast).label}</p>
+                    )}
                   </div>
                 </div>
               </div>

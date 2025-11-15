@@ -110,7 +110,7 @@ interface PatientFormProps {
     const s = parseInt(sStr)
     const d = parseInt(dStr)
     if (isNaN(s) || isNaN(d)) return null
-    const scores: Array<{ cond: boolean; chip: JSX.Element }> = [
+    const scores: Array<{ cond: boolean; chip: React.ReactElement }> = [
       { cond: s >= 180 || d >= 110, chip: badge('Hipertensão estágio 2 (severa)', 'red') },
       { cond: (s >= 160 && s <= 179) || (d >= 100 && d <= 109), chip: badge('Hipertensão estágio 2', 'orange') },
       { cond: (s >= 140 && s <= 159) || (d >= 90 && d <= 99), chip: badge('Hipertensão estágio 1', 'yellow') },
@@ -177,6 +177,7 @@ interface PatientFormProps {
     selectedFlowchart: 'dengue',
     generalObservations: '',
     weight: undefined,
+    allergies: [],
     medicalRecord: generatePatientId(),
     symptoms: [],
     vitalSigns: {
@@ -595,6 +596,36 @@ interface PatientFormProps {
                         step="0.1"
                       />
                     </div>
+                  </div>
+
+                  {/* Alergias */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
+                      Alergias (separe com vírgula)
+                    </label>
+                    <input
+                      type="text"
+                      value={(formData.allergies || []).join(', ')}
+                      onChange={(e) => {
+                        const raw = e.target.value
+                        const list = raw
+                          .split(',')
+                          .map(v => v.trim())
+                          .filter(v => v.length > 0)
+                        setFormData(prev => ({ ...prev, allergies: list }))
+                      }}
+                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                      placeholder="Ex.: Dipirona, Paracetamol"
+                    />
+                    {formData.allergies && formData.allergies.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {formData.allergies.map((a, i) => (
+                          <span key={`${a}-${i}`} className="px-2 py-1 text-xs rounded-lg bg-red-100 text-red-700 border border-red-200">
+                            {a}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* ID do Paciente */}

@@ -30,7 +30,7 @@ const Header: React.FC = () => {
               <div className="flex items-center space-x-2 mt-1">
                 <Brain className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                 <span className="text-xs sm:text-sm font-medium text-slate-600 uppercase tracking-wider">
-                  Sistema de Diagnóstico
+                  Fluxogramas de apoio
                 </span>
                 <Target className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
               </div>

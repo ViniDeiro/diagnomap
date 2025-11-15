@@ -143,7 +143,7 @@ const Footer: React.FC = () => {
         <div className="flex flex-col lg:flex-row justify-between items-center space-y-6 lg:space-y-0">
           <div className="text-center lg:text-left">
             <p className="text-slate-300 font-medium">
-              &copy; 2024 Siga o Fluxo. Sistema de Diagnóstico Clínico.
+              &copy; 2024 Siga o Fluxo. Fluxogramas de apoio para decisão terapêutica.
             </p>
             <p className="text-slate-500 text-sm mt-1">
               Desenvolvido para excelência em cuidados médicos.

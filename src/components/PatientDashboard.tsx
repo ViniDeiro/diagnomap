@@ -198,7 +198,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 >
                   <Brain className="w-4 h-4 text-blue-600" />
                   <span className="text-sm font-medium text-slate-600 uppercase tracking-wider">
-                    Sistema de Diagnóstico Clínico
+                    Fluxogramas de apoio para decisão terapêutica
                   </span>
                   <Target className="w-4 h-4 text-blue-600" />
                 </motion.div>
