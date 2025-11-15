@@ -415,6 +415,7 @@ interface PatientFormProps {
                     onSelectFlowchart={(flowchart) => {
                       setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id as "dengue" | "zika" | "chikungunya" }))
                       setHasSelectedFlow(true)
+                      setCurrentStep(2)
                     }}
                   />
                   {!hasSelectedFlow && (
