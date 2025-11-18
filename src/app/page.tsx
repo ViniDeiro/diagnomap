@@ -108,14 +108,18 @@ export default function Home() {
   }
 
   const handleViewPrescriptions = (patient: Patient) => {
-    setPreviousState(appState) // Guardar o estado atual antes de mudar
-    setCurrentPatient(patient)
+    // Guardar o estado atual antes de mudar e garantir dados frescos do paciente
+    setPreviousState(appState)
+    const fresh = patientService.getPatientById(patient.id) || patient
+    setCurrentPatient(fresh)
     setAppState('prescriptions')
   }
 
   const handleViewReport = (patient: Patient) => {
-    setPreviousState(appState) // Guardar o estado atual antes de mudar
-    setCurrentPatient(patient)
+    // Guardar o estado atual antes de mudar e garantir dados frescos do paciente
+    setPreviousState(appState)
+    const fresh = patientService.getPatientById(patient.id) || patient
+    setCurrentPatient(fresh)
     setAppState('report')
   }
 
@@ -162,6 +166,13 @@ export default function Home() {
   }
 
   const handlePrescriptionsClose = () => {
+    // Atualizar dados do paciente para preservar progresso e prescrições
+    if (currentPatient) {
+      const updatedPatient = patientService.getPatientById(currentPatient.id)
+      if (updatedPatient) {
+        setCurrentPatient(updatedPatient)
+      }
+    }
     // Voltar para o estado anterior (dashboard ou flowchart)
     setAppState(previousState)
     if (previousState === 'dashboard') {
@@ -261,6 +272,7 @@ export default function Home() {
             patient={currentPatient}
             onClose={handlePrescriptionsClose}
             onUpdate={handlePrescriptionsUpdate}
+            mode={'prescription-only'}
           />
         ) : null
 

@@ -53,6 +53,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const [progress, setProgress] = useState(patient.flowchartState.progress || 0)
   const [isTransitioning, setIsTransitioning] = useState(false)
   const [hydrationObservPrescribed, setHydrationObservPrescribed] = useState(false)
+  const [antipyreticChoiceB, setAntipyreticChoiceB] = useState<string>(
+    typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_b_${patient.id}`) || '') : ''
+  )
+  const [antipyreticAddedB, setAntipyreticAddedB] = useState<boolean>(false)
 
   // Helper: parse number safely from string/localStorage
   const parseNum = (s: string | null): number | undefined => {
@@ -80,36 +84,101 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     ast: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) : null)
   })
 
+  // Exames sugeridos no Grupo B (checkboxes)
+  const [suggestedExamsB, setSuggestedExamsB] = useState<string[]>(
+    typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(`suggested_exams_b_${patient.id}`) || '[]') : []
+  )
+  const suggestedExamLabels: Record<string, string> = {
+    alb: 'Albumina sérica',
+    alt: 'Transaminases ALT/TGP',
+    ast: 'Transaminases AST/TGO'
+  }
+  const toggleSuggestedExamB = (code: 'alb' | 'alt' | 'ast') => {
+    setSuggestedExamsB(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`suggested_exams_b_${patient.id}`, JSON.stringify(next))
+      }
+      return next
+    })
+  }
+
+  // Faixas de referência da Hemoglobina por idade/sexo
+  const getHbRange = () => {
+    const now = new Date()
+    const birth = patient.birthDate ? new Date(patient.birthDate) : now
+    const diffMonths = Math.max(0, Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4375)))
+    const ageYears = patient.age
+
+    // RN: referência aproximada adotada em torno de 16–18 g/dL
+    if (diffMonths < 1) return { min: 16.0, max: 18.0 }
+    // 1 a 11 meses
+    if (ageYears === 0 && diffMonths >= 1 && diffMonths <= 11) return { min: 10.6, max: 13.0 }
+    // 1 a 2 anos
+    if (ageYears >= 1 && ageYears <= 2) return { min: 11.5, max: 14.5 }
+    // 3 a 10 anos
+    if (ageYears >= 3 && ageYears <= 10) return { min: 11.5, max: 14.5 }
+    // 10 a 15 anos (adolescentes)
+    if (ageYears >= 11 && ageYears <= 17) return { min: 11.5, max: 14.5 }
+    // Adultos (≥ 18 anos), por sexo
+    if (ageYears >= 18) {
+      return patient.gender === 'masculino'
+        ? { min: 12.5, max: 16.5 }
+        : { min: 11.5, max: 15.5 }
+    }
+    return { min: 11.5, max: 14.5 }
+  }
+
   // Determine label and color classes for each lab based on value
-  const labStatus = (kind: 'hb' | 'ht' | 'plt' | 'alb' | 'alt' | 'ast', value?: number) => {
+  const labStatus = (kind: 'hb' | 'ht' | 'plt' | 'alb' | 'alt' | 'ast', value?: number, hbContext?: number) => {
     if (value == null) return { label: '', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
     switch (kind) {
       case 'hb': {
-        if (value >= 12) return { label: 'Normal', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
-        if (value >= 10) return { label: 'Anemia leve', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
-        return { label: 'Anemia moderada/grave', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        const range = getHbRange()
+        const refText = `(${range.min.toFixed(1)}–${range.max.toFixed(1)} g/dL)`
+        if (value < range.min) return { label: `Abaixo da faixa ${refText}`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (value > range.max) return { label: `Acima da faixa ${refText}`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: `Normal ${refText}`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
       }
       case 'ht': {
-        if (value >= 46) return { label: 'Hemoconcentração (alto)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
-        if (value < 36) return { label: 'Baixo', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
-        return { label: 'Normal', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (hbContext == null || hbContext <= 0) return { label: 'Informe hemoglobina para avaliar razão Ht/Hb', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
+        const ratio = value / hbContext
+        const ratioText = `Razão Ht/Hb: ${ratio.toFixed(1)}x`
+        if (ratio > 5) return { label: `${ratioText} – Extremamente grave`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (ratio >= 3.6) return { label: `${ratioText} – Hemoconcentrado`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (ratio >= 3.0) return { label: `${ratioText} – Aumentado`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: `${ratioText} – Abaixo do esperado`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
       }
       case 'plt': {
-        if (value < 100000) return { label: 'Trombocitopenia severa', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
-        if (value < 150000) return { label: 'Trombocitopenia leve', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
-        return { label: 'Plaquetas normais', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        // Nova classificação de plaquetopenia e plaquetose
+        if (value > 450000) return { label: 'Plaquetose (> 450.000/mm³)', input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
+        if (value < 20000) return { label: 'Plaquetopenia muito grave (< 20.000/mm³)', input: 'border-red-400 bg-red-50 focus:ring-red-600 focus:border-red-600', text: 'text-red-700' }
+        if (value < 50000) return { label: 'Plaquetopenia grave (20.000–49.999/mm³)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (value < 100000) return { label: 'Plaquetopenia moderada (50.000–99.999/mm³)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        if (value < 150000) return { label: 'Plaquetopenia leve (100.000–149.999/mm³)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        return { label: 'Plaquetas normais (≥ 150.000/mm³)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
       }
       case 'alb': {
-        if (value >= 3.5) return { label: 'Normal (3,5–5,5 g/dL)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
-        if (value >= 3.0) return { label: 'Hipoalbuminemia leve (3,0–3,4)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
-        if (value >= 2.1) return { label: 'Hipoalbuminemia moderada (2,1–2,9)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
-        return { label: 'Hipoalbuminemia grave (< 2,0)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        // Normalidade e hiperalbuminemia; manter níveis de hipoalbuminemia
+        if (value > 5.6) return { label: 'Hiperalbuminemia (> 5,6 g/dL)', input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
+        if (value >= 3.5 && value <= 5.5) return { label: 'Normal (3,5–5,5 g/dL)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (value >= 3.0 && value < 3.5) return { label: 'Hipoalbuminemia leve (3,0–3,4 g/dL)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (value < 2.0) return { label: 'Hipoalbuminemia grave (< 2,0 g/dL)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        return { label: 'Hipoalbuminemia moderada (2,1–2,9 g/dL)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
       }
-      case 'alt':
       case 'ast': {
-        if (value <= 40) return { label: 'Normal (≤ 40 U/L)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
-        if (value <= 120) return { label: 'Elevação moderada (41–120)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
-        return { label: 'Elevação acentuada (> 120)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        // TGO (AST): normal 5–40; leve 41–100; moderada 101–200; grave ≥ 201
+        if (value <= 40) return { label: 'AST normal (5–40 U/L)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (value <= 100) return { label: 'AST elevação leve (41–100 U/L)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (value <= 200) return { label: 'AST elevação moderada (101–200 U/L)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: 'AST elevação grave (≥ 201 U/L)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+      }
+      case 'alt': {
+        // TGP (ALT): normal 7–56; leve 57–120; moderada 121–220; grave ≥ 221
+        if (value <= 56) return { label: 'ALT normal (7–56 U/L)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (value <= 120) return { label: 'ALT elevação leve (57–120 U/L)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (value <= 220) return { label: 'ALT elevação moderada (121–220 U/L)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        return { label: 'ALT elevação grave (≥ 221 U/L)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
       }
       default:
         return { label: '', input: 'border-slate-300', text: 'text-slate-500' }
@@ -279,7 +348,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       >
                         i
                       </button>
-                      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 hidden group-hover:block bg-white border border-amber-300 rounded-lg shadow-md p-3 text-amber-800 text-xs max-w-xs whitespace-pre-line">
+                      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 hidden group-hover:block bg-white border border-amber-300 rounded-md shadow-lg p-4 text-amber-800 text-xs w-80 max-w-none break-words whitespace-pre-line">
                         {infoTexts.grupoC[sinal.id]}
                       </div>
                     </div>
@@ -345,7 +414,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       >
                         i
                       </button>
-                      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 hidden group-hover:block bg-white border border-red-300 rounded-lg shadow-md p-3 text-red-800 text-xs max-w-xs whitespace-pre-line">
+                      <div className="absolute left-6 top-1/2 -translate-y-1/2 z-20 hidden group-hover:block bg-white border border-red-300 rounded-md shadow-lg p-4 text-red-800 text-xs w-80 max-w-none break-words whitespace-pre-line">
                         {infoTexts.grupoD[sinal.id]}
                       </div>
                     </div>
@@ -950,7 +1019,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                           .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#1d4ed8,#0891b2)}
                         </style>
                         <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
+                          <img src="/sororal.png" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                         </div>
                         <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                           <h3 class="font-bold text-blue-800 mb-3">O que é o Soro Oral (SRO)?</h3>
@@ -994,113 +1063,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                           <ul class="text-amber-700 text-sm space-y-1">
                             <li>• Pausar se vômitos persistentes; retomar com microvolumes</li>
                             <li>• Não substituir alimentação</li>
-                            <li>• Em hiponatremia sintomática moderada/grave, seguir protocolo específico abaixo</li>
                           </ul>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                          <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hiponatremia</h3>
-                          <div class="text-slate-700 text-sm space-y-2">
-                            <p><strong>Escopo:</strong> pacientes pediátricos, adultos e idosos com hiponatremia hipotônica (Na &lt; 135 mmol/L).</p>
-                            <p><strong>Classificação:</strong> leve (130–134), moderada (125–129), grave (&lt;125 ou sintomas neurológicos).</p>
-                            <p><strong>Meta inicial:</strong> +4–6 mmol/L para alívio; <strong>limites:</strong> não ultrapassar 8–10 mmol/L/24h (6–8 se alto risco de ODS).</p>
-                            <div class="grid md:grid-cols-2 gap-4">
-                              <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                <h4 class="font-semibold text-blue-800 mb-1">Tratamento imediato</h4>
-                                <ul class="text-blue-700 text-xs space-y-1">
-                                  <li>• Sintomas graves: NaCl 3% bolus 2 mL/kg em 10–20 min; repetir até +4–6 mmol/L</li>
-                                  <li>• Sintomas moderados: preferir bolus (RIB) conforme SALSA; monitorizar sNa 2–4 h</li>
-                                  <li>• Assintomático/leve: investigar causa, restrição hídrica, monitorizar</li>
-                                </ul>
-                              </div>
-                              <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                                <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
-                                <ul class="text-indigo-700 text-xs space-y-1">
-                                  <li>• Adultos/Idosos: usar 2 mL/kg para bolus; idosos com metas conservadoras</li>
-                                  <li>• Pediatria: bolus 2 mL/kg; evitar correção &gt; 8 mmol/L/24h; monitorização próxima</li>
-                                </ul>
-                              </div>
-                            </div>
-                            <div class="bg-rose-50 p-3 rounded-lg border border-rose-200">
-                              <h4 class="font-semibold text-rose-800 mb-1">Sobrecorreção</h4>
-                              <p class="text-rose-700 text-xs">Se &gt; 8–10 mmol/L/24h (conforme risco): desmopressina + água livre ou D5W para <em>relowering</em>. SALSA recomenda abordagem precoce.</p>
-                            </div>
-                          <p class="text-xs text-slate-500">Referências: SALSA Trial (JAMA 2021), diretrizes europeias de hiponatremia, revisões práticas.</p>
-                          </div>
-                        </div>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                          <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hipernatremia</h3>
-                          <div class="text-slate-700 text-sm space-y-2">
-                            <p><strong>Definição e classificação:</strong> leve 146–149, moderada 150–159, grave ≥160; <em>aguda</em> &lt; 48h, <em>crônica</em> ≥ 48h.</p>
-                            <div class="grid md:grid-cols-2 gap-4">
-                              <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                                <h4 class="font-semibold text-orange-800 mb-1">Avaliação inicial</h4>
-                                <ul class="text-orange-700 text-xs space-y-1">
-                                  <li>• Confirmar Na sérico, osmolaridade plasmática e urinária, Na urinário</li>
-                                  <li>• Função renal (ureia/creatinina) e estado de volemia (hipo/eu/hipervolêmica)</li>
-                                  <li>• Sintomas neurológicos e causa de base (DI, perdas, soluções hipertônicas)</li>
-                                </ul>
-                              </div>
-                              <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-200">
-                                <h4 class="font-semibold text-cyan-800 mb-1">Déficit hídrico</h4>
-                                <p class="text-cyan-700 text-xs">Déficit = 0,6 × peso (kg) × (Na/140 − 1); em idosos/mulheres usar 0,5.</p>
-                                <p class="text-cyan-700 text-xs">Corrigir ao longo de 48–72 h conforme gravidade e tempo.</p>
-                              </div>
-                            </div>
-                            <div class="grid md:grid-cols-3 gap-4">
-                              <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                <h4 class="font-semibold text-blue-800 mb-1">Metas de correção</h4>
-                                <ul class="text-blue-700 text-xs space-y-1">
-                                  <li>• Aguda: 1–2 mmol/L/h; máx. 10–12 mmol/L/24h</li>
-                                  <li>• Crônica: 0,5 mmol/L/h; máx. 8–10 mmol/L/24h</li>
-                                  <li>• Alto risco: ≤ 8 mmol/L/24h</li>
-                                </ul>
-                              </div>
-                              <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                                <h4 class="font-semibold text-emerald-800 mb-1">Tratamento por volemia</h4>
-                                <ul class="text-emerald-700 text-xs space-y-1">
-                                  <li>• Hipovolêmica: SF 0,9% até estabilizar → D5W ou NaCl 0,45%</li>
-                                  <li>• Euvolêmica (DI): desmopressina 1–2 µg IV/SC (central) ou restrição de Na/proteínas + tiazídico ± amilorida (nefrógeno)</li>
-                                  <li>• Hipervolêmica: D5W + furosemida 20–40 mg IV; ajustar volume</li>
-                                </ul>
-                              </div>
-                              <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                                <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
-                                <ul class="text-indigo-700 text-xs space-y-1">
-                                  <li>• Pediatria: ≤0,5 mmol/L/h; máx. 10/24h; monitorar Na 2–4h</li>
-                                  <li>• Adultos: seguir déficit calculado; reavaliar função renal e diurese</li>
-                                  <li>• Idosos: usar 0,5 × peso; vigiar sobrecarga; monitorar glicemia/coração</li>
-                                </ul>
-                              </div>
-                            </div>
-                            <div class="grid md:grid-cols-2 gap-4">
-                              <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                                <h4 class="font-semibold text-amber-800 mb-1">Monitorização</h4>
-                                <ul class="text-amber-700 text-xs space-y-1">
-                                  <li>• Na sérico a cada 2–4 h nas primeiras 12–24 h; depois 6–8 h</li>
-                                  <li>• Diurese, sinais de edema cerebral, PA e glicemia</li>
-                                  <li>• Se correção muito rápida: pausar infusão e considerar desmopressina</li>
-                                </ul>
-                              </div>
-                              <div class="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                                <h4 class="font-semibold text-slate-800 mb-1">Manutenção e situações especiais</h4>
-                                <ul class="text-slate-700 text-xs space-y-1">
-                                  <li>• Tratar a causa; repor perdas contínuas; dieta com menor Na</li>
-                                  <li>• Ventilação mecânica: ajustar perdas insensíveis</li>
-                                  <li>• Diabetes insipidus: reposição hormonal/monitorização intensiva</li>
-                                  <li>• Idoso institucionalizado: prevenção com oferta hídrica adequada</li>
-                                </ul>
-                              </div>
-                            </div>
-                            <div class="bg-teal-50 p-3 rounded-lg border border-teal-200">
-                              <h4 class="font-semibold text-teal-800 mb-1">Resumo rápido (cartão de bolso)</h4>
-                              <ul class="text-teal-700 text-xs space-y-1">
-                                <li>• Hipovolêmica: SF 0,9% → D5W; ≤10 mmol/L/24h</li>
-                                <li>• Euvolêmica (DI): desmopressina/tiazídico; D5W; ≤8–10/24h</li>
-                                <li>• Hipervolêmica: D5W + furosemida; ≤8/24h</li>
-                              </ul>
-                              <p class="text-xs text-slate-500 mt-2">Referências: Adrogué & Madias NEJM 2000; Verbalis 2013; Hoorn & Zietse 2017; Snyder 1987; Sterns 2015; Spasovski 2014; Berl 2020; Rondon-Berrios 2023; OpenEvidence 2024.</p>
-                            </div>
-                          </div>
                         </div>
                       </div>
                       <div class="border-t border-slate-200 p-4">
@@ -1213,7 +1176,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                                   .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#1d4ed8,#0891b2)}
                                 </style>
                                 <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
-                                  <img src="https://upload.wikimedia.org/wikipedia/commons/3/34/Oral_rehydration_salts_packets.jpg" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
+                                  <img src="/sororal.png" alt="Soro Oral - pacotes de sais de reidratação" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                                 </div>
                                 <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                                   <h3 class="font-bold text-blue-800 mb-3">O que é o Soro Oral (SRO)?</h3>
@@ -1257,113 +1220,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                                   <ul class="text-amber-700 text-sm space-y-1">
                                     <li>• Pausar se vômitos persistentes; retomar com microvolumes</li>
                                     <li>• Não substituir alimentação</li>
-                                    <li>• Em hiponatremia sintomática moderada/grave, seguir protocolo específico abaixo</li>
                                   </ul>
-                                </div>
-                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                  <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hiponatremia</h3>
-                                  <div class="text-slate-700 text-sm space-y-2">
-                                    <p><strong>Escopo:</strong> pacientes pediátricos, adultos e idosos com hiponatremia hipotônica (Na &lt; 135 mmol/L).</p>
-                                    <p><strong>Classificação:</strong> leve (130–134), moderada (125–129), grave (&lt;125 ou sintomas neurológicos).</p>
-                                    <p><strong>Meta inicial:</strong> +4–6 mmol/L para alívio; <strong>limites:</strong> não ultrapassar 8–10 mmol/L/24h (6–8 se alto risco de ODS).</p>
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                      <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                        <h4 class="font-semibold text-blue-800 mb-1">Tratamento imediato</h4>
-                                        <ul class="text-blue-700 text-xs space-y-1">
-                                          <li>• Sintomas graves: NaCl 3% bolus 2 mL/kg em 10–20 min; repetir até +4–6 mmol/L</li>
-                                          <li>• Sintomas moderados: preferir bolus (RIB) conforme SALSA; monitorizar sNa 2–4 h</li>
-                                          <li>• Assintomático/leve: investigar causa, restrição hídrica, monitorizar</li>
-                                        </ul>
-                                      </div>
-                                      <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                                        <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
-                                        <ul class="text-indigo-700 text-xs space-y-1">
-                                          <li>• Adultos/Idosos: usar 2 mL/kg para bolus; idosos com metas conservadoras</li>
-                                          <li>• Pediatria: bolus 2 mL/kg; evitar correção &gt; 8 mmol/L/24h; monitorização próxima</li>
-                                        </ul>
-                                      </div>
-                                    </div>
-                                    <div class="bg-rose-50 p-3 rounded-lg border border-rose-200">
-                                      <h4 class="font-semibold text-rose-800 mb-1">Sobrecorreção</h4>
-                                      <p class="text-rose-700 text-xs">Se &gt; 8–10 mmol/L/24h (conforme risco): desmopressina + água livre ou D5W para <em>relowering</em>. SALSA recomenda abordagem precoce.</p>
-                                    </div>
-                                    <p class="text-xs text-slate-500">Referências: SALSA Trial (JAMA 2021), diretrizes europeias de hiponatremia, revisões práticas.</p>
-                                  </div>
-                                </div>
-                                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                  <h3 class="font-bold text-slate-800 mb-2">Protocolo institucional: Manejo da Hipernatremia</h3>
-                                  <div class="text-slate-700 text-sm space-y-2">
-                                    <p><strong>Definição e classificação:</strong> leve 146–149, moderada 150–159, grave ≥160; <em>aguda</em> &lt; 48h, <em>crônica</em> ≥ 48h.</p>
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                      <div class="bg-orange-50 p-3 rounded-lg border border-orange-200">
-                                        <h4 class="font-semibold text-orange-800 mb-1">Avaliação inicial</h4>
-                                        <ul class="text-orange-700 text-xs space-y-1">
-                                          <li>• Confirmar Na sérico, osmolaridade plasmática e urinária, Na urinário</li>
-                                          <li>• Função renal (ureia/creatinina) e estado de volemia (hipo/eu/hipervolêmica)</li>
-                                          <li>• Sintomas neurológicos e causa de base (DI, perdas, soluções hipertônicas)</li>
-                                        </ul>
-                                      </div>
-                                      <div class="bg-cyan-50 p-3 rounded-lg border border-cyan-200">
-                                        <h4 class="font-semibold text-cyan-800 mb-1">Déficit hídrico</h4>
-                                        <p class="text-cyan-700 text-xs">Déficit = 0,6 × peso (kg) × (Na/140 − 1); em idosos/mulheres usar 0,5.</p>
-                                        <p class="text-cyan-700 text-xs">Corrigir ao longo de 48–72 h conforme gravidade e tempo.</p>
-                                      </div>
-                                    </div>
-                                    <div class="grid md:grid-cols-3 gap-4">
-                                      <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                        <h4 class="font-semibold text-blue-800 mb-1">Metas de correção</h4>
-                                        <ul class="text-blue-700 text-xs space-y-1">
-                                          <li>• Aguda: 1–2 mmol/L/h; máx. 10–12 mmol/L/24h</li>
-                                          <li>• Crônica: 0,5 mmol/L/h; máx. 8–10 mmol/L/24h</li>
-                                          <li>• Alto risco: ≤ 8 mmol/L/24h</li>
-                                        </ul>
-                                      </div>
-                                      <div class="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                                        <h4 class="font-semibold text-emerald-800 mb-1">Tratamento por volemia</h4>
-                                        <ul class="text-emerald-700 text-xs space-y-1">
-                                          <li>• Hipovolêmica: SF 0,9% até estabilizar → D5W ou NaCl 0,45%</li>
-                                          <li>• Euvolêmica (DI): desmopressina 1–2 µg IV/SC (central) ou restrição de Na/proteínas + tiazídico ± amilorida (nefrógeno)</li>
-                                          <li>• Hipervolêmica: D5W + furosemida 20–40 mg IV; ajustar volume</li>
-                                        </ul>
-                                      </div>
-                                      <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-200">
-                                        <h4 class="font-semibold text-indigo-800 mb-1">Faixas etárias</h4>
-                                        <ul class="text-indigo-700 text-xs space-y-1">
-                                          <li>• Pediatria: ≤0,5 mmol/L/h; máx. 10/24h; monitorar Na 2–4h</li>
-                                          <li>• Adultos: seguir déficit calculado; reavaliar função renal e diurese</li>
-                                          <li>• Idosos: usar 0,5 × peso; vigiar sobrecarga; monitorar glicemia/coração</li>
-                                        </ul>
-                                      </div>
-                                    </div>
-                                    <div class="grid md:grid-cols-2 gap-4">
-                                      <div class="bg-amber-50 p-3 rounded-lg border border-amber-200">
-                                        <h4 class="font-semibold text-amber-800 mb-1">Monitorização</h4>
-                                        <ul class="text-amber-700 text-xs space-y-1">
-                                          <li>• Na sérico a cada 2–4 h nas primeiras 12–24 h; depois 6–8 h</li>
-                                          <li>• Diurese, sinais de edema cerebral, PA e glicemia</li>
-                                          <li>• Se correção muito rápida: pausar infusão e considerar desmopressina</li>
-                                        </ul>
-                                      </div>
-                                      <div class="bg-slate-100 p-3 rounded-lg border border-slate-200">
-                                        <h4 class="font-semibold text-slate-800 mb-1">Manutenção e situações especiais</h4>
-                                        <ul class="text-slate-700 text-xs space-y-1">
-                                          <li>• Tratar a causa; repor perdas contínuas; dieta com menor Na</li>
-                                          <li>• Ventilação mecânica: ajustar perdas insensíveis</li>
-                                          <li>• Diabetes insipidus: reposição hormonal/monitorização intensiva</li>
-                                          <li>• Idoso institucionalizado: prevenção com oferta hídrica adequada</li>
-                                        </ul>
-                                      </div>
-                                    </div>
-                                    <div class="bg-teal-50 p-3 rounded-lg border border-teal-200">
-                                      <h4 class="font-semibold text-teal-800 mb-1">Resumo rápido (cartão de bolso)</h4>
-                                      <ul class="text-teal-700 text-xs space-y-1">
-                                        <li>• Hipovolêmica: SF 0,9% → D5W; ≤10 mmol/L/24h</li>
-                                        <li>• Euvolêmica (DI): desmopressina/tiazídico; D5W; ≤8–10/24h</li>
-                                        <li>• Hipervolêmica: D5W + furosemida; ≤8/24h</li>
-                                      </ul>
-                                      <p class="text-xs text-slate-500 mt-2">Referências: Adrogué & Madias NEJM 2000; Verbalis 2013; Hoorn & Zietse 2017; Snyder 1987; Sterns 2015; Spasovski 2014; Berl 2020; Rondon-Berrios 2023; OpenEvidence 2024.</p>
-                                    </div>
-                                  </div>
                                 </div>
                               </div>
                               <div class="border-t border-slate-200 p-4">
@@ -1389,7 +1246,94 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     <div className="text-cyan-600 mb-2">
                       <Heart className="w-6 h-6 mx-auto" />
                     </div>
-                    <h4 className="font-bold text-cyan-800 mb-1">Líquidos</h4>
+                    <div className="flex items-center justify-center space-x-2">
+                      <h4 className="font-bold text-cyan-800 mb-1">Líquidos</h4>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const modal = document.createElement('div')
+                          modal.className = 'fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4'
+                          modal.innerHTML = `
+                              <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+                              <div class="bg-gradient-to-r from-cyan-600 to-teal-600 text-white p-6">
+                                <div class="flex items-center justify-between">
+                                  <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                      </svg>
+                                    </div>
+                                    <div>
+                                      <h2 class="text-xl font-bold">Líquidos – o que oferecer</h2>
+                                      <p class="text-teal-100 text-sm">Exemplos, como ofertar e cuidados</p>
+                                    </div>
+                                  </div>
+                                  <button onclick="this.closest('.fixed').remove()" class="p-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-colors duration-200">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                              <div class="p-6 space-y-6 overflow-y-auto modern-scroll pr-2 flex-1">
+                                <style>
+                                  .modern-scroll{scrollbar-width:thin;scrollbar-color:#0891b2 #f1f5f9}
+                                  .modern-scroll::-webkit-scrollbar{width:10px}
+                                  .modern-scroll::-webkit-scrollbar-track{background:#f1f5f9;border-radius:9999px}
+                                  .modern-scroll::-webkit-scrollbar-thumb{background:linear-gradient(180deg,#0891b2,#0d9488);border-radius:9999px}
+                                  .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#0e7490,#0f766e)}
+                                </style>
+                                <div class="bg-cyan-50 p-4 rounded-xl border border-cyan-200">
+                                  <h3 class="font-bold text-cyan-800 mb-2">Exemplos recomendados</h3>
+                                  <ul class="text-cyan-700 text-sm space-y-1">
+                                    <li>• Água</li>
+                                    <li>• Chás claros sem cafeína</li>
+                                    <li>• Água de coco</li>
+                                    <li>• Sucos naturais diluídos (sem adição de açúcar)</li>
+                                    <li>• Caldos claros (baixa gordura)</li>
+                                  </ul>
+                                </div>
+                                <div class="bg-teal-50 p-4 rounded-xl border border-teal-200">
+                                  <h3 class="font-bold text-teal-800 mb-2">Evitar</h3>
+                                  <ul class="text-teal-700 text-sm space-y-1">
+                                    <li>• Refrigerantes e bebidas energéticas</li>
+                                    <li>• Chás pretos e café (cafeinados)</li>
+                                    <li>• Bebidas alcoólicas</li>
+                                    <li>• Bebidas muito açucaradas</li>
+                                  </ul>
+                                </div>
+                                <div class="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                                  <h3 class="font-bold text-emerald-800 mb-2">Como oferecer</h3>
+                                  <ul class="text-emerald-700 text-sm space-y-1">
+                                    <li>• Pequenos volumes, em intervalos frequentes</li>
+                                    <li>• Alternar com Soro Oral conforme orientação</li>
+                                    <li>• Preferir temperatura ambiente ou ligeiramente gelada</li>
+                                    <li>• Aumentar oferta se febre/calor</li>
+                                  </ul>
+                                </div>
+                                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                                  <h3 class="font-bold text-amber-800 mb-2">Cuidados</h3>
+                                  <ul class="text-amber-700 text-sm space-y-1">
+                                    <li>• Pausar se vômitos persistentes; retomar com microvolumes</li>
+                                    <li>• Não substituir alimentação</li>
+                                  </ul>
+                                </div>
+                              </div>
+                              <div class="border-t border-slate-200 p-4">
+                                <button onclick="this.closest('.fixed').remove()" class="w-full bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-700 hover:to-teal-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200">Fechar</button>
+                              </div>
+                            </div>
+                          `
+                          document.body.appendChild(modal)
+                        }}
+                        className="ml-1 px-2 py-1 bg-cyan-100 hover:bg-cyan-200 text-cyan-700 rounded-lg transition-colors duration-200"
+                        title="O que são líquidos?"
+                      >
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
+                    </div>
                     <p className="text-xl font-bold text-cyan-700">{(volumeLiquidos / 1000).toFixed(1)} L</p>
                     <p className="text-xs text-cyan-600 mt-1">2/3 do total</p>
                   </div>
@@ -1447,6 +1391,39 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-green-50 p-4 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">Exames:</h4>
             <p className="text-green-700 text-sm">Hemograma completo obrigatório</p>
+            {/* Exames Sugeridos */}
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <h5 className="font-semibold text-green-800 mb-1">Exames Sugeridos:</h5>
+              <div className="space-y-2 text-sm text-green-800">
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={suggestedExamsB.includes('alb')}
+                    onChange={() => toggleSuggestedExamB('alb')}
+                    className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span>Albumina sérica</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={suggestedExamsB.includes('alt')}
+                    onChange={() => toggleSuggestedExamB('alt')}
+                    className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span>Transaminases ALT/TGP</span>
+                </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={suggestedExamsB.includes('ast')}
+                    onChange={() => toggleSuggestedExamB('ast')}
+                    className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span>Transaminases AST/TGO</span>
+                </label>
+              </div>
+            </div>
           </div>
           <div className="bg-green-50 p-4 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">Conduta:</h4>
@@ -1485,6 +1462,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <Droplets className="w-4 h-4" />
                 <span>{hydrationObservPrescribed ? 'Prescrição gerada' : 'Gerar hidratação até exames'}</span>
               </button>
+              {/* Mostrar botão de visualizar apenas após gerar a prescrição */}
+              {hydrationObservPrescribed && (
+                <button
+                  type="button"
+                  onClick={() => onViewPrescriptions && onViewPrescriptions(patient)}
+                  className={clsx(
+                    'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                    'bg-white hover:bg-green-100 text-green-800 border-green-300'
+                  )}
+                  title="Abrir prescrição do paciente"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Abrir prescrição</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1508,6 +1500,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <p className="text-yellow-700">• Hemograma completo solicitado</p>
           <p className="text-yellow-700">• Paciente em observação</p>
           <p className="text-yellow-700">• Manter hidratação oral</p>
+          {suggestedExamsB.length > 0 && (
+            <p className="text-yellow-700">• Exames sugeridos: {suggestedExamsB.map(code => suggestedExamLabels[code]).join(', ')}</p>
+          )}
+
+          {/* Botão de abrir prescrição removido nesta etapa conforme solicitação */}
         </div>
       ),
       options: [
@@ -1533,12 +1530,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <p className="text-yellow-700 text-sm">Se alterações significativas, reavaliar classificação</p>
           </div>
 
-          {/* Seção de Exames Opcionais - Grupo B */}
+          {/* Seção de Exames - Grupo B */}
           <div className="bg-white border-2 border-green-200 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-4">
               <Activity className="w-5 h-5 text-green-600" />
-              <h4 className="font-semibold text-green-800">Resultados dos Exames (Opcional)</h4>
-              <span className="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">Não obrigatório</span>
+              <h4 className="font-semibold text-green-800">Resultados dos Exames</h4>
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
@@ -1576,7 +1572,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="100"
                       placeholder="Ex: 38.0"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labsB.ht).input)}
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labsB.ht, labsB.hb).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_hematocrit_b_${patient.id}`, value)
@@ -1585,7 +1581,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_b_${patient.id}`) || '' : ''}
                     />
                     {labsB.ht != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('ht', labsB.ht).text)}>{labStatus('ht', labsB.ht).label}</p>
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labsB.ht, labsB.hb).text)}>{labStatus('ht', labsB.ht, labsB.hb).label}</p>
                     )}
                   </div>
                   
@@ -1679,8 +1675,45 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     </div>
                   </div>
                 </div>
-              </div>
             </div>
+          </div>
+
+          {/* Pré-visualização da classificação baseada em Hematócrito */}
+          {(() => {
+            const hb = labsB?.hb
+            const ht = labsB?.ht
+            const ratio = hb != null && ht != null ? ht / hb : undefined
+
+            let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
+            let highlightClass = 'text-slate-700'
+
+            if (ratio !== undefined) {
+              const ratioStr = `${ratio.toFixed(2)}x`
+              if (ratio >= 3.6) {
+                previewText = `Classificado para o Grupo C — hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                highlightClass = 'text-amber-800'
+              } else {
+                previewText = `Classificado para o Grupo B — sem hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                highlightClass = 'text-green-800'
+              }
+            } else if (ht != null) {
+              if (ht >= 45) {
+                previewText = `Classificado para o Grupo C — hematócrito elevado (${ht}%)`
+                highlightClass = 'text-amber-800'
+              } else {
+                previewText = `Classificado para o Grupo B — hematócrito dentro do esperado (${ht}%)`
+                highlightClass = 'text-green-800'
+              }
+            }
+
+            return (
+              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <p className={clsx('text-sm font-medium', highlightClass)}>
+                  {previewText}
+                </p>
+              </div>
+            )
+          })()}
 
             <div className="mt-4 p-3 bg-green-50 rounded-lg">
               <p className="text-xs text-green-700">
@@ -1692,8 +1725,36 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Manter Grupo B', nextStep: 'end_group_b', value: 'maintain' },
-        { text: 'Reclassificar para Grupo C', nextStep: 'group_c', value: 'upgrade' }
+        (() => {
+          const hb = labsB?.hb
+          const ht = labsB?.ht
+          const ratio = hb != null && ht != null ? ht / hb : undefined
+
+          // Texto e próximo passo dinâmicos com base no Ht/Hb (ou apenas Ht se Hb ausente)
+          let text = 'Classificar automaticamente (Ht/Hb)'
+          let nextStep: 'group_c' | 'end_group_b' | 'auto_classify_labs_b' = 'auto_classify_labs_b'
+
+          if (ratio !== undefined) {
+            if (ratio >= 3.6) {
+              text = 'Classificado para o Grupo C'
+              nextStep = 'group_c'
+            } else {
+              text = 'Classificado para o Grupo B'
+              nextStep = 'end_group_b'
+            }
+          } else if (ht != null) {
+            // Fallback: se só houver Ht, usar limiar absoluto clássico
+            if (ht >= 45) {
+              text = 'Classificado para o Grupo C'
+              nextStep = 'group_c'
+            } else {
+              text = 'Classificado para o Grupo B'
+              nextStep = 'end_group_b'
+            }
+          }
+
+          return { text, nextStep, value: 'auto' }
+        })()
       ]
     },
 
@@ -1714,6 +1775,125 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
+          </div>
+
+          {/* Seleção de antitérmico para receita */}
+          <div className="bg-white border-2 border-green-200 rounded-lg p-4">
+            <h4 className="font-semibold text-green-800 mb-2">Antitérmico</h4>
+            <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
+                <label className="inline-flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="antipyretic_b"
+                    checked={antipyreticChoiceB === 'paracetamol'}
+                    onChange={() => {
+                      setAntipyreticChoiceB('paracetamol')
+                      if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_b_${patient.id}`, 'paracetamol')
+                    }}
+                    disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
+                  />
+                  <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                    Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
+                  </span>
+                </label>
+                <label className="inline-flex items-center space-x-2">
+                  <input
+                    type="radio"
+                    name="antipyretic_b"
+                    checked={antipyreticChoiceB === 'dipirona'}
+                    onChange={() => {
+                      setAntipyreticChoiceB('dipirona')
+                      if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_b_${patient.id}`, 'dipirona')
+                    }}
+                    disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
+                  />
+                  <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                    Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-3 flex items-center space-x-2">
+                <button
+                  type="button"
+                  disabled={
+                    !antipyreticChoiceB ||
+                    antipyreticAddedB ||
+                    (
+                      antipyreticChoiceB === 'paracetamol'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                        : antipyreticChoiceB === 'dipirona'
+                          ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                          : false
+                    )
+                  }
+                  onClick={() => {
+                    try {
+                      const isAdult = patient.age >= 18
+                      const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+                      if (antipyreticChoiceB === 'paracetamol') {
+                        const dosage = isAdult ? '500–750 mg por dose' : '10–15 mg/kg/dose'
+                        patientService.addPrescription(patient.id, {
+                          medication: 'Paracetamol',
+                          dosage,
+                          frequency: 'A cada 6–8 horas se febre/dor',
+                          duration: 'Até melhora clínica (máx 3–4 g/dia em adultos)',
+                          instructions: 'Evitar AINEs (AAS, ibuprofeno, diclofenaco) na dengue.',
+                          prescribedBy: 'Sistema Siga o Fluxo'
+                        })
+                      } else if (antipyreticChoiceB === 'dipirona') {
+                        const dosage = isAdult ? '500–1000 mg por dose' : '10–20 mg/kg/dose'
+                        patientService.addPrescription(patient.id, {
+                          medication: 'Dipirona (Metamizol)',
+                          dosage,
+                          frequency: 'A cada 6–8 horas se febre/dor',
+                          duration: 'Até melhora clínica',
+                          instructions: 'Evitar AINEs; considerar contraindicações individuais da dipirona.',
+                          prescribedBy: 'Sistema Siga o Fluxo'
+                        })
+                      }
+                      setAntipyreticAddedB(true)
+                    } catch (error) {
+                      console.error('Erro ao adicionar antitérmico:', error)
+                      alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
+                    }
+                  }}
+                  className={clsx(
+                    'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                    (!antipyreticChoiceB || antipyreticAddedB || (
+                      antipyreticChoiceB === 'paracetamol'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                        : antipyreticChoiceB === 'dipirona'
+                          ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                          : false
+                    ))
+                      ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed'
+                      : 'bg-white hover:bg-green-100 text-green-800 border-green-300'
+                  )}
+                  title={
+                    !antipyreticChoiceB
+                      ? 'Selecione um antitérmico'
+                      : antipyreticAddedB
+                        ? 'Antitérmico já adicionado'
+                        : (
+                            antipyreticChoiceB === 'paracetamol'
+                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                                  ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                                  : 'Adicionar antitérmico à prescrição')
+                              : antipyreticChoiceB === 'dipirona'
+                                ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                                    ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                                    : 'Adicionar antitérmico à prescrição')
+                                : 'Adicionar antitérmico à prescrição'
+                          )
+                  }
+                >
+                  <Stethoscope className="w-4 h-4" />
+                  <span>{antipyreticAddedB ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
+                </button>
+              {/* Botão de abrir prescrição removido nesta etapa (Conclusão - Grupo B) */}
+            </div>
           </div>
         </div>
       ),
@@ -2123,12 +2303,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </ul>
           </div>
 
-          {/* Seção de Exames Opcionais */}
+          {/* Seção de Exames */}
           <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-4">
               <Activity className="w-5 h-5 text-blue-600" />
-              <h4 className="font-semibold text-blue-800">Resultados dos Exames (Opcional)</h4>
-              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full">Não obrigatório</span>
+              <h4 className="font-semibold text-blue-800">Resultados dos Exames</h4>
             </div>
             
             <div className="grid md:grid-cols-2 gap-4">
@@ -2167,7 +2346,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       min="0"
                       max="100"
                       placeholder="Ex: 38.0"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht).input)}
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
                       onChange={(e) => {
                         const value = e.target.value
                         localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
@@ -2176,7 +2355,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
                     />
                     {labs.ht != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht).text)}>{labStatus('ht', labs.ht).label}</p>
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
                     )}
                   </div>
                   
@@ -2478,7 +2657,43 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         }
       }
     }
-    
+
+    // Classificação automática baseada em hemoconcentração (Ht/Hb) no Grupo B
+    if (nextStep === 'auto_classify_labs_b') {
+      // Usar os valores já mantidos no estado local (labsB)
+      const hb = labsB?.hb
+      const ht = labsB?.ht
+      const ratio = hb && ht ? ht / hb : undefined
+
+      let finalStep: 'group_c' | 'end_group_b' = 'end_group_b'
+      let group: 'B' | 'C' = 'B'
+
+      // Regra solicitada: hemoconcentrado vai direto para Grupo C; senão, Grupo B
+      if (ratio !== undefined && ratio >= 3.6) {
+        finalStep = 'group_c'
+        group = 'C'
+      }
+
+      // Simular pequeno processamento para feedback visual, alinhado aos outros auto_classify
+      setTimeout(() => {
+        setHistory([...newHistory, currentStep])
+        setCurrentStep(finalStep)
+
+        const finalProgress = calculateProgress(finalStep, [...newHistory, currentStep])
+        setProgress(finalProgress)
+
+        try {
+          onUpdate(patient.id, finalStep, [...newHistory, currentStep], newAnswers, finalProgress, group)
+        } catch (error) {
+          console.error('Erro ao atualizar estado do paciente:', error)
+        }
+
+        setIsTransitioning(false)
+      }, 1200)
+
+      return
+    }
+
     // Lógica especial para classificação automática de fatores de risco
     if (nextStep === 'auto_classify_risk') {
       // Capturar dados dos checkboxes marcados
@@ -2592,33 +2807,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       return
     }
     
-    // Ao entrar em espera de exames no Grupo B, gerar prescrição de hidratação (evitar duplicação)
-    if (nextStep === 'wait_labs_b') {
-      try {
-        const fresh = patientService.getPatientById(patient.id)
-        const alreadyHasObservHydration = !!fresh?.treatment.prescriptions.some(p =>
-          p.medication.toLowerCase().includes('reidratação oral') &&
-          (p.duration.toLowerCase().includes('resultado do hemograma') || p.duration.toLowerCase().includes('retorno dos exames'))
-        )
-
-        if (!alreadyHasObservHydration) {
-          const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
-          const volumeInfantil = Math.round(peso * 75)
-          patientService.addPrescription(patient.id, {
-            medication: 'Solução de Reidratação Oral (SRO)',
-            dosage: patient.age >= 18 ? '200–400 ml por vez' : `${volumeInfantil} ml/dia dividido em pequenas quantidades`,
-            frequency: 'Oferecer em pequenos volumes, frequentemente',
-            duration: 'Até retorno dos exames (hemograma) e melhora clínica',
-            instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
-            prescribedBy: 'Sistema Siga o Fluxo'
-          })
-          patientService.addObservation(patient.id, 'Manter hidratação oral enquanto aguarda hemograma (Grupo B).')
-          setHydrationObservPrescribed(true)
-        }
-      } catch (error) {
-        console.error('Erro ao gerar prescrição de hidratação em espera de exames:', error)
-      }
-    }
+    // Removido: não gerar prescrição automaticamente ao entrar em espera de exames
 
     setHistory(newHistory)
     setCurrentStep(nextStep)
@@ -2829,7 +3018,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.4, ease: "easeOut" }}
-            className="bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-hidden"
+            className="bg-white rounded-2xl shadow-xl border border-slate-200/60 overflow-visible"
           >
             {/* Card Header Gradient */}
             <div className="h-2 bg-gradient-to-r from-blue-600 via-slate-400 to-blue-600"></div>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
   User, 
@@ -140,18 +140,10 @@ interface PatientFormProps {
     return badge(`PAM ≈ ${pam} mmHg`, 'blue-dark')
   }
 
-  // Formata a entrada da PA automaticamente para o padrão "120/80"
-  const formatBloodPressureInput = (value: string): string => {
-    // Mantém apenas dígitos para permitir digitação contínua (ex: 12080 -> 120/80)
-    const digits = (value || '').replace(/\D/g, '')
-    if (!digits) return ''
-    // Até 3 dígitos para sistólica
-    const s = digits.slice(0, 3)
-    // Próximos dígitos para diastólica (máx. 3)
-    const d = digits.slice(3, 6)
-    // Se ainda está digitando a diastólica, mostra a barra
-    return d.length > 0 ? `${s}/${d}` : `${s}/`
-  }
+  // Entrada livre de PA: não força formatação durante digitação.
+  // Aceita parcial até 3 dígitos por segmento e 1 barra.
+  const isBPPartialAllowed = (val: string) => /^\d{0,3}(\/\d{0,3})?$/.test(val)
+  const isBPCompleteValid = (val: string) => /^\d{2,3}\/\d{2,3}$/.test(val)
 
   const classifyGlucose = (g?: string) => {
     if (!g) return null
@@ -189,6 +181,47 @@ interface PatientFormProps {
       respiratoryRate: undefined
     }
   })
+
+  // Controle de texto da data de nascimento em formato pt-BR (dd/mm/aaaa)
+  const [birthDateText, setBirthDateText] = useState<string>('')
+  const [bpText, setBpText] = useState<string>('')
+
+  const formatDateBR = (date: Date): string => {
+    if (!date || isNaN(date.getTime())) return ''
+    const d = new Date(date)
+    const day = String(d.getDate()).padStart(2, '0')
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const year = String(d.getFullYear()).padStart(4, '0')
+    return `${day}/${month}/${year}`
+  }
+
+  const parseDateBR = (text: string): Date | null => {
+    const m = /^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/.exec(text)
+    if (!m) return null
+    const day = Number(m[1])
+    const month = Number(m[2])
+    const year = Number(m[3])
+    const d = new Date(year, month - 1, day)
+    // Validar consistência (evita datas como 31/02)
+    if (
+      d.getFullYear() !== year ||
+      d.getMonth() !== month - 1 ||
+      d.getDate() !== day
+    ) {
+      return null
+    }
+    return d
+  }
+
+  // Sincronizar a visualização de texto com a data do estado
+  useEffect(() => {
+    setBirthDateText(formatDateBR(formData.birthDate))
+  }, [formData.birthDate])
+
+  // Sincronizar texto da PA quando houver atualização explícita do estado (após validação)
+  useEffect(() => {
+    setBpText(prev => formData.vitalSigns?.bloodPressure ?? prev)
+  }, [formData.vitalSigns?.bloodPressure])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentStep, setCurrentStep] = useState(1)
@@ -546,21 +579,41 @@ interface PatientFormProps {
                     <div className="relative">
                       <Calendar className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                       <input
-                        type="date"
-                        value={formData.birthDate && !isNaN(formData.birthDate.getTime()) ? formData.birthDate.toISOString().split('T')[0] : ''}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="dd/mm/aaaa"
+                        value={birthDateText}
                         onChange={(e) => {
-                          if (e.target.value) {
-                            const newDate = new Date(e.target.value + 'T00:00:00')
-                            if (!isNaN(newDate.getTime())) {
-                              setFormData(prev => ({ ...prev, birthDate: newDate }))
-                            }
+                          const raw = e.target.value.replace(/\D/g, '')
+                          const trimmed = raw.slice(0, 8)
+                          let masked = trimmed
+                            .replace(/(\d{2})(\d)/, '$1/$2')
+                            .replace(/(\d{2})(\d)/, '$1/$2')
+                          setBirthDateText(masked)
+                          const parsed = parseDateBR(masked)
+                          if (parsed) {
+                            setFormData(prev => ({ ...prev, birthDate: parsed }))
+                            setErrors(prev => ({ ...prev, birthDate: '' }))
                           }
+                        }}
+                        onBlur={() => {
+                          const parsed = parseDateBR(birthDateText)
+                          if (!parsed) {
+                            setErrors(prev => ({ ...prev, birthDate: 'Data de nascimento inválida' }))
+                            return
+                          }
+                          if (parsed.getTime() > new Date().getTime()) {
+                            setErrors(prev => ({ ...prev, birthDate: 'Data de nascimento não pode ser no futuro' }))
+                            return
+                          }
+                          setFormData(prev => ({ ...prev, birthDate: parsed }))
+                          setBirthDateText(formatDateBR(parsed))
+                          setErrors(prev => ({ ...prev, birthDate: '' }))
                         }}
                         className={clsx(
                           "w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium",
                           errors.birthDate ? "border-red-400 bg-red-50" : ""
                         )}
-                        max={new Date().toISOString().split('T')[0]}
                       />
                     </div>
                     {formData.birthDate && !isNaN(formData.birthDate.getTime()) && (
@@ -865,24 +918,69 @@ interface PatientFormProps {
                       <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
                       <input
                         type="text"
-                        value={formData.vitalSigns?.bloodPressure || ''}
+                        value={bpText}
                         onChange={(e) => {
-                          const formatted = formatBloodPressureInput(e.target.value)
-                          const pamVal = calculatePAM(formatted)
+                          const next = e.target.value
+                          // Permitir apenas dígitos e uma barra, sem autoformatação
+                          if (!isBPPartialAllowed(next)) {
+                            // Ignora caracteres inválidos sem mexer no cursor
+                            return
+                          }
+                          setErrors(prev => ({ ...prev, bloodPressure: '' }))
+                          setBpText(next)
+                          if (isBPCompleteValid(next)) {
+                            const pamVal = calculatePAM(next)
+                            setFormData(prev => ({
+                              ...prev,
+                              vitalSigns: {
+                                ...prev.vitalSigns,
+                                bloodPressure: next,
+                                pam: pamVal
+                              }
+                            }))
+                          }
+                        }}
+                        onBlur={(e) => {
+                          const val = e.target.value
+                          if (!val) {
+                            setFormData(prev => ({
+                              ...prev,
+                              vitalSigns: { ...prev.vitalSigns, bloodPressure: undefined, pam: undefined }
+                            }))
+                            return
+                          }
+                          if (!isBPCompleteValid(val)) {
+                            setErrors(prev => ({ ...prev, bloodPressure: 'Formato inválido. Use o padrão 120/80.' }))
+                            return
+                          }
+                          const pamVal = calculatePAM(val)
                           setFormData(prev => ({
                             ...prev,
                             vitalSigns: {
                               ...prev.vitalSigns,
-                              bloodPressure: formatted,
+                              bloodPressure: val,
                               pam: pamVal
                             }
                           }))
                         }}
                         inputMode="numeric"
                         maxLength={7}
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                        className={clsx(
+                          "w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium",
+                          errors.bloodPressure ? "border-red-400 bg-red-50" : ""
+                        )}
                         placeholder="Ex: 120/80"
                       />
+                      {errors.bloodPressure && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-2 text-sm text-red-600 flex items-center bg-red-50 px-3 py-2 rounded-lg"
+                        >
+                          <AlertCircle className="w-4 h-4 mr-2" />
+                          {errors.bloodPressure}
+                        </motion.p>
+                      )}
                       {classifyBP(formData.vitalSigns?.bloodPressure)}
                       {renderPAMChip(formData.vitalSigns?.bloodPressure)}
                     </div>

@@ -114,24 +114,49 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       : meds.find(m => m.includes('dipirona'))
         ? 'Dipirona'
         : null
-
+    // Cálculo exato por peso/idade do antitérmico selecionado com texto simplificado
     const antipyreticBlock = (() => {
+      const dropsPerMl = 20
       if (chosenAntipyretic === 'Paracetamol') {
+        if (patient.weight) {
+          const mgPerDose = Math.round(patient.weight * 10) // 10 mg/kg por dose
+          const mgPerDrop = 200 / dropsPerMl // 200 mg/mL → 10 mg/gota
+          const drops = Math.round(mgPerDose / mgPerDrop)
+          const ml = (drops / dropsPerMl).toFixed(1)
+          return [
+            `• Tomar Paracetamol: ${drops} gotas (${ml} mL) por dose`,
+            `• Equivale a ${mgPerDose} mg por dose (sol. 200 mg/mL)`,
+            '• Intervalo: a cada 6–8 horas',
+            '• Limite diário: 60 mg/kg/dia ou 3 g/dia'
+          ].join('\n')
+        }
         return [
-          '• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)',
-          `• Pediátrico: 10–15 mg/kg VO a cada 6–8h${patient.weight ? ` (≈ ${Math.round(patient.weight)}–${Math.round(patient.weight * 1.5)} gotas/dose, sol. 200mg/mL)` : ''}`
+          '• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)',
+          '• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
         ].join('\n')
       }
       if (chosenAntipyretic === 'Dipirona') {
+        if (patient.weight) {
+          const mgPerDose = Math.round(patient.weight * 10) // 10 mg/kg por dose
+          const mgPerDrop = 500 / dropsPerMl // 500 mg/mL → 25 mg/gota
+          const drops = Math.round(mgPerDose / mgPerDrop)
+          const ml = (drops / dropsPerMl).toFixed(1)
+          return [
+            `• Tomar Dipirona: ${drops} gotas (${ml} mL) por dose`,
+            `• Equivale a ${mgPerDose} mg por dose (sol. 500 mg/mL)`,
+            '• Intervalo: a cada 6–8 horas',
+            '• Limite diário: 4 g/dia'
+          ].join('\n')
+        }
         return [
-          '• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)',
-          `• Pediátrico: 10 mg/kg VO a cada 6–8h${patient.weight ? ` (≈ ${Math.round((patient.weight * 10) / 25)} gotas/dose, sol. 500mg/mL)` : ''}`
+          '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)',
+          '• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
         ].join('\n')
       }
       return [
-        '• Dipirona: adultos 500–1000 mg VO a cada 6–8h (máx 4 g/dia)',
-        '• Paracetamol: adultos 500–750 mg VO a cada 6–8h (máx 3 g/dia)',
-        '• Crianças: Paracetamol 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia); Dipirona 10 mg/kg VO a cada 6–8h'
+        '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)',
+        '• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)',
+        '• Pediátrico: Paracetamol 10 mg/kg por dose; Dipirona 10 mg/kg por dose (a cada 6–8h)'
       ].join('\n')
     })()
 
@@ -199,7 +224,246 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     return null
   })()
   return (
-    <div />
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        transition={{ duration: 0.3 }}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden"
+      >
+        <div className="relative bg-gradient-to-r from-blue-600 to-slate-700 text-white p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
+                <Pill className="w-6 h-6" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">Receituário Médico</h2>
+                <p className="text-blue-100">Sistema Siga o Fluxo</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <motion.button
+                onClick={copyReportText}
+                className={clsx('flex items-center space-x-2 px-4 py-2 rounded-xl transition-all duration-200', copied ? 'bg-green-500/20 hover:bg-green-500/30 text-green-100' : 'bg-white/20 backdrop-blur-sm hover:bg-white/30')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Copiar texto do receituário"
+              >
+                {copied ? (
+                  <>
+                    <ClipboardCheck className="w-5 h-5" />
+                    <span className="font-medium">Copiado!</span>
+                  </>
+                ) : (
+                  <>
+                    <Clipboard className="w-5 h-5" />
+                    <span className="font-medium">Copiar Texto</span>
+                  </>
+                )}
+              </motion.button>
+              <motion.button
+                onClick={generatePDF}
+                className="flex items-center space-x-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 px-4 py-2 rounded-xl transition-colors duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Baixar PDF do receituário"
+              >
+                <Download className="w-5 h-5" />
+                <span className="font-medium">Baixar PDF</span>
+              </motion.button>
+              <motion.button
+                onClick={onClose}
+                className="p-2 bg-white/20 backdrop-blur-sm hover:bg-white/30 rounded-xl transition-colors duration-200"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="Fechar"
+              >
+                <X className="w-5 h-5" />
+              </motion.button>
+            </div>
+          </div>
+          <div className="mt-4 px-2">
+            <div className="inline-flex rounded-xl overflow-hidden border border-white/20">
+              <button
+                className={clsx('px-4 py-2 text-sm font-medium transition-colors', activeTab === 'orientations' ? 'bg-white/20 text-white' : 'bg-white/10 text-blue-100 hover:bg-white/20')}
+                onClick={() => setActiveTab('orientations')}
+              >
+                Orientações
+              </button>
+              <button
+                className={clsx('px-4 py-2 text-sm font-medium transition-colors', activeTab === 'prescriptions' ? 'bg-white/20 text-white' : 'bg-white/10 text-blue-100 hover:bg-white/20')}
+                onClick={() => setActiveTab('prescriptions')}
+              >
+                Medicamentos Prescritos
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-h-[calc(90vh-160px)] overflow-y-auto">
+          <div ref={reportRef} className="p-8 bg-white">
+            <div className="text-center mb-8 border-b-2 border-slate-800 pb-6">
+              <h1 className="text-3xl font-bold text-slate-800 mb-2">RECEITUÁRIO MÉDICO</h1>
+              <div className="flex items-center justify-center space-x-2">
+                <Stethoscope className="w-5 h-5 text-slate-600" />
+                <span className="text-slate-600">Sistema Siga o Fluxo</span>
+              </div>
+            </div>
+
+            <div className="mb-8">
+              <div className="grid grid-cols-2 gap-8 text-lg">
+                <div>
+                  <strong>Paciente:</strong> {patient.name}
+                </div>
+                <div>
+                  <strong>Idade:</strong> {patient.age} anos
+                </div>
+              </div>
+              <div className="mt-4 text-lg">
+                <strong>Data:</strong> {new Date().toLocaleDateString('pt-BR')}
+              </div>
+              {patient.flowchartState.group && (
+                <div className="mt-2 text-lg">
+                  <strong>Classificação:</strong> Grupo {patient.flowchartState.group}
+                </div>
+              )}
+            </div>
+
+            <div className="mb-8">
+              <div className="text-lg">
+                <strong>Diagnóstico:</strong> Dengue
+              </div>
+            </div>
+
+            {activeTab === 'orientations' && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-slate-800 mb-6">Orientações</h2>
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">1. Hidratação Oral</h3>
+                  {(() => {
+                    const hydration = calculateHydration(patient.weight)
+                    return (
+                      <div className="space-y-2 text-lg">
+                        {hydration ? (
+                          <>
+                            <div>• Total diário: {hydration.totalDaily} mL/dia ({hydration.liters} litros/dia)</div>
+                            <div>§ 1/3 com sais de reidratação oral → {hydration.withSalts} mL/dia</div>
+                            <div>§ 2/3 com líquidos caseiros → {hydration.withLiquids} mL/dia (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
+                          </>
+                        ) : (
+                          <>
+                            <div>• Orientação geral:</div>
+                            <div>§ 1/3 com sais de reidratação oral</div>
+                            <div>§ 2/3 com líquidos caseiros (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
+                          </>
+                        )}
+                        <div className="mt-2">§ Inicialmente, oferecer maior volume para evitar desidratação.</div>
+                      </div>
+                    )
+                  })()}
+                </div>
+
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">2. Retorno Imediato em sinais de alarme</h3>
+                  <div className="text-lg space-y-1">
+                    <div>• Dor abdominal intensa e contínua</div>
+                    <div>• Vômitos persistentes</div>
+                    <div>• Sangramentos de mucosa ou outros sinais de hemorragia</div>
+                    <div>• Letargia ou irritabilidade</div>
+                    <div>• Hipotensão ou tontura</div>
+                    <div>• Diminuição repentina da diurese (urina reduzida)</div>
+                  </div>
+                </div>
+
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">3. Seguimento Ambulatorial</h3>
+                  <div className="text-lg space-y-1">
+                    <div>• Caso não haja defervescência, retornar no 5° dia da doença para nova avaliação.</div>
+                    <div>• Observação dos sinais clínicos e reavaliação periódica.</div>
+                  </div>
+                </div>
+
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-slate-800 mb-4">4. {chosenAntipyreticLabel ? 'Antitérmico Prescrito' : 'Antitérmicos Permitidos'}</h3>
+              <div className="text-lg whitespace-pre-line">
+                {(() => {
+                  const dropsPerMl = 20
+                  const meds = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
+                  const chosen = meds.find(m => m.includes('paracetamol')) ? 'Paracetamol' : meds.find(m => m.includes('dipirona')) ? 'Dipirona' : null
+                  if (!chosen) {
+                    return '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)\n• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)\n• Pediátrico: Paracetamol 10 mg/kg por dose; Dipirona 10 mg/kg por dose (a cada 6–8h)'
+                  }
+                  if (!patient.weight) {
+                    return chosen === 'Paracetamol'
+                      ? '• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)\n• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
+                      : '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)\n• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
+                  }
+                  const w = patient.weight
+                  if (chosen === 'Paracetamol') {
+                    const mgPerDose = Math.round(w * 10)
+                    const mgPerDrop = 200 / dropsPerMl // 10 mg/gota
+                    const drops = Math.round(mgPerDose / mgPerDrop)
+                    const ml = (drops / dropsPerMl).toFixed(1)
+                    return `• Tomar Paracetamol: ${drops} gotas (${ml} mL) por dose\n• Equivale a ${mgPerDose} mg por dose (sol. 200 mg/mL)\n• Intervalo: a cada 6–8 horas\n• Limite diário: 60 mg/kg/dia ou 3 g/dia`
+                  }
+                  const mgPerDose = Math.round(w * 10)
+                  const mgPerDrop = 500 / dropsPerMl // 25 mg/gota
+                  const drops = Math.round(mgPerDose / mgPerDrop)
+                  const ml = (drops / dropsPerMl).toFixed(1)
+                  return `• Tomar Dipirona: ${drops} gotas (${ml} mL) por dose\n• Equivale a ${mgPerDose} mg por dose (sol. 500 mg/mL)\n• Intervalo: a cada 6–8 horas\n• Limite diário: 4 g/dia`
+                })()}
+              </div>
+            </div>
+
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">5. Medicamentos Contraindicados</h3>
+                  <div className="text-lg space-y-1">
+                    <div>• Aspirina (ácido acetilsalicílico) e salicilatos</div>
+                    <div>• AINEs: ibuprofeno, diclofenaco, naproxeno, entre outros</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'prescriptions' && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-slate-800 mb-6">Medicamentos Prescritos</h2>
+                {patient.treatment.prescriptions.length > 0 ? (
+                  <div className="space-y-4">
+                    {patient.treatment.prescriptions.map((prescription, index) => (
+                      <div key={prescription.id} className="border-l-4 border-slate-400 pl-6 text-lg">
+                        <div className="font-bold">{index + 1}. {prescription.medication}</div>
+                        <div className="ml-4 mt-2 space-y-1">
+                          <div>Dosagem: {prescription.dosage}</div>
+                          <div>Frequência: {prescription.frequency}</div>
+                          <div>Duração: {prescription.duration}</div>
+                          {prescription.instructions && (
+                            <div>Instruções: {prescription.instructions}</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-slate-600">Nenhum medicamento prescrito no momento.</p>
+                )}
+                <div className="mt-8 pt-6 border-t border-slate-200">
+                  <div className="text-lg">
+                    <strong>Assinatura do Médico:</strong>
+                  </div>
+                  <div className="mt-8 space-y-2 text-lg">
+                    <div>__________________________________________________</div>
+                    <div>Dr. Rodrigo Machado / CRM: XXXX.XXX</div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    </div>
   )
 }
 

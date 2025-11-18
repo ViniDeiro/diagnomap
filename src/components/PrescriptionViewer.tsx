@@ -26,13 +26,28 @@ interface PrescriptionViewerProps {
   patient: Patient
   onClose: () => void
   onUpdate: () => void
+  mode?: 'full' | 'prescription-only'
 }
 
 const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   patient,
   onClose,
-  onUpdate
+  onUpdate,
+  mode = 'full'
 }) => {
+  // Modo mínimo mostra apenas "Prescrições Ativas" conforme implementação original
+  const isMinimal = mode === 'prescription-only'
+  const isHydrationPrescription = (p: { medication: string }) => {
+    const name = (p.medication || '').toLowerCase()
+    return (
+      name.includes('sro') ||
+      name.includes('solução de reidratação oral') ||
+      name.includes('solucao de reidratacao oral') ||
+      name.includes('hidratação oral') ||
+      name.includes('hidratacao oral')
+    )
+  }
+  const activeHydrationPrescriptions = (patient.treatment.prescriptions || []).filter(isHydrationPrescription)
   const [showAddForm, setShowAddForm] = useState(false)
   const prescriptionRef = useRef<HTMLDivElement>(null)
   const labRef = useRef<HTMLDivElement>(null)
@@ -267,6 +282,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
         <div className="overflow-y-auto max-h-[calc(95vh-200px)]">
           
           {/* Patient Information Card */}
+          {!isMinimal && (
           <div className="p-8 border-b border-slate-200">
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl border border-slate-200/50">
               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
@@ -308,8 +324,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
               </div>
             </div>
           </div>
+          )}
 
           {/* Antipyretic choice + Action Buttons */}
+          {!isMinimal && (
           <div className="p-8 border-b border-slate-200">
             {/* Single antipyretic selection */}
             <div className="mb-4">
@@ -399,9 +417,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
               )}
             </div>
           </div>
+          )}
 
           {/* Add Prescription Form */}
-          {showAddForm && (
+          {!isMinimal && showAddForm && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -497,7 +516,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
             </motion.div>
           )}
 
-          {/* Medical Prescription - New Format */}
+          {/* Medical Prescription - New Format (hidden in minimal mode) */}
+          {!isMinimal && (
           <div className="p-8 border-b border-slate-200">
             <div ref={prescriptionRef} className="bg-white p-8 font-serif">
               {/* Header */}
@@ -642,9 +662,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
               </div>
             </div>
           </div>
+          )}
 
           {/* Lab Orders - For Download */}
-          {patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
+          {!isMinimal && patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
             <div className="p-8">
               <div ref={labRef} className="bg-white p-8">
                 {/* Lab Order Header */}
@@ -699,44 +720,53 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
             </div>
           )}
 
-          {/* Current Prescriptions Display */}
-          {patient.treatment.prescriptions.length > 0 && (
+          {/* Current Prescriptions Display (only hydration oral in minimal mode) */}
+          {isMinimal && (
             <div className="p-8">
               <h3 className="text-xl font-bold text-slate-800 mb-6 flex items-center">
                 <Pill className="w-6 h-6 mr-3 text-green-600" />
                 Prescrições Ativas
               </h3>
-              <div className="space-y-4">
-                {patient.treatment.prescriptions.map((prescription, index) => (
-                  <div key={prescription.id} className="bg-green-50 rounded-xl p-6 border border-green-200">
-                    <div className="flex items-start justify-between mb-4">
-                      <h4 className="text-lg font-bold text-green-800">{prescription.medication}</h4>
-                      <span className="text-sm text-slate-600">#{index + 1}</span>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <p className="text-sm text-slate-600">Dosagem</p>
-                        <p className="font-semibold text-slate-800">{prescription.dosage}</p>
+              {activeHydrationPrescriptions.length > 0 ? (
+                <div className="space-y-4">
+                  {activeHydrationPrescriptions.map((prescription, index) => (
+                    <div key={prescription.id} className="bg-green-50 rounded-xl p-6 border border-green-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <h4 className="text-lg font-bold text-green-800">{prescription.medication}</h4>
+                        <span className="text-sm text-slate-600">#{index + 1}</span>
                       </div>
-                      <div>
-                        <p className="text-sm text-slate-600">Frequência</p>
-                        <p className="font-semibold text-slate-800">{prescription.frequency}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                        <div>
+                          <p className="text-sm text-slate-600">Dosagem</p>
+                          <p className="font-semibold text-slate-800">{prescription.dosage}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Frequência</p>
+                          <p className="font-semibold text-slate-800">{prescription.frequency}</p>
+                        </div>
+                        <div>
+                          <p className="text-sm text-slate-600">Duração</p>
+                          <p className="font-semibold text-slate-800">{prescription.duration}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm text-slate-600">Duração</p>
-                        <p className="font-semibold text-slate-800">{prescription.duration}</p>
+                      <div className="bg-white rounded-lg p-4 border border-green-200">
+                        <p className="text-sm text-slate-600 mb-1">Instruções</p>
+                        <p className="text-slate-800">{prescription.instructions}</p>
+                      </div>
+                      <div className="mt-4 text-sm text-slate-600">
+                        Prescrito em: {formatDate(prescription.prescribedAt)} | Por: {prescription.prescribedBy}
                       </div>
                     </div>
-                    <div className="bg-white rounded-lg p-4 border border-green-200">
-                      <p className="text-sm text-slate-600 mb-1">Instruções</p>
-                      <p className="text-slate-800">{prescription.instructions}</p>
-                    </div>
-                    <div className="mt-4 text-sm text-slate-600">
-                      Prescrito em: {formatDate(prescription.prescribedAt)} | Por: {prescription.prescribedBy}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                  <p className="text-slate-700">Nenhuma prescrição ativa no momento.</p>
+                  <p className="text-slate-600 text-sm mt-2">
+                    Use o Fluxograma ou o modo completo para gerar as receitas.
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>

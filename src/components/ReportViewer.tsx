@@ -37,6 +37,25 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
 
+  // Faixas de referência da Hemoglobina por idade/sexo
+  const getHbRange = () => {
+    const now = new Date()
+    const birth = patient.birthDate ? new Date(patient.birthDate) : now
+    const diffMonths = Math.max(0, Math.floor((now.getTime() - birth.getTime()) / (1000 * 60 * 60 * 24 * 30.4375)))
+    const ageYears = patient.age
+
+    if (diffMonths < 1) return { min: 16.0, max: 18.0 } // RN
+    if (ageYears === 0 && diffMonths >= 1 && diffMonths <= 11) return { min: 10.6, max: 13.0 } // 1–11 meses
+    if (ageYears >= 1 && ageYears <= 2) return { min: 11.5, max: 14.5 } // 1–2 anos
+    if (ageYears >= 3 && ageYears <= 17) return { min: 11.5, max: 14.5 } // 3–17 anos
+    if (ageYears >= 18) {
+      return patient.gender === 'masculino'
+        ? { min: 12.5, max: 16.5 }
+        : { min: 11.5, max: 15.5 }
+    }
+    return { min: 11.5, max: 14.5 }
+  }
+
   const generatePDF = async () => {
     if (!reportRef.current) return
 
@@ -359,49 +378,95 @@ ${formatDate(new Date())}`
     if (patient.labResults && patient.labResults.status === 'completed') {
       const findings = []
       
-      if (patient.labResults.hemoglobin) {
+      if (patient.labResults.hemoglobin != null) {
         const hb = patient.labResults.hemoglobin
-        if (hb < 12) {
-          findings.push(`anemia leve com hemoglobina de ${hb} g/dL`)
-        } else if (hb < 10) {
-          findings.push(`anemia moderada com hemoglobina de ${hb} g/dL`)
+        const range = getHbRange()
+        const refText = `${range.min.toFixed(1)}–${range.max.toFixed(1)} g/dL`
+        if (hb < range.min) {
+          findings.push(`hemoglobina abaixo da faixa (${hb} g/dL; ref. ${refText})`)
+        } else if (hb > range.max) {
+          findings.push(`hemoglobina acima da faixa (${hb} g/dL; ref. ${refText})`)
         } else {
-          findings.push(`níveis de hemoglobina dentro da normalidade (${hb} g/dL)`)
+          findings.push(`hemoglobina dentro da faixa (${hb} g/dL; ref. ${refText})`)
         }
       }
       
-      if (patient.labResults.hematocrit) {
+      if (patient.labResults.hematocrit != null) {
         const ht = patient.labResults.hematocrit
-        findings.push(`hematócrito de ${ht}%`)
+        const hb = patient.labResults.hemoglobin
+        if (hb != null && hb > 0) {
+          const ratio = ht / hb
+          const r = ratio.toFixed(1)
+          if (ratio > 5) {
+            findings.push(`hemoconcentração extrema (Ht/Hb ${r}x)`) 
+          } else if (ratio >= 3.6) {
+            findings.push(`hemoconcentração (Ht/Hb ${r}x)`) 
+          } else if (ratio >= 3.0) {
+            findings.push(`hematócrito aumentado (Ht/Hb ${r}x)`) 
+          } else {
+            findings.push(`razão Ht/Hb ${r}x, abaixo do esperado`) 
+          }
+        } else {
+          findings.push(`hematócrito de ${ht}%`)
+        }
       }
       
-      if (patient.labResults.platelets) {
+      if (patient.labResults.platelets != null) {
         const plt = patient.labResults.platelets
-        if (plt < 100000) {
-          findings.push(`trombocitopenia severa (${plt.toLocaleString()}/mm³)`)
+        if (plt > 450000) {
+          findings.push(`plaquetose (${plt.toLocaleString()}/mm³)`) 
+        } else if (plt < 20000) {
+          findings.push(`plaquetopenia muito grave (${plt.toLocaleString()}/mm³)`) 
+        } else if (plt < 50000) {
+          findings.push(`plaquetopenia grave (${plt.toLocaleString()}/mm³)`) 
+        } else if (plt < 100000) {
+          findings.push(`plaquetopenia moderada (${plt.toLocaleString()}/mm³)`) 
         } else if (plt < 150000) {
-          findings.push(`trombocitopenia leve (${plt.toLocaleString()}/mm³)`)
+          findings.push(`plaquetopenia leve (${plt.toLocaleString()}/mm³)`) 
         } else {
-          findings.push(`contagem plaquetária preservada (${plt.toLocaleString()}/mm³)`)
+          findings.push(`contagem plaquetária preservada (${plt.toLocaleString()}/mm³)`) 
         }
       }
       
-      if (patient.labResults.albumin) {
+      if (patient.labResults.albumin != null) {
         const alb = patient.labResults.albumin
-        if (alb < 3.5) {
-          findings.push(`hipoalbuminemia (${alb} g/dL)`)
+        if (alb > 5.6) {
+          findings.push(`hiperalbuminemia (${alb} g/dL)`) 
+        } else if (alb >= 3.5 && alb <= 5.5) {
+          findings.push(`albumina dentro da faixa (3,5–5,5 g/dL; medido ${alb} g/dL)`) 
+        } else if (alb >= 3.0 && alb < 3.5) {
+          findings.push(`hipoalbuminemia leve (${alb} g/dL)`) 
+        } else if (alb < 2.0) {
+          findings.push(`hipoalbuminemia grave (${alb} g/dL)`) 
         } else {
-          findings.push(`níveis de albumina normais (${alb} g/dL)`)
+          findings.push(`hipoalbuminemia moderada (${alb} g/dL)`) 
         }
       }
       
-      if (patient.labResults.transaminases?.alt || patient.labResults.transaminases?.ast) {
-        const alt = patient.labResults.transaminases.alt
-        const ast = patient.labResults.transaminases.ast
-        if ((alt && alt > 40) || (ast && ast > 40)) {
-          findings.push(`elevação das transaminases (ALT: ${alt || 'NR'}, AST: ${ast || 'NR'} U/L)`)
+      if (patient.labResults.transaminases?.alt != null || patient.labResults.transaminases?.ast != null) {
+        const alt = patient.labResults.transaminases?.alt
+        const ast = patient.labResults.transaminases?.ast
+
+        const transFindings: string[] = []
+
+        if (alt != null) {
+          if (alt <= 56) transFindings.push(`ALT normal (7–56 U/L; ${alt} U/L)`) 
+          else if (alt <= 120) transFindings.push(`ALT elevação leve (57–120 U/L; ${alt} U/L)`) 
+          else if (alt <= 220) transFindings.push(`ALT elevação moderada (121–220 U/L; ${alt} U/L)`) 
+          else transFindings.push(`ALT elevação grave (≥ 221 U/L; ${alt} U/L)`) 
+        }
+
+        if (ast != null) {
+          if (ast <= 40) transFindings.push(`AST normal (5–40 U/L; ${ast} U/L)`) 
+          else if (ast <= 100) transFindings.push(`AST elevação leve (41–100 U/L; ${ast} U/L)`) 
+          else if (ast <= 200) transFindings.push(`AST elevação moderada (101–200 U/L; ${ast} U/L)`) 
+          else transFindings.push(`AST elevação grave (≥ 201 U/L; ${ast} U/L)`) 
+        }
+
+        if (transFindings.length > 0) {
+          findings.push(transFindings.join('; ')) 
         } else {
-          findings.push(`função hepática preservada`)
+          findings.push('função hepática preservada') 
         }
       }
       
@@ -501,7 +566,13 @@ ${formatDate(new Date())}`
           
           return `${basePhrase} Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.${riskFactorsText}`
         })() : 
-        `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional, sendo ${isFemale ? 'classificada' : 'classificado'} como ${patient.selectedFlowchart ? 'Grupo A de ' + (patient.selectedFlowchart.charAt(0).toUpperCase() + patient.selectedFlowchart.slice(1)) : 'grupo A de Dengue'}.`,
+        (() => {
+          const diseaseName = patient.selectedFlowchart 
+            ? patient.selectedFlowchart.charAt(0).toUpperCase() + patient.selectedFlowchart.slice(1)
+            : 'Dengue'
+          const letter = patient.flowchartState.group || 'A'
+          return `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional, sendo ${isFemale ? 'classificada' : 'classificado'} como Grupo ${letter} de ${diseaseName}.`
+        })(),
       
       treatment: groupInfo ? 
         `O plano terapêutico instituído contempla ${groupInfo.treatment}, seguindo rigorosamente as diretrizes clínicas preconizadas. Esta abordagem visa otimizar o prognóstico e minimizar o risco de complicações.` : 
