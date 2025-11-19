@@ -58,11 +58,51 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   )
   const [antipyreticAddedB, setAntipyreticAddedB] = useState<boolean>(false)
 
+  // Estados para escolha de antitérmico nos demais grupos (A, C, D)
+  const [antipyreticChoiceA, setAntipyreticChoiceA] = useState<string>(
+    typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_a_${patient.id}`) || '') : ''
+  )
+  const [antipyreticAddedA, setAntipyreticAddedA] = useState<boolean>(false)
+  const [antipyreticChoiceC, setAntipyreticChoiceC] = useState<string>(
+    typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_c_${patient.id}`) || '') : ''
+  )
+  const [antipyreticAddedC, setAntipyreticAddedC] = useState<boolean>(false)
+  const [antipyreticChoiceD, setAntipyreticChoiceD] = useState<string>(
+    typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_d_${patient.id}`) || '') : ''
+  )
+  const [antipyreticAddedD, setAntipyreticAddedD] = useState<boolean>(false)
+
   // Helper: parse number safely from string/localStorage
   const parseNum = (s: string | null): number | undefined => {
     if (!s) return undefined
     const n = Number(s)
     return isNaN(n) ? undefined : n
+  }
+
+  // Helper para adicionar prescrição de antitérmico baseado na escolha
+  const addAntipyreticPrescription = (choice: string) => {
+    const isAdult = patient.age >= 18
+    if (choice === 'paracetamol') {
+      const dosage = isAdult ? '500–750 mg por dose' : '10–15 mg/kg/dose'
+      patientService.addPrescription(patient.id, {
+        medication: 'Paracetamol',
+        dosage,
+        frequency: 'A cada 6–8 horas se febre/dor',
+        duration: 'Até melhora clínica (máx 3–4 g/dia em adultos)',
+        instructions: 'Evitar AINEs (AAS, ibuprofeno, diclofenaco) na dengue.',
+        prescribedBy: 'Sistema Siga o Fluxo'
+      })
+    } else if (choice === 'dipirona') {
+      const dosage = isAdult ? '500–1000 mg por dose' : '10–20 mg/kg/dose'
+      patientService.addPrescription(patient.id, {
+        medication: 'Dipirona (Metamizol)',
+        dosage,
+        frequency: 'A cada 6–8 horas se febre/dor',
+        duration: 'Até melhora clínica',
+        instructions: 'Evitar AINEs; considerar contraindicações individuais da dipirona.',
+        prescribedBy: 'Sistema Siga o Fluxo'
+      })
+    }
   }
 
   // Local states to color-code lab inputs (Group B optional & general optional blocks)
@@ -612,11 +652,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                               </div>
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">2</div>
-                                <p><strong>Calcular valor médio:</strong> (PA sistólica + PA diastólica) ÷ 2</p>
+                                <p><strong>Calcular PAM (Pressão Arterial Média):</strong> PAM = (PA Sistólica + 2 × PA Diastólica) ÷ 3</p>
                               </div>
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">3</div>
-                                <p><strong>Insuflar manguito:</strong> Até o valor médio calculado. Ex.: PA 120×80 → insuflar até 100 mmHg</p>
+                                <p><strong>Insuflar manguito:</strong> Até a PAM calculada. Ex.: PA 120/80 mmHg → insuflar até 93 mmHg</p>
                               </div>
                               <div class="flex items-start space-x-3">
                                 <div class="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold mt-0.5">4</div>
@@ -666,7 +706,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                             <h4 class="font-bold text-slate-800 mb-2">Resumo rápido</h4>
                             <ol class="list-decimal list-inside text-slate-700 space-y-1">
                               <li>Medir PA</li>
-                              <li>Inflar o manguito na média entre PAS e PAD</li>
+                              <li>Inflar o manguito até a PAM calculada</li>
                               <li>Manter 5 min (adulto) / 3 min (criança)</li>
                               <li>Soltar e esperar 1 min</li>
                               <li>Delimitar 2,5 × 2,5 cm no antebraço</li>
@@ -2483,6 +2523,102 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <li>• Cartão de acompanhamento</li>
             </ul>
           </div>
+
+          {/* Seleção de antitérmico para receita (Grupo C) */}
+          <div className="bg-white border-2 border-yellow-200 rounded-lg p-4">
+            <h4 className="font-semibold text-yellow-800 mb-2">Antitérmico</h4>
+            <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_c"
+                  checked={antipyreticChoiceC === 'paracetamol'}
+                  onChange={() => {
+                    setAntipyreticChoiceC('paracetamol')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_c_${patient.id}`, 'paracetamol')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_c"
+                  checked={antipyreticChoiceC === 'dipirona'}
+                  onChange={() => {
+                    setAntipyreticChoiceC('dipirona')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_c_${patient.id}`, 'dipirona')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 flex items-center space-x-2">
+              <button
+                type="button"
+                disabled={
+                  !antipyreticChoiceC ||
+                  antipyreticAddedC ||
+                  (
+                    antipyreticChoiceC === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      : antipyreticChoiceC === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        : false
+                  )
+                }
+                onClick={() => {
+                  try {
+                    addAntipyreticPrescription(antipyreticChoiceC)
+                    setAntipyreticAddedC(true)
+                  } catch (error) {
+                    console.error('Erro ao adicionar antitérmico (Grupo C):', error)
+                    alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
+                  }
+                }}
+                className={clsx(
+                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  (!antipyreticChoiceC || antipyreticAddedC || (
+                    antipyreticChoiceC === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      : antipyreticChoiceC === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        : false
+                  ))
+                    ? 'bg-yellow-200 text-yellow-700 border-yellow-300 cursor-not-allowed'
+                    : 'bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300'
+                )}
+                title={
+                  !antipyreticChoiceC
+                    ? 'Selecione um antitérmico'
+                    : antipyreticAddedC
+                      ? 'Antitérmico já adicionado'
+                      : (
+                          antipyreticChoiceC === 'paracetamol'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                                ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                                : 'Adicionar antitérmico à prescrição')
+                            : antipyreticChoiceC === 'dipirona'
+                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                                  ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                                  : 'Adicionar antitérmico à prescrição')
+                              : 'Adicionar antitérmico à prescrição'
+                        )
+                }
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>{antipyreticAddedC ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       ),
       options: [
@@ -2534,6 +2670,102 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <li>• Acompanhamento ambulatorial</li>
             </ul>
           </div>
+
+          {/* Seleção de antitérmico para receita (Grupo D) */}
+          <div className="bg-white border-2 border-red-200 rounded-lg p-4">
+            <h4 className="font-semibold text-red-800 mb-2">Antitérmico</h4>
+            <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_d"
+                  checked={antipyreticChoiceD === 'paracetamol'}
+                  onChange={() => {
+                    setAntipyreticChoiceD('paracetamol')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_d_${patient.id}`, 'paracetamol')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_d"
+                  checked={antipyreticChoiceD === 'dipirona'}
+                  onChange={() => {
+                    setAntipyreticChoiceD('dipirona')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_d_${patient.id}`, 'dipirona')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 flex items-center space-x-2">
+              <button
+                type="button"
+                disabled={
+                  !antipyreticChoiceD ||
+                  antipyreticAddedD ||
+                  (
+                    antipyreticChoiceD === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      : antipyreticChoiceD === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        : false
+                  )
+                }
+                onClick={() => {
+                  try {
+                    addAntipyreticPrescription(antipyreticChoiceD)
+                    setAntipyreticAddedD(true)
+                  } catch (error) {
+                    console.error('Erro ao adicionar antitérmico (Grupo D):', error)
+                    alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
+                  }
+                }}
+                className={clsx(
+                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  (!antipyreticChoiceD || antipyreticAddedD || (
+                    antipyreticChoiceD === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      : antipyreticChoiceD === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        : false
+                  ))
+                    ? 'bg-red-200 text-red-700 border-red-300 cursor-not-allowed'
+                    : 'bg-white hover:bg-red-100 text-red-800 border-red-300'
+                )}
+                title={
+                  !antipyreticChoiceD
+                    ? 'Selecione um antitérmico'
+                    : antipyreticAddedD
+                      ? 'Antitérmico já adicionado'
+                      : (
+                          antipyreticChoiceD === 'paracetamol'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                                ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                                : 'Adicionar antitérmico à prescrição')
+                            : antipyreticChoiceD === 'dipirona'
+                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                                  ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                                  : 'Adicionar antitérmico à prescrição')
+                              : 'Adicionar antitérmico à prescrição'
+                        )
+                }
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>{antipyreticAddedD ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       ),
       options: [
@@ -2549,10 +2781,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       icon: <CheckCircle className="w-6 h-6" />,
       color: 'bg-green-500',
       content: (
-        <div className="text-center">
-          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+        <div className="space-y-4 text-center">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-2" />
           <h3 className="text-xl font-semibold text-green-800">Alta Ambulatorial</h3>
-          <div className="bg-green-50 p-4 rounded-lg mt-4">
+          <div className="bg-green-50 p-4 rounded-lg mt-2 text-left">
             <h4 className="font-semibold text-green-800 mb-2">Orientações:</h4>
             <ul className="text-green-700 text-sm space-y-1">
               <li>• Retornar se sinais de alarme</li>
@@ -2560,6 +2792,102 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
+          </div>
+
+          {/* Seleção de antitérmico para receita (Grupo A) */}
+          <div className="bg-white border-2 border-green-200 rounded-lg p-4 text-left">
+            <h4 className="font-semibold text-green-800 mb-2">Antitérmico</h4>
+            <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_a"
+                  checked={antipyreticChoiceA === 'paracetamol'}
+                  onChange={() => {
+                    setAntipyreticChoiceA('paracetamol')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_a_${patient.id}`, 'paracetamol')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_a"
+                  checked={antipyreticChoiceA === 'dipirona'}
+                  onChange={() => {
+                    setAntipyreticChoiceA('dipirona')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_a_${patient.id}`, 'dipirona')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 flex items-center space-x-2">
+              <button
+                type="button"
+                disabled={
+                  !antipyreticChoiceA ||
+                  antipyreticAddedA ||
+                  (
+                    antipyreticChoiceA === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      : antipyreticChoiceA === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        : false
+                  )
+                }
+                onClick={() => {
+                  try {
+                    addAntipyreticPrescription(antipyreticChoiceA)
+                    setAntipyreticAddedA(true)
+                  } catch (error) {
+                    console.error('Erro ao adicionar antitérmico (Grupo A):', error)
+                    alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
+                  }
+                }}
+                className={clsx(
+                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  (!antipyreticChoiceA || antipyreticAddedA || (
+                    antipyreticChoiceA === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      : antipyreticChoiceA === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        : false
+                  ))
+                    ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed'
+                    : 'bg-white hover:bg-green-100 text-green-800 border-green-300'
+                )}
+                title={
+                  !antipyreticChoiceA
+                    ? 'Selecione um antitérmico'
+                    : antipyreticAddedA
+                      ? 'Antitérmico já adicionado'
+                      : (
+                          antipyreticChoiceA === 'paracetamol'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                                ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                                : 'Adicionar antitérmico à prescrição')
+                            : antipyreticChoiceA === 'dipirona'
+                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                                  ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                                  : 'Adicionar antitérmico à prescrição')
+                              : 'Adicionar antitérmico à prescrição'
+                        )
+                }
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>{antipyreticAddedA ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
+              </button>
+            </div>
           </div>
         </div>
       ),

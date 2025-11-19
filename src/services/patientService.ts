@@ -357,6 +357,126 @@ class PatientService {
     }
   }
 
+  // Preparar paciente para Retorno: resetar estado e admissão
+  prepareReturnVisit(patientId: string): void {
+    const patients = this.loadFromStorage()
+    const idx = patients.findIndex(p => p.id === patientId)
+    if (idx === -1) return
+
+    const now = new Date()
+
+    // Resetar estado do fluxograma e exames
+    patients[idx].flowchartState = {
+      currentStep: 'start',
+      history: [],
+      answers: {},
+      progress: 0,
+      group: undefined,
+      lastUpdate: now
+    }
+
+    patients[idx].labResults = {
+      hemoglobin: undefined,
+      hematocrit: undefined,
+      platelets: undefined,
+      albumin: undefined,
+      transaminases: { alt: undefined, ast: undefined },
+      requestDate: undefined,
+      resultDate: undefined,
+      status: 'not_requested'
+    }
+
+    // Atualizar admissão para o novo atendimento e limpar dados clínicos para reentrada
+    patients[idx].admission = {
+      date: now,
+      time: now.toLocaleTimeString('pt-BR'),
+      symptoms: [],
+      vitalSigns: undefined
+    }
+
+    patients[idx].status = 'active'
+    patients[idx].updatedAt = now
+    this.saveToStorage(patients)
+  }
+
+  // Atualizar paciente a partir do formulário de retorno (reentrada de dados)
+  updatePatientFromForm(patientId: string, formData: PatientFormData): Patient | null {
+    const patients = this.loadFromStorage()
+    const idx = patients.findIndex(p => p.id === patientId)
+    if (idx === -1) return null
+
+    const now = new Date()
+    const age = this.calculateAge(formData.birthDate)
+
+    const updated: Patient = {
+      ...patients[idx],
+      name: formData.name,
+      birthDate: formData.birthDate,
+      age,
+      gender: formData.gender,
+      weight: formData.weight,
+      allergies: formData.allergies || [],
+      medicalRecord: formData.medicalRecord,
+      selectedFlowchart: formData.selectedFlowchart,
+      generalObservations: formData.generalObservations,
+      admission: {
+        date: now,
+        time: now.toLocaleTimeString('pt-BR'),
+        symptoms: formData.symptoms,
+        vitalSigns: formData.vitalSigns
+      },
+      // flowchartState permanece "start" conforme prepareReturnVisit
+      flowchartState: {
+        ...patients[idx].flowchartState,
+        currentStep: 'start',
+        history: [],
+        answers: {},
+        progress: 0,
+        group: undefined,
+        lastUpdate: now
+      },
+      status: 'active',
+      updatedAt: now
+    }
+
+    patients[idx] = updated
+    this.saveToStorage(patients)
+    return updated
+  }
+
+  // Limpar chaves de localStorage associadas ao paciente (fluxo, exames, antitérmicos)
+  clearPatientLocalData(patientId: string): void {
+    if (typeof window === 'undefined') return
+    const keys = [
+      // Antitérmicos por grupo
+      `antipyretic_a_${patientId}`,
+      `antipyretic_b_${patientId}`,
+      `antipyretic_c_${patientId}`,
+      `antipyretic_d_${patientId}`,
+      // Exames gerais
+      `lab_hemoglobin_${patientId}`,
+      `lab_hematocrit_${patientId}`,
+      `lab_platelets_${patientId}`,
+      `lab_albumin_${patientId}`,
+      `lab_alt_${patientId}`,
+      `lab_ast_${patientId}`,
+      // Exames grupo B específicos
+      `lab_hemoglobin_b_${patientId}`,
+      `lab_hematocrit_b_${patientId}`,
+      `lab_platelets_b_${patientId}`,
+      `lab_albumin_b_${patientId}`,
+      `lab_alt_b_${patientId}`,
+      `lab_ast_b_${patientId}`,
+      // Sugestões de exames do grupo B
+      `suggested_exams_b_${patientId}`,
+      // Fatores de risco
+      `risk_factors_${patientId}`
+    ]
+    keys.forEach(k => {
+      try { localStorage.removeItem(k) } catch {}
+    })
+  }
+
   // Corrigir progresso de pacientes existentes
   fixExistingPatientsProgress(): void {
     const patients = this.loadFromStorage()

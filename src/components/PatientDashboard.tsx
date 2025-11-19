@@ -34,6 +34,7 @@ interface PatientDashboardProps {
   onViewPrescriptions: (patient: Patient) => void
   onViewReport: (patient: Patient) => void
   onViewMedicalPrescription: (patient: Patient) => void
+  onReturnVisit: (patient: Patient) => void
 }
 
 const PatientDashboard: React.FC<PatientDashboardProps> = ({
@@ -41,7 +42,8 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   onSelectPatient,
   onViewPrescriptions,
   onViewReport,
-  onViewMedicalPrescription
+  onViewMedicalPrescription,
+  onReturnVisit
 }) => {
   const [patients, setPatients] = useState<Patient[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -419,6 +421,19 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                               title="Visualizar Prescrições"
                             >
                               <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 group-hover/btn:text-amber-700 mx-auto" />
+                            </motion.button>
+                          )}
+
+                          {/* Botão de Retorno somente para pacientes do Grupo B */}
+                          {patient.flowchartState.group === 'B' && (
+                            <motion.button
+                              onClick={() => onReturnVisit(patient)}
+                              className="relative p-3 sm:p-4 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              title="Agendar/Iniciar Retorno (Grupo B)"
+                            >
+                              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
                             </motion.button>
                           )}
                           

@@ -7,6 +7,7 @@ import EmergencyFlowchart from '@/components/EmergencyFlowchart'
 import EmergencySelector from '@/components/EmergencySelector'
 import PatientForm from '@/components/PatientForm'
 import PatientDashboard from '@/components/PatientDashboard'
+import ReturnVisitScreen from '@/components/ReturnVisitScreen'
 import PrescriptionViewer from '@/components/PrescriptionViewer'
 import ReportViewer from '@/components/ReportViewer'
 import MedicalPrescriptionViewer from '@/components/MedicalPrescriptionViewer'
@@ -15,7 +16,7 @@ import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '
 import { patientService } from '@/services/patientService'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 
-type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription'
+type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form'
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('loading')
@@ -129,6 +130,36 @@ export default function Home() {
     setAppState('medical-prescription')
   }
 
+  const handleReturnVisit = (patient: Patient) => {
+    setCurrentPatient(patient)
+    setAppState('return-visit')
+  }
+
+  const handleStartReturn = () => {
+    if (!currentPatient) return
+    // Limpar dados temporários e preparar retorno
+    patientService.clearPatientLocalData(currentPatient.id)
+    patientService.prepareReturnVisit(currentPatient.id)
+    // Atualizar referência local com dados preparados
+    const fresh = patientService.getPatientById(currentPatient.id)
+    if (fresh) setCurrentPatient(fresh)
+    setAppState('return-form')
+  }
+
+  const handleReturnFormSubmit = (formData: PatientFormData) => {
+    if (!currentPatient) return
+    const updated = patientService.updatePatientFromForm(currentPatient.id, formData)
+    if (updated) {
+      setCurrentPatient(updated)
+      setAppState('flowchart')
+    }
+  }
+
+  const handleReturnCancel = () => {
+    setAppState('dashboard')
+    setCurrentPatient(null)
+  }
+
   const handleFlowchartComplete = () => {
     setAppState('dashboard')
     setCurrentPatient(null)
@@ -224,6 +255,7 @@ export default function Home() {
             onViewPrescriptions={handleViewPrescriptions}
             onViewReport={handleViewReport}
             onViewMedicalPrescription={handleViewMedicalPrescription}
+            onReturnVisit={handleReturnVisit}
           />
         )
 
@@ -243,6 +275,27 @@ export default function Home() {
             onEmergencySelector={handleEmergencySelector}
           />
         )
+
+      case 'return-visit':
+        return currentPatient ? (
+          <ReturnVisitScreen
+            patient={currentPatient}
+            onCancel={handleReturnCancel}
+            onStartReturn={handleStartReturn}
+          />
+        ) : null
+
+      case 'return-form':
+        return currentPatient ? (
+          <PatientForm
+            onSubmit={handleReturnFormSubmit}
+            onCancel={handleReturnCancel}
+            onEmergencySelector={handleEmergencySelector}
+            initialStep={4}
+            presetFlowchart={'dengue'}
+            skipFlowSelection={true}
+          />
+        ) : null
 
       case 'flowchart':
         return currentPatient ? (

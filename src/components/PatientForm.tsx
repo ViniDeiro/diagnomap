@@ -28,9 +28,13 @@ interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
   onCancel: () => void
   onEmergencySelector: () => void
+  // Opções para cenários específicos (ex.: Retorno)
+  initialStep?: number // passo inicial do wizard (1–4)
+  presetFlowchart?: 'dengue' | 'zika' | 'chikungunya' // define o fluxograma inicialmente
+  skipFlowSelection?: boolean // se true, não exige seleção do fluxograma
 }
 
-  const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector }) => {
+  const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, initialStep, presetFlowchart, skipFlowSelection }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -110,15 +114,20 @@ interface PatientFormProps {
     const s = parseInt(sStr)
     const d = parseInt(dStr)
     if (isNaN(s) || isNaN(d)) return null
+    // Ordem prioriza hipotensões para evitar classificação incorreta quando um componente está baixo
     const scores: Array<{ cond: boolean; chip: React.ReactElement }> = [
-      { cond: s >= 180 || d >= 110, chip: badge('Hipertensão estágio 2 (severa)', 'red') },
-      { cond: (s >= 160 && s <= 179) || (d >= 100 && d <= 109), chip: badge('Hipertensão estágio 2', 'orange') },
-      { cond: (s >= 140 && s <= 159) || (d >= 90 && d <= 99), chip: badge('Hipertensão estágio 1', 'yellow') },
-      { cond: (s >= 120 && s <= 139) || (d >= 80 && d <= 89), chip: badge('Pré-hipertensão', 'blue-dark') },
-      { cond: (s >= 100 && s <= 119) && (d >= 60 && d <= 79), chip: badge('Normal', 'blue') },
-      { cond: (s >= 85 && s <= 99) || (d >= 55 && d <= 59), chip: badge('Hipotensão leve', 'yellow') },
-      { cond: (s >= 70 && s <= 84) || (d >= 49 && d <= 54), chip: badge('Hipotensão moderada', 'orange') },
+      // Hipotensão
       { cond: s < 70 || d < 49, chip: badge('Hipotensão severa', 'red') },
+      { cond: (s >= 70 && s <= 84) || (d >= 49 && d <= 54), chip: badge('Hipotensão moderada', 'orange') },
+      { cond: (s >= 85 && s <= 99) || (d >= 55 && d <= 59), chip: badge('Hipotensão leve', 'yellow') },
+      // Hipertensão
+      { cond: s >= 180 || d >= 110, chip: badge('Hipertensão grave', 'red') },
+      { cond: (s >= 160 && s <= 179) || (d >= 100 && d <= 109), chip: badge('Hipertensão moderada', 'orange') },
+      { cond: (s >= 140 && s <= 159) || (d >= 90 && d <= 99), chip: badge('Hipertensão leve', 'yellow') },
+      // PA aumentada
+      { cond: (s >= 120 && s <= 139) || (d >= 80 && d <= 89), chip: badge('PA aumentada', 'blue-dark') },
+      // PA normal exige ambos componentes na faixa
+      { cond: (s >= 100 && s <= 119) && (d >= 60 && d <= 79), chip: badge('PA normal', 'blue') },
     ]
     return scores.find(sv => sv.cond)?.chip || null
   }
@@ -152,11 +161,14 @@ interface PatientFormProps {
     if (valStr === 'LO') return badge('Hipoglicemia extrema (LO)', 'black')
     const v = parseFloat(valStr)
     if (isNaN(v)) return null
-    if (v >= 200) return badge('Hiperglicemia severa', 'red')
+    // Hiperglicemias
+    if (v > 200) return badge('Hiperglicemia severa', 'red')
     if (v >= 151) return badge('Hiperglicemia moderada', 'orange')
     if (v >= 126) return badge('Hiperglicemia leve', 'yellow')
-    if (v >= 100) return badge('Pré-diabetes', 'blue-dark')
-    if (v >= 75) return badge('Normal', 'blue')
+    // Faixas elevadas e normais
+    if (v >= 100) return badge('Glicemia elevada', 'blue-dark')
+    if (v >= 75) return badge('Glicemia normal', 'blue')
+    // Hipoglicemias
     if (v >= 60) return badge('Hipoglicemia leve', 'yellow')
     if (v >= 45) return badge('Hipoglicemia moderada', 'orange')
     return badge('Hipoglicemia severa', 'red')
@@ -166,7 +178,7 @@ interface PatientFormProps {
     name: '',
     birthDate: new Date('2000-01-01'), // Data padrão ao invés de data atual
     gender: 'masculino',
-    selectedFlowchart: 'dengue',
+    selectedFlowchart: presetFlowchart ?? 'dengue',
     generalObservations: '',
     weight: undefined,
     allergies: [],
@@ -224,9 +236,9 @@ interface PatientFormProps {
   }, [formData.vitalSigns?.bloodPressure])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [currentStep, setCurrentStep] = useState(1)
+  const [currentStep, setCurrentStep] = useState<number>(initialStep && initialStep >= 1 && initialStep <= 4 ? initialStep : 1)
   // Controle explícito: usuário deve clicar para selecionar o fluxo
-  const [hasSelectedFlow, setHasSelectedFlow] = useState(false)
+  const [hasSelectedFlow, setHasSelectedFlow] = useState<boolean>(!!skipFlowSelection)
 
   // Seleção de fluxograma é feita via EmergencySelector
 

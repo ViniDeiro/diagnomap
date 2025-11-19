@@ -108,64 +108,19 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
 
   const generatePrescriptionText = () => {
     const hydration = calculateHydration(patient.weight)
-    const meds = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
-    const chosenAntipyretic = meds.find(m => m.includes('paracetamol'))
-      ? 'Paracetamol'
-      : meds.find(m => m.includes('dipirona'))
-        ? 'Dipirona'
-        : null
-    // Cálculo exato por peso/idade do antitérmico selecionado com texto simplificado
-    const antipyreticBlock = (() => {
-      const dropsPerMl = 20
-      if (chosenAntipyretic === 'Paracetamol') {
-        if (patient.weight) {
-          const mgPerDose = Math.round(patient.weight * 10) // 10 mg/kg por dose
-          const mgPerDrop = 200 / dropsPerMl // 200 mg/mL → 10 mg/gota
-          const drops = Math.round(mgPerDose / mgPerDrop)
-          const ml = (drops / dropsPerMl).toFixed(1)
-          return [
-            `• Tomar Paracetamol: ${drops} gotas (${ml} mL) por dose`,
-            `• Equivale a ${mgPerDose} mg por dose (sol. 200 mg/mL)`,
-            '• Intervalo: a cada 6–8 horas',
-            '• Limite diário: 60 mg/kg/dia ou 3 g/dia'
-          ].join('\n')
-        }
-        return [
-          '• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)',
-          '• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
-        ].join('\n')
-      }
-      if (chosenAntipyretic === 'Dipirona') {
-        if (patient.weight) {
-          const mgPerDose = Math.round(patient.weight * 10) // 10 mg/kg por dose
-          const mgPerDrop = 500 / dropsPerMl // 500 mg/mL → 25 mg/gota
-          const drops = Math.round(mgPerDose / mgPerDrop)
-          const ml = (drops / dropsPerMl).toFixed(1)
-          return [
-            `• Tomar Dipirona: ${drops} gotas (${ml} mL) por dose`,
-            `• Equivale a ${mgPerDose} mg por dose (sol. 500 mg/mL)`,
-            '• Intervalo: a cada 6–8 horas',
-            '• Limite diário: 4 g/dia'
-          ].join('\n')
-        }
-        return [
-          '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)',
-          '• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
-        ].join('\n')
-      }
-      return [
-        '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)',
-        '• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)',
-        '• Pediátrico: Paracetamol 10 mg/kg por dose; Dipirona 10 mg/kg por dose (a cada 6–8h)'
-      ].join('\n')
-    })()
+    // Removido bloco de antitérmico das orientações; somente aparecerá em "Medicamentos Prescritos".
 
-    const mappedPrescriptions = patient.treatment.prescriptions.map((prescription, index) => {
+    const antipyreticPrescriptions = patient.treatment.prescriptions.filter(p => {
+      const m = p.medication.toLowerCase()
+      return m.includes('paracetamol') || m.includes('dipirona')
+    })
+
+    const mappedPrescriptions = antipyreticPrescriptions.map((prescription, index) => {
       const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
       return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
     }).join('\n\n')
 
-    const prescriptionsText = patient.treatment.prescriptions.length > 0
+    const prescriptionsText = antipyreticPrescriptions.length > 0
       ? `Medicamentos Prescritos:\n${mappedPrescriptions}\n\n`
       : ''
 
@@ -200,10 +155,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       '• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.',
       '• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.',
       '',
-      `4. ${chosenAntipyretic ? 'Antitérmico Prescrito' : 'Antitérmicos Permitidos'}`,
-      antipyreticBlock,
-      '',
-      '5. Medicamentos Contraindicados',
+      '4. Medicamentos Contraindicados',
       '• Aspirina (ácido acetilsalicílico) e salicilatos',
       '• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros',
       '',
@@ -217,12 +169,6 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     ].join('\n')
   }
 
-  const chosenAntipyreticLabel = (() => {
-    const meds = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
-    if (meds.find(m => m.includes('paracetamol'))) return 'Paracetamol'
-    if (meds.find(m => m.includes('dipirona'))) return 'Dipirona'
-    return null
-  })()
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <motion.div
@@ -385,40 +331,10 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                   </div>
                 </div>
 
-            <div className="mb-8">
-              <h3 className="text-xl font-bold text-slate-800 mb-4">4. {chosenAntipyreticLabel ? 'Antitérmico Prescrito' : 'Antitérmicos Permitidos'}</h3>
-              <div className="text-lg whitespace-pre-line">
-                {(() => {
-                  const dropsPerMl = 20
-                  const meds = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
-                  const chosen = meds.find(m => m.includes('paracetamol')) ? 'Paracetamol' : meds.find(m => m.includes('dipirona')) ? 'Dipirona' : null
-                  if (!chosen) {
-                    return '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)\n• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)\n• Pediátrico: Paracetamol 10 mg/kg por dose; Dipirona 10 mg/kg por dose (a cada 6–8h)'
-                  }
-                  if (!patient.weight) {
-                    return chosen === 'Paracetamol'
-                      ? '• Adulto: Paracetamol 500–750 mg por dose, a cada 6–8h (máx 3 g/dia)\n• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
-                      : '• Adulto: Dipirona 500–1000 mg por dose, a cada 6–8h (máx 4 g/dia)\n• Pediátrico: 10 mg/kg por dose, a cada 6–8h (informe o peso para dose exata)'
-                  }
-                  const w = patient.weight
-                  if (chosen === 'Paracetamol') {
-                    const mgPerDose = Math.round(w * 10)
-                    const mgPerDrop = 200 / dropsPerMl // 10 mg/gota
-                    const drops = Math.round(mgPerDose / mgPerDrop)
-                    const ml = (drops / dropsPerMl).toFixed(1)
-                    return `• Tomar Paracetamol: ${drops} gotas (${ml} mL) por dose\n• Equivale a ${mgPerDose} mg por dose (sol. 200 mg/mL)\n• Intervalo: a cada 6–8 horas\n• Limite diário: 60 mg/kg/dia ou 3 g/dia`
-                  }
-                  const mgPerDose = Math.round(w * 10)
-                  const mgPerDrop = 500 / dropsPerMl // 25 mg/gota
-                  const drops = Math.round(mgPerDose / mgPerDrop)
-                  const ml = (drops / dropsPerMl).toFixed(1)
-                  return `• Tomar Dipirona: ${drops} gotas (${ml} mL) por dose\n• Equivale a ${mgPerDose} mg por dose (sol. 500 mg/mL)\n• Intervalo: a cada 6–8 horas\n• Limite diário: 4 g/dia`
-                })()}
-              </div>
-            </div>
+            {/* Removido: Antitérmico nas Orientações. O antitérmico aparecerá apenas em "Medicamentos Prescritos". */}
 
                 <div className="mb-8">
-                  <h3 className="text-xl font-bold text-slate-800 mb-4">5. Medicamentos Contraindicados</h3>
+                  <h3 className="text-xl font-bold text-slate-800 mb-4">4. Medicamentos Contraindicados</h3>
                   <div className="text-lg space-y-1">
                     <div>• Aspirina (ácido acetilsalicílico) e salicilatos</div>
                     <div>• AINEs: ibuprofeno, diclofenaco, naproxeno, entre outros</div>
@@ -430,9 +346,15 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
             {activeTab === 'prescriptions' && (
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Medicamentos Prescritos</h2>
-                {patient.treatment.prescriptions.length > 0 ? (
+                {patient.treatment.prescriptions.filter(p => {
+                  const m = p.medication.toLowerCase()
+                  return m.includes('paracetamol') || m.includes('dipirona')
+                }).length > 0 ? (
                   <div className="space-y-4">
-                    {patient.treatment.prescriptions.map((prescription, index) => (
+                    {patient.treatment.prescriptions.filter(p => {
+                      const m = p.medication.toLowerCase()
+                      return m.includes('paracetamol') || m.includes('dipirona')
+                    }).map((prescription, index) => (
                       <div key={prescription.id} className="border-l-4 border-slate-400 pl-6 text-lg">
                         <div className="font-bold">{index + 1}. {prescription.medication}</div>
                         <div className="ml-4 mt-2 space-y-1">
@@ -447,7 +369,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-600">Nenhum medicamento prescrito no momento.</p>
+                  <p className="text-slate-600">Nenhum antitérmico prescrito no momento.</p>
                 )}
                 <div className="mt-8 pt-6 border-t border-slate-200">
                   <div className="text-lg">
