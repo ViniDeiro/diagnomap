@@ -85,6 +85,7 @@ class PatientService {
       medicalRecord: formData.medicalRecord,
       selectedFlowchart: formData.selectedFlowchart,
       generalObservations: formData.generalObservations,
+      returnCount: 0,
       admission: {
         date: now,
         time: now.toLocaleTimeString('pt-BR'),
@@ -131,12 +132,14 @@ class PatientService {
     const patientIndex = patients.findIndex(p => p.id === patientId)
     
     if (patientIndex !== -1) {
+      // Preservar grupo anterior quando não for fornecido
+      const previousGroup = patients[patientIndex].flowchartState?.group
       patients[patientIndex].flowchartState = {
         currentStep,
         history,
         answers,
         progress,
-        group,
+        group: group ?? previousGroup,
         lastUpdate: new Date()
       }
       patients[patientIndex].updatedAt = new Date()
@@ -366,6 +369,8 @@ class PatientService {
     const now = new Date()
 
     // Resetar estado do fluxograma e exames
+    // Incrementar contador de retornos
+    patients[idx].returnCount = (patients[idx].returnCount || 0) + 1
     patients[idx].flowchartState = {
       currentStep: 'start',
       history: [],

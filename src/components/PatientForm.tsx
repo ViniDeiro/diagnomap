@@ -932,10 +932,23 @@ interface PatientFormProps {
                         type="text"
                         value={bpText}
                         onChange={(e) => {
-                          const next = e.target.value
-                          // Permitir apenas dígitos e uma barra, sem autoformatação
+                          // Normaliza entrada: converte espaços em '/', mantém apenas dígitos e uma barra
+                          let raw = e.target.value
+                          // Converte quaisquer espaços em barra imediatamente (ex.: "90 40" -> "90/40")
+                          if (raw.includes(' ')) {
+                            raw = raw.replace(/\s+/g, '/')
+                          }
+                          // Remove caracteres não numéricos ou barra
+                          raw = raw.replace(/[^\d\/]/g, '')
+                          // Garante no máximo uma barra e até 3 dígitos por segmento
+                          const parts = raw.split('/')
+                          const first = (parts[0] || '').replace(/\D/g, '').slice(0, 3)
+                          const secondRaw = parts.length > 1 ? parts.slice(1).join('') : ''
+                          const second = (secondRaw || '').replace(/\D/g, '').slice(0, 3)
+                          const next = second ? `${first}/${second}` : (parts.length > 1 ? `${first}/` : first)
+
+                          // Validação parcial conforme máscara
                           if (!isBPPartialAllowed(next)) {
-                            // Ignora caracteres inválidos sem mexer no cursor
                             return
                           }
                           setErrors(prev => ({ ...prev, bloodPressure: '' }))

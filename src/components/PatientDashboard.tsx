@@ -96,6 +96,12 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     }
   }
 
+  const getVisitText = (returnCount?: number) => {
+    const count = returnCount ?? 0
+    if (count <= 0) return 'Primeira visita'
+    return `${count}º retorno`
+  }
+
   const getGroupBadge = (group?: 'A' | 'B' | 'C' | 'D') => {
     if (!group) return null
     
@@ -363,7 +369,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           {getGroupBadge(patient.flowchartState.group)}
                         </div>
                         
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                           <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                             <Calendar className="w-5 h-5 text-blue-600" />
                             <div>
@@ -385,6 +391,13 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                             <div>
                               <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Status</p>
                               <p className="font-bold text-slate-800">{getStatusText(patient.status)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+                            <Clock className="w-5 h-5 text-blue-600" />
+                            <div>
+                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Retorno</p>
+                              <p className="font-bold text-slate-800">{getVisitText(patient.returnCount)}</p>
                             </div>
                           </div>
                         </div>

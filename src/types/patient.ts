@@ -10,6 +10,8 @@ export interface Patient {
   medicalRecord: string
   selectedFlowchart: 'dengue' | 'zika' | 'chikungunya'
   generalObservations?: string
+  // Quantidade de retornos já realizados após a admissão inicial
+  returnCount?: number
   admission: {
     date: Date
     time: string
