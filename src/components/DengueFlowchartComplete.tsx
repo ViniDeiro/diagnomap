@@ -16,6 +16,7 @@ import {
   Brain,
   Target,
   Zap,
+  Hourglass,
   ArrowLeft,
   RotateCcw,
   FileText
@@ -131,13 +132,54 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const suggestedExamLabels: Record<string, string> = {
     alb: 'Albumina sérica',
     alt: 'Transaminases ALT/TGP',
-    ast: 'Transaminases AST/TGO'
+    ast: 'Transaminases AST/TGO',
+    coag: 'Coagulograma'
   }
-  const toggleSuggestedExamB = (code: 'alb' | 'alt' | 'ast') => {
+  const toggleSuggestedExamB = (code: 'alb' | 'alt' | 'ast' | 'coag') => {
     setSuggestedExamsB(prev => {
       const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
       if (typeof window !== 'undefined') {
         localStorage.setItem(`suggested_exams_b_${patient.id}`, JSON.stringify(next))
+      }
+      return next
+    })
+  }
+
+  // Exames recomendados e outros no Grupo C (checkboxes)
+  const recommendedExamLabelsC = {
+    rx_pa_perfil_laurell: 'Raio X de tórax (PA, perfil e incidência de Laurell)',
+    usg_abdome: 'USG de abdome'
+  } as const
+  const otherExamLabelsC = {
+    glicemia: 'Glicemia',
+    ureia: 'Ureia',
+    creatinina: 'Creatinina',
+    eletrolitos: 'Eletrólitos',
+    gasometria: 'Gasometria',
+    coagulograma: 'Coagulograma',
+    tpae: 'TP/AE',
+    ecocardiograma: 'Ecocardiograma'
+  } as const
+  const [recommendedExamsC, setRecommendedExamsC] = useState<Array<keyof typeof recommendedExamLabelsC>>(
+    typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(`recommended_exams_c_${patient.id}`) || '[]') : []
+  )
+  const [otherExamsC, setOtherExamsC] = useState<Array<keyof typeof otherExamLabelsC>>(
+    typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(`other_exams_c_${patient.id}`) || '[]') : []
+  )
+  const toggleRecommendedExamC = (code: keyof typeof recommendedExamLabelsC) => {
+    setRecommendedExamsC(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`recommended_exams_c_${patient.id}`, JSON.stringify(next))
+      }
+      return next
+    })
+  }
+  const toggleOtherExamC = (code: keyof typeof otherExamLabelsC) => {
+    setOtherExamsC(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`other_exams_c_${patient.id}`, JSON.stringify(next))
       }
       return next
     })
@@ -176,7 +218,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       case 'hb': {
         const range = getHbRange()
         const refText = `(${range.min.toFixed(1)}–${range.max.toFixed(1)} g/dL)`
-        if (value < range.min) return { label: `Abaixo da faixa ${refText}`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        // Classificação de anemia por gravidade
+        if (value < 5) return { label: `Anemia extremamente grave (< 5 g/dL) ${refText}`, input: 'border-black bg-black text-white', text: 'text-white' }
+        if (value < 7) return { label: `Anemia grave (5,0–6,9 g/dL) ${refText}`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (value < 9) return { label: `Anemia moderada (7,0–8,9 g/dL) ${refText}`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        if (value < range.min) return { label: `Anemia leve (9,0–${(range.min - 0.1).toFixed(1)} g/dL) ${refText}`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
         if (value > range.max) return { label: `Acima da faixa ${refText}`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
         return { label: `Normal ${refText}`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
       }
@@ -184,16 +230,18 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         if (hbContext == null || hbContext <= 0) return { label: 'Informe hemoglobina para avaliar razão Ht/Hb', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
         const ratio = value / hbContext
         const ratioText = `Razão Ht/Hb: ${ratio.toFixed(1)}x`
-        if (ratio > 5) return { label: `${ratioText} – Extremamente grave`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (ratio >= 2.8 && ratio <= 3.2) return { label: `${ratioText} – Normal (2,8–3,2x)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (ratio > 5) return { label: `${ratioText} – Extremamente aumentado`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
         if (ratio >= 3.6) return { label: `${ratioText} – Hemoconcentrado`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
-        if (ratio >= 3.0) return { label: `${ratioText} – Aumentado`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        if (ratio > 3.2) return { label: `${ratioText} – Aumentado`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
         return { label: `${ratioText} – Abaixo do esperado`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
       }
       case 'plt': {
-        // Nova classificação de plaquetopenia e plaquetose
+        // Nova classificação de plaquetopenia e plaquetose, enfatizando muito grave e extrema
         if (value > 450000) return { label: 'Plaquetose (> 450.000/mm³)', input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
-        if (value < 20000) return { label: 'Plaquetopenia muito grave (< 20.000/mm³)', input: 'border-red-400 bg-red-50 focus:ring-red-600 focus:border-red-600', text: 'text-red-700' }
-        if (value < 50000) return { label: 'Plaquetopenia grave (20.000–49.999/mm³)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        if (value <= 5000) return { label: 'Plaquetopenia extrema (≤ 5.000/mm³)', input: 'border-black bg-black text-white', text: 'text-white' }
+        if (value <= 10000) return { label: 'Plaquetopenia muito grave (5.001–10.000/mm³)', input: 'border-red-400 bg-red-50 focus:ring-red-600 focus:border-red-600', text: 'text-red-700' }
+        if (value < 20000) return { label: 'Plaquetopenia grave (10.001–19.999/mm³)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
         if (value < 100000) return { label: 'Plaquetopenia moderada (50.000–99.999/mm³)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
         if (value < 150000) return { label: 'Plaquetopenia leve (100.000–149.999/mm³)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
         return { label: 'Plaquetas normais (≥ 150.000/mm³)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
@@ -207,14 +255,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         return { label: 'Hipoalbuminemia moderada (2,1–2,9 g/dL)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
       }
       case 'ast': {
-        // TGO (AST): normal 5–40; leve 41–100; moderada 101–200; grave ≥ 201
+        // TGO (AST): normal 5–40; abaixo do normal <5; elevação leve 41–100; moderada 101–200; grave ≥ 201
+        if (value < 5) return { label: 'AST abaixo do normal (< 5 U/L)', input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
         if (value <= 40) return { label: 'AST normal (5–40 U/L)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
         if (value <= 100) return { label: 'AST elevação leve (41–100 U/L)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
         if (value <= 200) return { label: 'AST elevação moderada (101–200 U/L)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
         return { label: 'AST elevação grave (≥ 201 U/L)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
       }
       case 'alt': {
-        // TGP (ALT): normal 7–56; leve 57–120; moderada 121–220; grave ≥ 221
+        // TGP (ALT): normal 7–56; abaixo do normal <7; leve 57–120; moderada 121–220; grave ≥ 221
+        if (value < 7) return { label: 'ALT abaixo do normal (< 7 U/L)', input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
         if (value <= 56) return { label: 'ALT normal (7–56 U/L)', input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
         if (value <= 120) return { label: 'ALT elevação leve (57–120 U/L)', input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
         if (value <= 220) return { label: 'ALT elevação moderada (121–220 U/L)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
@@ -224,6 +274,27 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         return { label: '', input: 'border-slate-300', text: 'text-slate-500' }
     }
   }
+
+  // Diurese na reavaliação (Grupo C)
+  const diuresisStatus = (value?: number) => {
+    if (value == null) return { label: '', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
+    const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+    const mlkgH = peso > 0 ? (value / peso) : undefined
+    if (mlkgH != null && mlkgH < 0.5) {
+      return { label: `Oligúria suspeita (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+    }
+    if (mlkgH != null) {
+      return { label: `Diurese adequada (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+    }
+    return { label: `Diurese informada: ${value} ml/h`, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
+  }
+
+  const [diuresis1h, setDiuresis1h] = useState<number | undefined>(
+    parseNum(typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_1h_${patient.id}`) : null)
+  )
+  const [diuresis2h, setDiuresis2h] = useState<number | undefined>(
+    parseNum(typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_2h_${patient.id}`) : null)
+  )
 
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
@@ -292,6 +363,239 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         'Sangramento visível em mucosas (nariz, gengivas) e/ou aparecimento de petéquias; indica agravamento hemorrágico.',
       letargia_irritabilidade:
         'Alteração do estado de consciência com prostração importante ou irritabilidade anormal; pode indicar hipoperfusão ou comprometimento neurológico.'
+    },
+
+    continue_treatment_c: {
+      id: 'continue_treatment_c',
+      title: 'Manter Hidratação por mais 1h - Grupo C',
+      description: 'Prosseguir com hidratação e monitorização',
+      type: 'action',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
+          <ul className="text-yellow-700 text-sm space-y-1">
+            <li>• Manter hidratação por mais 1 hora</li>
+            <li>• Monitorar sinais vitais e diurese</li>
+            <li>• Reavaliar após completar segunda hora</li>
+          </ul>
+        </div>
+      ),
+      options: [
+        { text: 'Aguardar 1h', nextStep: 'wait_reevaluation_c_2h', value: 'wait' }
+      ]
+    },
+
+    wait_reevaluation_c_2h: {
+      id: 'wait_reevaluation_c_2h',
+      title: 'Aguardando Reavaliação após 2h - Grupo C',
+      description: 'Monitorização durante segunda hora de hidratação',
+      type: 'wait_labs',
+      icon: <Hourglass className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      requiresLabs: true,
+      content: (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Status:</h4>
+          <p className="text-yellow-700">• Segunda hora de hidratação em curso</p>
+          <p className="text-yellow-700">• Manter monitorização clínica</p>
+        </div>
+      ),
+      options: [
+        { text: 'Reavaliação disponível', nextStep: 'reevaluation_c_2h', value: 'continue' }
+      ]
+    },
+
+    reevaluation_c_2h: {
+      id: 'reevaluation_c_2h',
+      title: 'Reavaliação após 2h - Grupo C',
+      description: 'Avaliação clínica e exames após segunda hora',
+      type: 'question',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Verificar:</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Sinais vitais</li>
+              <li>• Diurese</li>
+              <li>• Melhora dos sintomas</li>
+              <li>• Ausência de novos sinais de alarme</li>
+            </ul>
+          </div>
+
+          {/* Campo de Diurese */}
+          <div className="bg-white border border-yellow-200 rounded-lg p-4">
+            <label className="block text-xs text-slate-600 mb-1">Diurese na última hora (ml)</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Ex: 60"
+              className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", diuresisStatus(diuresis2h).input)}
+              onChange={(e) => {
+                const value = e.target.value
+                localStorage.setItem(`diuresis_c_2h_${patient.id}`, value)
+                setDiuresis2h(parseNum(value))
+              }}
+              defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_2h_${patient.id}`) || '' : ''}
+            />
+            {diuresis2h != null && (
+              <p className={clsx("text-xs mt-1", diuresisStatus(diuresis2h).text)}>{diuresisStatus(diuresis2h).label}</p>
+            )}
+          </div>
+
+          {/* Seção de Exames */}
+          <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-800">Resultados dos Exames</h4>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                    />
+                    {labs.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="Ex: 3.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labs.alb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_albumin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.alb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alb', labs.alb).text)}>{labStatus('alb', labs.alb).label}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 45"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labs.alt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_alt_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) || '' : ''}
+                    />
+                    {labs.alt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alt', labs.alt).text)}>{labStatus('alt', labs.alt).label}</p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 40"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labs.ast).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_ast_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ast: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ast != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ast', labs.ast).text)}>{labStatus('ast', labs.ast).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-700">
+              💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
+              Os dados dos exames serão salvos automaticamente no cadastro do paciente.
+            </p>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Melhora - Continuar tratamento', nextStep: 'end_group_c', value: 'improvement' },
+        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
+      ]
     },
     grupoD: {
       extravasamento_plasma:
@@ -1462,6 +1766,15 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   />
                   <span>Transaminases AST/TGO</span>
                 </label>
+                <label className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    checked={suggestedExamsB.includes('coag')}
+                    onChange={() => toggleSuggestedExamB('coag')}
+                    className="rounded border-green-300 text-green-600 focus:ring-green-500"
+                  />
+                  <span>Coagulograma</span>
+                </label>
               </div>
             </div>
           </div>
@@ -1475,8 +1788,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 onClick={() => {
                   try {
                     const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
-                    const volumeInfantil = Math.round(peso * 75)
-                    const dosage = patient.age >= 18 ? '200–400 ml por vez' : `${volumeInfantil} ml/dia dividido em pequenas quantidades`
+                    // Volume diário por peso (adulto vs pediatria)
+                    let perKg: number
+                    if (patient.age >= 18) {
+                      perKg = 60
+                    } else {
+                      if (peso <= 10) perKg = 100
+                      else if (peso <= 20) perKg = 150
+                      else perKg = 80
+                    }
+                    const totalDiario = Math.round(peso * perKg)
+                    const dosage = `${perKg} mL/kg/dia — estimado: ${totalDiario} mL/dia (peso ${peso} kg)`
                     const duration = 'Até retorno dos exames (hemograma) e melhora clínica'
                     patientService.addPrescription(patient.id, {
                       medication: 'Solução de Reidratação Oral (SRO)',
@@ -1811,7 +2133,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <h4 className="font-semibold text-green-800 mb-2">Orientações finais:</h4>
             <ul className="text-green-700 text-sm space-y-1">
               <li>• Retornar se sinais de alarme</li>
-              <li>• Retornar se não houver defervescência</li>
+              <li>• Retorno diário para reavaliação clínica e ambulatorial até 48h após remissão da febre</li>
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
@@ -1980,11 +2302,62 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 </div>
                 <h4 className="font-bold text-amber-800">Exames</h4>
               </div>
-              <div className="text-amber-700 text-sm space-y-1 mb-4">
-                <p>• Hemograma completo</p>
-                <p>• Albumina sérica</p>
-                <p>• Transaminases (ALT/AST)</p>
-                <p>• Raio-X de tórax</p>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <p className="font-semibold text-amber-800">Exames Obrigatórios:</p>
+                  <ul className="text-amber-700 text-sm space-y-1 mt-1">
+                    <li>• Hemograma completo</li>
+                    <li>• Dosagem de albumina sérica</li>
+                    <li>• Transaminases (ALT/AST)</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold text-amber-800">Recomendados:</p>
+                  <div className="mt-2 space-y-2">
+                    {Object.entries(recommendedExamLabelsC).map(([code, label]) => (
+                      <label key={code} className="flex items-center space-x-2 text-sm text-amber-800">
+                        <input
+                          type="checkbox"
+                          checked={recommendedExamsC.includes(code)}
+                          onChange={() => toggleRecommendedExamC(code as keyof typeof recommendedExamLabelsC)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="font-semibold text-amber-800">Outros exames conforme necessidade:</p>
+                  <div className="mt-2 grid md:grid-cols-2 gap-2">
+                    {Object.entries(otherExamLabelsC).map(([code, label]) => (
+                      <label key={code} className="flex items-center space-x-2 text-sm text-amber-800">
+                        <input
+                          type="checkbox"
+                          checked={otherExamsC.includes(code)}
+                          onChange={() => toggleOtherExamC(code as keyof typeof otherExamLabelsC)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {(recommendedExamsC.length > 0 || otherExamsC.length > 0) && (
+                  <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-amber-800 text-sm font-medium">Selecionados:</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {recommendedExamsC.map(code => (
+                        <span key={`rec_${code}`} className="inline-block px-2 py-1 bg-amber-200 text-amber-800 rounded-md text-xs">
+                          {recommendedExamLabelsC[code]}
+                        </span>
+                      ))}
+                      {otherExamsC.map(code => (
+                        <span key={`other_${code}`} className="inline-block px-2 py-1 bg-amber-200 text-amber-800 rounded-md text-xs">
+                          {otherExamLabelsC[code]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <button 
                 onClick={() => onViewPrescriptions?.(patient)}
@@ -2008,7 +2381,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               {(() => {
                 const peso = patient.weight || 70 // peso padrão se não informado
                 const volumeReposicao = peso * 10 // 10ml/kg
-                const volumeManutencao = peso * 25 // 25ml/kg/dia para manutenção
+                // Removido cálculo de manutenção 24h conforme solicitação
                 
                 return (
                   <div className="space-y-3">
@@ -2021,24 +2394,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         ({peso}kg × 10ml/kg) em 10 minutos
                       </p>
                     </div>
-                    
-                    <div className="bg-amber-200/50 p-3 rounded-lg">
-                      <p className="font-semibold text-amber-800 text-sm">Manutenção (24h):</p>
-                      <p className="text-amber-700 font-bold">
-                        {volumeManutencao}ml/dia
-                      </p>
-                      <p className="text-amber-600 text-xs">
-                        ({peso}kg × 25ml/kg/dia)
-                      </p>
-                    </div>
-                    
-                    <button 
-                      onClick={() => onViewReport?.(patient)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 mt-3"
-                    >
-                      <Heart className="w-4 h-4" />
-                      <span>Protocolo Completo</span>
-                    </button>
+                    {/* Seções de manutenção 24h e botão de protocolo completo removidos */}
                   </div>
                 )
               })()}
@@ -2343,6 +2699,27 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </ul>
           </div>
 
+          {/* Campo de Diurese */}
+          <div className="bg-white border border-yellow-200 rounded-lg p-4">
+            <label className="block text-xs text-slate-600 mb-1">Diurese na última hora (ml)</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Ex: 50"
+              className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", diuresisStatus(diuresis1h).input)}
+              onChange={(e) => {
+                const value = e.target.value
+                localStorage.setItem(`diuresis_c_1h_${patient.id}`, value)
+                setDiuresis1h(parseNum(value))
+              }}
+              defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_1h_${patient.id}`) || '' : ''}
+            />
+            {diuresis1h != null && (
+              <p className={clsx("text-xs mt-1", diuresisStatus(diuresis1h).text)}>{diuresisStatus(diuresis1h).label}</p>
+            )}
+          </div>
+
           {/* Seção de Exames */}
           <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-4">
@@ -2500,8 +2877,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Melhora - Continuar tratamento', nextStep: 'end_group_c', value: 'improvement' },
-        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
+        { text: 'Seguir tratamento (hidratar por mais 1h)', nextStep: 'continue_treatment_c', value: 'continue' }
       ]
     },
 

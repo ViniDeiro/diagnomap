@@ -249,7 +249,7 @@ export default function Home() {
       case 'dashboard':
         return (
           <PatientDashboard
-            key={refreshTrigger}
+            refreshTrigger={refreshTrigger}
             onNewPatient={handleNewPatient}
             onSelectPatient={handleSelectPatient}
             onViewPrescriptions={handleViewPrescriptions}
@@ -325,7 +325,7 @@ export default function Home() {
             patient={currentPatient}
             onClose={handlePrescriptionsClose}
             onUpdate={handlePrescriptionsUpdate}
-            mode={'prescription-only'}
+            mode={'full'}
           />
         ) : null
 

@@ -257,14 +257,28 @@ class PatientService {
       }
     }
 
-    // Hidratação oral para grupos A e B
+    // Hidratação oral para grupos A e B (dosagem por peso, com estimativa diária)
     if (['A', 'B'].includes(group)) {
+      // Cálculo de mL/kg/dia conforme faixa etária
+      const isAdult = patient.age >= 18
+      let perKg: number
+      if (isAdult) {
+        perKg = 60 // Adultos
+      } else {
+        // Pediatria: ≤10 kg → 100 mL/kg/dia; 10–20 kg → 150 mL/kg/dia; >20 kg → 80 mL/kg/dia
+        if (weight <= 10) perKg = 100
+        else if (weight <= 20) perKg = 150
+        else perKg = 80
+      }
+      const totalDaily = Math.round(weight * perKg)
+      const dosage = `${perKg} mL/kg/dia — estimado: ${totalDaily} mL/dia (peso ${weight} kg)`
+
       prescriptions.push({
         medication: 'Solução de Reidratação Oral (SRO)',
-        dosage: patient.age >= 18 ? '200–400 ml' : this.getChildHydrationVolume(weight),
-        frequency: 'A cada vômito/evacuação',
+        dosage,
+        frequency: 'Oferecer em pequenos volumes, frequentemente',
         duration: 'Até melhora dos sintomas',
-        instructions: 'Oferecer em pequenos volumes e frequentemente. Se não tolerar via oral, retornar ao serviço.',
+        instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
         prescribedBy: 'Sistema Siga o Fluxo'
       })
     }
@@ -367,6 +381,9 @@ class PatientService {
     if (idx === -1) return
 
     const now = new Date()
+
+    // Limpar dados locais do paciente para evitar bloqueios de progresso
+    try { this.clearPatientLocalData(patientId) } catch {}
 
     // Resetar estado do fluxograma e exames
     // Incrementar contador de retornos

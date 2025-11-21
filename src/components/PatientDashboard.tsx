@@ -35,6 +35,7 @@ interface PatientDashboardProps {
   onViewReport: (patient: Patient) => void
   onViewMedicalPrescription: (patient: Patient) => void
   onReturnVisit: (patient: Patient) => void
+  refreshTrigger?: number
 }
 
 const PatientDashboard: React.FC<PatientDashboardProps> = ({
@@ -43,7 +44,8 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   onViewPrescriptions,
   onViewReport,
   onViewMedicalPrescription,
-  onReturnVisit
+  onReturnVisit,
+  refreshTrigger
 }) => {
   const [patients, setPatients] = useState<Patient[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -53,9 +55,31 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
   const patientsPerPage = 10
 
+  // Carregar pacientes no início e sempre que houver refreshTrigger
   useEffect(() => {
     loadPatients()
+  }, [refreshTrigger])
+
+  // Restaurar página atual ao montar (evita voltar para página 1 ao fechar modais)
+  useEffect(() => {
+    try {
+      const savedPage = localStorage.getItem('dashboardPage')
+      if (savedPage) {
+        const pageNum = parseInt(savedPage, 10)
+        if (!isNaN(pageNum) && pageNum > 0) {
+          setCurrentPage(pageNum)
+        }
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Persistir página ao mudar
+  useEffect(() => {
+    try {
+      localStorage.setItem('dashboardPage', String(currentPage))
+    } catch {}
+  }, [currentPage])
 
   const loadPatients = () => {
     setIsLoading(true)

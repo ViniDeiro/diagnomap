@@ -90,24 +90,36 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     })
   }
 
-  // Função para calcular hidratação oral baseada no peso
-  const calculateHydration = (weight?: number) => {
+  // Função para calcular hidratação oral baseada no peso e idade
+  const calculateHydration = (weight?: number, age?: number) => {
     if (!weight) return null
-    
-    const totalDaily = Math.round(weight * 60) // mL/dia
+
+    const isAdult = (age ?? patient.age) >= 18
+    let perKg: number
+    if (isAdult) {
+      perKg = 60 // Adultos: 60 mL/kg/dia
+    } else {
+      // Pediatria: 100 ml/kg/dia até 10 kg; 150 ml/kg/dia de 10–20 kg; 80 ml/kg/dia acima de 20 kg
+      if (weight <= 10) perKg = 100
+      else if (weight <= 20) perKg = 150
+      else perKg = 80
+    }
+
+    const totalDaily = Math.round(weight * perKg)
     const withSalts = Math.round(totalDaily / 3) // 1/3 com sais
     const withLiquids = Math.round((totalDaily * 2) / 3) // 2/3 com líquidos caseiros
-    
+
     return {
       totalDaily,
       withSalts,
       withLiquids,
-      liters: (totalDaily / 1000).toFixed(1)
+      liters: (totalDaily / 1000).toFixed(1),
+      perKg
     }
   }
 
   const generatePrescriptionText = () => {
-    const hydration = calculateHydration(patient.weight)
+    const hydration = calculateHydration(patient.weight, patient.age)
     // Removido bloco de antitérmico das orientações; somente aparecerá em "Medicamentos Prescritos".
 
     const antipyreticPrescriptions = patient.treatment.prescriptions.filter(p => {
@@ -123,6 +135,16 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     const prescriptionsText = antipyreticPrescriptions.length > 0
       ? `Medicamentos Prescritos:\n${mappedPrescriptions}\n\n`
       : ''
+
+    const followUpLines = patient.flowchartState.group === 'B'
+      ? [
+          '• Retorno diário para reavaliação clínica e ambulatorial.',
+          '• Manter seguimento até 48h após remissão da febre.'
+        ]
+      : [
+          '• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.',
+          '• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.'
+        ]
 
     return [
       'RECEITUÁRIO MÉDICO',
@@ -152,8 +174,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       '• Diminuição repentina da diurese (urina reduzida)',
       '',
       '3. Seguimento Ambulatorial',
-      '• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.',
-      '• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.',
+      ...followUpLines,
       '',
       '4. Medicamentos Contraindicados',
       '• Aspirina (ácido acetilsalicílico) e salicilatos',
@@ -289,7 +310,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">1. Hidratação Oral</h3>
                   {(() => {
-                    const hydration = calculateHydration(patient.weight)
+                    const hydration = calculateHydration(patient.weight, patient.age)
                     return (
                       <div className="space-y-2 text-lg">
                         {hydration ? (
@@ -301,6 +322,8 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                         ) : (
                           <>
                             <div>• Orientação geral:</div>
+                            <div>§ Adultos: 60 mL/kg/dia</div>
+                            <div>§ Pediatria: até 10 kg → 100 mL/kg/dia; 10–20 kg → 150 mL/kg/dia; acima de 20 kg → 80 mL/kg/dia</div>
                             <div>§ 1/3 com sais de reidratação oral</div>
                             <div>§ 2/3 com líquidos caseiros (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
                           </>
@@ -326,8 +349,17 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">3. Seguimento Ambulatorial</h3>
                   <div className="text-lg space-y-1">
-                    <div>• Caso não haja defervescência, retornar no 5° dia da doença para nova avaliação.</div>
-                    <div>• Observação dos sinais clínicos e reavaliação periódica.</div>
+                    {patient.flowchartState.group === 'B' ? (
+                      <>
+                        <div>• Retorno diário para reavaliação clínica e ambulatorial.</div>
+                        <div>• Manter seguimento até 48h após remissão da febre.</div>
+                      </>
+                    ) : (
+                      <>
+                        <div>• Caso não haja defervescência, retornar no 5° dia da doença para nova avaliação.</div>
+                        <div>• Observação dos sinais clínicos e reavaliação periódica.</div>
+                      </>
+                    )}
                   </div>
                 </div>
 

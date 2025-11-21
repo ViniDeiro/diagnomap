@@ -191,7 +191,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
         'Hematócrito',
         'Contagem de plaquetas',
         'Albumina sérica',
-        'Transaminases (ALT/AST)'
+        'Transaminases (ALT/AST)',
+        'Coagulograma'
       ],
       C: [
         'Hemograma completo',
@@ -224,7 +225,19 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   const calculateHydration = (weight?: number) => {
     if (!weight) return null
     
-    const totalDaily = Math.round(weight * 60) // mL/dia
+    // Adulto vs pediatria: usa idade do paciente para definir mL/kg/dia
+    const isAdult = (patient?.age ?? 18) >= 18
+    let perKg: number
+    if (isAdult) {
+      perKg = 60 // Adultos: 60 mL/kg/dia
+    } else {
+      // Pediatria: 100 ml/kg/dia até 10 kg; 150 ml/kg/dia de 10–20 kg; 80 ml/kg/dia acima de 20 kg
+      if (weight <= 10) perKg = 100
+      else if (weight <= 20) perKg = 150
+      else perKg = 80
+    }
+
+    const totalDaily = Math.round(weight * perKg) // mL/dia
     const withSalts = Math.round(totalDaily / 3) // 1/3 com sais
     const withLiquids = Math.round((totalDaily * 2) / 3) // 2/3 com líquidos caseiros
     
@@ -232,7 +245,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
       totalDaily,
       withSalts,
       withLiquids,
-      liters: (totalDaily / 1000).toFixed(1)
+      liters: (totalDaily / 1000).toFixed(1),
+      perKg
     }
   }
 
@@ -557,13 +571,13 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                   {patient.weight && calculateHydration(patient.weight) ? (
                     <div className="ml-6 space-y-3 text-lg leading-relaxed">
                       <div>
-                        <strong>• Recomendação:</strong> 60 mL/kg/dia
+                        <strong>• Recomendação:</strong> {(patient?.age ?? 18) >= 18 ? '60 mL/kg/dia' : 'Pediátrico: até 10 kg → 100 mL/kg/dia; 10–20 kg → 150 mL/kg/dia; acima de 20 kg → 80 mL/kg/dia'}
                       </div>
                       <div>
                         <strong>• Cálculo para um paciente de {patient.weight} kg:</strong>
                       </div>
                       <div className="ml-8 space-y-2">
-                        <div>§ {patient.weight} kg × 60 mL = {calculateHydration(patient.weight)!.totalDaily} mL/dia ({calculateHydration(patient.weight)!.liters} litros/dia)</div>
+                        <div>§ {patient.weight} kg × {calculateHydration(patient.weight)!.perKg} mL = {calculateHydration(patient.weight)!.totalDaily} mL/dia ({calculateHydration(patient.weight)!.liters} litros/dia)</div>
                         <div>§ 1/3 com sais de reidratação oral → {calculateHydration(patient.weight)!.withSalts} mL/dia</div>
                         <div>§ 2/3 com líquidos caseiros → {calculateHydration(patient.weight)!.withLiquids} mL/dia (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
                         <div>§ Inicialmente, oferecer maior volume para evitar desidratação.</div>
@@ -572,7 +586,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                   ) : (
                     <div className="ml-6 space-y-3 text-lg leading-relaxed">
                       <div>
-                        <strong>• Recomendação:</strong> 60 mL/kg/dia
+                        <strong>• Recomendação:</strong> {(patient?.age ?? 18) >= 18 ? '60 mL/kg/dia' : 'Pediátrico: até 10 kg → 100 mL/kg/dia; 10–20 kg → 150 mL/kg/dia; acima de 20 kg → 80 mL/kg/dia'}
                       </div>
                       <div>
                         <strong>• Orientação geral:</strong>
@@ -603,8 +617,17 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">3. Seguimento Ambulatorial</h3>
                   <div className="ml-6 space-y-2 text-lg leading-relaxed">
-                    <div>• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.</div>
-                    <div>• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.</div>
+                    {patient.flowchartState.group === 'B' ? (
+                      <>
+                        <div>• Retorno diário para reavaliação clínica e ambulatorial.</div>
+                        <div>• Manter seguimento até 48h após remissão da febre.</div>
+                      </>
+                    ) : (
+                      <>
+                        <div>• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.</div>
+                        <div>• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.</div>
+                      </>
+                    )}
                   </div>
                 </div>
 
