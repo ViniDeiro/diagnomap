@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   Plus, 
@@ -56,8 +56,24 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const patientsPerPage = 10
 
   // Carregar pacientes no início e sempre que houver refreshTrigger
+  const isFirstLoadRef = useRef(true)
   useEffect(() => {
-    loadPatients()
+    if (isFirstLoadRef.current) {
+      // Primeira carga com spinner suave
+      setIsLoading(true)
+      setTimeout(() => {
+        patientService.fixExistingPatientsProgress()
+        const allPatients = patientService.getAllPatients()
+        setPatients(allPatients)
+        setIsLoading(false)
+        isFirstLoadRef.current = false
+      }, 800)
+    } else {
+      // Atualizações subsequentes sem spinner (evita sensação de "recarregar a página")
+      patientService.fixExistingPatientsProgress()
+      const allPatients = patientService.getAllPatients()
+      setPatients(allPatients)
+    }
   }, [refreshTrigger])
 
   // Restaurar página atual ao montar (evita voltar para página 1 ao fechar modais)
@@ -82,10 +98,10 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   }, [currentPage])
 
   const loadPatients = () => {
+    // Mantido para compatibilidade, mas o efeito acima faz a lógica diferenciada
     setIsLoading(true)
     setTimeout(() => {
       patientService.fixExistingPatientsProgress()
-      
       const allPatients = patientService.getAllPatients()
       setPatients(allPatients)
       setIsLoading(false)

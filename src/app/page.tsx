@@ -45,7 +45,7 @@ export default function Home() {
 
   const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
     setSelectedFlowchart(flowchart)
-    
+
     // Criar paciente de emergência se não existir
     if (!currentEmergencyPatient) {
       const emergencyPatient: EmergencyPatient = {
@@ -89,7 +89,7 @@ export default function Home() {
       } as EmergencyPatient
       setCurrentEmergencyPatient(emergencyPatient)
     }
-    
+
     setAppState('emergency-flowchart')
   }
 
@@ -229,7 +229,6 @@ export default function Home() {
     if (previousState === 'dashboard') {
       setCurrentPatient(null)
     }
-    setRefreshTrigger(prev => prev + 1)
   }
 
   const handleMedicalPrescriptionClose = () => {
@@ -238,16 +237,94 @@ export default function Home() {
     if (previousState === 'dashboard') {
       setCurrentPatient(null)
     }
-    setRefreshTrigger(prev => prev + 1)
   }
 
-  const renderContent = () => {
-    switch (appState) {
-      case 'loading':
-        return <LoadingScreen />
+  const isDashboardActive = ['dashboard', 'prescriptions', 'report', 'medical-prescription'].includes(appState)
 
-      case 'dashboard':
-        return (
+  const renderContent = () => {
+    if (appState === 'loading') return <LoadingScreen />
+
+    if (appState === 'emergency-selector') {
+      return (
+        <EmergencySelector
+          onSelectFlowchart={handleSelectEmergencyFlowchart}
+          selectedFlowchart={selectedFlowchart?.id}
+        />
+      )
+    }
+
+    if (appState === 'new-patient') {
+      return (
+        <PatientForm
+          onSubmit={handlePatientFormSubmit}
+          onCancel={handlePatientFormCancel}
+          onEmergencySelector={handleEmergencySelector}
+        />
+      )
+    }
+
+    if (appState === 'return-visit') {
+      return currentPatient ? (
+        <ReturnVisitScreen
+          patient={currentPatient}
+          onCancel={handleReturnCancel}
+          onStartReturn={handleStartReturn}
+        />
+      ) : null
+    }
+
+    if (appState === 'return-form') {
+      return currentPatient ? (
+        <PatientForm
+          onSubmit={handleReturnFormSubmit}
+          onCancel={handleReturnCancel}
+          onEmergencySelector={handleEmergencySelector}
+          initialStep={4}
+          presetFlowchart={'dengue'}
+          skipFlowSelection={true}
+          mode={'return'}
+          initialData={{
+            name: currentPatient.name,
+            birthDate: new Date(currentPatient.birthDate),
+            gender: currentPatient.gender,
+            weight: currentPatient.weight,
+            allergies: currentPatient.allergies || [],
+            medicalRecord: currentPatient.medicalRecord,
+            selectedFlowchart: currentPatient.selectedFlowchart,
+            generalObservations: currentPatient.generalObservations,
+            symptoms: currentPatient.admission?.symptoms || [],
+            vitalSigns: currentPatient.admission?.vitalSigns || {
+              temperature: undefined,
+              feverDays: undefined,
+              bloodPressure: '',
+              pam: undefined,
+              heartRate: undefined,
+              respiratoryRate: undefined,
+              oxygenSaturation: undefined,
+              glucose: undefined
+            }
+          }}
+        />
+      ) : null
+    }
+
+    // Flowchart rendering is now handled below to support background persistence
+
+    if (appState === 'emergency-flowchart') {
+      return currentEmergencyPatient && selectedFlowchart ? (
+        <EmergencyFlowchart
+          patient={currentEmergencyPatient}
+          flowchart={selectedFlowchart}
+          onComplete={handleEmergencyFlowchartComplete}
+          onUpdate={handleEmergencyFlowchartUpdate}
+        />
+      ) : null
+    }
+
+    // Dashboard and Overlays
+    return (
+      <>
+        {(appState === 'dashboard' || (isDashboardActive && previousState !== 'flowchart')) && (
           <PatientDashboard
             refreshTrigger={refreshTrigger}
             onNewPatient={handleNewPatient}
@@ -257,48 +334,9 @@ export default function Home() {
             onViewMedicalPrescription={handleViewMedicalPrescription}
             onReturnVisit={handleReturnVisit}
           />
-        )
+        )}
 
-      case 'emergency-selector':
-        return (
-          <EmergencySelector
-            onSelectFlowchart={handleSelectEmergencyFlowchart}
-            selectedFlowchart={selectedFlowchart?.id}
-          />
-        )
-
-      case 'new-patient':
-        return (
-          <PatientForm
-            onSubmit={handlePatientFormSubmit}
-            onCancel={handlePatientFormCancel}
-            onEmergencySelector={handleEmergencySelector}
-          />
-        )
-
-      case 'return-visit':
-        return currentPatient ? (
-          <ReturnVisitScreen
-            patient={currentPatient}
-            onCancel={handleReturnCancel}
-            onStartReturn={handleStartReturn}
-          />
-        ) : null
-
-      case 'return-form':
-        return currentPatient ? (
-          <PatientForm
-            onSubmit={handleReturnFormSubmit}
-            onCancel={handleReturnCancel}
-            onEmergencySelector={handleEmergencySelector}
-            initialStep={4}
-            presetFlowchart={'dengue'}
-            skipFlowSelection={true}
-          />
-        ) : null
-
-      case 'flowchart':
-        return currentPatient ? (
+        {(appState === 'flowchart' || (isDashboardActive && previousState === 'flowchart')) && currentPatient && (
           <DengueFlowchartComplete
             patient={currentPatient}
             onComplete={handleFlowchartComplete}
@@ -307,47 +345,32 @@ export default function Home() {
             onViewPrescriptions={handleViewPrescriptions}
             onViewReport={handleViewReport}
           />
-        ) : null
+        )}
 
-      case 'emergency-flowchart':
-        return currentEmergencyPatient && selectedFlowchart ? (
-          <EmergencyFlowchart
-            patient={currentEmergencyPatient}
-            flowchart={selectedFlowchart}
-            onComplete={handleEmergencyFlowchartComplete}
-            onUpdate={handleEmergencyFlowchartUpdate}
-          />
-        ) : null
-
-      case 'prescriptions':
-        return currentPatient ? (
+        {appState === 'prescriptions' && currentPatient && (
           <PrescriptionViewer
             patient={currentPatient}
             onClose={handlePrescriptionsClose}
             onUpdate={handlePrescriptionsUpdate}
-            mode={'full'}
+            mode={'hydration-only'}
           />
-        ) : null
+        )}
 
-      case 'report':
-        return currentPatient ? (
+        {appState === 'report' && currentPatient && (
           <ReportViewer
             patient={currentPatient}
             onClose={handleReportClose}
           />
-        ) : null
+        )}
 
-      case 'medical-prescription':
-        return currentPatient ? (
+        {appState === 'medical-prescription' && currentPatient && (
           <MedicalPrescriptionViewer
             patient={currentPatient}
             onClose={handleMedicalPrescriptionClose}
           />
-        ) : null
-
-      default:
-        return <LoadingScreen />
-    }
+        )}
+      </>
+    )
   }
 
   return renderContent()

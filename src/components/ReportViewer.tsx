@@ -397,12 +397,12 @@ ${formatDate(new Date())}`
         if (hb != null && hb > 0) {
           const ratio = ht / hb
           const r = ratio.toFixed(1)
-          if (ratio > 5) {
-            findings.push(`hemoconcentração extrema (Ht/Hb ${r}x)`) 
+          if (ratio >= 2.8 && ratio <= 3.2) {
+            findings.push(`hematócrito dentro da faixa (Ht/Hb ${r}x)`) 
+          } else if (ratio >= 3.21 && ratio <= 3.59) {
+            findings.push(`hematócrito aumentado (Ht/Hb ${r}x)`) 
           } else if (ratio >= 3.6) {
             findings.push(`hemoconcentração (Ht/Hb ${r}x)`) 
-          } else if (ratio >= 3.0) {
-            findings.push(`hematócrito aumentado (Ht/Hb ${r}x)`) 
           } else {
             findings.push(`razão Ht/Hb ${r}x, abaixo do esperado`) 
           }

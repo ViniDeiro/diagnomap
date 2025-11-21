@@ -2,14 +2,14 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { 
-  User, 
-  Calendar, 
-  Weight, 
-  FileText, 
-  Thermometer, 
-  Activity, 
-  Save, 
+import {
+  User,
+  Calendar,
+  Weight,
+  FileText,
+  Thermometer,
+  Activity,
+  Save,
   AlertCircle,
   ArrowLeft,
   Stethoscope,
@@ -32,9 +32,12 @@ interface PatientFormProps {
   initialStep?: number // passo inicial do wizard (1–4)
   presetFlowchart?: 'dengue' | 'zika' | 'chikungunya' // define o fluxograma inicialmente
   skipFlowSelection?: boolean // se true, não exige seleção do fluxograma
+  // Dados iniciais (pré-preenchimento) e modo de uso
+  initialData?: PatientFormData
+  mode?: 'new' | 'return'
 }
 
-  const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, initialStep, presetFlowchart, skipFlowSelection }) => {
+const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new' }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -174,23 +177,42 @@ interface PatientFormProps {
     return badge('Hipoglicemia severa', 'red')
   }
 
-  const [formData, setFormData] = useState<PatientFormData>({
-    name: '',
-    birthDate: new Date('2000-01-01'), // Data padrão ao invés de data atual
-    gender: 'masculino',
-    selectedFlowchart: presetFlowchart ?? 'dengue',
-    generalObservations: '',
-    weight: undefined,
-    allergies: [],
-    medicalRecord: generatePatientId(),
-    symptoms: [],
-    vitalSigns: {
-      temperature: undefined,
-      feverDays: undefined,
-      bloodPressure: '',
-      pam: undefined,
-      heartRate: undefined,
-      respiratoryRate: undefined
+  const [formData, setFormData] = useState<PatientFormData>(() => {
+    if (initialData) {
+      // Garantir defaults para campos opcionais
+      return {
+        ...initialData,
+        selectedFlowchart: initialData.selectedFlowchart ?? (presetFlowchart ?? 'dengue'),
+        allergies: initialData.allergies ?? [],
+        symptoms: initialData.symptoms ?? [],
+        vitalSigns: initialData.vitalSigns ?? {
+          temperature: undefined,
+          feverDays: undefined,
+          bloodPressure: '',
+          pam: undefined,
+          heartRate: undefined,
+          respiratoryRate: undefined
+        }
+      }
+    }
+    return {
+      name: '',
+      birthDate: new Date('2000-01-01'), // Data padrão ao invés de data atual
+      gender: 'masculino',
+      selectedFlowchart: presetFlowchart ?? 'dengue',
+      generalObservations: '',
+      weight: undefined,
+      allergies: [],
+      medicalRecord: generatePatientId(),
+      symptoms: [],
+      vitalSigns: {
+        temperature: undefined,
+        feverDays: undefined,
+        bloodPressure: '',
+        pam: undefined,
+        heartRate: undefined,
+        respiratoryRate: undefined
+      }
     }
   })
 
@@ -270,47 +292,48 @@ interface PatientFormProps {
     if (!birthDate || isNaN(birthDate.getTime())) {
       return 0
     }
-    
+
     const today = new Date()
     const birth = new Date(birthDate)
     let age = today.getFullYear() - birth.getFullYear()
     const monthDiff = today.getMonth() - birth.getMonth()
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--
     }
-    
+
     return Math.max(0, age)
   }
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {}
+    const isReturn = mode === 'return'
 
-    if (!formData.name.trim()) {
-      newErrors.name = 'Nome é obrigatório'
-    }
-
-    if (!formData.birthDate || isNaN(formData.birthDate.getTime())) {
-      newErrors.birthDate = 'Data de nascimento é obrigatória'
-    } else {
-      const age = calculateAge(formData.birthDate)
-      if (age < 0 || age > 120) {
-        newErrors.birthDate = 'Data de nascimento inválida'
+    if (!isReturn) {
+      if (!formData.name.trim()) {
+        newErrors.name = 'Nome é obrigatório'
       }
-      // Verificar se a data não é no futuro
-      if (formData.birthDate.getTime() > new Date().getTime()) {
-        newErrors.birthDate = 'Data de nascimento não pode ser no futuro'
+
+      if (!formData.birthDate || isNaN(formData.birthDate.getTime())) {
+        newErrors.birthDate = 'Data de nascimento é obrigatória'
+      } else {
+        const age = calculateAge(formData.birthDate)
+        if (age < 0 || age > 120) {
+          newErrors.birthDate = 'Data de nascimento inválida'
+        }
+        // Verificar se a data não é no futuro
+        if (formData.birthDate.getTime() > new Date().getTime()) {
+          newErrors.birthDate = 'Data de nascimento não pode ser no futuro'
+        }
       }
-    }
 
-    if (!formData.gender) {
-      newErrors.gender = 'Sexo é obrigatório'
-    }
+      if (!formData.gender) {
+        newErrors.gender = 'Sexo é obrigatório'
+      }
 
-    // ID do paciente é gerado automaticamente, não precisa validar
-
-    if (formData.symptoms.length === 0) {
-      newErrors.symptoms = 'Selecione pelo menos um sintoma'
+      if (formData.symptoms.length === 0) {
+        newErrors.symptoms = 'Selecione pelo menos um sintoma'
+      }
     }
 
     if (formData.vitalSigns?.temperature && !formData.vitalSigns?.feverDays) {
@@ -343,11 +366,11 @@ interface PatientFormProps {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
-      
+
       {/* Premium Medical Header */}
       <div className="relative bg-white shadow-xl border-b border-slate-200/50">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
-        
+
         <div className="relative max-w-7xl mx-auto px-8 py-8">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -371,7 +394,7 @@ interface PatientFormProps {
                   <User className="w-7 h-7 text-white" />
                 </div>
               </div>
-              
+
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
                   Novo Atendimento
@@ -390,7 +413,7 @@ interface PatientFormProps {
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-8 py-12">
-        
+
         {/* Progress Indicator */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -409,8 +432,8 @@ interface PatientFormProps {
                 <div key={step} className="flex items-center space-x-3">
                   <div className={clsx(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
-                    currentStep >= step 
-                      ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white shadow-lg" 
+                    currentStep >= step
+                      ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white shadow-lg"
                       : "bg-slate-100 text-slate-400"
                   )}>
                     <Icon className="w-5 h-5" />
@@ -436,9 +459,9 @@ interface PatientFormProps {
         >
           {/* Card Header */}
           <div className="h-2 bg-gradient-to-r from-blue-600 via-slate-400 to-blue-600"></div>
-          
+
           <form onSubmit={handleSubmit} className="p-8">
-            
+
             {/* Step 1: Seleção do Fluxograma */}
             {currentStep === 1 && (
               <motion.div
@@ -472,11 +495,10 @@ interface PatientFormProps {
                   <motion.button
                     type="button"
                     onClick={() => hasSelectedFlow && setCurrentStep(2)}
-                    className={`px-8 py-4 rounded-xl transition-all duration-300 font-semibold flex items-center space-x-2 ${
-                      hasSelectedFlow
+                    className={`px-8 py-4 rounded-xl transition-all duration-300 font-semibold flex items-center space-x-2 ${hasSelectedFlow
                         ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-xl"
                         : "bg-slate-200 text-slate-500 cursor-not-allowed"
-                    }`}
+                      }`}
                     whileHover={{ scale: hasSelectedFlow ? 1.02 : 1 }}
                     whileTap={{ scale: hasSelectedFlow ? 0.98 : 1 }}
                     disabled={!hasSelectedFlow}
@@ -554,7 +576,7 @@ interface PatientFormProps {
                         <Users className="w-5 h-5 text-blue-600" />
                         <span className="font-semibold text-slate-800">Masculino</span>
                       </motion.button>
-                      
+
                       <motion.button
                         type="button"
                         onClick={() => setFormData(prev => ({ ...prev, gender: 'feminino' }))}
@@ -866,12 +888,12 @@ interface PatientFormProps {
                       <input
                         type="number"
                         value={formData.vitalSigns?.temperature || ''}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          vitalSigns: { 
-                            ...prev.vitalSigns, 
-                            temperature: parseFloat(e.target.value) || undefined 
-                          } 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          vitalSigns: {
+                            ...prev.vitalSigns,
+                            temperature: parseFloat(e.target.value) || undefined
+                          }
                         }))}
                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
                         placeholder="Ex: 38.5"
@@ -893,12 +915,12 @@ interface PatientFormProps {
                       <input
                         type="number"
                         value={formData.vitalSigns?.feverDays || ''}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          vitalSigns: { 
-                            ...prev.vitalSigns, 
-                            feverDays: parseInt(e.target.value) || undefined 
-                          } 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          vitalSigns: {
+                            ...prev.vitalSigns,
+                            feverDays: parseInt(e.target.value) || undefined
+                          }
                         }))}
                         className={clsx(
                           "w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium",
@@ -932,37 +954,35 @@ interface PatientFormProps {
                         type="text"
                         value={bpText}
                         onChange={(e) => {
-                          // Normaliza entrada: converte espaços em '/', mantém apenas dígitos e uma barra
-                          let raw = e.target.value
-                          // Converte quaisquer espaços em barra imediatamente (ex.: "90 40" -> "90/40")
-                          if (raw.includes(' ')) {
-                            raw = raw.replace(/\s+/g, '/')
-                          }
-                          // Remove caracteres não numéricos ou barra
-                          raw = raw.replace(/[^\d\/]/g, '')
-                          // Garante no máximo uma barra e até 3 dígitos por segmento
-                          const parts = raw.split('/')
-                          const first = (parts[0] || '').replace(/\D/g, '').slice(0, 3)
-                          const secondRaw = parts.length > 1 ? parts.slice(1).join('') : ''
-                          const second = (secondRaw || '').replace(/\D/g, '').slice(0, 3)
-                          const next = second ? `${first}/${second}` : (parts.length > 1 ? `${first}/` : first)
+                          let raw = e.target.value.replace(/[^\d]/g, '')
+                          let formatted = raw
 
-                          // Validação parcial conforme máscara
-                          if (!isBPPartialAllowed(next)) {
-                            return
+                          if (raw.length >= 3) {
+                            const firstThree = parseInt(raw.slice(0, 3))
+                            if (firstThree > 299) {
+                              // Sistólica de 2 dígitos (ex: 90, 80)
+                              formatted = `${raw.slice(0, 2)}/${raw.slice(2, 5)}`
+                            } else {
+                              // Sistólica de 3 dígitos (ex: 120, 110)
+                              if (raw.length > 3) {
+                                formatted = `${raw.slice(0, 3)}/${raw.slice(3, 6)}`
+                              }
+                            }
                           }
-                          setErrors(prev => ({ ...prev, bloodPressure: '' }))
-                          setBpText(next)
-                          if (isBPCompleteValid(next)) {
-                            const pamVal = calculatePAM(next)
+
+                          setBpText(formatted)
+
+                          if (isBPCompleteValid(formatted)) {
+                            const pamVal = calculatePAM(formatted)
                             setFormData(prev => ({
                               ...prev,
                               vitalSigns: {
                                 ...prev.vitalSigns,
-                                bloodPressure: next,
+                                bloodPressure: formatted,
                                 pam: pamVal
                               }
                             }))
+                            setErrors(prev => ({ ...prev, bloodPressure: '' }))
                           }
                         }}
                         onBlur={(e) => {
@@ -975,6 +995,33 @@ interface PatientFormProps {
                             return
                           }
                           if (!isBPCompleteValid(val)) {
+                            // Tenta recuperar se o usuário digitou tudo junto (ex: 12080)
+                            const raw = val.replace(/[^\d]/g, '')
+                            let recovered = val
+                            if (raw.length >= 3) {
+                              const firstThree = parseInt(raw.slice(0, 3))
+                              if (firstThree > 299) {
+                                recovered = `${raw.slice(0, 2)}/${raw.slice(2, 5)}`
+                              } else if (raw.length > 3) {
+                                recovered = `${raw.slice(0, 3)}/${raw.slice(3, 6)}`
+                              }
+                            }
+
+                            if (isBPCompleteValid(recovered)) {
+                              setBpText(recovered)
+                              const pamVal = calculatePAM(recovered)
+                              setFormData(prev => ({
+                                ...prev,
+                                vitalSigns: {
+                                  ...prev.vitalSigns,
+                                  bloodPressure: recovered,
+                                  pam: pamVal
+                                }
+                              }))
+                              setErrors(prev => ({ ...prev, bloodPressure: '' }))
+                              return
+                            }
+
                             setErrors(prev => ({ ...prev, bloodPressure: 'Formato inválido. Use o padrão 120/80.' }))
                             return
                           }
@@ -1021,12 +1068,12 @@ interface PatientFormProps {
                       <input
                         type="number"
                         value={formData.vitalSigns?.heartRate || ''}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          vitalSigns: { 
-                            ...prev.vitalSigns, 
-                            heartRate: parseInt(e.target.value) || undefined 
-                          } 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          vitalSigns: {
+                            ...prev.vitalSigns,
+                            heartRate: parseInt(e.target.value) || undefined
+                          }
                         }))}
                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
                         placeholder="Ex: 80"
@@ -1047,12 +1094,12 @@ interface PatientFormProps {
                       <input
                         type="number"
                         value={formData.vitalSigns?.respiratoryRate || ''}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          vitalSigns: { 
-                            ...prev.vitalSigns, 
-                            respiratoryRate: parseInt(e.target.value) || undefined 
-                          } 
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          vitalSigns: {
+                            ...prev.vitalSigns,
+                            respiratoryRate: parseInt(e.target.value) || undefined
+                          }
                         }))}
                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
                         placeholder="Ex: 20"

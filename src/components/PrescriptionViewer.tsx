@@ -26,7 +26,7 @@ interface PrescriptionViewerProps {
   patient: Patient
   onClose: () => void
   onUpdate: () => void
-  mode?: 'full' | 'prescription-only'
+  mode?: 'full' | 'prescription-only' | 'hydration-only'
 }
 
 const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
@@ -37,6 +37,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
 }) => {
   // Modo mínimo mostra apenas "Prescrições Ativas" conforme implementação original
   const isMinimal = mode === 'prescription-only'
+  const isHydrationOnly = mode === 'hydration-only'
   const isHydrationPrescription = (p: { medication: string }) => {
     const name = (p.medication || '').toLowerCase()
     return (
@@ -273,7 +274,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                   </div>
                 </div>
                 <div>
-                  <h1 className="text-3xl font-bold mb-2">Prescrições Médicas</h1>
+                  <h1 className="text-3xl font-bold mb-2">{isHydrationOnly ? 'Prescrição de Hidratação' : 'Prescrições Médicas'}</h1>
                   <div className="flex items-center space-x-2">
                     <Stethoscope className="w-5 h-5 text-blue-200" />
                     <span className="text-blue-100 font-medium">Paciente: {patient.name}</span>
@@ -296,7 +297,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
         <div className="overflow-y-auto max-h-[calc(95vh-200px)]">
           
           {/* Patient Information Card */}
-          {!isMinimal && (
+          {!(isMinimal || isHydrationOnly) && (
           <div className="p-8 border-b border-slate-200">
             <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 rounded-2xl border border-slate-200/50">
               <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center">
@@ -340,8 +341,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
           </div>
           )}
 
-          {/* Antipyretic choice + Action Buttons */}
-          {!isMinimal && (
+          {/* Antitérmico + Ações (oculto em hydration-only) */}
+          {!isMinimal && !isHydrationOnly && (
           <div className="p-8 border-b border-slate-200">
             {/* Single antipyretic selection */}
             <div className="mb-4">
@@ -433,8 +434,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
           </div>
           )}
 
-          {/* Add Prescription Form */}
-          {!isMinimal && showAddForm && (
+          {/* Formulário de nova prescrição (oculto em hydration-only) */}
+          {!isMinimal && !isHydrationOnly && showAddForm && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
@@ -561,7 +562,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 </div>
               </div>
 
-              {/* Orientations */}
+              {/* Orientações */}
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Orientações:</h2>
                 
@@ -600,7 +601,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                   )}
                 </div>
 
-                {/* 2. Immediate Return */}
+                {/* 2. Retorno Imediato */}
+                {!isHydrationOnly && (
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">2. Retorno Imediato na presença de sinais de alarme, incluindo:</h3>
                   <div className="ml-6 space-y-2 text-lg leading-relaxed">
@@ -612,8 +614,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     <div>• Diminuição repentina da diurese (urina reduzida)</div>
                   </div>
                 </div>
-
-                {/* 3. Outpatient Follow-up */}
+                )}
+                
+                {/* 3. Seguimento Ambulatorial */}
+                {!isHydrationOnly && (
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">3. Seguimento Ambulatorial</h3>
                   <div className="ml-6 space-y-2 text-lg leading-relaxed">
@@ -630,8 +634,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     )}
                   </div>
                 </div>
-
-                {/* 4. Antipyretics */}
+                )}
+                
+                {/* 4. Antitérmicos Permitidos */}
+                {!isHydrationOnly && (
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">4. Antitérmicos Permitidos</h3>
                   <div className="ml-6 space-y-2 text-lg leading-relaxed">
@@ -640,8 +646,10 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     <div>• Crianças: Paracetamol 10–15 mg/kg VO a cada 6–8h (máx 60 mg/kg/dia); Dipirona 10 mg/kg VO a cada 6–8h</div>
                   </div>
                 </div>
-
-                {/* 5. Contraindications */}
+                )}
+                
+                {/* 5. Medicamentos Contraindicados */}
+                {!isHydrationOnly && (
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">5. Medicamentos Contraindicados</h3>
                   <div className="ml-6 space-y-2 text-lg leading-relaxed">
@@ -649,10 +657,11 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                     <div>• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros</div>
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Additional Prescriptions */}
-              {patient.treatment.prescriptions.length > 0 && (
+              {!isHydrationOnly && patient.treatment.prescriptions.length > 0 && (
                 <div className="mb-8">
                   <h2 className="text-2xl font-bold text-slate-800 mb-6">Medicamentos Prescritos:</h2>
                   <div className="space-y-4">
@@ -687,8 +696,8 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
           </div>
           )}
 
-          {/* Lab Orders - For Download */}
-          {!isMinimal && patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
+          {/* Pedido de Exames - Baixar (oculto em hydration-only) */}
+          {!isMinimal && !isHydrationOnly && patient.flowchartState.group && patient.flowchartState.group !== 'A' && (
             <div className="p-8">
               <div ref={labRef} className="bg-white p-8">
                 {/* Lab Order Header */}

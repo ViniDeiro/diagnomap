@@ -231,15 +231,14 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         const ratio = value / hbContext
         const ratioText = `Razão Ht/Hb: ${ratio.toFixed(1)}x`
         if (ratio >= 2.8 && ratio <= 3.2) return { label: `${ratioText} – Normal (2,8–3,2x)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
-        if (ratio > 5) return { label: `${ratioText} – Extremamente aumentado`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
-        if (ratio >= 3.6) return { label: `${ratioText} – Hemoconcentrado`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
-        if (ratio > 3.2) return { label: `${ratioText} – Aumentado`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
-        return { label: `${ratioText} – Abaixo do esperado`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (ratio >= 3.21 && ratio <= 3.59) return { label: `${ratioText} – Aumentado (3,21–3,59x)`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
+        if (ratio >= 3.6) return { label: `${ratioText} – Hemoconcentrado (≥ 3,6x)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        return { label: `${ratioText} – Abaixo (< 2,8x)`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
       }
       case 'plt': {
         // Nova classificação de plaquetopenia e plaquetose, enfatizando muito grave e extrema
         if (value > 450000) return { label: 'Plaquetose (> 450.000/mm³)', input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
-        if (value <= 5000) return { label: 'Plaquetopenia extrema (≤ 5.000/mm³)', input: 'border-black bg-black text-white', text: 'text-white' }
+        if (value <= 5000) return { label: 'Plaquetopenia extrema (≤ 5.000/mm³)', input: 'border-red-600 bg-red-100 text-red-800 focus:ring-red-600 focus:border-red-600', text: 'text-red-800' }
         if (value <= 10000) return { label: 'Plaquetopenia muito grave (5.001–10.000/mm³)', input: 'border-red-400 bg-red-50 focus:ring-red-600 focus:border-red-600', text: 'text-red-700' }
         if (value < 20000) return { label: 'Plaquetopenia grave (10.001–19.999/mm³)', input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
         if (value < 100000) return { label: 'Plaquetopenia moderada (50.000–99.999/mm³)', input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
