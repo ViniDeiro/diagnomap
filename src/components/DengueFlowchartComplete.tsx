@@ -364,239 +364,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       letargia_irritabilidade:
         'Alteração do estado de consciência com prostração importante ou irritabilidade anormal; pode indicar hipoperfusão ou comprometimento neurológico.'
     },
-
-    continue_treatment_c: {
-      id: 'continue_treatment_c',
-      title: 'Manter Hidratação por mais 1h - Grupo C',
-      description: 'Prosseguir com hidratação e monitorização',
-      type: 'action',
-      icon: <Clock className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      content: (
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
-          <ul className="text-yellow-700 text-sm space-y-1">
-            <li>• Manter hidratação por mais 1 hora</li>
-            <li>• Monitorar sinais vitais e diurese</li>
-            <li>• Reavaliar após completar segunda hora</li>
-          </ul>
-        </div>
-      ),
-      options: [
-        { text: 'Aguardar 1h', nextStep: 'wait_reevaluation_c_2h', value: 'wait' }
-      ]
-    },
-
-    wait_reevaluation_c_2h: {
-      id: 'wait_reevaluation_c_2h',
-      title: 'Aguardando Reavaliação após 2h - Grupo C',
-      description: 'Monitorização durante segunda hora de hidratação',
-      type: 'wait_labs',
-      icon: <Hourglass className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      requiresLabs: true,
-      content: (
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-yellow-800 mb-2">Status:</h4>
-          <p className="text-yellow-700">• Segunda hora de hidratação em curso</p>
-          <p className="text-yellow-700">• Manter monitorização clínica</p>
-        </div>
-      ),
-      options: [
-        { text: 'Reavaliação disponível', nextStep: 'reevaluation_c_2h', value: 'continue' }
-      ]
-    },
-
-    reevaluation_c_2h: {
-      id: 'reevaluation_c_2h',
-      title: 'Reavaliação após 2h - Grupo C',
-      description: 'Avaliação clínica e exames após segunda hora',
-      type: 'question',
-      icon: <Clock className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      content: (
-        <div className="space-y-6">
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Verificar:</h4>
-            <ul className="text-yellow-700 text-sm space-y-1">
-              <li>• Sinais vitais</li>
-              <li>• Diurese</li>
-              <li>• Melhora dos sintomas</li>
-              <li>• Ausência de novos sinais de alarme</li>
-            </ul>
-          </div>
-
-          {/* Campo de Diurese */}
-          <div className="bg-white border border-yellow-200 rounded-lg p-4">
-            <label className="block text-xs text-slate-600 mb-1">Diurese na última hora (ml)</label>
-            <input
-              type="number"
-              min="0"
-              step="1"
-              placeholder="Ex: 60"
-              className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", diuresisStatus(diuresis2h).input)}
-              onChange={(e) => {
-                const value = e.target.value
-                localStorage.setItem(`diuresis_c_2h_${patient.id}`, value)
-                setDiuresis2h(parseNum(value))
-              }}
-              defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_2h_${patient.id}`) || '' : ''}
-            />
-            {diuresis2h != null && (
-              <p className={clsx("text-xs mt-1", diuresisStatus(diuresis2h).text)}>{diuresisStatus(diuresis2h).label}</p>
-            )}
-          </div>
-
-          {/* Seção de Exames */}
-          <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <h4 className="font-semibold text-blue-800">Resultados dos Exames</h4>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-3">
-                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="20"
-                      placeholder="Ex: 12.5"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
-                    />
-                    {labs.hb != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      placeholder="Ex: 38.0"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
-                    />
-                    {labs.ht != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
-                    )}
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
-                    />
-                    {labs.plt != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="10"
-                      placeholder="Ex: 3.5"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labs.alb).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_albumin_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, alb: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) || '' : ''}
-                    />
-                    {labs.alb != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('alb', labs.alb).text)}>{labStatus('alb', labs.alb).label}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      placeholder="Ex: 45"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labs.alt).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_alt_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, alt: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) || '' : ''}
-                    />
-                    {labs.alt != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('alt', labs.alt).text)}>{labStatus('alt', labs.alt).label}</p>
-                    )}
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      placeholder="Ex: 40"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labs.ast).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_ast_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, ast: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) || '' : ''}
-                    />
-                    {labs.ast != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('ast', labs.ast).text)}>{labStatus('ast', labs.ast).label}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-            <p className="text-xs text-blue-700">
-              💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
-              Os dados dos exames serão salvos automaticamente no cadastro do paciente.
-            </p>
-          </div>
-        </div>
-      ),
-      options: [
-        { text: 'Melhora - Continuar tratamento', nextStep: 'end_group_c', value: 'improvement' },
-        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
-      ]
-    },
     grupoD: {
       extravasamento_plasma:
         'Perda significativa de plasma com sinais de choque e/ou disfunção de órgãos. Líquido sai dos vasos para os tecidos, levando a hemoconcentração (↑ hematócrito) e queda de plaquetas.\n\nSinais de choque\n• Hipotensão arterial\n• Pressão convergente (diferença sistólica–diastólica ≤ 20 mmHg)\n• Pulso rápido e fraco\n• Extremidades frias/cianose\n• Enchimento capilar lento (> 2 s)\n• Oligúria\n\nDisfunção orgânica\n• Dificuldade respiratória (edema de pulmão/SDRA)\n• Insuficiência hepática\n• Alterações neurológicas (delírio, sonolência ou coma)\n• Comprometimento de outros órgãos (miocardite, insuficiência renal)\n\nOutras características\n• Hemoconcentração ≥ 20%\n• Queda progressiva das plaquetas\n• Ascite/derrame pleural\n• Sangramentos de mucosas e/ou internos.',
@@ -2285,13 +2052,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <h4 className="font-bold text-amber-800">Acompanhamento</h4>
               </div>
               <p className="text-amber-700 font-medium mb-4">Internação - mínimo 48h</p>
-              <button 
-                onClick={() => onViewPrescriptions?.(patient)}
-                className="w-full bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-              >
-                <FileText className="w-4 h-4" />
-                <span>Ver Prescrições</span>
-              </button>
+              {/* Botão de prescrição removido conforme solicitação */}
             </div>
 
             {/* Exames */}
@@ -2359,13 +2120,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   </div>
                 )}
               </div>
-              <button 
-                onClick={() => onViewPrescriptions?.(patient)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-              >
-                <Activity className="w-4 h-4" />
-                <span>Ver Exames</span>
-              </button>
+              {/* Botão de exames removido conforme solicitação */}
             </div>
 
             {/* Conduta */}
@@ -2502,13 +2257,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <h4 className="font-bold text-red-800">Acompanhamento</h4>
               </div>
               <p className="text-red-700 font-medium mb-4">UTI - mínimo 48h</p>
-              <button 
-                onClick={() => onViewPrescriptions?.(patient)}
-                className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-              >
-                <FileText className="w-4 h-4" />
-                <span>Ver Prescrições UTI</span>
-              </button>
+              {/* Botão de prescrição UTI removido conforme solicitação */}
             </div>
 
             {/* Exames */}
@@ -2527,13 +2276,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <p>• Albumina e transaminases</p>
                 <p>• Raio-X de tórax</p>
               </div>
-              <button 
-                onClick={() => onViewPrescriptions?.(patient)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2"
-              >
-                <Activity className="w-4 h-4" />
-                <span>Ver Exames UTI</span>
-              </button>
+              {/* Botão de exames UTI removido conforme solicitação */}
             </div>
 
             {/* Conduta */}
@@ -2999,6 +2742,239 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       ),
       options: [
         { text: 'Finalizar', nextStep: 'end', value: 'finish' }
+      ]
+    },
+
+    continue_treatment_c: {
+      id: 'continue_treatment_c',
+      title: 'Manter Hidratação por mais 1h - Grupo C',
+      description: 'Prosseguir com hidratação e monitorização',
+      type: 'action',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
+          <ul className="text-yellow-700 text-sm space-y-1">
+            <li>• Manter hidratação por mais 1 hora</li>
+            <li>• Monitorar sinais vitais e diurese</li>
+            <li>• Reavaliar após completar segunda hora</li>
+          </ul>
+        </div>
+      ),
+      options: [
+        { text: 'Aguardar 1h', nextStep: 'wait_reevaluation_c_2h', value: 'wait' }
+      ]
+    },
+
+    wait_reevaluation_c_2h: {
+      id: 'wait_reevaluation_c_2h',
+      title: 'Aguardando Reavaliação após 2h - Grupo C',
+      description: 'Monitorização durante segunda hora de hidratação',
+      type: 'wait_labs',
+      icon: <Hourglass className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      requiresLabs: true,
+      content: (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Status:</h4>
+          <p className="text-yellow-700">• Segunda hora de hidratação em curso</p>
+          <p className="text-yellow-700">• Manter monitorização clínica</p>
+        </div>
+      ),
+      options: [
+        { text: 'Reavaliação disponível', nextStep: 'reevaluation_c_2h', value: 'continue' }
+      ]
+    },
+
+    reevaluation_c_2h: {
+      id: 'reevaluation_c_2h',
+      title: 'Reavaliação após 2h - Grupo C',
+      description: 'Avaliação clínica e exames após segunda hora',
+      type: 'question',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Verificar:</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Sinais vitais</li>
+              <li>• Diurese</li>
+              <li>• Melhora dos sintomas</li>
+              <li>• Ausência de novos sinais de alarme</li>
+            </ul>
+          </div>
+
+          {/* Campo de Diurese */}
+          <div className="bg-white border border-yellow-200 rounded-lg p-4">
+            <label className="block text-xs text-slate-600 mb-1">Diurese na última hora (ml)</label>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              placeholder="Ex: 60"
+              className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", diuresisStatus(diuresis2h).input)}
+              onChange={(e) => {
+                const value = e.target.value
+                localStorage.setItem(`diuresis_c_2h_${patient.id}`, value)
+                setDiuresis2h(parseNum(value))
+              }}
+              defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_2h_${patient.id}`) || '' : ''}
+            />
+            {diuresis2h != null && (
+              <p className={clsx("text-xs mt-1", diuresisStatus(diuresis2h).text)}>{diuresisStatus(diuresis2h).label}</p>
+            )}
+          </div>
+
+          {/* Seção de Exames */}
+          <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-800">Resultados dos Exames</h4>
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                    />
+                    {labs.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="Ex: 3.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labs.alb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_albumin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.alb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alb', labs.alb).text)}>{labStatus('alb', labs.alb).label}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 45"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labs.alt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_alt_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) || '' : ''}
+                    />
+                    {labs.alt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alt', labs.alt).text)}>{labStatus('alt', labs.alt).label}</p>
+                    )}
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 40"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labs.ast).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_ast_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ast: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ast != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ast', labs.ast).text)}>{labStatus('ast', labs.ast).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+            <p className="text-xs text-blue-700">
+              💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
+              Os dados dos exames serão salvos automaticamente no cadastro do paciente.
+            </p>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Melhora - Continuar tratamento', nextStep: 'end_group_c', value: 'improvement' },
+        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
       ]
     },
 
