@@ -2634,12 +2634,24 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       content: (
         <div className="space-y-4">
           <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Alta hospitalar:</h4>
+            <h4 className="font-semibold text-yellow-800 mb-2">Critérios de alta (necessários):</h4>
             <ul className="text-yellow-700 text-sm space-y-1">
-              <li>• Manter hidratação oral</li>
-              <li>• Seguimento ambulatorial</li>
-              <li>• Orientações de retorno</li>
-              <li>• Cartão de acompanhamento</li>
+              <li>• Estabilização hemodinâmica durante 48 horas</li>
+              <li>• Ausência de febre por 24 horas</li>
+              <li>• Melhora visível do quadro clínico</li>
+              <li>• Hematócrito normal e estável por 24 horas</li>
+              <li>• Plaquetas em elevação</li>
+              <li>• Diurese adequada (&gt;1 ml/kg/h)</li>
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Retorno (igual ao Grupo B):</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Retornar se sinais de alarme</li>
+              <li>• Retorno diário para reavaliação clínica e ambulatorial até 48h após remissão da febre</li>
+              <li>• Manter hidratação adequada</li>
+              <li>• Cartão de acompanhamento entregue</li>
             </ul>
           </div>
 
@@ -2973,8 +2985,81 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Melhora - Continuar tratamento', nextStep: 'end_group_c', value: 'improvement' },
+        { text: 'Melhora - Iniciar manutenção (25 mL/kg/6h)', nextStep: 'maintenance_c_phase1', value: 'improvement' },
         { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
+      ]
+    },
+
+    maintenance_c_phase1: {
+      id: 'maintenance_c_phase1',
+      title: 'Manutenção Fase 1 — 25 mL/kg em 6h',
+      description: 'Início da manutenção com soro fisiológico',
+      type: 'action',
+      icon: <Zap className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-4">
+          {(() => {
+            const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+            const volume = Math.round(peso * 25)
+            const taxaHora = Math.round(volume / 6)
+            return (
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-yellow-800 mb-2">Cálculo de manutenção:</h4>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  <li>• Soro fisiológico 0,9%</li>
+                  <li>• Peso estimado: {peso} kg</li>
+                  <li>• Volume total: {volume.toLocaleString('pt-BR')} mL (25 mL/kg)</li>
+                  <li>• Período: 6 horas</li>
+                  <li>• Velocidade de infusão: {taxaHora.toLocaleString('pt-BR')} mL/h</li>
+                </ul>
+              </div>
+            )
+          })()}
+          <div className="p-3 bg-white border border-yellow-200 rounded-lg">
+            <p className="text-sm text-slate-700">Monitorar sinais vitais, diurese e evolução clínica durante as 6 horas. Se houver melhora, iniciar a fase 2 (25 mL/kg em 8 horas).</p>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Melhora — Iniciar Fase 2 (25 mL/kg/8h)', nextStep: 'maintenance_c_phase2', value: 'improvement' },
+        { text: 'Sem melhora — Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
+      ]
+    },
+
+    maintenance_c_phase2: {
+      id: 'maintenance_c_phase2',
+      title: 'Manutenção Fase 2 — 25 mL/kg em 8h',
+      description: 'Segunda fase da manutenção com soro fisiológico',
+      type: 'action',
+      icon: <Zap className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-4">
+          {(() => {
+            const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+            const volume = Math.round(peso * 25)
+            const taxaHora = Math.round(volume / 8)
+            return (
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-yellow-800 mb-2">Cálculo de manutenção:</h4>
+                <ul className="text-yellow-700 text-sm space-y-1">
+                  <li>• Soro fisiológico 0,9%</li>
+                  <li>• Peso estimado: {peso} kg</li>
+                  <li>• Volume total: {volume.toLocaleString('pt-BR')} mL (25 mL/kg)</li>
+                  <li>• Período: 8 horas</li>
+                  <li>• Velocidade de infusão: {taxaHora.toLocaleString('pt-BR')} mL/h</li>
+                </ul>
+              </div>
+            )
+          })()}
+          <div className="p-3 bg-white border border-yellow-200 rounded-lg">
+            <p className="text-sm text-slate-700">Ao final da fase 2, seguir para os critérios de alta e seleção de antitérmico.</p>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Ir para critérios de alta', nextStep: 'end_group_c', value: 'finalize' }
       ]
     },
 
