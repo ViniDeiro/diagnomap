@@ -2,15 +2,15 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  ChevronRight, 
-  ChevronLeft, 
-  AlertTriangle, 
-  Heart, 
-  Stethoscope, 
-  Activity, 
-  Clock, 
-  CheckCircle, 
+import {
+  ChevronRight,
+  ChevronLeft,
+  AlertTriangle,
+  Heart,
+  Stethoscope,
+  Activity,
+  Clock,
+  CheckCircle,
   Droplets,
   Shield,
   Brain,
@@ -73,6 +73,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_d_${patient.id}`) || '') : ''
   )
   const [antipyreticAddedD, setAntipyreticAddedD] = useState<boolean>(false)
+
+  // Estado para persistência do choque (Grupo D)
+  const [shockPersistent, setShockPersistent] = useState<boolean>(false)
+
+  // Estado para sinais indiretos de choque (Grupo C reavaliação)
+  const [indirectShockSigns, setIndirectShockSigns] = useState<string[]>([])
+  const [shockOverride, setShockOverride] = useState<boolean>(false)
 
   // Helper: parse number safely from string/localStorage
   const parseNum = (s: string | null): number | undefined => {
@@ -351,10 +358,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   // Função utilitária para calcular o progresso baseado no caminho específico
   const calculateProgress = (currentStep: string, history: string[]): number => {
     const pathSteps = [...history, currentStep]
-    
+
     // Determinar o tipo de caminho baseado nos steps visitados
     let expectedTotalSteps = 6 // Caminho mínimo (Grupo A)
-    
+
     if (pathSteps.includes('group_b') || pathSteps.includes('wait_labs_b')) {
       expectedTotalSteps = 8 // Grupo B básico
     } else if (pathSteps.includes('group_c') || pathSteps.includes('treatment_c')) {
@@ -364,16 +371,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     } else if (pathSteps.includes('wait_reevaluation_c') || pathSteps.includes('wait_reevaluation_d')) {
       expectedTotalSteps = 14 // Casos com reavaliações
     }
-    
+
     // Se chegamos ao final, é 100%
     if (currentStep === 'end') {
       return 100
     }
-    
+
     // Calcular progresso baseado no número de steps completados
     const completedSteps = pathSteps.length
     const progress = Math.min((completedSteps / expectedTotalSteps) * 100, 95) // Máximo 95% até chegar ao final
-    
+
     return Math.round(progress)
   }
 
@@ -403,7 +410,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       sangramento_grave:
         'Hemorragia significativa com repercussão hemodinâmica (hematêmese, melena, metrorragia abundante, sangramento pulmonar ou intracraniano). Pode cursar com hipotensão e taquicardia.',
       comprometimento_orgaos:
-        'Disfunção grave de órgãos por resposta inflamatória sistêmica e extravasamento de plasma.\n\nPrincipais órgãos\n• Fígado: hepatite/insuficiência hepática aguda\n• Rins: insuficiência renal aguda\n• Pulmões: derrame pleural e/ou SDRA\n• Coração: derrame pericárdico\n• Sistema circulatório: hipotensão, pulso rápido e fino, extremidades frias, enchimento capilar lento (choque)\n• Sistema nervoso: letargia, irritabilidade, sonolência ou confusão.\n\nReconhecimento precoce dos sinais de alarme ajuda a evitar essa progressão.'
+        'Disfunção grave de órgãos por resposta inflamatória sistêmica e extravasamento de plasma.\n\nPrincipais órgãos\n• Fígado: hepatite/insuficiência hepática aguda\n• Rins: insuficiência renal aguda\n• Pulmões: derrame pleural e/ou SDRA\n• Coração: derrame pericárdico\n• Sistema circulatório: hipotensão, pulso rápido e fino, extremidades frias, enchimento capilar lento (choque)\n• Sistema nervoso: letargia, irritabilidade, sonolência ou confusão.\n\nReconhecimento precoce dos sinais de alarme ajuda a evitar essa progressão.',
+      persistencia_choque:
+        'O choque na dengue é uma complicação grave e potencialmente fatal da doença, caracterizada por um colapso circulatório. Ele ocorre quando há perda de volume de plasma do sangue para os tecidos, levando à insuficiência do fluxo sanguíneo e consequente falência de múltiplos órgãos. O quadro é geralmente precedido por sinais de alarme e manifesta-se tipicamente após a fase febril.\n\nComo acontece\n• Aumento da permeabilidade vascular: Durante a infecção, o vírus causa danos às células que revestem os vasos sanguíneos (disfunção endotelial).\n• Extravasamento de plasma: Isso faz com que o líquido, proteínas e eletrólitos "vazem" do interior dos vasos para o espaço entre as células.\n• Redução do volume sanguíneo: O extravasamento resulta em uma grande perda de plasma, diminuindo drasticamente o volume de sangue circulante.\n\nSinais e sintomas de choque\n• Hipotensão arterial (pressão arterial baixa)\n• Pulso rápido e fraco (filiforme)\n• Extremidades frias, suor e pele úmida\n• Enchimento capilar lento (maior que 2 segundos)\n• Pressão de pulso convergente (diferença entre a pressão sistólica e diastólica é menor que 20 mmHg)\n• Taquipneia (respiração rápida)\n• Inquietação ou alteração do nível de consciência\n• Dor abdominal intensa, que pode surgir antes do choque\n\nGravidade e prognóstico\n• O choque é uma emergência médica que pode levar à morte em 12 a 24 horas se não for tratado adequadamente.\n• Os casos que são tratados a tempo com reposição de fluidos têm uma recuperação rápida.\n• A rápida instalação dos sinais de choque é crucial para a gravidade.\n• O tratamento principal consiste na reposição de fluidos de forma adequada e terapia de suporte intensiva.'
     }
   }
 
@@ -433,20 +442,182 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         <div className="space-y-4">
           <div className="bg-red-50 p-4 rounded-lg">
             <h4 className="font-semibold text-red-800 mb-2">Orientação inicial:</h4>
-            <p className="text-red-700">Resposta inadequada caracterizada pela persistência do choque. Avaliar hematócrito.</p>
+            <div className="flex items-start space-x-2">
+              <p className="text-red-700">
+                Resposta inadequada caracterizada pela <span className="font-bold">persistência do choque</span>. Avaliar hematócrito.
+              </p>
+              {/* Botão de informação sobre persistência do choque */}
+              <div className="relative group">
+                <button
+                  type="button"
+                  aria-label="Informações"
+                  className="w-5 h-5 rounded-full border border-red-400 text-red-700 text-xs leading-none flex items-center justify-center bg-white hover:bg-red-50"
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  title="Saiba mais sobre persistência do choque"
+                >
+                  i
+                </button>
+                <div className="absolute right-0 top-6 z-20 hidden group-hover:block bg-white border border-red-300 rounded-md shadow-lg p-4 text-red-800 text-xs w-96 max-w-none break-words whitespace-pre-line text-left">
+                  {infoTexts.grupoD.persistencia_choque}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="bg-white border border-red-200 p-4 rounded-lg">
-            <p className="text-sm text-slate-700">Selecione o achado para continuar a conduta.</p>
+
+          {/* Seção de Exames para Avaliação */}
+          <div className="bg-white border-2 border-red-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-red-600" />
+              <h4 className="font-semibold text-red-800">Resultados dos Exames (Avaliação)</h4>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
+                    )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                    />
+                    {labs.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
+
+          {/* Pré-visualização da classificação baseada em Hematócrito */}
+          {(() => {
+            const hb = labs?.hb
+            const ht = labs?.ht
+            const ratio = hb != null && ht != null ? ht / hb : undefined
+
+            let previewText = 'Preencha Hematócrito (e Hb) para avaliar.'
+            let highlightClass = 'text-slate-700'
+            let bgClass = 'bg-slate-50 border-slate-200'
+
+            if (ratio !== undefined) {
+              const ratioStr = `${ratio.toFixed(2)}x`
+              if (ratio >= 3.6) {
+                previewText = `Hemoconcentração detectada (Razão Ht/Hb ${ratioStr}) — Indicativo de aumento do Ht`
+                highlightClass = 'text-red-800'
+                bgClass = 'bg-red-50 border-red-200'
+              } else {
+                previewText = `Sem hemoconcentração significativa (Razão Ht/Hb ${ratioStr}) — Indicativo de queda/estabilidade`
+                highlightClass = 'text-yellow-800'
+                bgClass = 'bg-yellow-50 border-yellow-200'
+              }
+            } else if (ht != null) {
+              if (ht >= 45) {
+                previewText = `Hematócrito elevado (${ht}%) — Indicativo de aumento`
+                highlightClass = 'text-red-800'
+                bgClass = 'bg-red-50 border-red-200'
+              } else {
+                previewText = `Hematócrito estável/baixo (${ht}%) — Indicativo de queda/estabilidade`
+                highlightClass = 'text-yellow-800'
+                bgClass = 'bg-yellow-50 border-yellow-200'
+              }
+            }
+
+            return (
+              <div className={clsx('p-3 border rounded-md', bgClass)}>
+                <p className={clsx('text-sm font-medium', highlightClass)}>
+                  {previewText}
+                </p>
+              </div>
+            )
+          })()}
         </div>
       ),
-      options: [
-        { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' },
-        { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
-      ]
+      options: (() => {
+        const hb = labs?.hb
+        const ht = labs?.ht
+        const ratio = hb != null && ht != null ? ht / hb : undefined
+
+        // Lógica dinâmica para sugerir o botão
+        if (ratio !== undefined) {
+          if (ratio >= 3.6) return [
+            { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' },
+            { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
+          ]
+          return [
+            { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' },
+            { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' }
+          ]
+        }
+        if (ht != null) {
+          if (ht >= 45) return [
+            { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' },
+            { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
+          ]
+          return [
+            { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' },
+            { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' }
+          ]
+        }
+
+        return [
+          { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' },
+          { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
+        ]
+      })()
     },
 
-    // Conduta: expansores plasmáticos
     d_plasma_expanders: {
       id: 'd_plasma_expanders',
       title: 'Expansores plasmáticos (Albumina/Coloides)',
@@ -549,7 +720,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <p>• Redução do volume sanguíneo circulante.</p>
                 <p className="mt-2 font-medium">Sinais e sintomas:</p>
                 <p>• Hipotensão arterial; pulso rápido e fraco; extremidades frias, sudorese e pele úmida.</p>
-                <p>• Enchimento capilar lento (> 2 s); pressão de pulso convergente (&lt; 20 mmHg).</p>
+                <p>• Enchimento capilar lento (&gt; 2 s); pressão de pulso convergente (&lt; 20 mmHg).</p>
                 <p>• Taquipneia; inquietação/alteração do nível de consciência; dor abdominal intensa.</p>
                 <p className="mt-2 font-medium">Gravidade e prognóstico:</p>
                 <p>• Pode levar à morte em 12–24h se não tratado; reposição adequada de fluidos favorece recuperação rápida.</p>
@@ -563,38 +734,27 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
           {/* Checkbox para registrar persistência do choque */}
           <div className="p-4 bg-white border border-red-200 rounded-lg">
-            <h5 className="font-semibold text-red-800 mb-3">Registrar persistência do choque</h5>
-            <label className="flex items-center space-x-2 text-sm">
-              <input id={`shock_persist_${patient.id}`} type="checkbox" className="rounded" />
-              <span>Choque persistente presente</span>
-            </label>
-            <div className="mt-3">
-              <button
-                type="button"
-                className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border bg-white hover:bg-red-50 text-red-700 border-red-300"
-                onClick={() => {
-                  try {
-                    const el = document.getElementById(`shock_persist_${patient.id}`) as HTMLInputElement
-                    const value = el?.checked ? 'true' : 'false'
-                    localStorage.setItem(`shock_persistent_${patient.id}`, value)
-                    alert('Persistência do choque registrada no relatório.')
-                  } catch (error) {
-                    console.error('Erro ao registrar persistência de choque:', error)
-                    alert('Não foi possível salvar. Tente novamente.')
+            <h5 className="font-semibold text-red-800 mb-3">Avaliação</h5>
+            <label className="flex items-center space-x-2 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                className="rounded w-5 h-5 text-red-600 focus:ring-red-500"
+                checked={shockPersistent}
+                onChange={(e) => {
+                  setShockPersistent(e.target.checked)
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem(`shock_persistent_${patient.id}`, e.target.checked ? 'true' : 'false')
                   }
                 }}
-              >
-                <Stethoscope className="w-4 h-4" />
-                <span>Salvar marcador</span>
-              </button>
-            </div>
+              />
+              <span className="font-medium text-slate-700">Choque persistente presente</span>
+            </label>
           </div>
         </div>
       ),
-      options: [
-        { text: 'Sem persistência do choque', nextStep: 'd_no_persistent_shock', value: 'no_persist' },
-        { text: 'Persistência do choque', nextStep: 'd_hemo_coag_management', value: 'persist' }
-      ]
+      options: shockPersistent
+        ? [{ text: 'Persistência do choque', nextStep: 'd_hemo_coag_management', value: 'persist' }]
+        : [{ text: 'Sem persistência do choque', nextStep: 'd_no_persistent_shock', value: 'no_persist' }]
     },
 
     // Sem persistência do choque: observar hiperhidratação e ajustar terapia
@@ -801,7 +961,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                               console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
                             }
                           }
-                          
+
                           if (e.target.checked) {
                             currentAnswers.grupoC = [...(currentAnswers.grupoC || []), sinal.id]
                           } else {
@@ -834,7 +994,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 ))}
               </div>
             </div>
-            
+
             {/* Grupo D - Sinais de Gravidade */}
             <div className="bg-gradient-to-br from-red-50 to-red-100 p-6 rounded-xl border border-red-400">
               <div className="flex items-center space-x-3 mb-4">
@@ -867,7 +1027,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                               console.warn('Erro ao parsear alarm_check, usando valor padrão:', error)
                             }
                           }
-                          
+
                           if (e.target.checked) {
                             currentAnswers.grupoD = [...(currentAnswers.grupoD || []), sinal.id]
                           } else {
@@ -901,19 +1061,19 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               </div>
             </div>
           </div>
-          
+
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <div className="flex items-center space-x-2 mb-2">
               <Brain className="w-5 h-5 text-blue-600" />
               <h5 className="font-semibold text-blue-800">Critério de Classificação</h5>
             </div>
             <p className="text-blue-700 text-sm">
-              <strong>Grupo D:</strong> Presença de qualquer sinal de gravidade<br/>
-              <strong>Grupo C:</strong> Presença apenas de sinais de alarme (sem sinais de gravidade)<br/>
+              <strong>Grupo D:</strong> Presença de qualquer sinal de gravidade<br />
+              <strong>Grupo C:</strong> Presença apenas de sinais de alarme (sem sinais de gravidade)<br />
               <strong>Grupo A/B:</strong> Ausência de sinais de alarme e gravidade
             </p>
           </div>
-          
+
           {/* Mostrar status da seleção */}
           {(() => {
             let classificationData = { grupoC: [], grupoD: [] }
@@ -928,7 +1088,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             }
             const hasGrupoD = classificationData.grupoD && classificationData.grupoD.length > 0
             const hasGrupoC = classificationData.grupoC && classificationData.grupoC.length > 0
-            
+
             if (hasGrupoD) {
               return (
                 <div className="bg-red-100 border border-red-300 rounded-xl p-4 flex items-center space-x-3">
@@ -1001,8 +1161,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </h4>
             <div className="space-y-3">
               <label className="flex items-center space-x-3 cursor-pointer">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   id="sangramento_espontaneo"
                   className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
                   onChange={(e) => {
@@ -1018,8 +1178,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               </label>
               <div className="flex items-center justify-between">
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="prova_laco"
                     className="w-4 h-4 text-red-600 bg-gray-100 border-gray-300 rounded focus:ring-red-500 focus:ring-2"
                     onChange={(e) => {
@@ -1188,8 +1348,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <div className="grid md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="lactentes"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1204,8 +1364,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Lactentes (&lt; 24 meses)</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="gestantes"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1220,8 +1380,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Gestantes</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="idosos"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1236,8 +1396,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Adultos &gt; 65 anos</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="hipertensao"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1252,8 +1412,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Hipertensão arterial</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="diabetes"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1268,8 +1428,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Diabetes mellitus</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="asma"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1286,8 +1446,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               </div>
               <div className="space-y-3">
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="dpoc"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1302,8 +1462,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">DPOC</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="obesidade"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1318,8 +1478,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Obesidade</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="hematologicas"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1334,8 +1494,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Doenças hematológicas</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="renal"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1350,8 +1510,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Doença renal crônica</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="hepatopatias"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -1366,8 +1526,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <span className="text-orange-700 font-medium">Hepatopatias</span>
                 </label>
                 <label className="flex items-center space-x-3 cursor-pointer">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     id="autoimunes"
                     className="w-4 h-4 text-orange-600 bg-gray-100 border-gray-300 rounded focus:ring-orange-500 focus:ring-2"
                     onChange={(e) => {
@@ -2032,12 +2192,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <Activity className="w-5 h-5 text-green-600" />
               <h4 className="font-semibold text-green-800">Resultados dos Exames</h4>
             </div>
-            
+
             <div className="grid md:grid-cols-2 gap-4">
               {/* Hemograma Básico */}
               <div className="space-y-3">
                 <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
-                
+
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
@@ -2059,7 +2219,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       <p className={clsx("text-xs mt-1", labStatus('hb', labsB.hb).text)}>{labStatus('hb', labsB.hb).label}</p>
                     )}
                   </div>
-                  
+
                   <div>
                     <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
                     <input
@@ -2080,7 +2240,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       <p className={clsx("text-xs mt-1", labStatus('ht', labsB.ht, labsB.hb).text)}>{labStatus('ht', labsB.ht, labsB.hb).label}</p>
                     )}
                   </div>
-                  
+
                   <div className="col-span-2">
                     <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
                     <input
@@ -2106,7 +2266,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               {/* Bioquímica Básica */}
               <div className="space-y-3">
                 <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
-                
+
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
@@ -2128,7 +2288,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       <p className={clsx("text-xs mt-1", labStatus('alb', labsB.alb).text)}>{labStatus('alb', labsB.alb).label}</p>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
@@ -2149,7 +2309,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         <p className={clsx("text-xs mt-1", labStatus('alt', labsB.alt).text)}>{labStatus('alt', labsB.alt).label}</p>
                       )}
                     </div>
-                    
+
                     <div>
                       <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
                       <input
@@ -2171,49 +2331,49 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     </div>
                   </div>
                 </div>
-            </div>
-          </div>
-
-          {/* Pré-visualização da classificação baseada em Hematócrito */}
-          {(() => {
-            const hb = labsB?.hb
-            const ht = labsB?.ht
-            const ratio = hb != null && ht != null ? ht / hb : undefined
-
-            let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
-            let highlightClass = 'text-slate-700'
-
-            if (ratio !== undefined) {
-              const ratioStr = `${ratio.toFixed(2)}x`
-              if (ratio >= 3.6) {
-                previewText = `Classificado para o Grupo C — hemoconcentração (Razão Ht/Hb ${ratioStr})`
-                highlightClass = 'text-amber-800'
-              } else {
-                previewText = `Classificado para o Grupo B — sem hemoconcentração (Razão Ht/Hb ${ratioStr})`
-                highlightClass = 'text-green-800'
-              }
-            } else if (ht != null) {
-              if (ht >= 45) {
-                previewText = `Classificado para o Grupo C — hematócrito elevado (${ht}%)`
-                highlightClass = 'text-amber-800'
-              } else {
-                previewText = `Classificado para o Grupo B — hematócrito dentro do esperado (${ht}%)`
-                highlightClass = 'text-green-800'
-              }
-            }
-
-            return (
-              <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-                <p className={clsx('text-sm font-medium', highlightClass)}>
-                  {previewText}
-                </p>
               </div>
-            )
-          })()}
+            </div>
+
+            {/* Pré-visualização da classificação baseada em Hematócrito */}
+            {(() => {
+              const hb = labsB?.hb
+              const ht = labsB?.ht
+              const ratio = hb != null && ht != null ? ht / hb : undefined
+
+              let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
+              let highlightClass = 'text-slate-700'
+
+              if (ratio !== undefined) {
+                const ratioStr = `${ratio.toFixed(2)}x`
+                if (ratio >= 3.6) {
+                  previewText = `Classificado para o Grupo C — hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                  highlightClass = 'text-amber-800'
+                } else {
+                  previewText = `Classificado para o Grupo B — sem hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                  highlightClass = 'text-green-800'
+                }
+              } else if (ht != null) {
+                if (ht >= 45) {
+                  previewText = `Classificado para o Grupo C — hematócrito elevado (${ht}%)`
+                  highlightClass = 'text-amber-800'
+                } else {
+                  previewText = `Classificado para o Grupo B — hematócrito dentro do esperado (${ht}%)`
+                  highlightClass = 'text-green-800'
+                }
+              }
+
+              return (
+                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                  <p className={clsx('text-sm font-medium', highlightClass)}>
+                    {previewText}
+                  </p>
+                </div>
+              )
+            })()}
 
             <div className="mt-4 p-3 bg-green-50 rounded-lg">
               <p className="text-xs text-green-700">
-                💡 <strong>Dica:</strong> Preencha os resultados disponíveis para melhor documentação. 
+                💡 <strong>Dica:</strong> Preencha os resultados disponíveis para melhor documentação.
                 Baseie sua decisão clínica nos valores alterados conforme protocolo.
               </p>
             </div>
@@ -2278,116 +2438,116 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <h4 className="font-semibold text-green-800 mb-2">Antitérmico</h4>
             <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
             <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
-                <label className="inline-flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="antipyretic_b"
-                    checked={antipyreticChoiceB === 'paracetamol'}
-                    onChange={() => {
-                      setAntipyreticChoiceB('paracetamol')
-                      if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_b_${patient.id}`, 'paracetamol')
-                    }}
-                    disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
-                  />
-                  <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                    Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
-                  </span>
-                </label>
-                <label className="inline-flex items-center space-x-2">
-                  <input
-                    type="radio"
-                    name="antipyretic_b"
-                    checked={antipyreticChoiceB === 'dipirona'}
-                    onChange={() => {
-                      setAntipyreticChoiceB('dipirona')
-                      if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_b_${patient.id}`, 'dipirona')
-                    }}
-                    disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
-                  />
-                  <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                    Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
-                  </span>
-                </label>
-              </div>
-
-              <div className="mt-3 flex items-center space-x-2">
-                <button
-                  type="button"
-                  disabled={
-                    !antipyreticChoiceB ||
-                    antipyreticAddedB ||
-                    (
-                      antipyreticChoiceB === 'paracetamol'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                        : antipyreticChoiceB === 'dipirona'
-                          ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                          : false
-                    )
-                  }
-                  onClick={() => {
-                    try {
-                      const isAdult = patient.age >= 18
-                      const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
-                      if (antipyreticChoiceB === 'paracetamol') {
-                        const dosage = isAdult ? '500–750 mg por dose' : '10–15 mg/kg/dose'
-                        patientService.addPrescription(patient.id, {
-                          medication: 'Paracetamol',
-                          dosage,
-                          frequency: 'A cada 6–8 horas se febre/dor',
-                          duration: 'Até melhora clínica (máx 3–4 g/dia em adultos)',
-                          instructions: 'Evitar AINEs (AAS, ibuprofeno, diclofenaco) na dengue.',
-                          prescribedBy: 'Sistema Siga o Fluxo'
-                        })
-                      } else if (antipyreticChoiceB === 'dipirona') {
-                        const dosage = isAdult ? '500–1000 mg por dose' : '10–20 mg/kg/dose'
-                        patientService.addPrescription(patient.id, {
-                          medication: 'Dipirona (Metamizol)',
-                          dosage,
-                          frequency: 'A cada 6–8 horas se febre/dor',
-                          duration: 'Até melhora clínica',
-                          instructions: 'Evitar AINEs; considerar contraindicações individuais da dipirona.',
-                          prescribedBy: 'Sistema Siga o Fluxo'
-                        })
-                      }
-                      setAntipyreticAddedB(true)
-                    } catch (error) {
-                      console.error('Erro ao adicionar antitérmico:', error)
-                      alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
-                    }
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_b"
+                  checked={antipyreticChoiceB === 'paracetamol'}
+                  onChange={() => {
+                    setAntipyreticChoiceB('paracetamol')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_b_${patient.id}`, 'paracetamol')
                   }}
-                  className={clsx(
-                    'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
-                    (!antipyreticChoiceB || antipyreticAddedB || (
-                      antipyreticChoiceB === 'paracetamol'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                        : antipyreticChoiceB === 'dipirona'
-                          ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                          : false
-                    ))
-                      ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed'
-                      : 'bg-white hover:bg-green-100 text-green-800 border-green-300'
-                  )}
-                  title={
-                    !antipyreticChoiceB
-                      ? 'Selecione um antitérmico'
-                      : antipyreticAddedB
-                        ? 'Antitérmico já adicionado'
-                        : (
-                            antipyreticChoiceB === 'paracetamol'
-                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                                  ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
-                                  : 'Adicionar antitérmico à prescrição')
-                              : antipyreticChoiceB === 'dipirona'
-                                ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                                    ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
-                                    : 'Adicionar antitérmico à prescrição')
-                                : 'Adicionar antitérmico à prescrição'
-                          )
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_b"
+                  checked={antipyreticChoiceB === 'dipirona'}
+                  onChange={() => {
+                    setAntipyreticChoiceB('dipirona')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_b_${patient.id}`, 'dipirona')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 flex items-center space-x-2">
+              <button
+                type="button"
+                disabled={
+                  !antipyreticChoiceB ||
+                  antipyreticAddedB ||
+                  (
+                    antipyreticChoiceB === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                      : antipyreticChoiceB === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                        : false
+                  )
+                }
+                onClick={() => {
+                  try {
+                    const isAdult = patient.age >= 18
+                    const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
+                    if (antipyreticChoiceB === 'paracetamol') {
+                      const dosage = isAdult ? '500–750 mg por dose' : '10–15 mg/kg/dose'
+                      patientService.addPrescription(patient.id, {
+                        medication: 'Paracetamol',
+                        dosage,
+                        frequency: 'A cada 6–8 horas se febre/dor',
+                        duration: 'Até melhora clínica (máx 3–4 g/dia em adultos)',
+                        instructions: 'Evitar AINEs (AAS, ibuprofeno, diclofenaco) na dengue.',
+                        prescribedBy: 'Sistema Siga o Fluxo'
+                      })
+                    } else if (antipyreticChoiceB === 'dipirona') {
+                      const dosage = isAdult ? '500–1000 mg por dose' : '10–20 mg/kg/dose'
+                      patientService.addPrescription(patient.id, {
+                        medication: 'Dipirona (Metamizol)',
+                        dosage,
+                        frequency: 'A cada 6–8 horas se febre/dor',
+                        duration: 'Até melhora clínica',
+                        instructions: 'Evitar AINEs; considerar contraindicações individuais da dipirona.',
+                        prescribedBy: 'Sistema Siga o Fluxo'
+                      })
+                    }
+                    setAntipyreticAddedB(true)
+                  } catch (error) {
+                    console.error('Erro ao adicionar antitérmico:', error)
+                    alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
                   }
-                >
-                  <Stethoscope className="w-4 h-4" />
-                  <span>{antipyreticAddedB ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
-                </button>
+                }}
+                className={clsx(
+                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  (!antipyreticChoiceB || antipyreticAddedB || (
+                    antipyreticChoiceB === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                      : antipyreticChoiceB === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                        : false
+                  ))
+                    ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed'
+                    : 'bg-white hover:bg-green-100 text-green-800 border-green-300'
+                )}
+                title={
+                  !antipyreticChoiceB
+                    ? 'Selecione um antitérmico'
+                    : antipyreticAddedB
+                      ? 'Antitérmico já adicionado'
+                      : (
+                        antipyreticChoiceB === 'paracetamol'
+                          ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                            ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                            : 'Adicionar antitérmico à prescrição')
+                          : antipyreticChoiceB === 'dipirona'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                              ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                              : 'Adicionar antitérmico à prescrição')
+                            : 'Adicionar antitérmico à prescrição'
+                      )
+                }
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>{antipyreticAddedB ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
+              </button>
               {/* Botão de abrir prescrição removido nesta etapa (Conclusão - Grupo B) */}
             </div>
           </div>
@@ -2418,7 +2578,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 </div>
                 <h4 className="font-bold text-amber-800">Acompanhamento</h4>
               </div>
-              <p className="text-amber-700 font-medium mb-4">Internação - mínimo 48h</p>
+              <p className="text-amber-700 font-medium mb-4">Internação - minimo 48h em leito de observação</p>
               {/* Botão de prescrição removido conforme solicitação */}
             </div>
 
@@ -2498,13 +2658,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 </div>
                 <h4 className="font-bold text-amber-800">Conduta</h4>
               </div>
-              
+
               {/* Cálculos automáticos baseados no peso */}
               {(() => {
                 const peso = patient.weight || 70 // peso padrão se não informado
                 const volumeReposicao = peso * 10 // 10ml/kg
                 // Removido cálculo de manutenção 24h conforme solicitação
-                
+
                 return (
                   <div className="space-y-3">
                     <div className="bg-amber-200/50 p-3 rounded-lg">
@@ -2523,35 +2683,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </div>
           </div>
 
-          {/* Resumo do protocolo */}
-          <div className="bg-gradient-to-r from-amber-100 to-orange-100 p-6 rounded-2xl border border-amber-300">
-            <div className="flex items-center space-x-3 mb-4">
-              <Shield className="w-6 h-6 text-amber-700" />
-              <h4 className="font-bold text-amber-800 text-lg">Protocolo de Internação - Grupo C</h4>
-            </div>
-            
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h5 className="font-semibold text-amber-800 mb-2">Monitorização Contínua:</h5>
-                <ul className="text-amber-700 text-sm space-y-1">
-                  <li>• Sinais vitais de 4/4h</li>
-                  <li>• Balanço hídrico rigoroso</li>
-                  <li>• Controle de diurese</li>
-                  <li>• Ausculta pulmonar</li>
-                </ul>
-              </div>
-              
-              <div>
-                <h5 className="font-semibold text-amber-800 mb-2">Critérios de Melhora:</h5>
-                <ul className="text-amber-700 text-sm space-y-1">
-                  <li>• Estabilização dos sinais vitais</li>
-                  <li>• Melhora da dor abdominal</li>
-                  <li>• Cessação dos vômitos</li>
-                  <li>• Diurese adequada (&gt;1ml/kg/h)</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+
         </div>
       ),
       options: [
@@ -2654,14 +2786,14 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 </div>
                 <h4 className="font-bold text-red-800">Conduta</h4>
               </div>
-              
+
               {/* Cálculos automáticos baseados no peso para UTI */}
               {(() => {
                 const peso = patient.weight || 70 // peso padrão se não informado
                 const volumeReposicaoUTI = peso * 20 // 20ml/kg para UTI
                 const volumeManutencaoUTI = peso * 30 // 30ml/kg/dia para manutenção UTI
                 const dopamax = peso * 20 // 20 mcg/kg/min (dose máxima)
-                
+
                 return (
                   <div className="space-y-3">
                     <div className="bg-red-200/50 p-3 rounded-lg">
@@ -2673,7 +2805,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         ({peso}kg × 20ml/kg) em até 20 minutos
                       </p>
                     </div>
-                    
+
                     <div className="bg-red-200/50 p-3 rounded-lg">
                       <p className="font-semibold text-red-800 text-sm">Manutenção UTI (24h):</p>
                       <p className="text-red-700 font-bold">
@@ -2683,7 +2815,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         ({peso}kg × 30ml/kg/dia)
                       </p>
                     </div>
-                    
+
                     <div className="bg-red-200/50 p-3 rounded-lg">
                       <p className="font-semibold text-red-800 text-sm">Dopamina (se necessário):</p>
                       <p className="text-red-700 font-bold">
@@ -2693,8 +2825,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         Peso: {peso}kg × 20 mcg/kg/min
                       </p>
                     </div>
-                    
-                    <button 
+
+                    <button
                       onClick={() => onViewReport?.(patient)}
                       className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 mt-3"
                     >
@@ -2713,7 +2845,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <AlertTriangle className="w-6 h-6 text-red-700" />
               <h4 className="font-bold text-red-800 text-lg">Protocolo de UTI - Grupo D</h4>
             </div>
-            
+
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h5 className="font-semibold text-red-800 mb-2">Monitorização Intensiva:</h5>
@@ -2725,7 +2857,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <li>• Gasometria de 6/6h</li>
                 </ul>
               </div>
-              
+
               <div>
                 <h5 className="font-semibold text-red-800 mb-2">Suporte Avançado:</h5>
                 <ul className="text-red-700 text-sm space-y-1">
@@ -2923,7 +3055,365 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </div>
           </div>
 
-          {/* Sinais Vitais */}
+
+
+          {/* Seção de Exames */}
+          <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <h4 className="font-semibold text-blue-800">Resultados dos Exames</h4>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Hemograma */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        // Salvar no localStorage temporariamente para não perder os dados
+                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
+                    )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                    />
+                    {labs.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Outros Exames */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="Ex: 3.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labs.alb).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_albumin_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alb: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) || '' : ''}
+                    />
+                    {labs.alb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alb', labs.alb).text)}>{labStatus('alb', labs.alb).label}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 45"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labs.alt).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_alt_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, alt: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) || '' : ''}
+                    />
+                    {labs.alt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alt', labs.alt).text)}>{labStatus('alt', labs.alt).label}</p>
+                    )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 40"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labs.ast).input)}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        localStorage.setItem(`lab_ast_${patient.id}`, value)
+                        setLabs(prev => ({ ...prev, ast: parseNum(value) }))
+                      }}
+                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) || '' : ''}
+                    />
+                    {labs.ast != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ast', labs.ast).text)}>{labStatus('ast', labs.ast).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica.
+                Os dados dos exames serão salvos automaticamente no cadastro do paciente.
+              </p>
+            </div>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Seguir tratamento (hidratar por mais 1h)', nextStep: 'continue_treatment_c', value: 'continue' }
+      ]
+    },
+
+    end_group_c: {
+      id: 'end_group_c',
+      title: 'Conclusão - Grupo C',
+      description: 'Finalização do atendimento hospitalar',
+      type: 'result',
+      icon: <CheckCircle className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Critérios de alta (necessários):</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Estabilização hemodinâmica durante 48 horas</li>
+              <li>• Após no mínimo 48 horas de internação</li>
+              <li>• Ausência de febre por 24 horas</li>
+              <li>• Melhora visível do quadro clínico</li>
+              <li>• Hematócrito normal e estável por 24 horas</li>
+              <li>• Plaquetas em elevação</li>
+              <li>• Diurese adequada (&gt;1 ml/kg/h)</li>
+            </ul>
+          </div>
+
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Retorno (igual ao Grupo B):</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Retornar se sinais de alarme</li>
+              <li>• Retorno diário para reavaliação clínica e ambulatorial até 48h após remissão da febre</li>
+              <li>• Manter hidratação adequada</li>
+              <li>• Cartão de acompanhamento entregue</li>
+            </ul>
+          </div>
+
+          {/* Seleção de antitérmico para receita (Grupo C) */}
+          <div className="bg-white border-2 border-yellow-200 rounded-lg p-4">
+            <h4 className="font-semibold text-yellow-800 mb-2">Antitérmico</h4>
+            <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_c"
+                  checked={antipyreticChoiceC === 'paracetamol'}
+                  onChange={() => {
+                    setAntipyreticChoiceC('paracetamol')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_c_${patient.id}`, 'paracetamol')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+              <label className="inline-flex items-center space-x-2">
+                <input
+                  type="radio"
+                  name="antipyretic_c"
+                  checked={antipyreticChoiceC === 'dipirona'}
+                  onChange={() => {
+                    setAntipyreticChoiceC('dipirona')
+                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_c_${patient.id}`, 'dipirona')
+                  }}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))}
+                />
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) && ' (alergia)'}
+                </span>
+              </label>
+            </div>
+
+            <div className="mt-3 flex items-center space-x-2">
+              <button
+                type="button"
+                disabled={
+                  !antipyreticChoiceC ||
+                  antipyreticAddedC ||
+                  (
+                    antipyreticChoiceC === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                      : antipyreticChoiceC === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                        : false
+                  )
+                }
+                onClick={() => {
+                  try {
+                    addAntipyreticPrescription(antipyreticChoiceC)
+                    setAntipyreticAddedC(true)
+                  } catch (error) {
+                    console.error('Erro ao adicionar antitérmico (Grupo C):', error)
+                    alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
+                  }
+                }}
+                className={clsx(
+                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
+                  (!antipyreticChoiceC || antipyreticAddedC || (
+                    antipyreticChoiceC === 'paracetamol'
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                      : antipyreticChoiceC === 'dipirona'
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                        : false
+                  ))
+                    ? 'bg-yellow-200 text-yellow-700 border-yellow-300 cursor-not-allowed'
+                    : 'bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300'
+                )}
+                title={
+                  !antipyreticChoiceC
+                    ? 'Selecione um antitérmico'
+                    : antipyreticAddedC
+                      ? 'Antitérmico já adicionado'
+                      : (
+                        antipyreticChoiceC === 'paracetamol'
+                          ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                            ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                            : 'Adicionar antitérmico à prescrição')
+                          : antipyreticChoiceC === 'dipirona'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                              ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                              : 'Adicionar antitérmico à prescrição')
+                            : 'Adicionar antitérmico à prescrição'
+                      )
+                }
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>{antipyreticAddedC ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Finalizar', nextStep: 'end', value: 'finish' }
+      ]
+    },
+
+    continue_treatment_c: {
+      id: 'continue_treatment_c',
+      title: 'Manter Hidratação por mais 1h - Grupo C',
+      description: 'Prosseguir com hidratação e monitorização',
+      type: 'action',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
+          <ul className="text-yellow-700 text-sm space-y-1">
+            <li>• Repetir expansão: 10 ml/kg em 1 hora (SF 0,9%)</li>
+            <li>• Monitorar sinais vitais e diurese</li>
+            <li>• Reavaliar na 2ª hora</li>
+          </ul>
+        </div>
+      ),
+      options: [
+        { text: 'Aguardar 1h', nextStep: 'wait_reevaluation_c_2h', value: 'wait' }
+      ]
+    },
+
+    wait_reevaluation_c_2h: {
+      id: 'wait_reevaluation_c_2h',
+      title: 'Aguardando Reavaliação após 2h - Grupo C',
+      description: 'Monitorização durante segunda hora de hidratação',
+      type: 'wait_labs',
+      icon: <Hourglass className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      requiresLabs: true,
+      content: (
+        <div className="bg-yellow-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-yellow-800 mb-2">Status:</h4>
+          <p className="text-yellow-700">• Segunda hora de hidratação em curso</p>
+          <p className="text-yellow-700">• Manter monitorização clínica</p>
+        </div>
+      ),
+      options: [
+        { text: 'Reavaliação disponível', nextStep: 'reevaluation_c_2h', value: 'continue' }
+      ]
+    },
+
+    reevaluation_c_2h: {
+      id: 'reevaluation_c_2h',
+      title: 'Reavaliação após 2h - Grupo C',
+      description: 'Avaliação clínica e exames após segunda hora',
+      type: 'question',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-6">
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Verificar:</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Sinais vitais</li>
+              <li>• Diurese</li>
+              <li>• Melhora dos sintomas</li>
+              <li>• Ausência de novos sinais de alarme</li>
+            </ul>
+          </div>
+
+          {/* Sinais Vitais (2ª hora) */}
           <div className="bg-white border border-yellow-200 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-3">
               <Activity className="w-5 h-5 text-yellow-600" />
@@ -3016,362 +3506,74 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </div>
           </div>
 
-          {/* Seção de Exames */}
-          <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
-            <div className="flex items-center space-x-2 mb-4">
-              <Activity className="w-5 h-5 text-blue-600" />
-              <h4 className="font-semibold text-blue-800">Resultados dos Exames</h4>
+          {/* Sinais Indiretos de Choque */}
+          <div className="bg-white border border-red-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+              <h4 className="font-semibold text-red-800">Sinais Indiretos de Choque</h4>
             </div>
-            
-            <div className="grid md:grid-cols-2 gap-4">
-              {/* Hemograma */}
-              <div className="space-y-3">
-                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="20"
-                      placeholder="Ex: 12.5"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', labs.hb).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        // Salvar no localStorage temporariamente para não perder os dados
-                        localStorage.setItem(`lab_hemoglobin_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, hb: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hemoglobin_${patient.id}`) || '' : ''}
-                    />
-                    {labs.hb != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('hb', labs.hb).text)}>{labStatus('hb', labs.hb).label}</p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="100"
-                      placeholder="Ex: 38.0"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', labs.ht, labs.hb).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_hematocrit_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, ht: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_hematocrit_${patient.id}`) || '' : ''}
-                    />
-                    {labs.ht != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('ht', labs.ht, labs.hb).text)}>{labStatus('ht', labs.ht, labs.hb).label}</p>
-                    )}
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
-                    />
-                    {labs.plt != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
-                    )}
+            <div className="space-y-2">
+              {[
+                'Enchimento capilar lento (> 2s)',
+                'Extremidades frias',
+                'Alteração do nível de consciência / Letargia',
+                'Pele úmida e pegajosa',
+                'Pulso rápido e fino'
+              ].map((sign) => (
+                <label key={sign} className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="rounded text-red-600 focus:ring-red-500"
+                    checked={indirectShockSigns.includes(sign)}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setIndirectShockSigns(prev => [...prev, sign])
+                      } else {
+                        setIndirectShockSigns(prev => prev.filter(s => s !== sign))
+                      }
+                    }}
+                  />
+                  <span className="text-sm text-slate-700">{sign}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Alerta de Choque e Override */}
+          {(() => {
+            const systolic = vitals2h.bp ? parseInt(vitals2h.bp.split('/')[0]) : undefined
+            const diastolic = vitals2h.bp ? parseInt(vitals2h.bp.split('/')[1]) : undefined
+            const pulsePressure = (systolic && diastolic) ? (systolic - diastolic) : undefined
+            const isShock = (pulsePressure !== undefined && pulsePressure < 20) || (vitals2h.hr !== undefined && vitals2h.hr > 100) || indirectShockSigns.length > 0
+
+            if (isShock) {
+              return (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4 animate-pulse">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-bold text-red-800">Possível Choque Detectado (Grupo D)</h4>
+                      <p className="text-sm text-red-700 mt-1">
+                        Parâmetros indicam instabilidade hemodinâmica (PA convergente, taquicardia ou sinais clínicos). O sistema sugere condução para o Grupo D.
+                      </p>
+                      <label className="flex items-center space-x-2 mt-3 cursor-pointer bg-white p-2 rounded border border-red-200 shadow-sm">
+                        <input
+                          type="checkbox"
+                          className="rounded text-red-600 focus:ring-red-500"
+                          checked={shockOverride}
+                          onChange={(e) => setShockOverride(e.target.checked)}
+                        />
+                        <span className="text-sm font-medium text-red-800">
+                          Avaliação clínica discordante: Paciente estável (Manter Grupo C)
+                        </span>
+                      </label>
+                    </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Outros Exames */}
-              <div className="space-y-3">
-                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
-                
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      max="10"
-                      placeholder="Ex: 3.5"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', labs.alb).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_albumin_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, alb: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_albumin_${patient.id}`) || '' : ''}
-                    />
-                    {labs.alb != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('alb', labs.alb).text)}>{labStatus('alb', labs.alb).label}</p>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      placeholder="Ex: 45"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', labs.alt).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_alt_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, alt: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_alt_${patient.id}`) || '' : ''}
-                    />
-                    {labs.alt != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('alt', labs.alt).text)}>{labStatus('alt', labs.alt).label}</p>
-                    )}
-                  </div>
-                  
-                  <div className="col-span-2">
-                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="1000"
-                      placeholder="Ex: 40"
-                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', labs.ast).input)}
-                      onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_ast_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, ast: parseNum(value) }))
-                      }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_ast_${patient.id}`) || '' : ''}
-                    />
-                    {labs.ast != null && (
-                      <p className={clsx("text-xs mt-1", labStatus('ast', labs.ast).text)}>{labStatus('ast', labs.ast).label}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-700">
-                💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
-                Os dados dos exames serão salvos automaticamente no cadastro do paciente.
-              </p>
-            </div>
-          </div>
-        </div>
-      ),
-      options: [
-        { text: 'Seguir tratamento (hidratar por mais 1h)', nextStep: 'continue_treatment_c', value: 'continue' }
-      ]
-    },
-
-    end_group_c: {
-      id: 'end_group_c',
-      title: 'Conclusão - Grupo C',
-      description: 'Finalização do atendimento hospitalar',
-      type: 'result',
-      icon: <CheckCircle className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      content: (
-        <div className="space-y-4">
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Critérios de alta (necessários):</h4>
-            <ul className="text-yellow-700 text-sm space-y-1">
-              <li>• Estabilização hemodinâmica durante 48 horas</li>
-              <li>• Após no mínimo 48 horas de internação</li>
-              <li>• Ausência de febre por 24 horas</li>
-              <li>• Melhora visível do quadro clínico</li>
-              <li>• Hematócrito normal e estável por 24 horas</li>
-              <li>• Plaquetas em elevação</li>
-              <li>• Diurese adequada (&gt;1 ml/kg/h)</li>
-            </ul>
-          </div>
-
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Retorno (igual ao Grupo B):</h4>
-            <ul className="text-yellow-700 text-sm space-y-1">
-              <li>• Retornar se sinais de alarme</li>
-              <li>• Retorno diário para reavaliação clínica e ambulatorial até 48h após remissão da febre</li>
-              <li>• Manter hidratação adequada</li>
-              <li>• Cartão de acompanhamento entregue</li>
-            </ul>
-          </div>
-
-          {/* Seleção de antitérmico para receita (Grupo C) */}
-          <div className="bg-white border-2 border-yellow-200 rounded-lg p-4">
-            <h4 className="font-semibold text-yellow-800 mb-2">Antitérmico</h4>
-            <p className="text-slate-600 text-sm mb-3">Escolha o antitérmico para incluir na prescrição. Evitar AINEs (ibuprofeno, AAS, diclofenaco) na dengue.</p>
-            <div className="flex flex-col md:flex-row md:items-center md:space-x-6 space-y-2 md:space-y-0">
-              <label className="inline-flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="antipyretic_c"
-                  checked={antipyreticChoiceC === 'paracetamol'}
-                  onChange={() => {
-                    setAntipyreticChoiceC('paracetamol')
-                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_c_${patient.id}`, 'paracetamol')
-                  }}
-                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
-                />
-                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
-                </span>
-              </label>
-              <label className="inline-flex items-center space-x-2">
-                <input
-                  type="radio"
-                  name="antipyretic_c"
-                  checked={antipyreticChoiceC === 'dipirona'}
-                  onChange={() => {
-                    setAntipyreticChoiceC('dipirona')
-                    if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_c_${patient.id}`, 'dipirona')
-                  }}
-                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
-                />
-                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
-                </span>
-              </label>
-            </div>
-
-            <div className="mt-3 flex items-center space-x-2">
-              <button
-                type="button"
-                disabled={
-                  !antipyreticChoiceC ||
-                  antipyreticAddedC ||
-                  (
-                    antipyreticChoiceC === 'paracetamol'
-                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                      : antipyreticChoiceC === 'dipirona'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                        : false
-                  )
-                }
-                onClick={() => {
-                  try {
-                    addAntipyreticPrescription(antipyreticChoiceC)
-                    setAntipyreticAddedC(true)
-                  } catch (error) {
-                    console.error('Erro ao adicionar antitérmico (Grupo C):', error)
-                    alert('Não foi possível adicionar o antitérmico à prescrição. Tente novamente.')
-                  }
-                }}
-                className={clsx(
-                  'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
-                  (!antipyreticChoiceC || antipyreticAddedC || (
-                    antipyreticChoiceC === 'paracetamol'
-                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                      : antipyreticChoiceC === 'dipirona'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                        : false
-                  ))
-                    ? 'bg-yellow-200 text-yellow-700 border-yellow-300 cursor-not-allowed'
-                    : 'bg-white hover:bg-yellow-100 text-yellow-800 border-yellow-300'
-                )}
-                title={
-                  !antipyreticChoiceC
-                    ? 'Selecione um antitérmico'
-                    : antipyreticAddedC
-                      ? 'Antitérmico já adicionado'
-                      : (
-                          antipyreticChoiceC === 'paracetamol'
-                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                                ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
-                                : 'Adicionar antitérmico à prescrição')
-                            : antipyreticChoiceC === 'dipirona'
-                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                                  ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
-                                  : 'Adicionar antitérmico à prescrição')
-                              : 'Adicionar antitérmico à prescrição'
-                        )
-                }
-              >
-                <Stethoscope className="w-4 h-4" />
-                <span>{antipyreticAddedC ? 'Antitérmico adicionado' : 'Adicionar antitérmico à prescrição'}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      ),
-      options: [
-        { text: 'Finalizar', nextStep: 'end', value: 'finish' }
-      ]
-    },
-
-    continue_treatment_c: {
-      id: 'continue_treatment_c',
-      title: 'Manter Hidratação por mais 1h - Grupo C',
-      description: 'Prosseguir com hidratação e monitorização',
-      type: 'action',
-      icon: <Clock className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      content: (
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
-          <ul className="text-yellow-700 text-sm space-y-1">
-            <li>• Manter hidratação por mais 1 hora</li>
-            <li>• Monitorar sinais vitais e diurese</li>
-            <li>• Se houver piora ou instabilidade, repetir bolo de 10 mL/kg em 10 minutos (SF 0,9%)</li>
-            <li>• Reavaliar na 2ª hora</li>
-          </ul>
-        </div>
-      ),
-      options: [
-        { text: 'Aguardar 1h', nextStep: 'wait_reevaluation_c_2h', value: 'wait' }
-      ]
-    },
-
-    wait_reevaluation_c_2h: {
-      id: 'wait_reevaluation_c_2h',
-      title: 'Aguardando Reavaliação após 2h - Grupo C',
-      description: 'Monitorização durante segunda hora de hidratação',
-      type: 'wait_labs',
-      icon: <Hourglass className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      requiresLabs: true,
-      content: (
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-yellow-800 mb-2">Status:</h4>
-          <p className="text-yellow-700">• Segunda hora de hidratação em curso</p>
-          <p className="text-yellow-700">• Manter monitorização clínica</p>
-        </div>
-      ),
-      options: [
-        { text: 'Reavaliação disponível', nextStep: 'reevaluation_c_2h', value: 'continue' }
-      ]
-    },
-
-    reevaluation_c_2h: {
-      id: 'reevaluation_c_2h',
-      title: 'Reavaliação após 2h - Grupo C',
-      description: 'Avaliação clínica e exames após segunda hora',
-      type: 'question',
-      icon: <Clock className="w-6 h-6" />,
-      color: 'bg-yellow-500',
-      content: (
-        <div className="space-y-6">
-          <div className="bg-yellow-50 p-4 rounded-lg">
-            <h4 className="font-semibold text-yellow-800 mb-2">Verificar:</h4>
-            <ul className="text-yellow-700 text-sm space-y-1">
-              <li>• Sinais vitais</li>
-              <li>• Diurese</li>
-              <li>• Melhora dos sintomas</li>
-              <li>• Ausência de novos sinais de alarme</li>
-            </ul>
-          </div>
+              )
+            }
+            return null
+          })()}
 
           {/* Campo de Diurese */}
           <div className="bg-white border border-yellow-200 rounded-lg p-4">
@@ -3533,16 +3735,94 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
           <div className="mt-4 p-3 bg-blue-50 rounded-lg">
             <p className="text-xs text-blue-700">
-              💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica. 
+              💡 <strong>Dica:</strong> Você pode preencher os resultados disponíveis ou prosseguir diretamente com a avaliação clínica.
               Os dados dos exames serão salvos automaticamente no cadastro do paciente.
             </p>
           </div>
+
+          {/* Pré-visualização da classificação baseada em Hematócrito (Grupo C -> D ou Manter C) */}
+          {(() => {
+            const hb = labs?.hb
+            const ht = labs?.ht
+            const ratio = hb != null && ht != null ? ht / hb : undefined
+
+            let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
+            let highlightClass = 'text-slate-700'
+            let bgClass = 'bg-slate-50 border-slate-200'
+
+            if (ratio !== undefined) {
+              const ratioStr = `${ratio.toFixed(2)}x`
+              if (ratio >= 3.6) {
+                previewText = `Hemoconcentração detectada (Razão Ht/Hb ${ratioStr}) — Reclassificar para Grupo D`
+                highlightClass = 'text-red-800'
+                bgClass = 'bg-red-50 border-red-200'
+              } else {
+                previewText = `Sem hemoconcentração significativa (Razão Ht/Hb ${ratioStr}) — Manter no Grupo C`
+                highlightClass = 'text-green-800'
+                bgClass = 'bg-green-50 border-green-200'
+              }
+            } else if (ht != null) {
+              if (ht >= 45) {
+                previewText = `Hematócrito elevado (${ht}%) — Reclassificar para Grupo D`
+                highlightClass = 'text-red-800'
+                bgClass = 'bg-red-50 border-red-200'
+              } else {
+                previewText = `Hematócrito estável (${ht}%) — Manter no Grupo C`
+                highlightClass = 'text-green-800'
+                bgClass = 'bg-green-50 border-green-200'
+              }
+            }
+
+            return (
+              <div className={clsx('mt-4 p-3 border rounded-md', bgClass)}>
+                <p className={clsx('text-sm font-medium', highlightClass)}>
+                  {previewText}
+                </p>
+              </div>
+            )
+          })()}
         </div>
       ),
-      options: [
-        { text: 'Melhora - Iniciar manutenção (25 mL/kg/6h)', nextStep: 'maintenance_c_phase1', value: 'improvement' },
-        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d_shock', value: 'deterioration' }
-      ]
+      options: (() => {
+        const systolic = vitals2h.bp ? parseInt(vitals2h.bp.split('/')[0]) : undefined
+        const diastolic = vitals2h.bp ? parseInt(vitals2h.bp.split('/')[1]) : undefined
+        const pulsePressure = (systolic && diastolic) ? (systolic - diastolic) : undefined
+        const isShock = (pulsePressure !== undefined && pulsePressure < 20) || (vitals2h.hr !== undefined && vitals2h.hr > 100) || indirectShockSigns.length > 0
+
+        if (isShock && !shockOverride) {
+          return [{ text: 'Sinais de Choque - Ir para Grupo D', nextStep: 'group_d_shock', value: 'shock' }]
+        }
+
+        const hb = labs?.hb
+        const ht = labs?.ht
+        const ratio = hb != null && ht != null ? ht / hb : undefined
+
+        if (ratio !== undefined) {
+          if (ratio >= 3.6) return [
+            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' },
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
+          ]
+          return [
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
+            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
+          ]
+        }
+        if (ht != null) {
+          if (ht >= 45) return [
+            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' },
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
+          ]
+          return [
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
+            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
+          ]
+        }
+
+        return [
+          { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' },
+          { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
+        ]
+      })()
     },
 
     maintenance_c_phase1: {
@@ -3678,10 +3958,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     setAntipyreticChoiceD('paracetamol')
                     if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_d_${patient.id}`, 'paracetamol')
                   }}
-                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))}
                 />
-                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) && ' (alergia)'}
                 </span>
               </label>
               <label className="inline-flex items-center space-x-2">
@@ -3693,10 +3973,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     setAntipyreticChoiceD('dipirona')
                     if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_d_${patient.id}`, 'dipirona')
                   }}
-                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))}
                 />
-                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) && ' (alergia)'}
                 </span>
               </label>
             </div>
@@ -3709,9 +3989,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   antipyreticAddedD ||
                   (
                     antipyreticChoiceD === 'paracetamol'
-                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
                       : antipyreticChoiceD === 'dipirona'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
                         : false
                   )
                 }
@@ -3728,9 +4008,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
                   (!antipyreticChoiceD || antipyreticAddedD || (
                     antipyreticChoiceD === 'paracetamol'
-                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
                       : antipyreticChoiceD === 'dipirona'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
                         : false
                   ))
                     ? 'bg-red-200 text-red-700 border-red-300 cursor-not-allowed'
@@ -3742,16 +4022,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     : antipyreticAddedD
                       ? 'Antitérmico já adicionado'
                       : (
-                          antipyreticChoiceD === 'paracetamol'
-                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                                ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
-                                : 'Adicionar antitérmico à prescrição')
-                            : antipyreticChoiceD === 'dipirona'
-                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                                  ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
-                                  : 'Adicionar antitérmico à prescrição')
-                              : 'Adicionar antitérmico à prescrição'
-                        )
+                        antipyreticChoiceD === 'paracetamol'
+                          ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                            ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                            : 'Adicionar antitérmico à prescrição')
+                          : antipyreticChoiceD === 'dipirona'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                              ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                              : 'Adicionar antitérmico à prescrição')
+                            : 'Adicionar antitérmico à prescrição'
+                      )
                 }
               >
                 <Stethoscope className="w-4 h-4" />
@@ -3801,10 +4081,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     setAntipyreticChoiceA('paracetamol')
                     if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_a_${patient.id}`, 'paracetamol')
                   }}
-                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))}
                 />
-                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a)) && ' (alergia)'}
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Paracetamol{(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a)) && ' (alergia)'}
                 </span>
               </label>
               <label className="inline-flex items-center space-x-2">
@@ -3816,10 +4096,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     setAntipyreticChoiceA('dipirona')
                     if (typeof window !== 'undefined') localStorage.setItem(`antipyretic_a_${patient.id}`, 'dipirona')
                   }}
-                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))}
+                  disabled={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))}
                 />
-                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
-                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a)) && ' (alergia)'}
+                <span className={(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) ? 'text-red-600 line-through text-sm' : 'text-slate-800 text-sm'}>
+                  Dipirona (Metamizol){(patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a)) && ' (alergia)'}
                 </span>
               </label>
             </div>
@@ -3832,9 +4112,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   antipyreticAddedA ||
                   (
                     antipyreticChoiceA === 'paracetamol'
-                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
                       : antipyreticChoiceA === 'dipirona'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
                         : false
                   )
                 }
@@ -3851,9 +4131,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
                   (!antipyreticChoiceA || antipyreticAddedA || (
                     antipyreticChoiceA === 'paracetamol'
-                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
+                      ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
                       : antipyreticChoiceA === 'dipirona'
-                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
+                        ? (patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
                         : false
                   ))
                     ? 'bg-green-200 text-green-700 border-green-300 cursor-not-allowed'
@@ -3865,16 +4145,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     : antipyreticAddedA
                       ? 'Antitérmico já adicionado'
                       : (
-                          antipyreticChoiceA === 'paracetamol'
-                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol','acetaminofeno','acetaminophen'].includes(a))
-                                ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
-                                : 'Adicionar antitérmico à prescrição')
-                            : antipyreticChoiceA === 'dipirona'
-                              ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona','metamizol','metamizole'].includes(a))
-                                  ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
-                                  : 'Adicionar antitérmico à prescrição')
-                              : 'Adicionar antitérmico à prescrição'
-                        )
+                        antipyreticChoiceA === 'paracetamol'
+                          ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['paracetamol', 'acetaminofeno', 'acetaminophen'].includes(a))
+                            ? 'Alergia registrada a Paracetamol/Acetaminofeno — opção bloqueada'
+                            : 'Adicionar antitérmico à prescrição')
+                          : antipyreticChoiceA === 'dipirona'
+                            ? ((patient.allergies || []).map(a => a.toLowerCase()).some(a => ['dipirona', 'metamizol', 'metamizole'].includes(a))
+                              ? 'Alergia registrada a Dipirona/Metamizol — opção bloqueada'
+                              : 'Adicionar antitérmico à prescrição')
+                            : 'Adicionar antitérmico à prescrição'
+                      )
                 }
               >
                 <Stethoscope className="w-4 h-4" />
@@ -3910,16 +4190,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const handleAnswer = (nextStep: string, value?: string) => {
     // Evitar cliques duplos durante transição
     if (isTransitioning) return
-    
+
     setIsTransitioning(true)
-    
+
     const newAnswers = value ? { ...answers, [currentStep]: value } : answers
     const newHistory = [...history, currentStep]
-    
+
     if (value) {
       setAnswers(newAnswers)
     }
-    
+
     // Capturar dados dos exames se estamos saindo da reavaliação
     if (currentStep === 'reevaluation_c_1h' || currentStep === 'evaluate_labs_b') {
       // Capturar dados dos exames
@@ -4040,7 +4320,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         { id: 'hepatopatias', label: 'Hepatopatias' },
         { id: 'autoimunes', label: 'Doenças autoimunes' }
       ]
-      
+
       // Capturar fatores de risco marcados
       checkboxes.forEach(checkbox => {
         const element = document.getElementById(checkbox.id) as HTMLInputElement
@@ -4048,11 +4328,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           riskFactors.push(checkbox.label)
         }
       })
-      
+
       // Determinar classificação
       let finalStep = 'group_a' // Padrão: sem fatores de risco
       let group: 'A' | 'B' | 'C' | 'D' | undefined = 'A'
-      
+
       if (riskFactors.length > 0) {
         finalStep = 'group_b'
         group = 'B'
@@ -4062,24 +4342,24 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         // Limpar fatores de risco se não houver nenhum
         localStorage.removeItem(`risk_factors_${patient.id}`)
       }
-      
+
       // Usar setTimeout para simular processamento
       setTimeout(() => {
         setHistory([...newHistory, currentStep])
         setCurrentStep(finalStep)
-        
+
         const finalProgress = calculateProgress(finalStep, [...newHistory, currentStep])
         setProgress(finalProgress)
-        
+
         try {
           onUpdate(patient.id, finalStep, [...newHistory, currentStep], newAnswers, finalProgress, group)
         } catch (error) {
           console.error('Erro ao atualizar estado do paciente:', error)
         }
-        
+
         setIsTransitioning(false)
       }, 1500) // 1.5 segundos para mostrar o processamento
-      
+
       // Não continuar com o fluxo normal
       return
     }
@@ -4099,10 +4379,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       }
       const hasGrupoD = classificationData.grupoD && classificationData.grupoD.length > 0
       const hasGrupoC = classificationData.grupoC && classificationData.grupoC.length > 0
-      
+
       let finalStep = 'bleeding_check' // Se não tem sinais de alarme, vai para avaliação de sangramento
       let group: 'A' | 'B' | 'C' | 'D' | undefined = undefined
-      
+
       if (hasGrupoD) {
         finalStep = 'group_d'
         group = 'D'
@@ -4111,36 +4391,36 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         group = 'C'
       }
       // Se não tem sinais de alarme nem gravidade, vai para bleeding_check para determinar A ou B
-      
+
       // Usar setTimeout para simular processamento
       setTimeout(() => {
         setHistory([...newHistory, currentStep])
         setCurrentStep(finalStep)
-        
+
         const finalProgress = calculateProgress(finalStep, [...newHistory, currentStep])
         setProgress(finalProgress)
-        
+
         try {
           onUpdate(patient.id, finalStep, [...newHistory, currentStep], newAnswers, finalProgress, group)
         } catch (error) {
           console.error('Erro ao atualizar estado do paciente:', error)
         }
-        
+
         setIsTransitioning(false)
       }, 1500) // 1.5 segundos para mostrar o processamento
-      
+
       // Não continuar com o fluxo normal
       return
     }
-    
+
     // Removido: não gerar prescrição automaticamente ao entrar em espera de exames
 
     setHistory(newHistory)
     setCurrentStep(nextStep)
-    
+
     const newProgress = calculateProgress(nextStep, newHistory)
     setProgress(newProgress)
-    
+
     // Detectar grupo
     let group: 'A' | 'B' | 'C' | 'D' | undefined
     if (nextStep === 'group_a' || nextStep === 'hydration_a') group = 'A'
@@ -4160,19 +4440,19 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       nextStep === 'd_no_persistent_shock' ||
       nextStep === 'd_hemo_coag_management'
     ) group = 'D'
-    
+
     // Atualizar estado
     try {
       onUpdate(patient.id, nextStep, newHistory, newAnswers, newProgress, group)
     } catch (error) {
       console.error('Erro ao atualizar estado do paciente:', error)
     }
-    
+
     // Resetar transição após um pequeno delay
     setTimeout(() => {
       setIsTransitioning(false)
     }, 300)
-    
+
     // Completar apenas quando realmente finalizar
     if (nextStep === 'end') {
       setTimeout(() => onComplete(), 500)
@@ -4185,7 +4465,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       const newHistory = history.slice(0, -1)
       setHistory(newHistory)
       setCurrentStep(previousStep)
-      
+
       const newProgress = calculateProgress(previousStep, newHistory)
       setProgress(newProgress)
     }
@@ -4197,13 +4477,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     setHistory([])
     setAnswers({})
     setProgress(0)
-    
+
     try {
       onUpdate(patient.id, 'start', [], {}, 0)
     } catch (error) {
       console.error('Erro ao reiniciar fluxograma:', error)
     }
-    
+
     setTimeout(() => {
       setIsTransitioning(false)
     }, 300)
@@ -4223,11 +4503,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
-      
+
       {/* Premium Medical Header */}
       <div className="relative bg-white shadow-xl border-b border-slate-200/50 sticky top-0 z-50">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-6">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
@@ -4243,7 +4523,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <Stethoscope className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
                 </div>
               </div>
-              
+
               <div>
                 <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
                   {patient.name}
@@ -4276,8 +4556,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 disabled={history.length === 0}
                 className={clsx(
                   "group flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 font-medium",
-                  history.length > 0 
-                    ? "bg-gradient-to-br from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 border-amber-300 text-amber-700 shadow-lg hover:shadow-xl" 
+                  history.length > 0
+                    ? "bg-gradient-to-br from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 border-amber-300 text-amber-700 shadow-lg hover:shadow-xl"
                     : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
                 )}
                 whileHover={history.length > 0 ? { scale: 1.02 } : {}}
@@ -4303,7 +4583,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
       {/* Main Content */}
       <div className="max-w-6xl mx-auto px-4 lg:px-8 py-8">
-        
+
         {/* Progress Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -4338,7 +4618,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               )}
             </div>
           </div>
-          
+
           <div className="w-full bg-gradient-to-r from-slate-200 to-slate-300 rounded-full h-4 shadow-inner">
             <motion.div
               className="bg-gradient-to-r from-blue-600 via-blue-500 to-slate-600 h-4 rounded-full shadow-lg"
@@ -4361,7 +4641,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           >
             {/* Card Header Gradient */}
             <div className="h-2 bg-gradient-to-r from-blue-600 via-slate-400 to-blue-600"></div>
-            
+
             <div className="p-6 lg:p-8">
               {/* Step Header */}
               <div className="flex flex-col lg:flex-row lg:items-start space-y-4 lg:space-y-0 lg:space-x-6 mb-8">
@@ -4371,7 +4651,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     {step.icon}
                   </div>
                 </div>
-                
+
                 <div className="flex-1">
                   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-4">
                     <h2 className="text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
@@ -4408,7 +4688,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     <Target className="w-5 h-5 mr-2 text-blue-600" />
                     Escolha uma opção:
                   </h3>
-                  
+
                   <div className="grid gap-4">
                     {step.options.map((option, index) => (
                       <motion.button
@@ -4420,9 +4700,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                           isTransitioning && "opacity-50 cursor-not-allowed",
                           !isTransitioning && (
                             step.type === 'question' ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:from-blue-100 hover:to-blue-200 text-blue-900" :
-                            step.type === 'group' ? "bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 text-green-900" :
-                            step.type === 'action' ? "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:from-amber-100 hover:to-amber-200 text-amber-900" :
-                            "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 hover:from-slate-100 hover:to-slate-200 text-slate-900"
+                              step.type === 'group' ? "bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 text-green-900" :
+                                step.type === 'action' ? "bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200 hover:from-amber-100 hover:to-amber-200 text-amber-900" :
+                                  "bg-gradient-to-br from-slate-50 to-slate-100 border-slate-200 hover:from-slate-100 hover:to-slate-200 text-slate-900"
                           )
                         )}
                         whileHover={!isTransitioning ? { scale: 1.02, y: -2 } : {}}
@@ -4430,7 +4710,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       >
                         {/* Background Effect */}
                         <div className="absolute inset-0 bg-gradient-to-r from-white/10 via-transparent to-white/10 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                        
+
                         <div className="relative flex items-center justify-between">
                           <span className="font-bold text-lg lg:text-xl pr-4">{option.text}</span>
                           <div className="flex-shrink-0 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
@@ -4447,7 +4727,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </AnimatePresence>
 
         {/* Premium Footer */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
