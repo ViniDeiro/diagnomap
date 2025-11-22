@@ -489,6 +489,19 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                               <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
                             </motion.button>
                           )}
+
+                          {/* Botão de Retorno para pacientes do Grupo C após alta */}
+                          {patient.flowchartState.group === 'C' && patient.status === 'discharged' && (
+                            <motion.button
+                              onClick={() => onReturnVisit(patient)}
+                              className="relative p-3 sm:p-4 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              title="Agendar/Iniciar Retorno (Grupo C)"
+                            >
+                              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
+                            </motion.button>
+                          )}
                           
                           <motion.button
                             onClick={() => setShowDeleteConfirm(patient.id)}

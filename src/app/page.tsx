@@ -15,8 +15,9 @@ import { Patient, PatientFormData } from '@/types/patient'
 import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
+import { GasometryFlowchart } from '@/components/GasometryFlowchart'
 
-type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form'
+type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'gasometry-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form'
 
 export default function Home() {
   const [appState, setAppState] = useState<AppState>('loading')
@@ -44,9 +45,32 @@ export default function Home() {
   }
 
   const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
+    // Caso especial: Gasometria abre o componente dedicado
+    if (flowchart.id === 'gasometria') {
+      setAppState('gasometry-flowchart')
+      return
+    }
+
+    // Caso especial: Dengue deve usar o fluxo completo dedicado
+    if (flowchart.id === 'dengue') {
+      const quickPatient = patientService.createPatient({
+        name: 'Paciente de Emergência',
+        birthDate: new Date('2000-01-01'),
+        gender: 'masculino',
+        medicalRecord: `EM-${Date.now()}`,
+        selectedFlowchart: 'dengue',
+        generalObservations: '',
+        symptoms: [],
+        vitalSigns: {}
+      })
+      setCurrentPatient(quickPatient)
+      setAppState('flowchart')
+      return
+    }
+
+    // Demais protocolos usam o fluxograma genérico de emergência
     setSelectedFlowchart(flowchart)
 
-    // Criar paciente de emergência se não existir
     if (!currentEmergencyPatient) {
       const emergencyPatient: EmergencyPatient = {
         id: `emergency-${Date.now()}`,
@@ -259,6 +283,7 @@ export default function Home() {
           onSubmit={handlePatientFormSubmit}
           onCancel={handlePatientFormCancel}
           onEmergencySelector={handleEmergencySelector}
+          onOpenGasometry={() => setAppState('gasometry-flowchart')}
         />
       )
     }
@@ -279,6 +304,7 @@ export default function Home() {
           onSubmit={handleReturnFormSubmit}
           onCancel={handleReturnCancel}
           onEmergencySelector={handleEmergencySelector}
+          onOpenGasometry={() => setAppState('gasometry-flowchart')}
           initialStep={4}
           presetFlowchart={'dengue'}
           skipFlowSelection={true}
@@ -321,6 +347,15 @@ export default function Home() {
       ) : null
     }
 
+    if (appState === 'gasometry-flowchart') {
+      return (
+        <GasometryFlowchart
+          onComplete={() => setAppState('dashboard')}
+          onCancel={() => setAppState('emergency-selector')}
+        />
+      )
+    }
+
     // Dashboard and Overlays
     return (
       <>
@@ -352,7 +387,8 @@ export default function Home() {
             patient={currentPatient}
             onClose={handlePrescriptionsClose}
             onUpdate={handlePrescriptionsUpdate}
-            mode={'hydration-only'}
+            // Mostrar a versão verdinha (mínima) apenas quando vindo do fluxograma
+            mode={previousState === 'flowchart' ? 'prescription-only' : 'hydration-only'}
           />
         )}
 

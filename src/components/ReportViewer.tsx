@@ -506,6 +506,30 @@ ${formatDate(new Date())}`
       }
     }
 
+    // Registrar manejo do choque (persistência e decisões) para narrativa
+    let shockManagementInfo = ''
+    try {
+      const shockPersist = localStorage.getItem(`shock_persistent_${patient.id}`) === 'true'
+      const decisionsRaw = localStorage.getItem(`shock_decisions_${patient.id}`)
+      const decisions: string[] = decisionsRaw ? JSON.parse(decisionsRaw) : []
+
+      const formatList = (items: string[]) => {
+        if (items.length === 0) return ''
+        if (items.length === 1) return items[0].toLowerCase()
+        if (items.length === 2) return `${items[0].toLowerCase()} e ${items[1].toLowerCase()}`
+        return `${items.slice(0, -1).map(i => i.toLowerCase()).join(', ')} e ${items[items.length - 1].toLowerCase()}`
+      }
+
+      if (shockPersist || decisions.length > 0) {
+        const prefix = 'No contexto do manejo hemodinâmico na dengue grave'
+        const persistText = shockPersist ? ' foi registrada persistência do choque.' : ''
+        const decisionsText = decisions.length > 0 ? ` Medidas adotadas: ${formatList(decisions)}.` : ''
+        shockManagementInfo = `${prefix},${persistText || decisionsText ? '' : ' foram instituídas medidas de suporte conforme protocolo institucional.'}${persistText}${decisionsText}`
+      }
+    } catch (error) {
+      console.warn('Erro ao recuperar manejo do choque para relatório:', error)
+    }
+
     // Observações de forma mais técnica
     let observationsInfo = ''
     const allObservations = []
@@ -579,6 +603,7 @@ ${formatDate(new Date())}`
         'Foi estabelecido plano terapêutico individualizado conforme necessidades clínicas identificadas.',
       
       prescriptions: prescriptionInfo,
+      shockManagement: shockManagementInfo,
       
       observations: observationsInfo,
       
@@ -736,6 +761,7 @@ ${formatDate(new Date())}`
                   <p className="text-lg leading-10 text-justify indent-8">
                     {narrative.treatment}
                     {narrative.prescriptions && ` ${narrative.prescriptions}`}
+                    {narrative.shockManagement && ` ${narrative.shockManagement}`}
                   </p>
                   
                   <p className="text-lg leading-10 text-justify indent-8">

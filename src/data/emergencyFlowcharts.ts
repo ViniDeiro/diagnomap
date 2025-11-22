@@ -488,21 +488,45 @@ export const dengueFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Gasometria (Placeholder para seleção)
+export const gasometryFlowchart: EmergencyFlowchart = {
+  id: 'gasometria',
+  name: 'Gasometria',
+  description: 'Análise e interpretação de gasometria arterial e venosa.',
+  category: 'respiratory',
+  priority: 'medium',
+  icon: 'activity',
+  color: 'from-blue-500 to-blue-700',
+  initialStep: 'start',
+  finalSteps: [],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Gasometria',
+      description: 'Selecione o tipo de gasometria',
+      type: 'question',
+      options: []
+    }
+  }
+}
+
 // Mapa de todos os fluxogramas disponíveis
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
   sepsis: sepsisFlowchart,
   dengue: dengueFlowchart,
-  // Adicionar mais fluxogramas conforme implementados
+  gasometria: gasometryFlowchart,
 }
 
-// Lista de categorias com fluxogramas
 // Lista completa de todos os fluxogramas disponíveis
 export const allFlowcharts = [
+  // Ferramentas
+  { id: 'gasometria', name: 'Gasometria', category: 'respiratory', implemented: true },
+
   // Hematológicos
   { id: 'anemia_hemolitica', name: 'Anemia hemolítica', category: 'hematological', implemented: false },
-  
+
   // Infecciosos
   { id: 'arranhadura_gato', name: 'Arranhadura de gato', category: 'infectious', implemented: false },
   { id: 'candidíase', name: 'Candidíase', category: 'infectious', implemented: false },
@@ -520,12 +544,12 @@ export const allFlowcharts = [
   { id: 'pneumonia', name: 'Pneumonia', category: 'infectious', implemented: false },
   { id: 'sifilis', name: 'Sífilis', category: 'infectious', implemented: false },
   { id: 'uretrite', name: 'Uretrite', category: 'infectious', implemented: false },
-  
+
   // Musculoesqueléticos
   { id: 'artralgia', name: 'Artralgia', category: 'musculoskeletal', implemented: false },
   { id: 'lombalgia', name: 'Lombalgia', category: 'musculoskeletal', implemented: false },
   { id: 'mialgia', name: 'Mialgia', category: 'musculoskeletal', implemented: false },
-  
+
   // Neurológicos
   { id: 'avc_hemorragico', name: 'AVC hemorrágico', category: 'neurological', implemented: false },
   { id: 'avci', name: 'AVCi', category: 'neurological', implemented: false },
@@ -535,20 +559,20 @@ export const allFlowcharts = [
   { id: 'rebaixamento_consciencia', name: 'Rebaixamento do nível de consciência', category: 'neurological', implemented: false },
   { id: 'sindrome_guillain_barre', name: 'Síndrome de Guillain-Barré', category: 'neurological', implemented: false },
   { id: 'tce', name: 'TCE', category: 'neurological', implemented: false },
-  
+
   // Dermatológicos
   { id: 'celulite', name: 'Celulite', category: 'dermatological', implemented: false },
   { id: 'erisipela', name: 'Erisipela', category: 'dermatological', implemented: false },
-  
+
   // Endócrinos
   { id: 'cetoacidose_diabetica', name: 'Cetoacidose diabética', category: 'endocrine', implemented: false },
   { id: 'hiperglicemia', name: 'Hiperglicemia', category: 'endocrine', implemented: false },
   { id: 'hipoglicemia', name: 'Hipoglicemia', category: 'endocrine', implemented: false },
-  
+
   // Gastrointestinais
   { id: 'colecistite', name: 'Colecistite', category: 'gastrointestinal', implemented: false },
   { id: 'colelitiase', name: 'Colelitíase', category: 'gastrointestinal', implemented: false },
-  { id: 'diarreia', name: 'Diarréia', category: 'gastrointestinal', implemented: false },
+  { id: 'diarreia', name: 'Diarreia', category: 'gastrointestinal', implemented: false },
   { id: 'disfagia', name: 'Disfagia', category: 'gastrointestinal', implemented: false },
   { id: 'doenca_hemorroidaria', name: 'Doença hemorroidária', category: 'gastrointestinal', implemented: false },
   { id: 'dor_abdominal', name: 'Dor abdominal', category: 'gastrointestinal', implemented: false },
@@ -556,16 +580,16 @@ export const allFlowcharts = [
   { id: 'hemorragia_digestiva_alta', name: 'Hemorragia Digestiva Alta', category: 'gastrointestinal', implemented: false },
   { id: 'pancreatite_aguda', name: 'Pancreatite Aguda', category: 'gastrointestinal', implemented: false },
   { id: 'vomitos', name: 'Vômitos', category: 'gastrointestinal', implemented: false },
-  
+
   // Renais/Urológicos
   { id: 'colica_renal', name: 'Cólica Renal', category: 'renal', implemented: false },
   { id: 'disuria', name: 'Disúria', category: 'renal', implemented: false },
   { id: 'hematuria', name: 'Hematúria', category: 'renal', implemented: false },
   { id: 'torcao_testicular', name: 'Torção testicular', category: 'renal', implemented: false },
-  
+
   // Oftalmológicos
   { id: 'conjuntivite', name: 'Conjuntivite', category: 'ophthalmological', implemented: false },
-  
+
   // Respiratórios
   { id: 'crise_asmatica', name: 'Crise asmática/Broncoespasmo', category: 'respiratory', implemented: false },
   { id: 'dispneia', name: 'Dispnéia', category: 'respiratory', implemented: false },
@@ -573,11 +597,11 @@ export const allFlowcharts = [
   { id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', category: 'respiratory', implemented: false },
   { id: 'tep', name: 'TEP', category: 'respiratory', implemented: false },
   { id: 'tosse', name: 'Tosse', category: 'respiratory', implemented: false },
-  
+
   // Psiquiátricos
   { id: 'crise_ansiedade', name: 'Crise de ansiedade', category: 'psychiatric', implemented: false },
   { id: 'surto_psicotico', name: 'Surto psicótico', category: 'psychiatric', implemented: false },
-  
+
   // Cardiovasculares
   { id: 'derrame_pericardico', name: 'Derrame pericárdico', category: 'cardiovascular', implemented: false },
   { id: 'derrame_pleural', name: 'Derrame pleural', category: 'cardiovascular', implemented: false },
@@ -601,7 +625,7 @@ export const allFlowcharts = [
   { id: 'tv_monomorfica_instavel', name: 'TV monomórfica instável', category: 'cardiovascular', implemented: false },
   { id: 'tv_polimorfica', name: 'TV polimórfica', category: 'cardiovascular', implemented: false },
   { id: 'tvp', name: 'TVP', category: 'cardiovascular', implemented: false },
-  
+
   // Distúrbios Hidroeletrolíticos (DHEL)
   { id: 'dhel_hipercalcemia', name: 'DHEL - Hipercalcemia', category: 'metabolic', implemented: false },
   { id: 'dhel_hipercalemia', name: 'DHEL - Hipercalemia', category: 'metabolic', implemented: false },
@@ -611,15 +635,15 @@ export const allFlowcharts = [
   { id: 'dhel_hipocalemia', name: 'DHEL - Hipocalemia', category: 'metabolic', implemented: false },
   { id: 'dhel_hipomagnesemia', name: 'DHEL - Hipomagnesemia', category: 'metabolic', implemented: false },
   { id: 'dhel_hiponatremia', name: 'DHEL - Hiponatremia sintomática', category: 'metabolic', implemented: false },
-  
+
   // Ginecológicos
   { id: 'corrimento_vaginal', name: 'Corrimento vaginal', category: 'gynecological', implemented: false },
   { id: 'sangramento_vaginal', name: 'Sangramento vaginal', category: 'gynecological', implemented: false },
-  
+
   // Gastroenterológicos
   { id: 'geca', name: 'GECA', category: 'gastrointestinal', implemented: false },
   { id: 'icteria', name: 'Icterícia', category: 'gastrointestinal', implemented: false },
-  
+
   // Intoxicações
   { id: 'intoxicacao_alcool', name: 'Intoxicação por álcool', category: 'toxicological', implemented: false },
   { id: 'intoxicacao_chumbinho', name: 'Intoxicação por chumbinho', category: 'toxicological', implemented: false },
@@ -627,27 +651,27 @@ export const allFlowcharts = [
   { id: 'intoxicacao_etilenoglicol', name: 'Intoxicação por etilenoglicol', category: 'toxicological', implemented: false },
   { id: 'intoxicacao_metanol', name: 'Intoxicação por metanol', category: 'toxicological', implemented: false },
   { id: 'intoxicacao_organofosforado', name: 'Intoxicação por organofosforado', category: 'toxicological', implemented: false },
-  
+
   // Oncológicos
   { id: 'leucemia_mieloide_aguda', name: 'Leucemia Mielóide Aguda', category: 'oncological', implemented: false },
   { id: 'linfoma_hodgkin', name: 'Linfoma de Hodgkin', category: 'oncological', implemented: false },
   { id: 'mieloma_multiplo', name: 'Mieloma múltiplo', category: 'oncological', implemented: false },
-  
+
   // Traumatológicos/Acidentes
   { id: 'mordedura_cachorro', name: 'Mordedura de cachorro', category: 'trauma', implemented: false },
   { id: 'picada_aranha', name: 'Picada de aranha', category: 'trauma', implemented: false },
   { id: 'picada_cobras', name: 'Picada de cobras', category: 'trauma', implemented: false },
   { id: 'picada_escorpiao', name: 'Picada de escorpião', category: 'trauma', implemented: false },
   { id: 'queimaduras', name: 'Queimaduras', category: 'trauma', implemented: false },
-  
+
   // Otorrinolaringológicos
   { id: 'otite', name: 'Otite', category: 'otorhinolaryngological', implemented: false },
   { id: 'rinite', name: 'Rinite', category: 'otorhinolaryngological', implemented: false },
   { id: 'sinusite', name: 'Sinusite', category: 'otorhinolaryngological', implemented: false },
-  
+
   // Metabólicos
   { id: 'rabdomiolise', name: 'Rabdomiólise', category: 'metabolic', implemented: false },
-  
+
   // Alérgicos/Imunológicos
   { id: 'reacao_alergica', name: 'Reação alérgica', category: 'allergic', implemented: false }
 ]

@@ -1,11 +1,12 @@
 import { Patient } from "./patient"
 
-export type EmergencyType = 
+export type EmergencyType =
   | 'dengue'
   | 'covid19'
   | 'iam' // Infarto Agudo do Miocárdio
   | 'avc' // Acidente Vascular Cerebral
   | 'sepsis'
+  | 'gasometria'
   | 'trauma'
   | 'stroke'
   | 'cardiac_arrest'
@@ -57,7 +58,7 @@ export interface EmergencyFlowchart {
   procedures?: Procedure[]
 }
 
-export type EmergencyCategory = 
+export type EmergencyCategory =
   | 'cardiovascular'
   | 'respiratory'
   | 'neurological'

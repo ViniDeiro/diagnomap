@@ -19,7 +19,8 @@ import {
   Hourglass,
   ArrowLeft,
   RotateCcw,
-  FileText
+  FileText,
+  Info
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Patient } from '@/types/patient'
@@ -280,12 +281,26 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
     const mlkgH = peso > 0 ? (value / peso) : undefined
     if (mlkgH != null && mlkgH < 0.5) {
-      return { label: `Oligúria suspeita (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+      return { label: `Oligúria (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
     }
-    if (mlkgH != null) {
-      return { label: `Diurese adequada (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+    if (mlkgH != null && mlkgH <= 2) {
+      return { label: `Diurese normal (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+    }
+    if (mlkgH != null && mlkgH > 2) {
+      return { label: `Poliúria (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
     }
     return { label: `Diurese informada: ${value} ml/h`, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
+  }
+
+  // Cálculo da PAM (Pressão Arterial Média) a partir de "PAS/PAD"
+  const calcPamFromBp = (bp?: string): number | undefined => {
+    if (!bp) return undefined
+    const parts = bp.split('/').map(p => p.trim())
+    if (parts.length !== 2) return undefined
+    const s = parseInt(parts[0])
+    const d = parseInt(parts[1])
+    if (isNaN(s) || isNaN(d)) return undefined
+    return Math.round((s + 2 * d) / 3)
   }
 
   const [diuresis1h, setDiuresis1h] = useState<number | undefined>(
@@ -294,6 +309,23 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const [diuresis2h, setDiuresis2h] = useState<number | undefined>(
     parseNum(typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_2h_${patient.id}`) : null)
   )
+
+  // Sinais vitais para telas de reavaliação do Grupo C
+  const [vitals1h, setVitals1h] = useState({
+    bp: typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_bp_${patient.id}`) || '') : '',
+    hr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_hr_${patient.id}`) : null),
+    rr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_rr_${patient.id}`) : null),
+    spo2: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_spo2_${patient.id}`) : null),
+    temp: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_temp_${patient.id}`) : null)
+  })
+
+  const [vitals2h, setVitals2h] = useState({
+    bp: typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : '',
+    hr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_hr_${patient.id}`) : null),
+    rr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_rr_${patient.id}`) : null),
+    spo2: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_spo2_${patient.id}`) : null),
+    temp: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_temp_${patient.id}`) : null)
+  })
 
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
@@ -388,6 +420,342 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       ]
     },
 
+    // GRUPO D — Choque: avaliação inicial focada
+    group_d_shock: {
+      id: 'group_d_shock',
+      title: 'GRUPO D — Choque: Avaliar Hematócrito',
+      description: 'Resposta inadequada caracterizada pela persistência do choque. Avaliar hematócrito.',
+      type: 'question',
+      group: 'D',
+      icon: <AlertTriangle className="w-6 h-6" />,
+      color: 'bg-red-600',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">Orientação inicial:</h4>
+            <p className="text-red-700">Resposta inadequada caracterizada pela persistência do choque. Avaliar hematócrito.</p>
+          </div>
+          <div className="bg-white border border-red-200 p-4 rounded-lg">
+            <p className="text-sm text-slate-700">Selecione o achado para continuar a conduta.</p>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Hematócrito hemoconcentrado', nextStep: 'd_plasma_expanders', value: 'ht_up' },
+        { text: 'Hematócrito em queda', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
+      ]
+    },
+
+    // Conduta: expansores plasmáticos
+    d_plasma_expanders: {
+      id: 'd_plasma_expanders',
+      title: 'Expansores plasmáticos (Albumina/Coloides)',
+      description: 'Hemoconcentração com choque — reposição com albumina 5% ou coloides',
+      type: 'action',
+      group: 'D',
+      icon: <Droplets className="w-6 h-6" />,
+      color: 'bg-red-600',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">Albumina:</h4>
+            <ul className="text-red-700 text-sm space-y-1">
+              <li>• Dose: 0,5–1 g/kg</li>
+              <li>• Preparar solução a 5%: para cada 100 mL, usar 25 mL de albumina 20% + 75 mL de SF 0,9%</li>
+            </ul>
+          </div>
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">Na ausência de albumina:</h4>
+            <ul className="text-red-700 text-sm space-y-1">
+              <li>• Usar coloides sintéticos</li>
+              <li>• Velocidade: 10 mL/kg/hora</li>
+            </ul>
+          </div>
+          <div className="p-3 bg-white border border-red-200 rounded-lg">
+            <p className="text-sm text-slate-700">Monitorar resposta clínica contínua e reavaliar hemodinâmica e diurese.</p>
+          </div>
+
+          {/* Registrar decisões no relatório */}
+          <div className="p-4 bg-white border border-red-200 rounded-lg">
+            <h5 className="font-semibold text-red-800 mb-3">Registrar no relatório</h5>
+            <div className="space-y-2 text-sm">
+              <label className="flex items-center space-x-2">
+                <input id={`exp_albumin_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Albumina 5% (0,5–1 g/kg)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`exp_colloid_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Coloide sintético (10 mL/kg/h)</span>
+              </label>
+            </div>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border bg-white hover:bg-red-50 text-red-700 border-red-300"
+                onClick={() => {
+                  try {
+                    const key = `shock_decisions_${patient.id}`
+                    const existing = localStorage.getItem(key)
+                    let decisions: string[] = existing ? JSON.parse(existing) : []
+                    const addIfChecked = (id: string, label: string) => {
+                      const el = document.getElementById(id) as HTMLInputElement
+                      if (el && el.checked) decisions.push(label)
+                    }
+                    addIfChecked(`exp_albumin_${patient.id}`, 'Albumina 5% (0,5–1 g/kg)')
+                    addIfChecked(`exp_colloid_${patient.id}`, 'Coloide sintético (10 mL/kg/h)')
+                    // Unificar entradas
+                    decisions = Array.from(new Set(decisions))
+                    localStorage.setItem(key, JSON.stringify(decisions))
+                    alert('Decisões registradas no relatório.')
+                  } catch (error) {
+                    console.error('Erro ao salvar decisões de expansores:', error)
+                    alert('Não foi possível salvar as decisões. Tente novamente.')
+                  }
+                }}
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>Salvar decisões</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Resposta adequada — Tratar como Grupo C (melhora clínica)', nextStep: 'maintenance_c_phase2', value: 'back_to_c' },
+        { text: 'Sem resposta — Continuar UTI', nextStep: 'wait_reevaluation_d', value: 'stay_d' }
+      ]
+    },
+
+    // Checagem de persistência do choque com texto informativo
+    d_shock_persistence_check: {
+      id: 'd_shock_persistence_check',
+      title: 'Persistência do choque?',
+      description: 'Hematócrito em queda — avaliar persistência do choque',
+      type: 'question',
+      group: 'D',
+      icon: <AlertTriangle className="w-6 h-6" />,
+      color: 'bg-red-600',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <Info className="w-5 h-5 text-red-700 mt-0.5" />
+              <div className="text-red-700 text-sm">
+                <p className="font-semibold">O que é persistência do choque na dengue?</p>
+                <p>O choque na dengue é uma complicação grave e potencialmente fatal, caracterizada por colapso circulatório por perda de volume plasmático e insuficiência do fluxo sanguíneo, levando à falência de múltiplos órgãos.</p>
+                <p className="mt-2 font-medium">Como acontece:</p>
+                <p>• Aumento da permeabilidade vascular (disfunção endotelial).</p>
+                <p>• Extravasamento de plasma com perda de líquido, proteínas e eletrólitos.</p>
+                <p>• Redução do volume sanguíneo circulante.</p>
+                <p className="mt-2 font-medium">Sinais e sintomas:</p>
+                <p>• Hipotensão arterial; pulso rápido e fraco; extremidades frias, sudorese e pele úmida.</p>
+                <p>• Enchimento capilar lento (> 2 s); pressão de pulso convergente (&lt; 20 mmHg).</p>
+                <p>• Taquipneia; inquietação/alteração do nível de consciência; dor abdominal intensa.</p>
+                <p className="mt-2 font-medium">Gravidade e prognóstico:</p>
+                <p>• Pode levar à morte em 12–24h se não tratado; reposição adequada de fluidos favorece recuperação rápida.</p>
+                <p>• Tratamento principal: reposição de fluidos e suporte intensivo.</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-3 bg-white border border-red-200 rounded-lg">
+            <p className="text-sm text-slate-700">Selecione a situação atual para seguir a conduta.</p>
+          </div>
+
+          {/* Checkbox para registrar persistência do choque */}
+          <div className="p-4 bg-white border border-red-200 rounded-lg">
+            <h5 className="font-semibold text-red-800 mb-3">Registrar persistência do choque</h5>
+            <label className="flex items-center space-x-2 text-sm">
+              <input id={`shock_persist_${patient.id}`} type="checkbox" className="rounded" />
+              <span>Choque persistente presente</span>
+            </label>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border bg-white hover:bg-red-50 text-red-700 border-red-300"
+                onClick={() => {
+                  try {
+                    const el = document.getElementById(`shock_persist_${patient.id}`) as HTMLInputElement
+                    const value = el?.checked ? 'true' : 'false'
+                    localStorage.setItem(`shock_persistent_${patient.id}`, value)
+                    alert('Persistência do choque registrada no relatório.')
+                  } catch (error) {
+                    console.error('Erro ao registrar persistência de choque:', error)
+                    alert('Não foi possível salvar. Tente novamente.')
+                  }
+                }}
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>Salvar marcador</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Sem persistência do choque', nextStep: 'd_no_persistent_shock', value: 'no_persist' },
+        { text: 'Persistência do choque', nextStep: 'd_hemo_coag_management', value: 'persist' }
+      ]
+    },
+
+    // Sem persistência do choque: observar hiperhidratação e ajustar terapia
+    d_no_persistent_shock: {
+      id: 'd_no_persistent_shock',
+      title: 'Sem persistência do choque — Observar gravidade/hiperhidratação',
+      description: 'Ajuste de infusão, diuréticos e inotrópicos conforme necessidade',
+      type: 'action',
+      group: 'D',
+      icon: <Heart className="w-6 h-6" />,
+      color: 'bg-red-600',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">Com resolução do choque, sem sangramento, mas com novos sinais de gravidade:</h4>
+            <ul className="text-red-700 text-sm space-y-1">
+              <li>• Observar desconforto respiratório, sinais de ICC e investigar hiperhidratação</li>
+              <li>• Tratar com diminuição importante da infusão de líquido</li>
+              <li>• Considerar uso de diuréticos</li>
+              <li>• Avaliar drogas inotrópicas quando necessário</li>
+            </ul>
+          </div>
+
+          {/* Registrar decisões no relatório */}
+          <div className="p-4 bg-white border border-red-200 rounded-lg">
+            <h5 className="font-semibold text-red-800 mb-3">Registrar no relatório</h5>
+            <div className="space-y-2 text-sm">
+              <label className="flex items-center space-x-2">
+                <input id={`no_persist_reduce_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Redução importante da infusão</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`no_persist_diuretic_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Diurético</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`no_persist_inotropic_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Drogas inotrópicas</span>
+              </label>
+            </div>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border bg-white hover:bg-red-50 text-red-700 border-red-300"
+                onClick={() => {
+                  try {
+                    const key = `shock_decisions_${patient.id}`
+                    const existing = localStorage.getItem(key)
+                    let decisions: string[] = existing ? JSON.parse(existing) : []
+                    const addIfChecked = (id: string, label: string) => {
+                      const el = document.getElementById(id) as HTMLInputElement
+                      if (el && el.checked) decisions.push(label)
+                    }
+                    addIfChecked(`no_persist_reduce_${patient.id}`, 'Redução da infusão de líquidos')
+                    addIfChecked(`no_persist_diuretic_${patient.id}`, 'Diurético')
+                    addIfChecked(`no_persist_inotropic_${patient.id}`, 'Drogas inotrópicas')
+                    decisions = Array.from(new Set(decisions))
+                    localStorage.setItem(key, JSON.stringify(decisions))
+                    alert('Decisões registradas no relatório.')
+                  } catch (error) {
+                    console.error('Erro ao salvar decisões sem persistência:', error)
+                    alert('Não foi possível salvar as decisões. Tente novamente.')
+                  }
+                }}
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>Salvar decisões</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Aguardar evolução (UTI)', nextStep: 'wait_reevaluation_d', value: 'continue' }
+      ]
+    },
+
+    // Persistência do choque: investigar hemorragia/coagulopatia e tratar
+    d_hemo_coag_management: {
+      id: 'd_hemo_coag_management',
+      title: 'Persistência do choque — Hemorragia/Coagulopatia',
+      description: 'Transfusões e correção de coagulopatias',
+      type: 'action',
+      group: 'D',
+      icon: <AlertTriangle className="w-6 h-6" />,
+      color: 'bg-red-600',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-red-800 mb-2">Investigar hemorragia e coagulopatia de consumo:</h4>
+            <ul className="text-red-700 text-sm space-y-1">
+              <li>• Se hemorragia: transfundir concentrado de hemácias 10–15 mL/kg/dia</li>
+              <li>• Se coagulopatia: considerar plasma fresco 10 mL/kg</li>
+              <li>• Vitamina K endovenosa e crioprecipitado (1 U para cada 5–10 kg)</li>
+              <li>• Transfusão de plaquetas apenas se: sangramento persistente não controlado, após correção dos fatores de coagulação e do choque, com trombocitopenia e INR &gt; 1,5× o normal</li>
+            </ul>
+          </div>
+
+          {/* Registrar decisões no relatório */}
+          <div className="p-4 bg-white border border-red-200 rounded-lg">
+            <h5 className="font-semibold text-red-800 mb-3">Registrar no relatório</h5>
+            <div className="space-y-2 text-sm">
+              <label className="flex items-center space-x-2">
+                <input id={`hemo_ch_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Concentrado de hemácias (10–15 mL/kg/dia)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`hemo_pff_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Plasma fresco (10 mL/kg)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`hemo_vk_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Vitamina K EV</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`hemo_cryo_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Crioprecipitado (1 U para cada 5–10 kg)</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <input id={`hemo_platelets_${patient.id}`} type="checkbox" className="rounded" />
+                <span>Plaquetas (condições específicas)</span>
+              </label>
+            </div>
+            <div className="mt-3">
+              <button
+                type="button"
+                className="inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border bg-white hover:bg-red-50 text-red-700 border-red-300"
+                onClick={() => {
+                  try {
+                    const key = `shock_decisions_${patient.id}`
+                    const existing = localStorage.getItem(key)
+                    let decisions: string[] = existing ? JSON.parse(existing) : []
+                    const addIfChecked = (id: string, label: string) => {
+                      const el = document.getElementById(id) as HTMLInputElement
+                      if (el && el.checked) decisions.push(label)
+                    }
+                    addIfChecked(`hemo_ch_${patient.id}`, 'Concentrado de hemácias (10–15 mL/kg/dia)')
+                    addIfChecked(`hemo_pff_${patient.id}`, 'Plasma fresco (10 mL/kg)')
+                    addIfChecked(`hemo_vk_${patient.id}`, 'Vitamina K EV')
+                    addIfChecked(`hemo_cryo_${patient.id}`, 'Crioprecipitado (1 U/5–10 kg)')
+                    addIfChecked(`hemo_platelets_${patient.id}`, 'Plaquetas (condições específicas)')
+                    decisions = Array.from(new Set(decisions))
+                    localStorage.setItem(key, JSON.stringify(decisions))
+                    alert('Decisões registradas no relatório.')
+                  } catch (error) {
+                    console.error('Erro ao salvar decisões de hemorragia/coagulopatia:', error)
+                    alert('Não foi possível salvar as decisões. Tente novamente.')
+                  }
+                }}
+              >
+                <Stethoscope className="w-4 h-4" />
+                <span>Salvar decisões</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Aguardar evolução (UTI)', nextStep: 'wait_reevaluation_d', value: 'continue' }
+      ]
+    },
     alarm_check: {
       id: 'alarm_check',
       title: 'Avaliação de Sinais de Alarme e Gravidade',
@@ -2462,6 +2830,192 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             )}
           </div>
 
+          {/* Sinais Vitais */}
+          <div className="bg-white border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <Activity className="w-5 h-5 text-yellow-600" />
+              <h4 className="font-semibold text-yellow-800">Sinais Vitais (1ª hora)</h4>
+            </div>
+            <div className="grid md:grid-cols-5 gap-3">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">PA (mmHg) PAS/PAD</label>
+                <input
+                  type="text"
+                  placeholder="Ex: 110/70"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_1h_bp_${patient.id}`, value)
+                    setVitals1h(prev => ({ ...prev, bp: value }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_bp_${patient.id}`) || '') : ''}
+                />
+                {vitals1h.bp && (
+                  <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals1h.bp) || '--'} mmHg</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Ex: 90"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_1h_hr_${patient.id}`, value)
+                    setVitals1h(prev => ({ ...prev, hr: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_hr_${patient.id}`) || '') : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">FR (irpm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Ex: 18"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_1h_rr_${patient.id}`, value)
+                    setVitals1h(prev => ({ ...prev, rr: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_rr_${patient.id}`) || '') : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">SpO₂ (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="Ex: 97"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_1h_spo2_${patient.id}`, value)
+                    setVitals1h(prev => ({ ...prev, spo2: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_spo2_${patient.id}`) || '') : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Temp (°C)</label>
+                <input
+                  type="number"
+                  min="30"
+                  max="45"
+                  step="0.1"
+                  placeholder="Ex: 37.2"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_1h_temp_${patient.id}`, value)
+                    setVitals1h(prev => ({ ...prev, temp: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_temp_${patient.id}`) || '') : ''}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sinais Vitais */}
+          <div className="bg-white border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-3">
+              <Activity className="w-5 h-5 text-yellow-600" />
+              <h4 className="font-semibold text-yellow-800">Sinais Vitais (2ª hora)</h4>
+            </div>
+            <div className="grid md:grid-cols-5 gap-3">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">PA (mmHg) PAS/PAD</label>
+                <input
+                  type="text"
+                  placeholder="Ex: 110/70"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, value)
+                    setVitals2h(prev => ({ ...prev, bp: value }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : ''}
+                />
+                {vitals2h.bp && (
+                  <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals2h.bp) || '--'} mmHg</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Ex: 90"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_2h_hr_${patient.id}`, value)
+                    setVitals2h(prev => ({ ...prev, hr: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_hr_${patient.id}`) || '') : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">FR (irpm)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="Ex: 18"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_2h_rr_${patient.id}`, value)
+                    setVitals2h(prev => ({ ...prev, rr: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_rr_${patient.id}`) || '') : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">SpO₂ (%)</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  placeholder="Ex: 97"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_2h_spo2_${patient.id}`, value)
+                    setVitals2h(prev => ({ ...prev, spo2: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_spo2_${patient.id}`) || '') : ''}
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Temp (°C)</label>
+                <input
+                  type="number"
+                  min="30"
+                  max="45"
+                  step="0.1"
+                  placeholder="Ex: 37.2"
+                  className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_2h_temp_${patient.id}`, value)
+                    setVitals2h(prev => ({ ...prev, temp: parseNum(value) }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_temp_${patient.id}`) || '') : ''}
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Seção de Exames */}
           <div className="bg-white border-2 border-blue-200 rounded-lg p-4">
             <div className="flex items-center space-x-2 mb-4">
@@ -2636,6 +3190,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             <h4 className="font-semibold text-yellow-800 mb-2">Critérios de alta (necessários):</h4>
             <ul className="text-yellow-700 text-sm space-y-1">
               <li>• Estabilização hemodinâmica durante 48 horas</li>
+              <li>• Após no mínimo 48 horas de internação</li>
               <li>• Ausência de febre por 24 horas</li>
               <li>• Melhora visível do quadro clínico</li>
               <li>• Hematócrito normal e estável por 24 horas</li>
@@ -2769,7 +3324,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <ul className="text-yellow-700 text-sm space-y-1">
             <li>• Manter hidratação por mais 1 hora</li>
             <li>• Monitorar sinais vitais e diurese</li>
-            <li>• Reavaliar após completar segunda hora</li>
+            <li>• Se houver piora ou instabilidade, repetir bolo de 10 mL/kg em 10 minutos (SF 0,9%)</li>
+            <li>• Reavaliar na 2ª hora</li>
           </ul>
         </div>
       ),
@@ -2985,7 +3541,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       ),
       options: [
         { text: 'Melhora - Iniciar manutenção (25 mL/kg/6h)', nextStep: 'maintenance_c_phase1', value: 'improvement' },
-        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
+        { text: 'Piora - Reclassificar Grupo D', nextStep: 'group_d_shock', value: 'deterioration' }
       ]
     },
 
@@ -3022,7 +3578,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       ),
       options: [
         { text: 'Melhora — Iniciar Fase 2 (25 mL/kg/8h)', nextStep: 'maintenance_c_phase2', value: 'improvement' },
-        { text: 'Sem melhora — Reclassificar Grupo D', nextStep: 'group_d', value: 'deterioration' }
+        { text: 'Sem melhora — Reclassificar Grupo D', nextStep: 'group_d_shock', value: 'deterioration' }
       ]
     },
 
@@ -3054,6 +3610,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           })()}
           <div className="p-3 bg-white border border-yellow-200 rounded-lg">
             <p className="text-sm text-slate-700">Ao final da fase 2, seguir para os critérios de alta e seleção de antitérmico.</p>
+            <p className="text-sm text-slate-700 mt-1">Manter internação mínima de 48 horas com monitorização clínica e de diurese.</p>
           </div>
         </div>
       ),
@@ -3365,9 +3922,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     
     // Capturar dados dos exames se estamos saindo da reavaliação
     if (currentStep === 'reevaluation_c_1h' || currentStep === 'evaluate_labs_b') {
-      // Capturar dados dos exames do localStorage (diferente para cada grupo)
+      // Capturar dados dos exames
+      // Para Grupo B, usar SEMPRE os valores do estado (labsB) para evitar divergências do localStorage.
+      // Para reavaliação de C, manter leitura do localStorage.
       const suffix = currentStep === 'evaluate_labs_b' ? '_b' : ''
-      const labData = {
+      const lsData = {
         hemoglobin: localStorage.getItem(`lab_hemoglobin${suffix}_${patient.id}`),
         hematocrit: localStorage.getItem(`lab_hematocrit${suffix}_${patient.id}`),
         platelets: localStorage.getItem(`lab_platelets${suffix}_${patient.id}`),
@@ -3375,27 +3934,34 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         alt: localStorage.getItem(`lab_alt${suffix}_${patient.id}`),
         ast: localStorage.getItem(`lab_ast${suffix}_${patient.id}`)
       }
-      
+
+      // Valores a serem salvos/avaliados: estado para B, localStorage para C
+      const hbVal = currentStep === 'evaluate_labs_b' ? labsB?.hb : (lsData.hemoglobin ? parseFloat(lsData.hemoglobin) : undefined)
+      const htVal = currentStep === 'evaluate_labs_b' ? labsB?.ht : (lsData.hematocrit ? parseFloat(lsData.hematocrit) : undefined)
+      const pltVal = currentStep === 'evaluate_labs_b' ? labsB?.plt : (lsData.platelets ? parseInt(lsData.platelets) : undefined)
+      const albVal = currentStep === 'evaluate_labs_b' ? labsB?.alb : (lsData.albumin ? parseFloat(lsData.albumin) : undefined)
+      const altVal = currentStep === 'evaluate_labs_b' ? labsB?.alt : (lsData.alt ? parseInt(lsData.alt) : undefined)
+      const astVal = currentStep === 'evaluate_labs_b' ? labsB?.ast : (lsData.ast ? parseInt(lsData.ast) : undefined)
+
       // Salvar dados dos exames no serviço se algum foi preenchido
-      const hasLabData = Object.values(labData).some(value => value && value.trim() !== '')
+      const hasLabData = [hbVal, htVal, pltVal, albVal, altVal, astVal].some(v => v !== undefined)
       if (hasLabData) {
         try {
-          // Salvar os dados dos exames usando o patientService
           patientService.updateLabResults(patient.id, {
-            hemoglobin: labData.hemoglobin ? parseFloat(labData.hemoglobin) : undefined,
-            hematocrit: labData.hematocrit ? parseFloat(labData.hematocrit) : undefined,
-            platelets: labData.platelets ? parseInt(labData.platelets) : undefined,
-            albumin: labData.albumin ? parseFloat(labData.albumin) : undefined,
+            hemoglobin: hbVal,
+            hematocrit: htVal,
+            platelets: pltVal,
+            albumin: albVal,
             transaminases: {
-              alt: labData.alt ? parseInt(labData.alt) : undefined,
-              ast: labData.ast ? parseInt(labData.ast) : undefined
+              alt: altVal,
+              ast: astVal
             },
             status: 'completed',
             resultDate: new Date()
           })
-          
-          // Limpar localStorage após salvar
-          Object.keys(labData).forEach(key => {
+
+          // Limpar localStorage após salvar (mantido para evitar dados obsoletos)
+          Object.keys(lsData).forEach(key => {
             localStorage.removeItem(`lab_${key}${suffix}_${patient.id}`)
           })
         } catch (error) {
@@ -3403,17 +3969,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         }
       }
 
-      // Avaliação automática dos exames para Grupo B
+      // Avaliação automática dos exames para Grupo B usando os valores do estado
       if (currentStep === 'evaluate_labs_b') {
-        const hemoglobin = labData.hemoglobin ? parseFloat(labData.hemoglobin) : undefined
-        const hematocrit = labData.hematocrit ? parseFloat(labData.hematocrit) : undefined
-        const platelets = labData.platelets ? parseInt(labData.platelets) : undefined
-        const albumin = labData.albumin ? parseFloat(labData.albumin) : undefined
         const shouldUpgrade = (
-          (platelets !== undefined && platelets < 100000) ||
-          (hematocrit !== undefined && hematocrit >= 45) ||
-          (hemoglobin !== undefined && hemoglobin >= 16) ||
-          (albumin !== undefined && albumin < 3.5)
+          (pltVal !== undefined && pltVal < 100000) ||
+          (htVal !== undefined && htVal >= 45) ||
+          (hbVal !== undefined && hbVal >= 16) ||
+          (albVal !== undefined && albVal < 3.5)
         )
         // Se critérios de gravidade laboratorial presentes e usuário tentar manter B, reclassificar para C
         if (shouldUpgrade && nextStep === 'end_group_b') {
@@ -3583,8 +4145,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     let group: 'A' | 'B' | 'C' | 'D' | undefined
     if (nextStep === 'group_a' || nextStep === 'hydration_a') group = 'A'
     else if (nextStep === 'group_b' || nextStep === 'wait_labs_b' || nextStep === 'end_group_b') group = 'B'
-    else if (nextStep === 'group_c' || nextStep === 'treatment_c') group = 'C'
-    else if (nextStep === 'group_d' || nextStep === 'treatment_d') group = 'D'
+    else if (
+      nextStep === 'group_c' ||
+      nextStep === 'treatment_c' ||
+      nextStep === 'maintenance_c_phase1' ||
+      nextStep === 'maintenance_c_phase2'
+    ) group = 'C'
+    else if (
+      nextStep === 'group_d' ||
+      nextStep === 'treatment_d' ||
+      nextStep === 'group_d_shock' ||
+      nextStep === 'd_plasma_expanders' ||
+      nextStep === 'd_shock_persistence_check' ||
+      nextStep === 'd_no_persistent_shock' ||
+      nextStep === 'd_hemo_coag_management'
+    ) group = 'D'
     
     // Atualizar estado
     try {

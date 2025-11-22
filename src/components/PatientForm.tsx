@@ -28,6 +28,8 @@ interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
   onCancel: () => void
   onEmergencySelector: () => void
+  // Caso especial para abrir o fluxo dedicado de Gasometria
+  onOpenGasometry?: () => void
   // Opções para cenários específicos (ex.: Retorno)
   initialStep?: number // passo inicial do wizard (1–4)
   presetFlowchart?: 'dengue' | 'zika' | 'chikungunya' // define o fluxograma inicialmente
@@ -37,7 +39,7 @@ interface PatientFormProps {
   mode?: 'new' | 'return'
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new' }) => {
+const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, onOpenGasometry, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new' }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -481,10 +483,16 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                   <EmergencySelector
                     selectedFlowchart={formData.selectedFlowchart}
                     onSelectFlowchart={(flowchart) => {
+                      if (flowchart.id === 'gasometria') {
+                        // Abrir o fluxo dedicado de gasometria, se disponível
+                        onOpenGasometry?.()
+                        return
+                      }
                       setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id as "dengue" | "zika" | "chikungunya" }))
                       setHasSelectedFlow(true)
                       setCurrentStep(2)
                     }}
+                    onOpenGasometry={onOpenGasometry}
                   />
                   {!hasSelectedFlow && (
                     <p className="text-sm text-red-600 mt-2">Selecione um fluxograma para continuar.</p>
@@ -496,8 +504,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                     type="button"
                     onClick={() => hasSelectedFlow && setCurrentStep(2)}
                     className={`px-8 py-4 rounded-xl transition-all duration-300 font-semibold flex items-center space-x-2 ${hasSelectedFlow
-                        ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-xl"
-                        : "bg-slate-200 text-slate-500 cursor-not-allowed"
+                      ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-xl"
+                      : "bg-slate-200 text-slate-500 cursor-not-allowed"
                       }`}
                     whileHover={{ scale: hasSelectedFlow ? 1.02 : 1 }}
                     whileTap={{ scale: hasSelectedFlow ? 0.98 : 1 }}
