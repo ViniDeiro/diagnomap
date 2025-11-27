@@ -4495,9 +4495,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           return opts
         }
 
-        // 8ª reavaliação: decisões só se Ht/Hb informados
-        const hb = labs?.hb
-        const ht = labs?.ht
+        // 8ª reavaliação: decisões só se Ht/Hb informados da ABA ATUAL
+        const hb = dReevalData[dReevalTab]?.labs?.hb
+        const ht = dReevalData[dReevalTab]?.labs?.ht
         const ratio = hb != null && ht != null ? ht / hb : undefined
 
         if (ratio !== undefined) {
