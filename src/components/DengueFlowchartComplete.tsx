@@ -31,7 +31,7 @@ interface FlowchartStep {
   title: string
   description: string
   type: 'question' | 'action' | 'result' | 'group' | 'wait_labs'
-  options?: { text: string; nextStep: string; value?: string }[]
+  options?: { text: string; nextStep: string; value?: string; disabled?: boolean }[]
   group?: 'A' | 'B' | 'C' | 'D'
   icon?: React.ReactNode
   color?: string
@@ -193,6 +193,32 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     })
   }
 
+  // Exames recomendados e outros no Grupo D (checkboxes) - Reutilizando labels do Grupo C
+  const [recommendedExamsD, setRecommendedExamsD] = useState<Array<keyof typeof recommendedExamLabelsC>>(
+    typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(`recommended_exams_d_${patient.id}`) || '[]') : []
+  )
+  const [otherExamsD, setOtherExamsD] = useState<Array<keyof typeof otherExamLabelsC>>(
+    typeof window !== 'undefined' ? JSON.parse(localStorage.getItem(`other_exams_d_${patient.id}`) || '[]') : []
+  )
+  const toggleRecommendedExamD = (code: keyof typeof recommendedExamLabelsC) => {
+    setRecommendedExamsD(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`recommended_exams_d_${patient.id}`, JSON.stringify(next))
+      }
+      return next
+    })
+  }
+  const toggleOtherExamD = (code: keyof typeof otherExamLabelsC) => {
+    setOtherExamsD(prev => {
+      const next = prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`other_exams_d_${patient.id}`, JSON.stringify(next))
+      }
+      return next
+    })
+  }
+
   // Faixas de referência da Hemoglobina por idade/sexo
   const getHbRange = () => {
     const now = new Date()
@@ -227,7 +253,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         const range = getHbRange()
         const refText = `(${range.min.toFixed(1)}–${range.max.toFixed(1)} g/dL)`
         // Classificação de anemia por gravidade
-        if (value < 5) return { label: `Anemia extremamente grave (< 5 g/dL) ${refText}`, input: 'border-black bg-black text-white', text: 'text-white' }
+        if (value < 5) return { label: `Anemia extremamente grave (< 5 g/dL) ${refText}`, input: 'border-red-600 bg-red-50 focus:ring-red-600 focus:border-red-600', text: 'text-red-800' }
         if (value < 7) return { label: `Anemia grave (5,0–6,9 g/dL) ${refText}`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
         if (value < 9) return { label: `Anemia moderada (7,0–8,9 g/dL) ${refText}`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
         if (value < range.min) return { label: `Anemia leve (9,0–${(range.min - 0.1).toFixed(1)} g/dL) ${refText}`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
@@ -310,29 +336,164 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     return Math.round((s + 2 * d) / 3)
   }
 
+  // Chips de classificação de Sinais Vitais (replicados do PatientForm)
+  const vitalsBadge = (label: string, tone: 'blue' | 'blue-dark' | 'yellow' | 'orange' | 'red' | 'black') => {
+    const tones: Record<typeof tone, string> = {
+      blue: 'bg-blue-100 text-blue-700 border-blue-200',
+      'blue-dark': 'bg-blue-200 text-blue-900 border-blue-300',
+      yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      orange: 'bg-orange-100 text-orange-700 border-orange-200',
+      red: 'bg-red-100 text-red-700 border-red-200',
+      black: 'bg-black text-white border-black'
+    } as any
+    return (
+      <span className={clsx('mt-2 ml-0 inline-flex items-center px-2 py-1 border rounded-full text-xs font-semibold', tones[tone])}>
+        {label}
+      </span>
+    )
+  }
+
+  const classifyHRChip = (hr?: number) => {
+    if (hr == null) return null
+    if (hr >= 160) return vitalsBadge('Taquicardia severa', 'red')
+    if (hr >= 131) return vitalsBadge('Taquicardia moderada', 'orange')
+    if (hr > 100) return vitalsBadge('Taquicardia leve', 'yellow')
+    if (hr >= 60) return vitalsBadge('Normal', 'blue')
+    if (hr >= 50) return vitalsBadge('Bradicardia leve', 'yellow')
+    if (hr >= 35) return vitalsBadge('Bradicardia moderada', 'orange')
+    return vitalsBadge('Bradicardia severa', 'red')
+  }
+
+  const classifyRRChip = (rr?: number) => {
+    if (rr == null) return null
+    if (rr >= 40) return vitalsBadge('Taquipneia severa', 'red')
+    if (rr >= 31) return vitalsBadge('Taquipneia moderada', 'orange')
+    if (rr >= 21) return vitalsBadge('Taquipneia leve', 'yellow')
+    if (rr >= 14) return vitalsBadge('Normal', 'blue')
+    if (rr >= 12) return vitalsBadge('Bradipneia leve', 'yellow')
+    if (rr >= 9) return vitalsBadge('Bradipneia moderada', 'orange')
+    return vitalsBadge('Bradipneia severa', 'red')
+  }
+
+  const classifySpO2Chip = (spo2?: number) => {
+    if (spo2 == null) return null
+    if (spo2 <= 85) return vitalsBadge('Hipoxemia severa', 'red')
+    if (spo2 <= 89) return vitalsBadge('Hipoxemia moderada', 'orange')
+    if (spo2 <= 94) return vitalsBadge('Hipoxemia leve', 'yellow')
+    return vitalsBadge('Normal', 'blue')
+  }
+
+  const classifyTempChip = (t?: number) => {
+    if (t == null || isNaN(t)) return null
+    if (t < 28) return vitalsBadge('Hipotermia grave (< 28°C)', 'red')
+    if (t <= 31.9) return vitalsBadge('Hipotermia moderada (28–31,9°C)', 'orange')
+    if (t <= 35.9) return vitalsBadge('Hipotermia leve (32–35,9°C)', 'yellow')
+    if (t <= 37.2 && t >= 36.0) return vitalsBadge('Normal (36,0–37,2°C)', 'blue')
+    if (t <= 37.7) return vitalsBadge('Sub-febril (37,3–37,7°C)', 'yellow')
+    if (t <= 39.9) return vitalsBadge('Febre (37,8–39,9°C)', 'orange')
+    if (t > 40) return vitalsBadge('Hipertermia (> 40°C)', 'red')
+    if (t > 39.9 && t <= 40) return vitalsBadge('Febre alta (≈ 40°C)', 'orange')
+    return null
+  }
+
+  const classifyBPChip = (bp?: string) => {
+    if (!bp) return null
+    const [sStr, dStr] = bp.split('/')
+    const s = parseInt(sStr)
+    const d = parseInt(dStr)
+    if (isNaN(s) || isNaN(d)) return null
+    const scores: Array<{ cond: boolean; chip: React.ReactElement }> = [
+      { cond: s < 70 || d < 49, chip: vitalsBadge('Hipotensão severa', 'red') },
+      { cond: (s >= 70 && s <= 84) || (d >= 49 && d <= 54), chip: vitalsBadge('Hipotensão moderada', 'orange') },
+      { cond: (s >= 85 && s <= 99) || (d >= 55 && d <= 59), chip: vitalsBadge('Hipotensão leve', 'yellow') },
+      { cond: s >= 180 || d >= 110, chip: vitalsBadge('Hipertensão grave', 'red') },
+      { cond: (s >= 160 && s <= 179) || (d >= 100 && d <= 109), chip: vitalsBadge('Hipertensão moderada', 'orange') },
+      { cond: (s >= 140 && s <= 159) || (d >= 90 && d <= 99), chip: vitalsBadge('Hipertensão leve', 'yellow') },
+      { cond: (s >= 120 && s <= 139) || (d >= 80 && d <= 89), chip: vitalsBadge('PA aumentada', 'blue-dark') },
+      { cond: (s >= 100 && s <= 119) && (d >= 60 && d <= 79), chip: vitalsBadge('PA normal', 'blue') },
+    ]
+    return scores.find(sv => sv.cond)?.chip || null
+  }
+
+  const renderPAMChip2 = (bp?: string) => {
+    const pam = calcPamFromBp(bp)
+    if (pam == null) return null
+    return vitalsBadge(`PAM ≈ ${pam} mmHg`, 'blue-dark')
+  }
+
+  // Estados para reavaliação do Grupo C (1h e 2h)
   const [diuresis1h, setDiuresis1h] = useState<number | undefined>(
-    parseNum(typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_1h_${patient.id}`) : null)
+    typeof window !== 'undefined' ? parseNum(localStorage.getItem(`diuresis_c_1h_${patient.id}`) || '') : undefined
   )
+  const [vitals1h, setVitals1h] = useState<{ bp?: string, hr?: number, rr?: number, spo2?: number, temp?: number }>({
+    bp: typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_bp_${patient.id}`) || '' : '',
+    hr: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_1h_hr_${patient.id}`) || '') : undefined,
+    rr: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_1h_rr_${patient.id}`) || '') : undefined,
+    spo2: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_1h_spo2_${patient.id}`) || '') : undefined,
+    temp: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_1h_temp_${patient.id}`) || '') : undefined
+  })
+
   const [diuresis2h, setDiuresis2h] = useState<number | undefined>(
-    parseNum(typeof window !== 'undefined' ? localStorage.getItem(`diuresis_c_2h_${patient.id}`) : null)
+    typeof window !== 'undefined' ? parseNum(localStorage.getItem(`diuresis_c_2h_${patient.id}`) || '') : undefined
   )
-
-  // Sinais vitais para telas de reavaliação do Grupo C
-  const [vitals1h, setVitals1h] = useState({
-    bp: typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_bp_${patient.id}`) || '') : '',
-    hr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_hr_${patient.id}`) : null),
-    rr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_rr_${patient.id}`) : null),
-    spo2: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_spo2_${patient.id}`) : null),
-    temp: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_1h_temp_${patient.id}`) : null)
+  const [vitals2h, setVitals2h] = useState<{ bp?: string, hr?: number, rr?: number, spo2?: number, temp?: number }>({
+    bp: typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '' : '',
+    hr: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_2h_hr_${patient.id}`) || '') : undefined,
+    rr: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_2h_rr_${patient.id}`) || '') : undefined,
+    spo2: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_2h_spo2_${patient.id}`) || '') : undefined,
+    temp: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_c_2h_temp_${patient.id}`) || '') : undefined
   })
 
-  const [vitals2h, setVitals2h] = useState({
-    bp: typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : '',
-    hr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_hr_${patient.id}`) : null),
-    rr: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_rr_${patient.id}`) : null),
-    spo2: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_spo2_${patient.id}`) : null),
-    temp: parseNum(typeof window !== 'undefined' ? localStorage.getItem(`vitals_c_2h_temp_${patient.id}`) : null)
+  // Estados para reavaliação do Grupo D
+  const [diuresisD, setDiuresisD] = useState<number | undefined>(
+    typeof window !== 'undefined' ? parseNum(localStorage.getItem(`diuresis_d_${patient.id}`) || '') : undefined
+  )
+  const [vitalsD, setVitalsD] = useState<{ bp?: string, hr?: number, rr?: number, spo2?: number, temp?: number }>({
+    bp: typeof window !== 'undefined' ? localStorage.getItem(`vitals_d_bp_${patient.id}`) || '' : '',
+    hr: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_d_hr_${patient.id}`) || '') : undefined,
+    rr: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_d_rr_${patient.id}`) || '') : undefined,
+    spo2: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_d_spo2_${patient.id}`) || '') : undefined,
+    temp: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_d_temp_${patient.id}`) || '') : undefined
   })
+  // Controle de abas de reavaliação do Grupo D (1ª a 8ª)
+  const [dReevalTab, setDReevalTab] = useState<number>(1)
+
+  // Estado por aba para Reavaliação do Grupo D: vitais, diurese e exames
+  type DTabVitals = { bp?: string, hr?: number, rr?: number, spo2?: number, temp?: number }
+  type DTabLabs = { hb?: number, ht?: number, plt?: number, alb?: number, alt?: number, ast?: number }
+  type DReevalTabData = { vitals?: DTabVitals, diuresis?: number, labs?: DTabLabs }
+
+  const [dReevalData, setDReevalData] = useState<Record<number, DReevalTabData>>(() => {
+    const initial: Record<number, DReevalTabData> = {}
+    for (let n = 1; n <= 8; n++) {
+      try {
+        const raw = typeof window !== 'undefined' ? localStorage.getItem(`d_tab_${n}_data_${patient.id}`) : null
+        initial[n] = raw ? JSON.parse(raw) : {}
+      } catch {
+        initial[n] = {}
+      }
+    }
+    return initial
+  })
+
+  const updateDTabData = (patch: Partial<DReevalTabData>, tab = dReevalTab) => {
+    setDReevalData(prev => {
+      const current = prev[tab] || {}
+      const next: DReevalTabData = {
+        ...current,
+        ...(patch || {}),
+        vitals: patch.vitals ? { ...(current.vitals || {}), ...(patch.vitals || {}) } : current.vitals,
+        labs: patch.labs ? { ...(current.labs || {}), ...(patch.labs || {}) } : current.labs
+      }
+      const updated = { ...prev, [tab]: next }
+      try {
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(`d_tab_${tab}_data_${patient.id}`, JSON.stringify(next))
+        }
+      } catch {}
+      return updated
+    })
+  }
 
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
@@ -459,6 +620,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   i
                 </button>
                 <div className="absolute right-0 top-6 z-20 hidden group-hover:block bg-white border border-red-300 rounded-md shadow-lg p-4 text-red-800 text-xs w-96 max-w-none break-words whitespace-pre-line text-left">
+                  <strong className="block mb-2 text-sm">O que é persistência do choque na dengue?</strong>
                   {infoTexts.grupoD.persistencia_choque}
                 </div>
               </div>
@@ -585,8 +747,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: (() => {
-        const hb = labs?.hb
-        const ht = labs?.ht
+        // Nas 1ª a 7ª reavaliações, navegamos entre abas sem acionar decisões finais
+        if (dReevalTab < 8) {
+          const nextLabel = `${dReevalTab + 1}ª reavaliação`
+          const prevLabel = `${dReevalTab - 1}ª reavaliação`
+          const opts: { text: string; nextStep: string; value: string }[] = [
+            { text: `Ir para ${nextLabel}`, nextStep: 'reevaluation_d_tab_next', value: `goto_${dReevalTab + 1}` }
+          ]
+          if (dReevalTab > 1) {
+            opts.unshift({ text: `Voltar para ${prevLabel}`, nextStep: 'reevaluation_d_tab_prev', value: `back_${dReevalTab - 1}` })
+          }
+          return opts
+        }
+
+        const hb = dReevalData[dReevalTab]?.labs?.hb
+        const ht = dReevalData[dReevalTab]?.labs?.ht
         const ratio = hb != null && ht != null ? ht / hb : undefined
 
         // Lógica dinâmica para sugerir o botão
@@ -925,6 +1100,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       color: 'bg-gradient-to-r from-amber-500 to-red-600',
       content: (
         <div className="space-y-6">
+          {/* (removido) Abas de reavaliação — devem aparecer dentro da etapa do Grupo D */}
           <div className="grid lg:grid-cols-2 gap-6">
             {/* Grupo C - Sinais de Alarme */}
             <div className="bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-xl border border-amber-300">
@@ -2606,7 +2782,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       <label key={code} className="flex items-center space-x-2 text-sm text-amber-800">
                         <input
                           type="checkbox"
-                          checked={recommendedExamsC.includes(code)}
+                          checked={recommendedExamsC.includes(code as keyof typeof recommendedExamLabelsC)}
                           onChange={() => toggleRecommendedExamC(code as keyof typeof recommendedExamLabelsC)}
                         />
                         <span>{label}</span>
@@ -2621,7 +2797,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       <label key={code} className="flex items-center space-x-2 text-sm text-amber-800">
                         <input
                           type="checkbox"
-                          checked={otherExamsC.includes(code)}
+                          checked={otherExamsC.includes(code as keyof typeof otherExamLabelsC)}
                           onChange={() => toggleOtherExamC(code as keyof typeof otherExamLabelsC)}
                         />
                         <span>{label}</span>
@@ -2755,8 +2931,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 </div>
                 <h4 className="font-bold text-red-800">Acompanhamento</h4>
               </div>
-              <p className="text-red-700 font-medium mb-4">UTI - mínimo 48h</p>
-              {/* Botão de prescrição UTI removido conforme solicitação */}
+              <p className="text-red-700 font-medium mb-4">Em leito de UTI até estabilização – mínimo de 48h.</p>
             </div>
 
             {/* Exames */}
@@ -2767,15 +2942,63 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 </div>
                 <h4 className="font-bold text-red-800">Exames</h4>
               </div>
-              <div className="text-red-700 text-sm space-y-1 mb-4">
-                <p>• Hemograma completo</p>
-                <p>• Gasometria arterial</p>
-                <p>• Eletrólitos (Na, K, Cl)</p>
-                <p>• Função renal (Cr, Ur)</p>
-                <p>• Albumina e transaminases</p>
-                <p>• Raio-X de tórax</p>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <p className="font-semibold text-red-800">Exames Obrigatórios:</p>
+                  <ul className="text-red-700 text-sm space-y-1 mt-1">
+                    <li>• Hemograma completo</li>
+                    <li>• Dosagem de albumina sérica</li>
+                    <li>• Transaminases (ALT/AST)</li>
+                  </ul>
+                </div>
+                <div>
+                  <p className="font-semibold text-red-800">Recomendados:</p>
+                  <div className="mt-2 space-y-2">
+                    {Object.entries(recommendedExamLabelsC).map(([code, label]) => (
+                      <label key={code} className="flex items-center space-x-2 text-sm text-red-800">
+                        <input
+                          type="checkbox"
+                          checked={recommendedExamsD.includes(code as keyof typeof recommendedExamLabelsC)}
+                          onChange={() => toggleRecommendedExamD(code as keyof typeof recommendedExamLabelsC)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="font-semibold text-red-800">Outros exames conforme necessidade:</p>
+                  <div className="mt-2 grid md:grid-cols-2 gap-2">
+                    {Object.entries(otherExamLabelsC).map(([code, label]) => (
+                      <label key={code} className="flex items-center space-x-2 text-sm text-red-800">
+                        <input
+                          type="checkbox"
+                          checked={otherExamsD.includes(code as keyof typeof otherExamLabelsC)}
+                          onChange={() => toggleOtherExamD(code as keyof typeof otherExamLabelsC)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                {(recommendedExamsD.length > 0 || otherExamsD.length > 0) && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-800 text-sm font-medium">Selecionados:</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {recommendedExamsD.map(code => (
+                        <span key={`rec_${code}`} className="inline-block px-2 py-1 bg-red-200 text-red-800 rounded-md text-xs">
+                          {recommendedExamLabelsC[code]}
+                        </span>
+                      ))}
+                      {otherExamsD.map(code => (
+                        <span key={`other_${code}`} className="inline-block px-2 py-1 bg-red-200 text-red-800 rounded-md text-xs">
+                          {otherExamLabelsC[code]}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-              {/* Botão de exames UTI removido conforme solicitação */}
             </div>
 
             {/* Conduta */}
@@ -2787,55 +3010,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <h4 className="font-bold text-red-800">Conduta</h4>
               </div>
 
-              {/* Cálculos automáticos baseados no peso para UTI */}
-              {(() => {
-                const peso = patient.weight || 70 // peso padrão se não informado
-                const volumeReposicaoUTI = peso * 20 // 20ml/kg para UTI
-                const volumeManutencaoUTI = peso * 30 // 30ml/kg/dia para manutenção UTI
-                const dopamax = peso * 20 // 20 mcg/kg/min (dose máxima)
-
-                return (
-                  <div className="space-y-3">
-                    <div className="bg-red-200/50 p-3 rounded-lg">
-                      <p className="font-semibold text-red-800 text-sm">Reposição Volêmica Emergencial:</p>
-                      <p className="text-red-700 font-bold">
-                        {volumeReposicaoUTI}ml SF 0,9%
-                      </p>
-                      <p className="text-red-600 text-xs">
-                        ({peso}kg × 20ml/kg) em até 20 minutos
-                      </p>
-                    </div>
-
-                    <div className="bg-red-200/50 p-3 rounded-lg">
-                      <p className="font-semibold text-red-800 text-sm">Manutenção UTI (24h):</p>
-                      <p className="text-red-700 font-bold">
-                        {volumeManutencaoUTI}ml/dia
-                      </p>
-                      <p className="text-red-600 text-xs">
-                        ({peso}kg × 30ml/kg/dia)
-                      </p>
-                    </div>
-
-                    <div className="bg-red-200/50 p-3 rounded-lg">
-                      <p className="font-semibold text-red-800 text-sm">Dopamina (se necessário):</p>
-                      <p className="text-red-700 font-bold">
-                        Até {dopamax} mcg/kg/min
-                      </p>
-                      <p className="text-red-600 text-xs">
-                        Peso: {peso}kg × 20 mcg/kg/min
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => onViewReport?.(patient)}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 mt-3"
-                    >
-                      <Heart className="w-4 h-4" />
-                      <span>Protocolo UTI</span>
-                    </button>
-                  </div>
-                )
-              })()}
+              <div className="space-y-3">
+                <div className="bg-red-200/50 p-3 rounded-lg">
+                  <p className="text-red-800 text-sm">
+                    <strong>Reposição volêmica (adulto e criança).</strong> Iniciar imediatamente fase de expansão rápida parenteral, com soro fisiológico a 0,9%: 20 mL/kg em até 20 minutos, em qualquer nível de complexidade, inclusive durante eventual transferência para uma unidade de referência, mesmo na ausência de exames complementares.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -2903,7 +3084,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     wait_reevaluation_d: {
       id: 'wait_reevaluation_d',
       title: 'Aguardando Evolução - UTI',
-      description: 'Paciente em UTI com monitoramento contínuo',
+      description: 'Reavaliação a cada 15-30 minutos durante 2 horas',
       type: 'wait_labs',
       icon: <AlertTriangle className="w-6 h-6" />,
       color: 'bg-red-600',
@@ -2913,7 +3094,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <h4 className="font-semibold text-red-800 mb-2">Status UTI:</h4>
           <p className="text-red-700">• Paciente em cuidados intensivos</p>
           <p className="text-red-700">• Monitoramento contínuo</p>
-          <p className="text-red-700">• Reavaliação constante</p>
+          <p className="text-red-700">• Reavaliação constante (15-30 min)</p>
           <p className="text-red-700">• Aguardando estabilização</p>
         </div>
       ),
@@ -2974,19 +3155,36 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <input
                   type="text"
                   placeholder="Ex: 110/70"
+                  inputMode="numeric"
+                  maxLength={7}
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  value={vitals1h.bp || ''}
                   onChange={(e) => {
-                    const value = e.target.value
-                    localStorage.setItem(`vitals_c_1h_bp_${patient.id}`, value)
-                    setVitals1h(prev => ({ ...prev, bp: value }))
-                  }}
-                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_bp_${patient.id}`) || '') : ''}
-                />
-                {vitals1h.bp && (
-                  <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals1h.bp) || '--'} mmHg</p>
-                )}
-              </div>
-              <div>
+                    let raw = e.target.value.replace(/[^\d]/g, '')
+                    let formatted = raw
+
+                    if (raw.length >= 3) {
+                      const firstThree = parseInt(raw.slice(0, 3))
+                      if (firstThree > 299) {
+                        formatted = `${raw.slice(0, 2)}/${raw.slice(2, 5)}`
+                      } else {
+                        if (raw.length > 3) {
+                          formatted = `${raw.slice(0, 3)}/${raw.slice(3, 6)}`
+                        }
+                      }
+                    }
+
+                setVitals1h(prev => ({ ...prev, bp: formatted }))
+                localStorage.setItem(`vitals_c_1h_bp_${patient.id}`, formatted)
+              }}
+            />
+            {classifyBPChip(vitals1h.bp)}
+            {renderPAMChip2(vitals1h.bp)}
+            {vitals1h.bp && (
+              <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals1h.bp) || '--'} mmHg</p>
+            )}
+          </div>
+          <div>
                 <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
                 <input
                   type="number"
@@ -3001,6 +3199,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_hr_${patient.id}`) || '') : ''}
                 />
+                {classifyHRChip(vitals1h.hr)}
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">FR (irpm)</label>
@@ -3017,6 +3216,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_rr_${patient.id}`) || '') : ''}
                 />
+                {classifyRRChip(vitals1h.rr)}
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">SpO₂ (%)</label>
@@ -3034,6 +3234,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_spo2_${patient.id}`) || '') : ''}
                 />
+                {classifySpO2Chip(vitals1h.spo2)}
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">Temp (°C)</label>
@@ -3051,6 +3252,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_1h_temp_${patient.id}`) || '') : ''}
                 />
+                {classifyTempChip(vitals1h.temp)}
               </div>
             </div>
           </div>
@@ -3426,18 +3628,20 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   type="text"
                   placeholder="Ex: 110/70"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  onChange={(e) => {
-                    const value = e.target.value
-                    localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, value)
-                    setVitals2h(prev => ({ ...prev, bp: value }))
-                  }}
-                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : ''}
-                />
-                {vitals2h.bp && (
-                  <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals2h.bp) || '--'} mmHg</p>
-                )}
-              </div>
-              <div>
+                onChange={(e) => {
+                  const value = e.target.value
+                  localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, value)
+                  setVitals2h(prev => ({ ...prev, bp: value }))
+                }}
+                defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : ''}
+              />
+              {classifyBPChip(vitals2h.bp)}
+              {renderPAMChip2(vitals2h.bp)}
+              {vitals2h.bp && (
+                <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals2h.bp) || '--'} mmHg</p>
+              )}
+            </div>
+            <div>
                 <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
                 <input
                   type="number"
@@ -3452,6 +3656,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_hr_${patient.id}`) || '') : ''}
                 />
+                {classifyHRChip(vitals2h.hr)}
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">FR (irpm)</label>
@@ -3468,6 +3673,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_rr_${patient.id}`) || '') : ''}
                 />
+                {classifyRRChip(vitals2h.rr)}
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">SpO₂ (%)</label>
@@ -3485,6 +3691,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_spo2_${patient.id}`) || '') : ''}
                 />
+                {classifySpO2Chip(vitals2h.spo2)}
               </div>
               <div>
                 <label className="block text-xs text-slate-600 mb-1">Temp (°C)</label>
@@ -3502,6 +3709,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   }}
                   defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_temp_${patient.id}`) || '') : ''}
                 />
+                {classifyTempChip(vitals2h.temp)}
               </div>
             </div>
           </div>
@@ -3799,8 +4007,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
         if (ratio !== undefined) {
           if (ratio >= 3.6) return [
-            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' },
-            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
+            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
           ]
           return [
             { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
@@ -3809,8 +4016,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         }
         if (ht != null) {
           if (ht >= 45) return [
-            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' },
-            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
+            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
           ]
           return [
             { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
@@ -3902,27 +4108,421 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     reevaluation_d: {
       id: 'reevaluation_d',
       title: 'Reavaliação - Grupo D',
-      description: 'Avaliação da evolução em UTI',
-      type: 'action',
+      description: 'Avaliação da evolução em UTI (15-30 min)',
+      type: 'question',
       icon: <Heart className="w-6 h-6" />,
       color: 'bg-red-500',
       content: (
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div className="bg-red-50 p-4 rounded-lg">
             <h4 className="font-semibold text-red-800 mb-2">Avaliação intensiva:</h4>
             <ul className="text-red-700 text-sm space-y-1">
               <li>• Sinais vitais contínuos</li>
-              <li>• Balanço hídrico</li>
+              <li>• Balanço hídrico rigoroso</li>
               <li>• Função orgânica</li>
-              <li>• Exames seriados</li>
+              <li>• Exames seriados (Hematócrito)</li>
             </ul>
+          </div>
+
+          {/* Abas de reavaliação 1ª a 8ª — dentro do Grupo D */}
+          <div className="bg-white border-2 border-red-200 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Activity className="w-5 h-5 text-red-600" />
+                <h4 className="font-semibold text-red-800">Reavaliações a cada 15 min (2h)</h4>
+              </div>
+              <span className="text-xs font-medium text-red-700">8ª reavaliação obrigatória</span>
+            </div>
+            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+              {[1,2,3,4,5,6,7,8].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setDReevalTab(n)}
+                  className={clsx(
+                    'px-2 py-2 rounded-lg text-sm font-medium border transition-colors',
+                    dReevalTab === n
+                      ? 'bg-red-100 text-red-800 border-red-300'
+                      : 'bg-white hover:bg-red-50 text-slate-700 border-slate-300'
+                  )}
+                  title={`${n}ª reavaliação`}
+                >
+                  {n}ª
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sinais Vitais - Grupo D */}
+          <div className="bg-white border-2 border-red-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-red-600" />
+              <h4 className="font-semibold text-red-800">Sinais Vitais</h4>
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">PA (mmHg)</label>
+                <input
+                  type="text"
+                  placeholder="120/80"
+                  inputMode="numeric"
+                  maxLength={7}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={dReevalData[dReevalTab]?.vitals?.bp || ''}
+                  onChange={(e) => {
+                    let raw = e.target.value.replace(/[^\d]/g, '')
+                    let formatted = raw
+
+                    if (raw.length >= 3) {
+                      const firstThree = parseInt(raw.slice(0, 3))
+                      if (firstThree > 299) {
+                        // Sistólica de 2 dígitos (ex: 90, 80)
+                        formatted = `${raw.slice(0, 2)}/${raw.slice(2, 5)}`
+                      } else {
+                        // Sistólica de 3 dígitos (ex: 120, 110)
+                        if (raw.length > 3) {
+                          formatted = `${raw.slice(0, 3)}/${raw.slice(3, 6)}`
+                        }
+                      }
+                    }
+                    updateDTabData({ vitals: { bp: formatted } })
+                  }}
+                />
+                {classifyBPChip(dReevalData[dReevalTab]?.vitals?.bp)}
+                {renderPAMChip2(dReevalData[dReevalTab]?.vitals?.bp)}
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
+                <input
+                  type="number"
+                  placeholder="80"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={dReevalData[dReevalTab]?.vitals?.hr ?? ''}
+                  onChange={(e) => {
+                    const val = parseNum(e.target.value)
+                    updateDTabData({ vitals: { hr: val } })
+                  }}
+                />
+                {classifyHRChip(dReevalData[dReevalTab]?.vitals?.hr)}
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">FR (irpm)</label>
+                <input
+                  type="number"
+                  placeholder="18"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={dReevalData[dReevalTab]?.vitals?.rr ?? ''}
+                  onChange={(e) => {
+                    const val = parseNum(e.target.value)
+                    updateDTabData({ vitals: { rr: val } })
+                  }}
+                />
+                {classifyRRChip(dReevalData[dReevalTab]?.vitals?.rr)}
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">SpO2 (%)</label>
+                <input
+                  type="number"
+                  placeholder="98"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={dReevalData[dReevalTab]?.vitals?.spo2 ?? ''}
+                  onChange={(e) => {
+                    const val = parseNum(e.target.value)
+                    updateDTabData({ vitals: { spo2: val } })
+                  }}
+                />
+                {classifySpO2Chip(dReevalData[dReevalTab]?.vitals?.spo2)}
+              </div>
+              <div>
+                <label className="block text-xs text-slate-600 mb-1">Temp (ºC)</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  placeholder="36.5"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  value={dReevalData[dReevalTab]?.vitals?.temp ?? ''}
+                  onChange={(e) => {
+                    const val = parseNum(e.target.value)
+                    updateDTabData({ vitals: { temp: val } })
+                  }}
+                />
+                {classifyTempChip(dReevalData[dReevalTab]?.vitals?.temp)}
+              </div>
+            </div>
+            {/* Exibir PAM calculada */}
+            {(() => {
+              const pam = calcPamFromBp(dReevalData[dReevalTab]?.vitals?.bp)
+              if (pam) {
+                return (
+                  <div className="mt-2 text-xs text-red-700 font-medium">
+                    PAM calculada: {pam} mmHg
+                  </div>
+                )
+              }
+              return null
+            })()}
+          </div>
+
+          {/* Diurese - Grupo D */}
+          <div className="bg-white border-2 border-red-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Droplets className="w-5 h-5 text-red-600" />
+              <h4 className="font-semibold text-red-800">Diurese (ml/h)</h4>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex-1">
+                <input
+                  type="number"
+                  placeholder="Ex: 50"
+                  className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", diuresisStatus(dReevalData[dReevalTab]?.diuresis).input)}
+                  value={dReevalData[dReevalTab]?.diuresis ?? ''}
+                  onChange={(e) => {
+                    const val = parseNum(e.target.value)
+                    updateDTabData({ diuresis: val })
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                {dReevalData[dReevalTab]?.diuresis != null && (
+                  <p className={clsx("text-sm font-medium", diuresisStatus(dReevalData[dReevalTab]?.diuresis).text)}>
+                    {diuresisStatus(dReevalData[dReevalTab]?.diuresis).label}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Seção de Exames */}
+          <div className="bg-white border-2 border-red-200 rounded-lg p-4">
+            <div className="flex items-center space-x-2 mb-4">
+              <Activity className="w-5 h-5 text-red-600" />
+              <h4 className="font-semibold text-red-800">Resultados dos Exames</h4>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-4">
+              {/* Hemograma */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Hemograma Completo</h5>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hemoglobina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="20"
+                      placeholder="Ex: 12.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('hb', dReevalData[dReevalTab]?.labs?.hb).input)}
+                      onChange={(e) => {
+                        const value = parseNum(e.target.value)
+                        updateDTabData({ labs: { hb: value } })
+                      }}
+                      value={dReevalData[dReevalTab]?.labs?.hb ?? ''}
+                    />
+                    {dReevalData[dReevalTab]?.labs?.hb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('hb', dReevalData[dReevalTab]?.labs?.hb).text)}>{labStatus('hb', dReevalData[dReevalTab]?.labs?.hb).label}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Hematócrito (%)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder="Ex: 38.0"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ht', dReevalData[dReevalTab]?.labs?.ht, dReevalData[dReevalTab]?.labs?.hb).input)}
+                      onChange={(e) => {
+                        const value = parseNum(e.target.value)
+                        updateDTabData({ labs: { ht: value } })
+                      }}
+                      value={dReevalData[dReevalTab]?.labs?.ht ?? ''}
+                    />
+                    {dReevalData[dReevalTab]?.labs?.ht != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ht', dReevalData[dReevalTab]?.labs?.ht, dReevalData[dReevalTab]?.labs?.hb).text)}>{labStatus('ht', dReevalData[dReevalTab]?.labs?.ht, dReevalData[dReevalTab]?.labs?.hb).label}</p>
+                    )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000000"
+                      placeholder="Ex: 150000"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', dReevalData[dReevalTab]?.labs?.plt).input)}
+                      onChange={(e) => {
+                        const value = parseNum(e.target.value)
+                        updateDTabData({ labs: { plt: value } })
+                      }}
+                      value={dReevalData[dReevalTab]?.labs?.plt ?? ''}
+                    />
+                    {dReevalData[dReevalTab]?.labs?.plt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('plt', dReevalData[dReevalTab]?.labs?.plt).text)}>{labStatus('plt', dReevalData[dReevalTab]?.labs?.plt).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Bioquímica */}
+              <div className="space-y-3">
+                <h5 className="font-medium text-slate-700 border-b border-slate-200 pb-1">Bioquímica</h5>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">Albumina (g/dL)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="10"
+                      placeholder="Ex: 3.5"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alb', dReevalData[dReevalTab]?.labs?.alb).input)}
+                      onChange={(e) => {
+                        const value = parseNum(e.target.value)
+                        updateDTabData({ labs: { alb: value } })
+                      }}
+                      value={dReevalData[dReevalTab]?.labs?.alb ?? ''}
+                    />
+                    {dReevalData[dReevalTab]?.labs?.alb != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alb', dReevalData[dReevalTab]?.labs?.alb).text)}>{labStatus('alb', dReevalData[dReevalTab]?.labs?.alb).label}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-slate-600 mb-1">ALT (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 45"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('alt', dReevalData[dReevalTab]?.labs?.alt).input)}
+                      onChange={(e) => {
+                        const value = parseNum(e.target.value)
+                        updateDTabData({ labs: { alt: value } })
+                      }}
+                      value={dReevalData[dReevalTab]?.labs?.alt ?? ''}
+                    />
+                    {dReevalData[dReevalTab]?.labs?.alt != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('alt', dReevalData[dReevalTab]?.labs?.alt).text)}>{labStatus('alt', dReevalData[dReevalTab]?.labs?.alt).label}</p>
+                    )}
+                  </div>
+
+                  <div className="col-span-2">
+                    <label className="block text-xs text-slate-600 mb-1">AST (U/L)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="1000"
+                      placeholder="Ex: 40"
+                      className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('ast', dReevalData[dReevalTab]?.labs?.ast).input)}
+                      onChange={(e) => {
+                        const value = parseNum(e.target.value)
+                        updateDTabData({ labs: { ast: value } })
+                      }}
+                      value={dReevalData[dReevalTab]?.labs?.ast ?? ''}
+                    />
+                    {dReevalData[dReevalTab]?.labs?.ast != null && (
+                      <p className={clsx("text-xs mt-1", labStatus('ast', dReevalData[dReevalTab]?.labs?.ast).text)}>{labStatus('ast', dReevalData[dReevalTab]?.labs?.ast).label}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Pré-visualização da classificação baseada em Hematócrito */}
+            {(() => {
+              const hb = dReevalData[dReevalTab]?.labs?.hb
+              const ht = dReevalData[dReevalTab]?.labs?.ht
+              const ratio = hb != null && ht != null ? ht / hb : undefined
+
+              let previewText = 'Preencha Hematócrito para avaliar evolução.'
+              let highlightClass = 'text-slate-700'
+              let bgClass = 'bg-slate-50 border-slate-200'
+
+              if (ratio !== undefined) {
+                const ratioStr = `${ratio.toFixed(2)}x`
+                if (ratio >= 3.6) {
+                  previewText = `Hemoconcentração mantida (Razão Ht/Hb ${ratioStr}) — Iniciar Expansores`
+                  highlightClass = 'text-red-800'
+                  bgClass = 'bg-red-50 border-red-200'
+                } else {
+                  previewText = `Melhora da hemoconcentração (Razão Ht/Hb ${ratioStr}) — Avaliar Persistência do Choque`
+                  highlightClass = 'text-green-800'
+                  bgClass = 'bg-green-50 border-green-200'
+                }
+              } else if (ht != null) {
+                if (ht >= 45) {
+                  previewText = `Hematócrito elevado (${ht}%) — Iniciar Expansores`
+                  highlightClass = 'text-red-800'
+                  bgClass = 'bg-red-50 border-red-200'
+                } else {
+                  previewText = `Hematócrito em queda/estável (${ht}%) — Avaliar Persistência do Choque`
+                  highlightClass = 'text-green-800'
+                  bgClass = 'bg-green-50 border-green-200'
+                }
+              }
+
+              return (
+                <div className={clsx('mt-4 p-3 border rounded-md', bgClass)}>
+                  <p className={clsx('text-sm font-medium', highlightClass)}>
+                    {previewText}
+                  </p>
+                  {dReevalTab < 8 && (
+                    <p className="text-xs text-slate-600 mt-2">
+                      Avance para a {dReevalTab + 1}ª reavaliação. As ações definitivas aparecem na 8ª.
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
           </div>
         </div>
       ),
-      options: [
-        { text: 'Estável - Continuar UTI', nextStep: 'end_group_d', value: 'stable' },
-        { text: 'Instável - Intensificar', nextStep: 'end_group_d', value: 'unstable' }
-      ]
+      options: (() => {
+        // Abas 1–7: somente navegação de aba
+        if (dReevalTab < 8) {
+          const nextLabel = `${dReevalTab + 1}ª reavaliação`
+          const prevLabel = `${dReevalTab - 1}ª reavaliação`
+          const opts: { text: string; nextStep: string; value: string }[] = [
+            { text: `Ir para ${nextLabel}`, nextStep: 'reevaluation_d_tab_next', value: `goto_${dReevalTab + 1}` }
+          ]
+          if (dReevalTab > 1) {
+            opts.unshift({ text: `Voltar para ${prevLabel}`, nextStep: 'reevaluation_d_tab_prev', value: `back_${dReevalTab - 1}` })
+          }
+          return opts
+        }
+
+        // 8ª reavaliação: decisões só se Ht/Hb informados
+        const hb = labs?.hb
+        const ht = labs?.ht
+        const ratio = hb != null && ht != null ? ht / hb : undefined
+
+        if (ratio !== undefined) {
+          if (ratio >= 3.6) return [
+            { text: 'Hemoconcentração Detectada - Iniciar Expansores', nextStep: 'd_plasma_expanders', value: 'ht_up' }
+          ]
+          return [
+            { text: 'Hematócrito em Queda - Avaliar Choque', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
+          ]
+        }
+
+        if (ht != null) {
+          if (ht >= 45) return [
+            { text: 'Hemoconcentração Detectada - Iniciar Expansores', nextStep: 'd_plasma_expanders', value: 'ht_up' }
+          ]
+          return [
+            { text: 'Hematócrito em Queda - Avaliar Choque', nextStep: 'd_shock_persistence_check', value: 'ht_down' }
+          ]
+        }
+
+        // Sem Ht/Hb na 8ª: mostrar botão não clicável orientando a informar resultados
+        return [
+          { text: 'Informe Hematócrito/Hemoglobina para habilitar decisões (8ª reavaliação)', nextStep: 'noop', value: 'disabled', disabled: true }
+        ]
+      })()
     },
 
     end_group_d: {
@@ -4192,6 +4792,18 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     if (isTransitioning) return
 
     setIsTransitioning(true)
+
+    // Navegação interna das abas da reavaliação do Grupo D
+    if (nextStep === 'reevaluation_d_tab_next') {
+      setDReevalTab(prev => Math.min(prev + 1, 8))
+      setTimeout(() => setIsTransitioning(false), 200)
+      return
+    }
+    if (nextStep === 'reevaluation_d_tab_prev') {
+      setDReevalTab(prev => Math.max(prev - 1, 1))
+      setTimeout(() => setIsTransitioning(false), 200)
+      return
+    }
 
     const newAnswers = value ? { ...answers, [currentStep]: value } : answers
     const newHistory = [...history, currentStep]
@@ -4684,20 +5296,25 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               {/* Step Options */}
               {step.options && step.options.length > 0 && (
                 <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-slate-800 flex items-center">
-                    <Target className="w-5 h-5 mr-2 text-blue-600" />
-                    Escolha uma opção:
-                  </h3>
+                  {(() => {
+                    const allDisabled = step.options?.every(opt => opt.disabled)
+                    return (
+                      <h3 className="text-lg font-semibold text-slate-800 flex items-center">
+                        <Target className="w-5 h-5 mr-2 text-blue-600" />
+                        {allDisabled ? 'Ações indisponíveis — informe Hematócrito/Hemoglobina' : 'Escolha uma opção:'}
+                      </h3>
+                    )
+                  })()}
 
                   <div className="grid gap-4">
                     {step.options.map((option, index) => (
                       <motion.button
                         key={index}
                         onClick={() => handleAnswer(option.nextStep, option.value)}
-                        disabled={isTransitioning}
+                        disabled={isTransitioning || option.disabled}
                         className={clsx(
                           "group relative p-6 rounded-2xl text-left transition-all duration-300 border-2 hover:shadow-2xl overflow-hidden",
-                          isTransitioning && "opacity-50 cursor-not-allowed",
+                          (isTransitioning || option.disabled) && "opacity-50 cursor-not-allowed",
                           !isTransitioning && (
                             step.type === 'question' ? "bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:from-blue-100 hover:to-blue-200 text-blue-900" :
                               step.type === 'group' ? "bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:from-green-100 hover:to-green-200 text-green-900" :
@@ -4714,7 +5331,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                         <div className="relative flex items-center justify-between">
                           <span className="font-bold text-lg lg:text-xl pr-4">{option.text}</span>
                           <div className="flex-shrink-0 w-10 h-10 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                            <ChevronRight className="w-5 h-5 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                            <ChevronRight className={clsx("w-5 h-5 opacity-70 transition-all", option.disabled ? "opacity-40" : "group-hover:opacity-100 group-hover:translate-x-1")} />
                           </div>
                         </div>
                       </motion.button>

@@ -6,7 +6,7 @@ const Header: React.FC = () => {
     <header className="relative bg-white shadow-2xl border-b border-slate-200/50 sticky top-0 z-50">
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
-      
+
       {/* Subtle pattern */}
       <div className="absolute inset-0 opacity-[0.015]" style={{
         backgroundImage: `url('data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23334155" fill-opacity="0.4"%3E%3Cpath d="M20 20h40v40H20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')`
@@ -22,9 +22,9 @@ const Header: React.FC = () => {
                 <Stethoscope className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
             </div>
-            
+
             <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent pb-2 py-1 leading-relaxed">
                 Siga o Fluxo
               </h1>
               <div className="flex items-center space-x-2 mt-1">
@@ -46,7 +46,7 @@ const Header: React.FC = () => {
                 <p className="text-sm font-bold text-emerald-800">MS 2024</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3 bg-gradient-to-r from-blue-50 to-cyan-50 px-4 py-2 rounded-xl border border-blue-200">
               <Activity className="w-5 h-5 text-blue-600" />
               <div>
@@ -54,7 +54,7 @@ const Header: React.FC = () => {
                 <p className="text-sm font-bold text-blue-800">Dengue</p>
               </div>
             </div>
-            
+
             <div className="flex items-center space-x-3 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2 rounded-xl border border-amber-200">
               <Award className="w-5 h-5 text-amber-600" />
               <div>
@@ -76,7 +76,7 @@ const Header: React.FC = () => {
           {/* Background pattern */}
           <div className="absolute inset-0 bg-gradient-to-r from-blue-700/30 to-slate-800/30"></div>
           <div className="absolute top-0 right-0 w-32 h-32 sm:w-64 sm:h-64 bg-gradient-to-br from-white/10 to-transparent rounded-full -translate-y-16 translate-x-16 sm:-translate-y-32 sm:translate-x-32 blur-3xl"></div>
-          
+
           <div className="relative">
             <div className="flex items-start justify-between mb-4">
               <div className="flex-1">
@@ -87,7 +87,7 @@ const Header: React.FC = () => {
                 </h2>
                 <p className="text-sm sm:text-base text-blue-100 leading-relaxed">
                   <span className="hidden sm:inline">
-                    Sistema inteligente desenvolvido com base no protocolo oficial do Ministério da Saúde 
+                    Sistema inteligente desenvolvido com base no protocolo oficial do Ministério da Saúde
                     para classificação de risco e tomada de decisões clínicas em pacientes com suspeita de dengue.
                   </span>
                   <span className="sm:hidden">
@@ -96,18 +96,18 @@ const Header: React.FC = () => {
                 </p>
               </div>
             </div>
-            
+
             <div className="flex flex-wrap gap-2 sm:gap-3">
               <div className="flex items-center space-x-1 sm:space-x-2 bg-white/20 backdrop-blur-sm px-2 sm:px-4 py-1 sm:py-2 rounded-lg border border-white/30">
                 <div className="w-2 h-2 bg-green-400 rounded-full"></div>
                 <span className="text-xs sm:text-sm font-semibold">Atualizado</span>
               </div>
-              
+
               <div className="flex items-center space-x-1 sm:space-x-2 bg-white/20 backdrop-blur-sm px-2 sm:px-4 py-1 sm:py-2 rounded-lg border border-white/30">
                 <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
                 <span className="text-xs sm:text-sm font-semibold">Protocolo MS</span>
               </div>
-              
+
               <div className="flex items-center space-x-1 sm:space-x-2 bg-white/20 backdrop-blur-sm px-2 sm:px-4 py-1 sm:py-2 rounded-lg border border-white/30">
                 <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
                 <span className="text-xs sm:text-sm font-semibold">Validado</span>
