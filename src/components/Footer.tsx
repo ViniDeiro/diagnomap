@@ -10,28 +10,21 @@ const Footer: React.FC = () => {
       }}></div>
 
       <div className="relative max-w-7xl mx-auto px-8 py-16">
-        
+
         {/* Main Footer Content */}
         <div className="grid lg:grid-cols-4 gap-12">
-          
+
           {/* Brand Section */}
           <div className="lg:col-span-1">
             <div className="flex items-center space-x-4 mb-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-slate-400 rounded-xl blur-lg opacity-50"></div>
-                <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 to-slate-600 rounded-xl flex items-center justify-center">
-                  <Stethoscope className="w-6 h-6 text-white" />
-                </div>
-              </div>
-              <div>
-                <h3 className="text-xl font-bold bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-                  Siga o Fluxo
-                </h3>
-                <p className="text-sm text-slate-400">Sistema Clínico</p>
-              </div>
+              <img
+                src="/logo.jpeg"
+                alt="Siga o Fluxo"
+                className="h-16 w-auto object-contain bg-white/10 rounded-lg p-1"
+              />
             </div>
             <p className="text-slate-300 leading-relaxed mb-6">
-              Plataforma inteligente de apoio à decisão médica para classificação de risco 
+              Plataforma inteligente de apoio à decisão médica para classificação de risco
               e manejo de pacientes com suspeita de dengue.
             </p>
             <div className="flex items-center space-x-3 bg-gradient-to-r from-emerald-500/20 to-green-500/20 px-4 py-3 rounded-xl border border-emerald-500/30">
@@ -112,7 +105,7 @@ const Footer: React.FC = () => {
                   <p className="text-3xl font-black text-white">192</p>
                 </div>
               </div>
-              
+
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-4 rounded-xl shadow-xl border border-blue-500/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -122,7 +115,7 @@ const Footer: React.FC = () => {
                   <p className="text-3xl font-black text-white">193</p>
                 </div>
               </div>
-              
+
               <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-4 rounded-xl shadow-xl border border-purple-500/30">
                 <div className="flex items-center justify-between">
                   <div>
@@ -149,7 +142,7 @@ const Footer: React.FC = () => {
               Desenvolvido para excelência em cuidados médicos.
             </p>
           </div>
-          
+
           <div className="flex items-center space-x-6">
             <div className="flex items-center space-x-2 bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
               <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -170,10 +163,10 @@ const Footer: React.FC = () => {
             <div>
               <h5 className="text-white font-bold mb-2">Aviso Médico-Legal</h5>
               <p className="text-slate-300 text-sm leading-relaxed">
-                <strong>Este sistema é uma ferramenta de apoio à decisão médica</strong> e não substitui 
-                o julgamento clínico profissional. Sempre consulte as diretrizes institucionais locais e 
-                mantenha-se atualizado com os protocolos mais recentes. Em situações de emergência ou 
-                dúvidas clínicas, procure imediatamente assistência médica especializada. O uso desta 
+                <strong>Este sistema é uma ferramenta de apoio à decisão médica</strong> e não substitui
+                o julgamento clínico profissional. Sempre consulte as diretrizes institucionais locais e
+                mantenha-se atualizado com os protocolos mais recentes. Em situações de emergência ou
+                dúvidas clínicas, procure imediatamente assistência médica especializada. O uso desta
                 ferramenta implica na aceitação destas condições.
               </p>
             </div>

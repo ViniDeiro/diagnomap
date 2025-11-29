@@ -1,8 +1,7 @@
 import React from 'react'
 import { motion } from 'framer-motion'
-import { 
-  Stethoscope, 
-  Loader2, 
+import {
+  Loader2,
   Brain,
   Target
 } from 'lucide-react'
@@ -11,23 +10,23 @@ interface LoadingScreenProps {
   message?: string
 }
 
-const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
-  message = "Inicializando Siga o Fluxo..." 
+const LoadingScreen: React.FC<LoadingScreenProps> = ({
+  message = "Inicializando Siga o Fluxo..."
 }) => {
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex items-center justify-center relative overflow-hidden">
-      
+
       {/* Background pattern igual ao site */}
       <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
-      
+
       {/* Padrão geométrico sutil */}
       <div className="absolute inset-0 opacity-[0.015]" style={{
         backgroundImage: `url('data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23334155" fill-opacity="0.4"%3E%3Cpath d="M20 20h40v40H20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')`
       }}></div>
 
       <div className="text-center relative z-10 max-w-xl mx-auto px-8">
-        
+
         {/* Logo igual ao Header */}
         <motion.div
           className="flex justify-center mb-12"
@@ -48,9 +47,9 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           >
             {/* Glow igual ao site */}
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-2xl blur-xl opacity-20 scale-110"></div>
-            
-            {/* Container do logo igual ao Header */}
-            <div className="relative w-20 h-20 bg-gradient-to-br from-blue-600 to-slate-700 rounded-2xl flex items-center justify-center shadow-2xl border border-blue-100">
+
+            {/* Container do logo */}
+            <div className="relative flex items-center justify-center">
               <motion.div
                 animate={{
                   scale: [1, 1.1, 1],
@@ -61,33 +60,23 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
                   ease: "easeInOut"
                 }}
               >
-                <Stethoscope className="w-10 h-10 text-white" />
+                <img
+                  src="/logo.jpeg"
+                  alt="Siga o Fluxo"
+                  className="h-32 w-auto object-contain rounded-2xl shadow-2xl"
+                />
               </motion.div>
             </div>
           </motion.div>
         </motion.div>
 
-        {/* Título igual ao site */}
+        {/* Container de Texto e Loading */}
         <motion.div
           className="mb-16"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 1.2 }}
         >
-          <motion.h1 
-            className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent mb-6"
-            animate={{
-              backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: "easeInOut"
-            }}
-          >
-            Siga o Fluxo
-          </motion.h1>
-          
           {/* Subtítulo igual ao Header */}
           <motion.div
             className="flex items-center justify-center space-x-2 mb-8"
@@ -109,8 +98,6 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
             animate={{ width: 96 }}
             transition={{ delay: 1.3, duration: 1.5 }}
           />
-          
-
         </motion.div>
 
         {/* Loading card com estilo do site */}
@@ -131,7 +118,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
                 <Loader2 className="w-4 h-4 text-white" />
               </div>
             </motion.div>
-            <motion.span 
+            <motion.span
               className="text-slate-700 font-semibold text-lg"
               animate={{
                 opacity: [0.8, 1, 0.8],
@@ -170,7 +157,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
               }}
             />
           </div>
-          
+
           {/* Status text */}
           <motion.div
             className="mt-4 text-center"

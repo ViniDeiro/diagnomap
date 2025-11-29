@@ -1,5 +1,5 @@
 import React from 'react'
-import { Activity, Shield, Award, Stethoscope, Brain, Target, Zap } from 'lucide-react'
+import { Activity, Shield, Award, Zap } from 'lucide-react'
 
 const Header: React.FC = () => {
   return (
@@ -12,29 +12,15 @@ const Header: React.FC = () => {
         backgroundImage: `url('data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23334155" fill-opacity="0.4"%3E%3Cpath d="M20 20h40v40H20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')`
       }}></div>
 
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex items-center justify-between">
-          {/* Premium Logo */}
-          <div className="flex items-center space-x-3 sm:space-x-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-2xl blur-xl opacity-20 scale-110"></div>
-              <div className="relative w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-blue-600 to-slate-700 rounded-2xl flex items-center justify-center shadow-2xl border border-blue-100">
-                <Stethoscope className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
-              </div>
-            </div>
-
-            <div>
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent pb-2 py-1 leading-relaxed">
-                Siga o Fluxo
-              </h1>
-              <div className="flex items-center space-x-2 mt-1">
-                <Brain className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                <span className="text-xs sm:text-sm font-medium text-slate-600 uppercase tracking-wider">
-                  Fluxogramas de apoio
-                </span>
-                <Target className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-              </div>
-            </div>
+          {/* Logo */}
+          <div className="flex items-center relative z-10">
+            <img
+              src="/logo.jpeg"
+              alt="Siga o Fluxo"
+              className="h-14 sm:h-16 lg:h-20 w-auto object-contain scale-[1.8] origin-left ml-4"
+            />
           </div>
 
           {/* Premium Status Indicators */}

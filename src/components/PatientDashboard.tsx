@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  Plus, 
+import {
+  Plus,
   Search,
   Calendar,
   Clock,
@@ -86,7 +86,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
           setCurrentPage(pageNum)
         }
       }
-    } catch {}
+    } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -94,21 +94,10 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   useEffect(() => {
     try {
       localStorage.setItem('dashboardPage', String(currentPage))
-    } catch {}
+    } catch { }
   }, [currentPage])
 
-  const loadPatients = () => {
-    // Mantido para compatibilidade, mas o efeito acima faz a lógica diferenciada
-    setIsLoading(true)
-    setTimeout(() => {
-      patientService.fixExistingPatientsProgress()
-      const allPatients = patientService.getAllPatients()
-      setPatients(allPatients)
-      setIsLoading(false)
-    }, 800)
-  }
-
-  const filteredPatients = patients.filter(patient => 
+  const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.medicalRecord.includes(searchTerm)
   )
@@ -144,16 +133,16 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
 
   const getGroupBadge = (group?: 'A' | 'B' | 'C' | 'D') => {
     if (!group) return null
-    
+
     const colors = {
       A: 'from-blue-600 to-blue-700 border-blue-500',
       B: 'from-emerald-600 to-emerald-700 border-emerald-500',
       C: 'from-amber-600 to-amber-700 border-amber-500',
       D: 'from-red-600 to-red-700 border-red-500'
     }
-    
+
     return (
-      <motion.span 
+      <motion.span
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         className={clsx(
@@ -179,7 +168,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     patientService.deletePatient(patientId)
     setPatients(prev => prev.filter(p => p.id !== patientId))
     setShowDeleteConfirm(null)
-    
+
     // Ajustar página se necessário
     const newTotalPages = Math.ceil((filteredPatients.length - 1) / patientsPerPage)
     if (currentPage > newTotalPages && newTotalPages > 0) {
@@ -193,15 +182,13 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const endIndex = startIndex + patientsPerPage
   const currentPatients = filteredPatients.slice(startIndex, endIndex)
 
-
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
-      
+
       {/* Premium Medical Header */}
       <div className="relative bg-white shadow-xl border-b border-slate-200/50">
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
-        
+
         {/* Subtle geometric pattern */}
         <div className="absolute inset-0 opacity-[0.02]" style={{
           backgroundImage: `url('data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23334155" fill-opacity="0.4"%3E%3Cpath d="M20 20h40v40H20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')`
@@ -215,42 +202,19 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
             className="flex items-center justify-center"
           >
             {/* Medical Logo Premium */}
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center justify-center">
               <motion.div
-                initial={{ scale: 0, rotate: -90 }}
-                animate={{ scale: 1, rotate: 0 }}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
                 className="relative"
               >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-2xl blur-xl opacity-20 scale-110"></div>
-                <div className="relative w-16 h-16 bg-gradient-to-br from-blue-600 to-slate-700 rounded-2xl flex items-center justify-center shadow-2xl border border-blue-100">
-                  <Stethoscope className="w-8 h-8 text-white" />
-                </div>
+                <img
+                  src="/logo.jpeg"
+                  alt="Siga o Fluxo"
+                  className="h-16 sm:h-20 lg:h-24 w-auto object-contain scale-[1.8]"
+                />
               </motion.div>
-
-              <div className="text-center">
-                <motion.h1
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.2, duration: 0.6 }}
-                  className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent"
-                >
-                  Siga o Fluxo
-                </motion.h1>
-                
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.4, duration: 0.6 }}
-                  className="flex items-center justify-center space-x-2 mt-2"
-                >
-                  <Brain className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-slate-600 uppercase tracking-wider">
-                    Fluxogramas de apoio para decisão terapêutica
-                  </span>
-                  <Target className="w-4 h-4 text-blue-600" />
-                </motion.div>
-              </div>
             </div>
           </motion.div>
         </div>
@@ -258,7 +222,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-8 py-12">
-        
+
         {/* Professional Action Bar */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -278,7 +242,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
               <motion.button
                 onClick={onNewPatient}
@@ -287,7 +251,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 whileTap={{ scale: 0.98 }}
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-slate-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                
+
                 <div className="relative flex items-center space-x-2 sm:space-x-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
                     <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -348,13 +312,13 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                     <User className="w-10 h-10 text-slate-500" />
                   </div>
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-slate-800 mb-4">
                   {searchTerm ? 'Paciente não encontrado' : 'Nenhum paciente cadastrado'}
                 </h3>
                 <p className="text-slate-600 text-lg mb-8 max-w-md mx-auto">
-                  {searchTerm 
-                    ? 'Verifique os dados inseridos e tente novamente' 
+                  {searchTerm
+                    ? 'Verifique os dados inseridos e tente novamente'
                     : 'Inicie um novo atendimento para começar o diagnóstico'
                   }
                 </p>
@@ -382,7 +346,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 >
                   {/* Premium border gradient */}
                   <div className="h-1 bg-gradient-to-r from-blue-600 via-slate-400 to-blue-600"></div>
-                  
+
                   <div className="p-4 sm:p-6 lg:p-8">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
                       <div className="flex-1">
@@ -408,7 +372,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           </motion.div>
                           {getGroupBadge(patient.flowchartState.group)}
                         </div>
-                        
+
                         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                           <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
                             <Calendar className="w-5 h-5 text-blue-600" />
@@ -442,7 +406,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 lg:space-x-4 lg:ml-8">
                         <div className="flex space-x-3 sm:space-x-2 lg:space-x-3">
                           <motion.button
@@ -454,7 +418,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           >
                             <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 group-hover/btn:text-purple-700 mx-auto" />
                           </motion.button>
-                          
+
                           <motion.button
                             onClick={() => onViewMedicalPrescription(patient)}
                             className="relative p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl border border-green-200 hover:border-green-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
@@ -464,7 +428,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           >
                             <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 group-hover/btn:text-green-700 mx-auto" />
                           </motion.button>
-                          
+
                           {patient.treatment.prescriptions.length > 0 && (
                             <motion.button
                               onClick={() => onViewPrescriptions(patient)}
@@ -502,7 +466,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                               <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
                             </motion.button>
                           )}
-                          
+
                           <motion.button
                             onClick={() => setShowDeleteConfirm(patient.id)}
                             className="relative p-3 sm:p-4 bg-gradient-to-br from-red-50 to-rose-50 hover:from-red-100 hover:to-rose-100 rounded-xl border border-red-200 hover:border-red-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
@@ -513,7 +477,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                             <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 group-hover/btn:text-red-700 mx-auto" />
                           </motion.button>
                         </div>
-                        
+
                         <motion.button
                           onClick={() => onSelectPatient(patient)}
                           className="relative bg-gradient-to-r from-blue-600 to-slate-700 hover:from-blue-700 hover:to-slate-800 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 sm:space-x-3 font-semibold text-sm sm:text-base shadow-xl hover:shadow-2xl overflow-hidden group/btn w-full sm:w-auto"
@@ -523,8 +487,8 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-blue-700 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
                           <div className="relative flex items-center space-x-2 sm:space-x-3">
                             <span className="font-semibold">
-                              {patient.status === 'active' && patient.flowchartState.currentStep !== 'end' 
-                                ? 'Continuar Atendimento' 
+                              {patient.status === 'active' && patient.flowchartState.currentStep !== 'end'
+                                ? 'Continuar Atendimento'
                                 : 'Visualizar Histórico'}
                             </span>
                             <motion.div
@@ -572,7 +536,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 <div className="flex items-center space-x-2">
                   {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                     let pageNumber: number
-                    
+
                     if (totalPages <= 5) {
                       pageNumber = i + 1
                     } else if (currentPage <= 3) {
@@ -600,7 +564,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                       </motion.button>
                     )
                   })}
-                  
+
                   {totalPages > 5 && currentPage < totalPages - 2 && (
                     <>
                       <div className="px-2 text-slate-400">
@@ -633,7 +597,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                   <ChevronRight className="w-5 h-5" />
                 </motion.button>
               </div>
-              
+
               <div className="mt-4 text-center text-sm text-slate-600">
                 Página {currentPage} de {totalPages} • {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
               </div>
@@ -661,15 +625,15 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <AlertTriangle className="w-8 h-8 text-red-600" />
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-slate-800 mb-4">
                   Confirmar Exclusão
                 </h3>
-                
+
                 <p className="text-slate-600 mb-8 leading-relaxed">
                   Tem certeza que deseja excluir este paciente? Esta ação não pode ser desfeita e todos os dados do paciente serão perdidos permanentemente.
                 </p>
-                
+
                 <div className="flex space-x-4">
                   <motion.button
                     onClick={() => setShowDeleteConfirm(null)}
@@ -679,7 +643,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                   >
                     Cancelar
                   </motion.button>
-                  
+
                   <motion.button
                     onClick={() => handleDeletePatient(showDeleteConfirm)}
                     className="flex-1 bg-gradient-to-r from-red-600 to-red-700 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
