@@ -23,6 +23,7 @@ import {
 import { PatientFormData } from '@/types/patient'
 import { clsx } from 'clsx'
 import EmergencySelector from './EmergencySelector'
+import SeverityAlertModal from './SeverityAlertModal'
 
 interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
@@ -37,9 +38,11 @@ interface PatientFormProps {
   // Dados iniciais (pré-preenchimento) e modo de uso
   initialData?: PatientFormData
   mode?: 'new' | 'return'
+  // Redirecionamento automático quando detectamos severidade nos sinais vitais iniciais
+  onSeverityRedirect?: (data: PatientFormData, group: 'C' | 'D') => void
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, onOpenGasometry, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new' }) => {
+const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, onOpenGasometry, onSeverityRedirect, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new' }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -178,6 +181,35 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
     if (v >= 45) return badge('Hipoglicemia moderada', 'orange')
     return badge('Hipoglicemia severa', 'red')
   }
+
+  // Estado do modal de severidade
+  const [severityModalOpen, setSeverityModalOpen] = useState(false)
+  const [severityLevel, setSeverityLevel] = useState<'yellow' | 'red' | null>(null)
+  const [severityTrigger, setSeverityTrigger] = useState<string | undefined>(undefined)
+  // Assinatura do último achado severo exibido; usada para evitar reabertura redundante
+  const [lastSeveritySig, setLastSeveritySig] = useState<string | null>(null)
+  // Campo que disparou a última severidade exibida
+  const [lastTriggeredField, setLastTriggeredField] = useState<
+    | null
+    | 'temperature'
+    | 'feverDays'
+    | 'bloodPressure'
+    | 'heartRate'
+    | 'respiratoryRate'
+    | 'oxygenSaturation'
+    | 'glucose'
+  >(null)
+  // Campo atualmente em edição para evitar disparo de modal durante digitação
+  const [editingField, setEditingField] = useState<
+    | null
+    | 'temperature'
+    | 'feverDays'
+    | 'bloodPressure'
+    | 'heartRate'
+    | 'respiratoryRate'
+    | 'oxygenSaturation'
+    | 'glucose'
+  >(null)
 
   const [formData, setFormData] = useState<PatientFormData>(() => {
     if (initialData) {
@@ -346,6 +378,152 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
     return Object.keys(newErrors).length === 0
   }
 
+  // Detecta severidade a partir dos sinais vitais informados e sugere grupo
+  const detectSeverityFromVitals = (): { level: 'yellow' | 'red'; trigger: string; group: 'C' | 'D' } | null => {
+    const v = formData.vitalSigns || {}
+
+    // Temperatura
+    if (v.temperature != null) {
+      const t = v.temperature
+      if (t < 28) return { level: 'red', trigger: 'Hipotermia grave (<28°C)', group: 'D' }
+      if (t > 40) return { level: 'red', trigger: 'Hipertermia (>40°C)', group: 'D' }
+    }
+
+    // Pressão arterial
+    if (v.bloodPressure) {
+      const [sStr, dStr] = v.bloodPressure.split('/')
+      const s = parseInt(sStr)
+      const d = parseInt(dStr)
+      if (!isNaN(s) && !isNaN(d)) {
+        if (s < 70 || d < 49) return { level: 'red', trigger: 'Hipotensão severa', group: 'D' }
+        if (s >= 180 || d >= 110) return { level: 'red', trigger: 'Hipertensão grave', group: 'D' }
+      }
+    }
+
+    // Frequência cardíaca
+    if (v.heartRate != null) {
+      const hr = v.heartRate
+      if (hr >= 160 || hr < 35) return { level: 'red', trigger: 'Alteração severa de FC', group: 'D' }
+    }
+
+    // Frequência respiratória
+    if (v.respiratoryRate != null) {
+      const rr = v.respiratoryRate
+      if (rr >= 40 || rr < 9) return { level: 'red', trigger: 'Alteração severa de FR', group: 'D' }
+    }
+
+    // SpO₂
+    if (v.oxygenSaturation != null) {
+      const spo2 = v.oxygenSaturation
+      if (spo2 <= 85) return { level: 'red', trigger: 'Hipoxemia severa (SpO₂ ≤85%)', group: 'D' }
+    }
+
+    // Glicemia capilar
+    if (v.glucose) {
+      const g = v.glucose.trim().toUpperCase()
+      if (g === 'HI') return { level: 'red', trigger: 'Hiperglicemia extrema (HI)', group: 'D' }
+      if (g === 'LO') return { level: 'red', trigger: 'Hipoglicemia extrema (LO)', group: 'D' }
+      const num = parseFloat(g)
+      if (!isNaN(num)) {
+        if (num < 45) return { level: 'red', trigger: 'Hipoglicemia severa', group: 'D' }
+        if (num > 200) return { level: 'red', trigger: 'Hiperglicemia severa', group: 'D' }
+        if (num >= 45 && num < 60) return { level: 'yellow', trigger: 'Hipoglicemia moderada', group: 'C' }
+      }
+    }
+
+    return null
+  }
+
+  // Detecta severidade apenas para um campo específico (usado no onBlur)
+  type VitalField = 'temperature' | 'feverDays' | 'bloodPressure' | 'heartRate' | 'respiratoryRate' | 'oxygenSaturation' | 'glucose'
+  const detectSeverityForField = (
+    field: VitalField,
+    override?: string | number | undefined
+  ): { level: 'yellow' | 'red'; trigger: string; group: 'C' | 'D' } | null => {
+    const v = formData.vitalSigns || {}
+    switch (field) {
+      case 'temperature': {
+        const t = typeof override === 'number' ? (override as number) : v.temperature
+        if (t == null) return null
+        if (t < 28) return { level: 'red', trigger: 'Hipotermia grave (<28°C)', group: 'D' }
+        if (t > 40) return { level: 'red', trigger: 'Hipertermia (>40°C)', group: 'D' }
+        return null
+      }
+      case 'bloodPressure': {
+        const bp = typeof override === 'string' ? (override as string) : v.bloodPressure
+        if (!bp) return null
+        const [sStr, dStr] = bp.split('/')
+        const s = parseInt(sStr)
+        const d = parseInt(dStr)
+        if (isNaN(s) || isNaN(d)) return null
+        if (s < 70 || d < 49) return { level: 'red', trigger: 'Hipotensão severa', group: 'D' }
+        if (s >= 180 || d >= 110) return { level: 'red', trigger: 'Hipertensão grave', group: 'D' }
+        return null
+      }
+      case 'heartRate': {
+        const hr = typeof override === 'number' ? (override as number) : v.heartRate
+        if (hr == null) return null
+        if (hr >= 160 || hr < 35) return { level: 'red', trigger: 'Alteração severa de FC', group: 'D' }
+        return null
+      }
+      case 'respiratoryRate': {
+        const rr = typeof override === 'number' ? (override as number) : v.respiratoryRate
+        if (rr == null) return null
+        if (rr >= 40 || rr < 9) return { level: 'red', trigger: 'Alteração severa de FR', group: 'D' }
+        return null
+      }
+      case 'oxygenSaturation': {
+        const spo2 = typeof override === 'number' ? (override as number) : v.oxygenSaturation
+        if (spo2 == null) return null
+        if (spo2 <= 85) return { level: 'red', trigger: 'Hipoxemia severa (SpO₂ ≤85%)', group: 'D' }
+        return null
+      }
+      case 'glucose': {
+        const g = typeof override === 'string' ? (override as string) : v.glucose
+        if (!g) return null
+        const valStr = g.trim().toUpperCase()
+        if (valStr === 'HI') return { level: 'red', trigger: 'Hiperglicemia extrema (HI)', group: 'D' }
+        if (valStr === 'LO') return { level: 'red', trigger: 'Hipoglicemia extrema (LO)', group: 'D' }
+        const num = parseFloat(valStr)
+        if (isNaN(num)) return null
+        if (num < 45) return { level: 'red', trigger: 'Hipoglicemia severa', group: 'D' }
+        if (num > 200) return { level: 'red', trigger: 'Hiperglicemia severa', group: 'D' }
+        if (num >= 45 && num < 60) return { level: 'yellow', trigger: 'Hipoglicemia moderada', group: 'C' }
+        return null
+      }
+      case 'feverDays':
+      default:
+        return null
+    }
+  }
+
+  // Dispara modal apenas quando o campo severo perde foco
+  const handleFieldBlur = (field: VitalField, override?: string | number | undefined) => {
+    setEditingField(null)
+    const sev = detectSeverityForField(field, override)
+    const sig = sev ? `${field}:${sev.level}:${sev.trigger}` : null
+    if (sev) {
+      if (sig !== lastSeveritySig) {
+        setSeverityLevel(sev.level)
+        setSeverityTrigger(sev.trigger)
+        setSeverityModalOpen(true)
+        setLastSeveritySig(sig)
+        setLastTriggeredField(field)
+      }
+    } else {
+      // Só limpa a assinatura se o próprio campo que gerou a severidade foi normalizado
+      if (lastTriggeredField === field) {
+        setLastSeveritySig(null)
+        setLastTriggeredField(null)
+      }
+    }
+  }
+
+  // Modal passa a ser disparado no onBlur do campo severo; sem auto-abrir por efeito
+  useEffect(() => {
+    // Intencionalmente não dispara modal aqui.
+  }, [formData.vitalSigns, currentStep, editingField])
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (validateForm()) {
@@ -353,7 +531,12 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         ...formData,
         age: calculateAge(formData.birthDate)
       }
-      onSubmit(dataToSubmit)
+      const sev = detectSeverityFromVitals()
+      if (sev && onSeverityRedirect) {
+        onSeverityRedirect(dataToSubmit, sev.group)
+      } else {
+        onSubmit(dataToSubmit)
+      }
     }
   }
 
@@ -896,6 +1079,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="number"
                         value={formData.vitalSigns?.temperature || ''}
+                        onFocus={() => setEditingField('temperature')}
+                        onBlur={(e) => handleFieldBlur('temperature', parseFloat(e.target.value) || undefined)}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           vitalSigns: {
@@ -923,6 +1108,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="number"
                         value={formData.vitalSigns?.feverDays || ''}
+                        onFocus={() => setEditingField('feverDays')}
+                        onBlur={() => handleFieldBlur('feverDays')}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           vitalSigns: {
@@ -961,6 +1148,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="text"
                         value={bpText}
+                        onFocus={() => setEditingField('bloodPressure')}
                         onChange={(e) => {
                           let raw = e.target.value.replace(/[^\d]/g, '')
                           let formatted = raw
@@ -994,6 +1182,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                           }
                         }}
                         onBlur={(e) => {
+                          setEditingField(null)
                           const val = e.target.value
                           if (!val) {
                             setFormData(prev => ({
@@ -1027,6 +1216,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                                 }
                               }))
                               setErrors(prev => ({ ...prev, bloodPressure: '' }))
+                              handleFieldBlur('bloodPressure', recovered)
                               return
                             }
 
@@ -1042,6 +1232,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                               pam: pamVal
                             }
                           }))
+                          handleFieldBlur('bloodPressure', val)
                         }}
                         inputMode="numeric"
                         maxLength={7}
@@ -1076,6 +1267,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="number"
                         value={formData.vitalSigns?.heartRate || ''}
+                        onFocus={() => setEditingField('heartRate')}
+                        onBlur={(e) => handleFieldBlur('heartRate', parseInt(e.target.value) || undefined)}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           vitalSigns: {
@@ -1102,6 +1295,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="number"
                         value={formData.vitalSigns?.respiratoryRate || ''}
+                        onFocus={() => setEditingField('respiratoryRate')}
+                        onBlur={(e) => handleFieldBlur('respiratoryRate', parseInt(e.target.value) || undefined)}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           vitalSigns: {
@@ -1128,6 +1323,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="number"
                         value={formData.vitalSigns?.oxygenSaturation ?? ''}
+                        onFocus={() => setEditingField('oxygenSaturation')}
+                        onBlur={(e) => handleFieldBlur('oxygenSaturation', parseInt(e.target.value) || undefined)}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           vitalSigns: {
@@ -1154,6 +1351,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       <input
                         type="text"
                         value={formData.vitalSigns?.glucose ?? ''}
+                        onFocus={() => setEditingField('glucose')}
+                        onBlur={(e) => handleFieldBlur('glucose', e.target.value)}
                         onChange={(e) => setFormData(prev => ({
                           ...prev,
                           vitalSigns: {
@@ -1193,6 +1392,14 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
             )}
           </form>
         </motion.div>
+        {/* Modal de severidade */}
+        <SeverityAlertModal
+          isOpen={severityModalOpen}
+          onClose={() => { setSeverityModalOpen(false); setLastSeveritySig(null) }}
+          level={severityLevel || 'yellow'}
+          triggerTitle={severityTrigger}
+          autoRedirect={false}
+        />
       </div>
     </div>
   )

@@ -9,11 +9,11 @@ class PatientService {
     const birth = new Date(birthDate)
     let age = today.getFullYear() - birth.getFullYear()
     const monthDiff = today.getMonth() - birth.getMonth()
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
       age--
     }
-    
+
     return age
   }
 
@@ -27,11 +27,11 @@ class PatientService {
   // Carregar pacientes do localStorage
   private loadFromStorage(): Patient[] {
     if (typeof window === 'undefined') return []
-    
+
     try {
       const data = localStorage.getItem(this.storageKey)
       if (!data) return []
-      
+
       const patients = JSON.parse(data)
       // Converter strings de data de volta para Date objects
       return patients.map((patient: Patient) => ({
@@ -73,7 +73,7 @@ class PatientService {
     const id = `patient_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
     const now = new Date()
     const age = this.calculateAge(formData.birthDate)
-    
+
     const patient: Patient = {
       id,
       name: formData.name,
@@ -111,7 +111,7 @@ class PatientService {
     const patients = this.loadFromStorage()
     patients.push(patient)
     this.saveToStorage(patients)
-    
+
     return patient
   }
 
@@ -130,7 +130,7 @@ class PatientService {
   updateFlowchartState(patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, group?: 'A' | 'B' | 'C' | 'D'): void {
     const patients = this.loadFromStorage()
     const patientIndex = patients.findIndex(p => p.id === patientId)
-    
+
     if (patientIndex !== -1) {
       // Preservar grupo anterior quando não for fornecido
       const previousGroup = patients[patientIndex].flowchartState?.group
@@ -143,7 +143,7 @@ class PatientService {
         lastUpdate: new Date()
       }
       patients[patientIndex].updatedAt = new Date()
-      
+
       // Se fluxograma foi finalizado, dar alta ao paciente
       if (currentStep === 'end') {
         patients[patientIndex].status = 'discharged'
@@ -163,7 +163,7 @@ class PatientService {
           requestDate: new Date()
         }
       }
-      
+
       this.saveToStorage(patients)
     }
   }
@@ -172,7 +172,7 @@ class PatientService {
   updateLabResults(patientId: string, results: Partial<Patient['labResults']>): void {
     const patients = this.loadFromStorage()
     const patientIndex = patients.findIndex(p => p.id === patientId)
-    
+
     if (patientIndex !== -1) {
       patients[patientIndex].labResults = {
         ...patients[patientIndex].labResults,
@@ -190,14 +190,14 @@ class PatientService {
   addPrescription(patientId: string, prescription: Omit<Prescription, 'id' | 'prescribedAt'>): void {
     const patients = this.loadFromStorage()
     const patientIndex = patients.findIndex(p => p.id === patientId)
-    
+
     if (patientIndex !== -1) {
       const newPrescription: Prescription = {
         ...prescription,
         id: `prescription_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         prescribedAt: new Date()
       }
-      
+
       patients[patientIndex].treatment.prescriptions.push(newPrescription)
       patients[patientIndex].updatedAt = new Date()
       this.saveToStorage(patients)
@@ -313,7 +313,7 @@ class PatientService {
   addObservation(patientId: string, observation: string): void {
     const patients = this.loadFromStorage()
     const patientIndex = patients.findIndex(p => p.id === patientId)
-    
+
     if (patientIndex !== -1) {
       patients[patientIndex].treatment.observations.push(observation)
       patients[patientIndex].updatedAt = new Date()
@@ -325,7 +325,7 @@ class PatientService {
   dischargePatient(patientId: string, criteria: string[]): void {
     const patients = this.loadFromStorage()
     const patientIndex = patients.findIndex(p => p.id === patientId)
-    
+
     if (patientIndex !== -1) {
       patients[patientIndex].status = 'discharged'
       patients[patientIndex].treatment.dischargeDate = new Date()
@@ -338,7 +338,7 @@ class PatientService {
   // Obter estatísticas do dashboard
   getDashboardStats(): DashboardStats {
     const patients = this.getAllPatients()
-    
+
     return {
       totalPatients: patients.length,
       activeFlowcharts: patients.filter(p => p.status === 'active').length,
@@ -383,7 +383,7 @@ class PatientService {
     const now = new Date()
 
     // Limpar dados locais do paciente para evitar bloqueios de progresso
-    try { this.clearPatientLocalData(patientId) } catch {}
+    try { this.clearPatientLocalData(patientId) } catch { }
 
     // Resetar estado do fluxograma e exames
     // Incrementar contador de retornos
@@ -495,7 +495,7 @@ class PatientService {
       `risk_factors_${patientId}`
     ]
     keys.forEach(k => {
-      try { localStorage.removeItem(k) } catch {}
+      try { localStorage.removeItem(k) } catch { }
     })
   }
 
@@ -509,15 +509,15 @@ class PatientService {
         const completedSteps = patient.flowchartState.history.length
         patient.flowchartState.progress = Math.min((completedSteps / totalSteps) * 100, 100)
       }
-      
+
       // Se tem grupo definido mas progresso baixo, assumir que está quase completo
       if (patient.flowchartState.group && patient.flowchartState.progress < 80) {
         patient.flowchartState.progress = 85
       }
-      
+
       return patient
     })
-    
+
     this.saveToStorage(updatedPatients)
   }
 }

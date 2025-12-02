@@ -123,6 +123,23 @@ export default function Home() {
     setAppState('flowchart')
   }
 
+  // Redirecionamento automático para grupos C/D vindo do PatientForm
+  const handleSeverityRedirect = (formData: PatientFormData, group: 'C' | 'D') => {
+    const newPatient = patientService.createPatient(formData)
+    const targetStep = group === 'D' ? 'group_d' : 'group_c'
+    try {
+      // Inicializa o estado do fluxograma já no grupo detectado
+      patientService.updateFlowchartState(newPatient.id, targetStep, ['start'], {}, 20, group)
+    } catch (e) {
+      // Falha não bloqueia navegação
+      console.warn('Falha ao atualizar estado para severidade inicial:', e)
+    }
+    // Buscar o paciente atualizado (o objeto criado inicialmente ainda tem currentStep='start')
+    const fresh = patientService.getPatientById(newPatient.id) || newPatient
+    setCurrentPatient(fresh)
+    setAppState('flowchart')
+  }
+
   const handlePatientFormCancel = () => {
     setAppState('dashboard')
   }
@@ -284,6 +301,7 @@ export default function Home() {
           onCancel={handlePatientFormCancel}
           onEmergencySelector={handleEmergencySelector}
           onOpenGasometry={() => setAppState('gasometry-flowchart')}
+          onSeverityRedirect={handleSeverityRedirect}
         />
       )
     }
@@ -309,6 +327,7 @@ export default function Home() {
           presetFlowchart={'dengue'}
           skipFlowSelection={true}
           mode={'return'}
+          onSeverityRedirect={handleSeverityRedirect}
           initialData={{
             name: currentPatient.name,
             birthDate: new Date(currentPatient.birthDate),

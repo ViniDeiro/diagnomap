@@ -490,7 +490,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         if (typeof window !== 'undefined') {
           localStorage.setItem(`d_tab_${tab}_data_${patient.id}`, JSON.stringify(next))
         }
-      } catch {}
+      } catch { }
       return updated
     })
   }
@@ -3174,17 +3174,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                       }
                     }
 
-                setVitals1h(prev => ({ ...prev, bp: formatted }))
-                localStorage.setItem(`vitals_c_1h_bp_${patient.id}`, formatted)
-              }}
-            />
-            {classifyBPChip(vitals1h.bp)}
-            {renderPAMChip2(vitals1h.bp)}
-            {vitals1h.bp && (
-              <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals1h.bp) || '--'} mmHg</p>
-            )}
-          </div>
-          <div>
+                    setVitals1h(prev => ({ ...prev, bp: formatted }))
+                    localStorage.setItem(`vitals_c_1h_bp_${patient.id}`, formatted)
+                  }}
+                />
+                {classifyBPChip(vitals1h.bp)}
+                {renderPAMChip2(vitals1h.bp)}
+                {vitals1h.bp && (
+                  <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals1h.bp) || '--'} mmHg</p>
+                )}
+              </div>
+              <div>
                 <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
                 <input
                   type="number"
@@ -3628,20 +3628,20 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   type="text"
                   placeholder="Ex: 110/70"
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                onChange={(e) => {
-                  const value = e.target.value
-                  localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, value)
-                  setVitals2h(prev => ({ ...prev, bp: value }))
-                }}
-                defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : ''}
-              />
-              {classifyBPChip(vitals2h.bp)}
-              {renderPAMChip2(vitals2h.bp)}
-              {vitals2h.bp && (
-                <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals2h.bp) || '--'} mmHg</p>
-              )}
-            </div>
-            <div>
+                  onChange={(e) => {
+                    const value = e.target.value
+                    localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, value)
+                    setVitals2h(prev => ({ ...prev, bp: value }))
+                  }}
+                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : ''}
+                />
+                {classifyBPChip(vitals2h.bp)}
+                {renderPAMChip2(vitals2h.bp)}
+                {vitals2h.bp && (
+                  <p className="text-xs mt-1 text-slate-600">PAM ≈ {calcPamFromBp(vitals2h.bp) || '--'} mmHg</p>
+                )}
+              </div>
+              <div>
                 <label className="block text-xs text-slate-600 mb-1">FC (bpm)</label>
                 <input
                   type="number"
@@ -4134,7 +4134,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <span className="text-xs font-medium text-red-700">8ª reavaliação obrigatória</span>
             </div>
             <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-              {[1,2,3,4,5,6,7,8].map((n) => (
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
                 <button
                   key={n}
                   type="button"
