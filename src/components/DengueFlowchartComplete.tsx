@@ -3627,13 +3627,28 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 <input
                   type="text"
                   placeholder="Ex: 110/70"
+                  inputMode="numeric"
+                  maxLength={7}
                   className="w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  value={vitals2h.bp || ''}
                   onChange={(e) => {
-                    const value = e.target.value
-                    localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, value)
-                    setVitals2h(prev => ({ ...prev, bp: value }))
+                    let raw = e.target.value.replace(/[^\d]/g, '')
+                    let formatted = raw
+
+                    if (raw.length >= 3) {
+                      const firstThree = parseInt(raw.slice(0, 3))
+                      if (firstThree > 299) {
+                        formatted = `${raw.slice(0, 2)}/${raw.slice(2, 5)}`
+                      } else {
+                        if (raw.length > 3) {
+                          formatted = `${raw.slice(0, 3)}/${raw.slice(3, 6)}`
+                        }
+                      }
+                    }
+
+                    setVitals2h(prev => ({ ...prev, bp: formatted }))
+                    localStorage.setItem(`vitals_c_2h_bp_${patient.id}`, formatted)
                   }}
-                  defaultValue={typeof window !== 'undefined' ? (localStorage.getItem(`vitals_c_2h_bp_${patient.id}`) || '') : ''}
                 />
                 {classifyBPChip(vitals2h.bp)}
                 {renderPAMChip2(vitals2h.bp)}

@@ -54,9 +54,41 @@ const SeverityAlertModal: React.FC<SeverityAlertModalProps> = ({
     ? 'PACIENTE COM GRAVIDADE'
     : 'POTENCIALMENTE GRAVE'
 
-  const description = level === 'red'
-    ? 'Paciente com sinais de choque. Necessita de internação em ambiente de terapia intensiva com conduta imediata. Atentar para deterioração clínica/hemodinâmica e choque refratário. GRUPO D.'
-    : 'Paciente com sinais de gravidade, necessita de internação para observação e conduta. Atentar para sinais de choque e deterioração clínica/hemodinâmica. Grupo C ou D.'
+  // Mensagens específicas por gatilho
+  const trigger = (triggerTitle || '').toLowerCase()
+  const isHyperthermia = level === 'red' && trigger.includes('hipertermia')
+  const isHypoglycemiaModerate = level === 'yellow' && trigger.includes('hipoglicemia moderada')
+  const isHypoglycemiaSevere = level === 'red' && trigger.includes('hipoglicemia severa')
+  const isHyperglycemiaSevere = level === 'red' && trigger.includes('hiperglicemia severa')
+  const isHyperglycemiaHI = level === 'red' && (trigger.includes('hiperglicemia extrema') || trigger.includes('(hi)') || trigger.includes(' hi '))
+
+  const description = (() => {
+    // Vermelho: hipertermia específica
+    if (isHyperthermia) {
+      return 'Paciente apresentando hipertermia grave. Temperaturas acima de 40°C cursam com risco de insolação "heat stroke". Podem aparecer sinais de confusão mental, Delirium, convulsões e coma), além de disfunção de múltiplos órgãos (colapso cardiovascular, Injúria Renal Aguda, Rabdomiolise, disfunção hepática, Coagulação intra-vascular disseminada e Síndrome do Distresse Respiratório Agudo). Se não tratada imediatamente pode ter mortalidade próxima à 80%'
+    }
+    // Amarelo: hipo moderada
+    if (isHypoglycemiaModerate) {
+      return 'Paciente hipoglicêmico com potencial para piora clínica. Correção rápida hipoglicemia.'
+    }
+    // Vermelho: hipo severa
+    if (isHypoglycemiaSevere) {
+      return 'Paciente com hipoglicemia severa. Alto risco de complicações clínicas e neurológicas. Correção imediata da hipoglicemia.'
+    }
+    // Vermelho: hiper severa
+    if (isHyperglycemiaSevere) {
+      return 'Paciente com hiperglicemia severa. Necessita de correção da hiperglicemia e possivelmente hidratação. Atenção à possibilidade de Cetoacidose e Coma Hiperosmolar.'
+    }
+    // Vermelho: HI
+    if (isHyperglycemiaHI) {
+      return 'Paciente com hiperglicemia extrema. Necessita de internação com urgência em ambiente de terapia intensiva ou sala de emergência para condução. Correção imediata da hiperglicemia e possivelmente hidratação. Sujeito à complicações graves. Avaliar possibilidade de Cetoacidose e Coma hiperosmolar. Gasometria arterial indicada para facilitar interpretação.'
+    }
+    // Fallback por nível
+    if (level === 'red') {
+      return 'Paciente com sinais de choque. Necessita de internação em ambiente de terapia intensiva com conduta imediata. Atentar para deterioração clínica/hemodinâmica e choque refratário. GRUPO D.'
+    }
+    return 'Paciente com sinais de gravidade, necessita de internação para observação e conduta. Atentar para sinais de choque e deterioração clínica/hemodinâmica. Grupo C ou D.'
+  })()
 
   return (
     <AnimatePresence>

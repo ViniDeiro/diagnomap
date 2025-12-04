@@ -458,12 +458,18 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         if (isNaN(s) || isNaN(d)) return null
         if (s < 70 || d < 49) return { level: 'red', trigger: 'Hipotensão severa', group: 'D' }
         if (s >= 180 || d >= 110) return { level: 'red', trigger: 'Hipertensão grave', group: 'D' }
+        // Moderados: caixa amarela
+        if ((s >= 160 && s <= 179) || (d >= 100 && d <= 109)) {
+          return { level: 'yellow', trigger: 'Hipertensão moderada', group: 'C' }
+        }
         return null
       }
       case 'heartRate': {
         const hr = typeof override === 'number' ? (override as number) : v.heartRate
         if (hr == null) return null
         if (hr >= 160 || hr < 35) return { level: 'red', trigger: 'Alteração severa de FC', group: 'D' }
+        // Taquicardia moderada: caixa amarela
+        if (hr >= 131 && hr < 160) return { level: 'yellow', trigger: 'Taquicardia moderada', group: 'C' }
         return null
       }
       case 'respiratoryRate': {
