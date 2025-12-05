@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
     Heart,
@@ -42,6 +43,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     selectedFlowchart,
     onOpenGasometry
 }) => {
+    const router = useRouter()
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -283,6 +285,11 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                     // Caso especial: abrir Gasometria no componente dedicado quando solicitado
                                     if (flowchart.id === 'gasometria' && onOpenGasometry) {
                                         onOpenGasometry()
+                                        return
+                                    }
+                                    // Caso especial: Hiponatremia tem rota dedicada
+                                    if (flowchart.id === 'dhel_hiponatremia') {
+                                        router.push('/hyponatremia')
                                         return
                                     }
                                     // Se implementado, usar o fluxograma completo

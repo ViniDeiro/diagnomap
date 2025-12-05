@@ -40,9 +40,11 @@ interface PatientFormProps {
   mode?: 'new' | 'return'
   // Redirecionamento automático quando detectamos severidade nos sinais vitais iniciais
   onSeverityRedirect?: (data: PatientFormData, group: 'C' | 'D') => void
+  // Modo compacto: apenas Dados Pessoais, sem Sintomas/Sinais Vitais
+  onlyPersonalData?: boolean
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, onOpenGasometry, onSeverityRedirect, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new' }) => {
+const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, onOpenGasometry, onSeverityRedirect, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new', onlyPersonalData = false }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -365,7 +367,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         newErrors.gender = 'Sexo é obrigatório'
       }
 
-      if (formData.symptoms.length === 0) {
+      if (!onlyPersonalData && formData.symptoms.length === 0) {
         newErrors.symptoms = 'Selecione pelo menos um sintoma'
       }
     }
@@ -614,12 +616,15 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-8">
-              {[
-                { step: 1, label: 'Fluxograma', icon: Target },
-                { step: 2, label: 'Dados Pessoais', icon: User },
-                { step: 3, label: 'Sintomas Clínicos', icon: Heart },
-                { step: 4, label: 'Sinais Vitais', icon: Activity }
-              ].map(({ step, label, icon: Icon }) => (
+              {(onlyPersonalData
+                ? [{ step: 2, label: 'Dados Pessoais', icon: User }]
+                : [
+                    { step: 1, label: 'Fluxograma', icon: Target },
+                    { step: 2, label: 'Dados Pessoais', icon: User },
+                    { step: 3, label: 'Sintomas Clínicos', icon: Heart },
+                    { step: 4, label: 'Sinais Vitais', icon: Activity }
+                  ]
+                ).map(({ step, label, icon: Icon }) => (
                 <div key={step} className="flex items-center space-x-3">
                   <div className={clsx(
                     "w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-300",
@@ -936,25 +941,41 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                 </div>
 
                 <div className="flex justify-between pt-6">
-                  <motion.button
-                    type="button"
-                    onClick={() => setCurrentStep(1)}
-                    className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all duration-200 font-medium"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Voltar
-                  </motion.button>
-                  <motion.button
-                    type="button"
-                    onClick={() => setCurrentStep(3)}
-                    className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <span>Próximo: Sintomas</span>
-                    <Heart className="w-5 h-5" />
-                  </motion.button>
+                  {onlyPersonalData ? (
+                    <div />
+                  ) : (
+                    <motion.button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all duration-200 font-medium"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      Voltar
+                    </motion.button>
+                  )}
+                  {onlyPersonalData ? (
+                    <motion.button
+                      type="submit"
+                      className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>Continuar para Fluxograma</span>
+                      <Target className="w-5 h-5" />
+                    </motion.button>
+                  ) : (
+                    <motion.button
+                      type="button"
+                      onClick={() => setCurrentStep(3)}
+                      className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <span>Próximo: Sintomas</span>
+                      <Heart className="w-5 h-5" />
+                    </motion.button>
+                  )}
                 </div>
               </motion.div>
             )}
