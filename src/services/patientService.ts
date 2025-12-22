@@ -1,4 +1,5 @@
 import { Patient, PatientFormData, Prescription, DashboardStats } from '@/types/patient'
+import { insertPatientWithFlowLink, updatePatientWithFlowLink, deletePatient as deletePatientDB, fromUIPatient } from './patientRepo'
 
 class PatientService {
   private storageKey = 'siga_o_fluxo_patients'
@@ -112,6 +113,15 @@ class PatientService {
     patients.push(patient)
     this.saveToStorage(patients)
 
+    try {
+      const payload = fromUIPatient(patient)
+      insertPatientWithFlowLink(payload).catch((err) => {
+        console.error('Erro ao inserir paciente no banco:', err)
+      })
+    } catch (err) {
+      console.error('Erro ao preparar inserção de paciente:', err)
+    }
+
     return patient
   }
 
@@ -165,6 +175,14 @@ class PatientService {
       }
 
       this.saveToStorage(patients)
+      try {
+        const payload = fromUIPatient(patients[patientIndex])
+        updatePatientWithFlowLink(patientId, payload).catch((err) => {
+          console.error('Erro ao atualizar paciente no banco:', err)
+        })
+      } catch (err) {
+        console.error('Erro ao preparar atualização de paciente:', err)
+      }
     }
   }
 
@@ -183,6 +201,16 @@ class PatientService {
       patients[patientIndex].status = 'active'
       patients[patientIndex].updatedAt = new Date()
       this.saveToStorage(patients)
+      try {
+        const payload = fromUIPatient(patients[patientIndex])
+        import('./patientRepo').then(({ updatePatientByExternalId }) => {
+          updatePatientByExternalId(patientId, payload).catch((err) => {
+            console.error('Erro ao atualizar resultados de exames:', err)
+          })
+        })
+      } catch (err) {
+        console.error('Erro ao preparar atualização de resultados de exames:', err)
+      }
     }
   }
 
@@ -201,6 +229,16 @@ class PatientService {
       patients[patientIndex].treatment.prescriptions.push(newPrescription)
       patients[patientIndex].updatedAt = new Date()
       this.saveToStorage(patients)
+      try {
+        const payload = fromUIPatient(patients[patientIndex])
+        import('./patientRepo').then(({ updatePatientByExternalId }) => {
+          updatePatientByExternalId(patientId, payload).catch((err) => {
+            console.error('Erro ao atualizar prescrições:', err)
+          })
+        })
+      } catch (err) {
+        console.error('Erro ao preparar atualização de prescrições:', err)
+      }
     }
   }
 
@@ -318,6 +356,14 @@ class PatientService {
       patients[patientIndex].treatment.observations.push(observation)
       patients[patientIndex].updatedAt = new Date()
       this.saveToStorage(patients)
+      try {
+        const payload = fromUIPatient(patients[patientIndex])
+        updatePatientWithFlowLink(patientId, payload).catch((err) => {
+          console.error('Erro ao adicionar observação:', err)
+        })
+      } catch (err) {
+        console.error('Erro ao preparar observação:', err)
+      }
     }
   }
 
@@ -332,6 +378,14 @@ class PatientService {
       patients[patientIndex].treatment.dischargeCriteria = criteria
       patients[patientIndex].updatedAt = new Date()
       this.saveToStorage(patients)
+      try {
+        const payload = fromUIPatient(patients[patientIndex])
+        updatePatientWithFlowLink(patientId, payload).catch((err) => {
+          console.error('Erro ao dar alta ao paciente:', err)
+        })
+      } catch (err) {
+        console.error('Erro ao preparar alta do paciente:', err)
+      }
     }
   }
 
@@ -365,6 +419,7 @@ class PatientService {
     const patients = this.loadFromStorage()
     const filteredPatients = patients.filter(p => p.id !== patientId)
     this.saveToStorage(filteredPatients)
+    try { deletePatientDB(patientId).catch(() => {}) } catch {}
   }
 
   // Limpar todos os dados (usado para testes)
@@ -419,6 +474,14 @@ class PatientService {
     patients[idx].status = 'active'
     patients[idx].updatedAt = now
     this.saveToStorage(patients)
+    try {
+      const payload = fromUIPatient(patients[idx])
+      updatePatientWithFlowLink(patientId, payload).catch((err) => {
+        console.error('Erro ao preparar retorno do paciente:', err)
+      })
+    } catch (err) {
+      console.error('Falha ao preparar retorno do paciente:', err)
+    }
   }
 
   // Atualizar paciente a partir do formulário de retorno (reentrada de dados)
@@ -463,6 +526,14 @@ class PatientService {
 
     patients[idx] = updated
     this.saveToStorage(patients)
+    try {
+      const payload = fromUIPatient(updated)
+      updatePatientWithFlowLink(patientId, payload).catch((err) => {
+        console.error('Erro ao atualizar paciente no retorno:', err)
+      })
+    } catch (err) {
+      console.error('Erro ao preparar atualização de paciente no retorno:', err)
+    }
     return updated
   }
 

@@ -25,6 +25,7 @@ import {
 import { clsx } from 'clsx'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
+import { enableLocalStorageReplication, hydrateLocalStorageFromDB } from '@/services/patientStorageBridge'
 
 interface FlowchartStep {
   id: string
@@ -87,6 +88,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     const n = Number(s)
     return isNaN(n) ? undefined : n
   }
+
+  useEffect(() => {
+    hydrateLocalStorageFromDB(patient.id).then(() => {
+      enableLocalStorageReplication(patient.id)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient.id])
 
   // Helper para adicionar prescrição de antitérmico baseado na escolha
   const addAntipyreticPrescription = (choice: string) => {
@@ -5075,12 +5083,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       console.error('Erro ao atualizar estado do paciente:', error)
     }
 
-    // Resetar transição após um pequeno delay
+    
     setTimeout(() => {
       setIsTransitioning(false)
     }, 300)
 
-    // Completar apenas quando realmente finalizar
+    
     if (nextStep === 'end') {
       setTimeout(() => onComplete(), 500)
     }
@@ -5118,7 +5126,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
   const step = steps[currentStep]
 
-  // Verificação de segurança - se o step não existir, voltar para o início
+  
   if (!step) {
     console.error(`Step '${currentStep}' não encontrado. Redirecionando para 'start'.`)
     setCurrentStep('start')

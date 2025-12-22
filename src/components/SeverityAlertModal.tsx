@@ -61,6 +61,10 @@ const SeverityAlertModal: React.FC<SeverityAlertModalProps> = ({
   const isHypoglycemiaSevere = level === 'red' && trigger.includes('hipoglicemia severa')
   const isHyperglycemiaSevere = level === 'red' && trigger.includes('hiperglicemia severa')
   const isHyperglycemiaHI = level === 'red' && (trigger.includes('hiperglicemia extrema') || trigger.includes('(hi)') || trigger.includes(' hi '))
+  const isTachycardiaModerate = level === 'yellow' && trigger.includes('taquicardia moderada')
+  const isRespiratoryRateSevere = level === 'red' && (trigger.includes('alteração severa de fr') || trigger.includes('taquipneia severa'))
+  const isHypoxemiaModerate = level === 'yellow' && trigger.includes('hipoxemia moderada')
+  const isHypoxemiaSevere = level === 'red' && trigger.includes('hipoxemia severa')
 
   const description = (() => {
     // Vermelho: hipertermia específica
@@ -82,6 +86,22 @@ const SeverityAlertModal: React.FC<SeverityAlertModalProps> = ({
     // Vermelho: HI
     if (isHyperglycemiaHI) {
       return 'Paciente com hiperglicemia extrema. Necessita de internação com urgência em ambiente de terapia intensiva ou sala de emergência para condução. Correção imediata da hiperglicemia e possivelmente hidratação. Sujeito à complicações graves. Avaliar possibilidade de Cetoacidose e Coma hiperosmolar. Gasometria arterial indicada para facilitar interpretação.'
+    }
+    // Amarelo: taquicardia moderada
+    if (isTachycardiaModerate) {
+      return 'Paciente com sinais de Insuficiência respiratória e desconforto. Atentar para piora ventilatória com necessidade de suporte invasivo (Intubação orotraqueal e ventilação mecânica). Grupo C ou D.'
+    }
+    // Vermelho: alteração severa de FR
+    if (isRespiratoryRateSevere) {
+      return 'Paciente com sinais de Insuficiência respiratória grave e desconforto ventilatório iminentes. Potencial evolução para insuficiência respiratória grave e hipoxemia severa. Atentar para piora ventilatória súbita com necessidade de suporte invasivo (Intubação orotraqueal e ventilação mecânica). Grupo D.'
+    }
+    // Amarelo: hipoxemia moderada
+    if (isHypoxemiaModerate) {
+      return 'Paciente apresentando hipoxemia moderada com necessidade de suplementação imediata de Oxigênio (Salvo em pacientes com DPOC ou hipoxemia crônica - individualizar). Monitorização de SpO2 e observação recomendada. Pode evoluir com piora ventilatória com necessidade de suporte invasivo (Intubação orotraqueal e ventilação mecânica).'
+    }
+    // Vermelho: hipoxemia severa
+    if (isHypoxemiaSevere) {
+      return 'Paciente apresentando hipoxemia severa com necessidade de suplementação imediata de oxigênio e possivelmente intervenção avançada (Máscara de Venturi, VNI ou CNAF). Monitorização de SpO2 e observação mandatória, preferencialmente em ambiente de terapia intensiva ou sala de emergência. Pode evoluir com piora ventilatória súbita com necessidade de suporte invasivo (Intubação orotraqueal e ventilação mecânica). Alto risco de evento adverso grave (PCR, parada respiratória ou rebaixamento do nível de consciência).'
     }
     // Fallback por nível
     if (level === 'red') {

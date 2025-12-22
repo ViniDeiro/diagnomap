@@ -47,6 +47,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+    const [activeTab, setActiveTab] = useState<'flowcharts' | 'protocols'>('flowcharts')
     const [showDevelopmentModal, setShowDevelopmentModal] = useState(false)
     const [selectedProtocol, setSelectedProtocol] = useState<{ name: string; category: string } | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
@@ -54,6 +55,13 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
 
     // Usar todos os fluxogramas (incluindo os não implementados)
     const allAvailableFlowcharts = allFlowcharts
+
+    const clinicalProtocols: Array<{ id: string; name: string; category: string; implemented: boolean }> = [
+        { id: 'sepse_protocolo', name: 'Sepse Grave (Protocolo Clínico)', category: 'infectious', implemented: false },
+        { id: 'iam_protocolo', name: 'IAM (Protocolo Clínico)', category: 'cardiovascular', implemented: false },
+        { id: 'avc_protocolo', name: 'AVC (Protocolo Clínico)', category: 'neurological', implemented: false },
+        { id: 'dengue_protocolo', name: 'Dengue (Protocolo Clínico)', category: 'infectious', implemented: false },
+    ]
 
     const filteredFlowcharts = allAvailableFlowcharts.filter(flowchart => {
         const matchesSearch = flowchart.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -176,7 +184,34 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                 </p>
             </div>
 
-            {/* Filtros e Busca */}
+            <div className="mb-6">
+                <div className="inline-flex rounded-lg border bg-white shadow-sm">
+                    <button
+                        onClick={() => setActiveTab('flowcharts')}
+                        className={clsx(
+                            "px-4 py-2 text-sm font-semibold rounded-l-lg transition-colors",
+                            activeTab === 'flowcharts'
+                                ? "bg-blue-600 text-white"
+                                : "text-gray-700 hover:bg-gray-100"
+                        )}
+                    >
+                        Fluxogramas
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('protocols')}
+                        className={clsx(
+                            "px-4 py-2 text-sm font-semibold rounded-r-lg transition-colors",
+                            activeTab === 'protocols'
+                                ? "bg-blue-600 text-white"
+                                : "text-gray-700 hover:bg-gray-100"
+                        )}
+                    >
+                        Protocolos Clínicos
+                    </button>
+                </div>
+            </div>
+
+            {activeTab === 'flowcharts' && (
             <div className="mb-6 space-y-4">
                 {/* Barra de Busca */}
                 <div className="relative">
@@ -254,8 +289,10 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                     </div>
                 </div>
             </div>
+            )}
 
-            {/* Lista de Protocolos */}
+            {activeTab === 'flowcharts' && (
+            <>
             {filteredFlowcharts.length === 0 ? (
                 <div className="text-center py-12">
                     <Activity className="w-12 h-12 text-gray-400 mx-auto mb-4" />
@@ -427,6 +464,70 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                     </span>
                 </div>
             </div>
+            </>
+            )}
+
+            {activeTab === 'protocols' && (
+                <div className={clsx(
+                    "gap-6",
+                    viewMode === 'grid'
+                        ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3"
+                        : "space-y-4"
+                )}>
+                    {clinicalProtocols
+                        .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                        .map((proto) => (
+                        <motion.div
+                            key={proto.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                                setSelectedProtocol({ name: proto.name, category: proto.category })
+                                setShowDevelopmentModal(true)
+                            }}
+                            className={clsx(
+                                "bg-white rounded-xl border-2 cursor-pointer transition-all duration-200",
+                                "hover:shadow-lg hover:border-blue-300",
+                                "border-gray-200 hover:border-blue-300",
+                            )}
+                        >
+                            <div className={clsx(
+                                "p-6",
+                                viewMode === 'list' && "flex items-center space-x-4"
+                            )}>
+                                <div className={clsx(
+                                    "flex items-center space-x-3 mb-4",
+                                    viewMode === 'list' && "mb-0"
+                                )}>
+                                    <div className="p-3 rounded-xl bg-gradient-to-r from-indigo-500 to-blue-600 text-white">
+                                        <Stethoscope className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex items-center space-x-2 mb-1">
+                                            <h3 className="font-bold text-gray-800">{proto.name}</h3>
+                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                EM DESENVOLVIMENTO
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-gray-600">
+                                            Diretriz clínica com passos e condutas
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-gray-500">
+                                    <span className="flex items-center space-x-1">
+                                        {getCategoryIcon(proto.category as EmergencyCategory)}
+                                        <span>{getCategoryName(proto.category as EmergencyCategory)}</span>
+                                    </span>
+                                    <span>Em breve</span>
+                                </div>
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
 
             {/* Modal de Desenvolvimento */}
             <UnderDevelopmentModal

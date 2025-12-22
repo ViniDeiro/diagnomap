@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+  import { motion } from 'framer-motion'
 import {
   User,
   Calendar,
@@ -23,7 +23,10 @@ import {
 import { PatientFormData } from '@/types/patient'
 import { clsx } from 'clsx'
 import EmergencySelector from './EmergencySelector'
+import PhysicalExamForm, { PhysicalExamData } from './PhysicalExamForm'
 import SeverityAlertModal from './SeverityAlertModal'
+import AllergySelector from './AllergySelector'
+import { supabase } from '@/services/supabaseClient'
 
 interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
@@ -213,6 +216,71 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
     | 'glucose'
   >(null)
 
+  // Geração de resumo textual do Exame Físico para anexar em Observações Gerais
+  const summarizePhysicalExam = (pe: PhysicalExamData): string => {
+    const lines: string[] = []
+    const mapState: Record<PhysicalExamData['generalState'], string> = {
+      bom: 'Bom estado geral',
+      regular: 'Regular estado geral',
+      mal: 'Mal estado geral',
+      grave: 'Grave estado geral',
+      pessimo: 'Péssimo estado geral'
+    }
+
+    const gradeStr = (grade?: number) => (grade ? `${grade}/4+` : '')
+
+    lines.push(`Estado Geral: ${mapState[pe.generalState]}`)
+
+    lines.push(
+      `Coloração: ${pe.coloration.status === 'corado' ? 'Corado' : `Descorado ${gradeStr(pe.coloration.grade)}`}`
+    )
+    lines.push(
+      `Hidratação: ${pe.hydration.status === 'hidratado' ? 'Hidratado' : `Desidratado ${gradeStr(pe.hydration.grade)}`}`
+    )
+    lines.push(
+      `Cianose: ${pe.cyanosis.status === 'acianotico' ? 'Acianótico' : `Cianótico ${gradeStr(pe.cyanosis.grade)}`}`
+    )
+    lines.push(
+      `Icterícia: ${pe.jaundice.status === 'anicterico' ? 'Anictérico' : `Ictérico ${gradeStr(pe.jaundice.grade)}`}`
+    )
+
+    const tempPrefix = pe.temperature.status === 'afebril' ? 'Afebril' : 'Febril'
+    lines.push(`Temperatura: ${tempPrefix} – T: ${pe.temperature.value ?? 'N/A'}`)
+
+    const respLabel =
+      pe.respiration.status === 'eupneico'
+        ? 'Eupneico'
+        : pe.respiration.status === 'taquipneico'
+        ? 'Taquipnéico'
+        : `Dispnéico ${gradeStr(pe.respiration.grade)}`
+    lines.push(`Respiração: ${respLabel}`)
+
+    // Neurológico
+    const neuroNormal = 'Consciente, contactuante, Pupilas iso-foto reagentes'
+    const neuroLine = pe.neuro.altered && pe.neuro.altered.trim().length > 0 ? `Alterado: ${pe.neuro.altered.trim()}` : neuroNormal
+    lines.push(`Neurológico: Glasgow ${pe.neuro.glasgow ?? 'N/A'}; ${neuroLine}`)
+
+    // Demais sistemas
+    const cardiacNormal = 'Bulhas rítmicas, normofonéticas, sem sopros audíveis'
+    lines.push(
+      `Cardíaco: ${pe.cardiac.altered && pe.cardiac.altered.trim().length > 0 ? `Alterado: ${pe.cardiac.altered.trim()}` : cardiacNormal}`
+    )
+    const pulmonaryNormal = 'Murmúrio vesicular presente, sem ruídos adventícios'
+    lines.push(
+      `Pulmonar: ${pe.pulmonary.altered && pe.pulmonary.altered.trim().length > 0 ? `Alterado: ${pe.pulmonary.altered.trim()}` : pulmonaryNormal}`
+    )
+    const abdomenNormal = 'Plano, normotenso, RHA presentes, sem alterações, sem sinais de irritação peritoneal'
+    lines.push(
+      `Abdome: ${pe.abdomen.altered && pe.abdomen.altered.trim().length > 0 ? `Alterado: ${pe.abdomen.altered.trim()}` : abdomenNormal}`
+    )
+    const extremitiesNormal = 'Pulsos periféricos simétricos, sem alterações. Sem empastamentos. Enchimento capilar normal, perfusão periférica preservada.'
+    lines.push(
+      `Extremidades: ${pe.extremities.altered && pe.extremities.altered.trim().length > 0 ? `Alterado: ${pe.extremities.altered.trim()}` : extremitiesNormal}`
+    )
+
+    return lines.join('\n')
+  }
+
   const [formData, setFormData] = useState<PatientFormData>(() => {
     if (initialData) {
       // Garantir defaults para campos opcionais
@@ -255,6 +323,21 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
   // Controle de texto da data de nascimento em formato pt-BR (dd/mm/aaaa)
   const [birthDateText, setBirthDateText] = useState<string>('')
   const [bpText, setBpText] = useState<string>('')
+  const [doctorMunicipalityId, setDoctorMunicipalityId] = useState<number | null>(null)
+  const [physicalExam, setPhysicalExam] = useState<PhysicalExamData>({
+    generalState: 'bom',
+    coloration: { status: 'corado' },
+    hydration: { status: 'hidratado' },
+    cyanosis: { status: 'acianotico' },
+    jaundice: { status: 'anicterico' },
+    temperature: { status: 'afebril', value: undefined },
+    respiration: { status: 'eupneico' },
+    neuro: { glasgow: 15, altered: '' },
+    cardiac: { altered: '' },
+    pulmonary: { altered: '' },
+    abdomen: { altered: '' },
+    extremities: { altered: '' }
+  })
 
   const formatDateBR = (date: Date): string => {
     if (!date || isNaN(date.getTime())) return ''
@@ -264,6 +347,27 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
     const year = String(d.getFullYear()).padStart(4, '0')
     return `${day}/${month}/${year}`
   }
+
+  // Buscar municipality_id do médico logado para alimentar o seletor de alergias
+  useEffect(() => {
+    let cancelled = false
+    async function loadDoctorMunicipality() {
+      try {
+        const { data: userRes } = await supabase.auth.getUser()
+        const authId = userRes?.user?.id
+        if (!authId) return
+        const { data, error } = await supabase
+          .from('doctors')
+          .select('municipality_id')
+          .eq('auth_user_id', authId)
+          .single()
+        if (error) return
+        if (!cancelled) setDoctorMunicipalityId(data?.municipality_id ?? null)
+      } catch {}
+    }
+    loadDoctorMunicipality()
+    return () => { cancelled = true }
+  }, [])
 
   const parseDateBR = (text: string): Date | null => {
     const m = /^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/.exec(text)
@@ -294,7 +398,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
   }, [formData.vitalSigns?.bloodPressure])
 
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [currentStep, setCurrentStep] = useState<number>(initialStep && initialStep >= 1 && initialStep <= 4 ? initialStep : 1)
+  const [currentStep, setCurrentStep] = useState<number>(initialStep && initialStep >= 1 && initialStep <= 5 ? initialStep : 1)
   // Controle explícito: usuário deve clicar para selecionar o fluxo
   const [hasSelectedFlow, setHasSelectedFlow] = useState<boolean>(!!skipFlowSelection)
 
@@ -418,6 +522,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
     if (v.oxygenSaturation != null) {
       const spo2 = v.oxygenSaturation
       if (spo2 <= 85) return { level: 'red', trigger: 'Hipoxemia severa (SpO₂ ≤85%)', group: 'D' }
+      if (spo2 > 85 && spo2 <= 89) return { level: 'yellow', trigger: 'Hipoxemia moderada (SpO₂ 86–89%)', group: 'C' }
     }
 
     // Glicemia capilar
@@ -484,6 +589,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         const spo2 = typeof override === 'number' ? (override as number) : v.oxygenSaturation
         if (spo2 == null) return null
         if (spo2 <= 85) return { level: 'red', trigger: 'Hipoxemia severa (SpO₂ ≤85%)', group: 'D' }
+        if (spo2 > 85 && spo2 <= 89) return { level: 'yellow', trigger: 'Hipoxemia moderada (SpO₂ 86–89%)', group: 'C' }
         return null
       }
       case 'glucose': {
@@ -539,6 +645,9 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         ...formData,
         age: calculateAge(formData.birthDate)
       }
+      // Gera um resumo textual do exame físico e anexa às observações gerais
+      const phys = summarizePhysicalExam(physicalExam)
+      dataToSubmit.generalObservations = [formData.generalObservations || '', phys].filter(Boolean).join('\n\n')
       const sev = detectSeverityFromVitals()
       if (sev && onSeverityRedirect) {
         onSeverityRedirect(dataToSubmit, sev.group)
@@ -622,7 +731,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                     { step: 1, label: 'Fluxograma', icon: Target },
                     { step: 2, label: 'Dados Pessoais', icon: User },
                     { step: 3, label: 'Sintomas Clínicos', icon: Heart },
-                    { step: 4, label: 'Sinais Vitais', icon: Activity }
+                    { step: 4, label: 'Sinais Vitais', icon: Activity },
+                    { step: 5, label: 'Exame Físico', icon: Stethoscope }
                   ]
                 ).map(({ step, label, icon: Icon }) => (
                 <div key={step} className="flex items-center space-x-3">
@@ -891,21 +1001,22 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                   {/* Alergias */}
                   <div>
                     <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
-                      Alergias (separe com vírgula)
+                      Alergias (selecione da lista)
                     </label>
-                    <input
-                      type="text"
-                      value={(formData.allergies || []).join(', ')}
-                      onChange={(e) => {
-                        const raw = e.target.value
-                        const list = raw
-                          .split(',')
-                          .map(v => v.trim())
-                          .filter(v => v.length > 0)
-                        setFormData(prev => ({ ...prev, allergies: list }))
-                      }}
-                      className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
-                      placeholder="Ex.: Dipirona, Paracetamol"
+                    <AllergySelector
+                      value={formData.allergies || []}
+                      onChange={(list) => setFormData(prev => ({ ...prev, allergies: list }))}
+                      municipalityId={doctorMunicipalityId ?? undefined}
+                      placeholder="Buscar medicamento por nome"
+                      allowedNames={(() => {
+                        const flow = (formData.selectedFlowchart || 'dengue') as 'dengue' | 'zika' | 'chikungunya'
+                        const map: Record<'dengue' | 'zika' | 'chikungunya', string[]> = {
+                          dengue: ['paracetamol', 'dipirona'],
+                          zika: ['paracetamol', 'dipirona'],
+                          chikungunya: ['paracetamol', 'dipirona']
+                        }
+                        return map[flow]
+                      })()}
                     />
                     {formData.allergies && formData.allergies.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -1399,6 +1510,47 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                   <motion.button
                     type="button"
                     onClick={() => setCurrentStep(3)}
+                    className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all duration-200 font-medium"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Voltar
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    onClick={() => setCurrentStep(5)}
+                    className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <span>Próximo: Exame Físico</span>
+                    <Stethoscope className="w-5 h-5" />
+                  </motion.button>
+                </div>
+              </motion.div>
+            )}
+
+            {/* Step 5: Exame Físico */}
+            {currentStep === 5 && (
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="space-y-8"
+              >
+                <div className="flex items-center space-x-4 mb-8">
+                  <div className="w-3 h-12 bg-gradient-to-b from-blue-600 to-slate-700 rounded-full"></div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800">Exame Físico</h2>
+                    <p className="text-slate-600">Registre os achados do exame físico</p>
+                  </div>
+                </div>
+
+                <PhysicalExamForm value={physicalExam} onChange={setPhysicalExam} />
+
+                <div className="flex justify-between pt-6">
+                  <motion.button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
                     className="bg-slate-100 text-slate-700 px-6 py-3 rounded-xl hover:bg-slate-200 transition-all duration-200 font-medium"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}

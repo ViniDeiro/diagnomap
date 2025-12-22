@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Plus,
@@ -26,7 +27,10 @@ import {
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
+import { listPatients } from '@/services/patientRepo'
+import { toUIPatient } from '@/services/patientRepo'
 import { clsx } from 'clsx'
+import { supabase } from '@/services/supabaseClient'
 
 interface PatientDashboardProps {
   onNewPatient: () => void
@@ -53,54 +57,109 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const [hoveredCard, setHoveredCard] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [showTransferModal, setShowTransferModal] = useState<string | null>(null)
+  const [transferQuery, setTransferQuery] = useState('')
+  const [doctorOptions, setDoctorOptions] = useState<{ id: string; name: string; crm: string | null; email: string | null }[]>([])
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string | null>(null)
+  const [isTransferring, setIsTransferring] = useState(false)
+  const [transferError, setTransferError] = useState<string | null>(null)
   const patientsPerPage = 10
+  const [avatarUrl, setAvatarUrl] = useState<string>('')
 
   // Carregar pacientes no início e sempre que houver refreshTrigger
   const isFirstLoadRef = useRef(true)
   useEffect(() => {
-    if (isFirstLoadRef.current) {
-      // Primeira carga com spinner suave
-      setIsLoading(true)
-      setTimeout(() => {
-        patientService.fixExistingPatientsProgress()
-        const allPatients = patientService.getAllPatients()
-        setPatients(allPatients)
-        setIsLoading(false)
-        isFirstLoadRef.current = false
-      }, 800)
-    } else {
-      // Atualizações subsequentes sem spinner (evita sensação de "recarregar a página")
-      patientService.fixExistingPatientsProgress()
-      const allPatients = patientService.getAllPatients()
-      setPatients(allPatients)
+    const load = async () => {
+      if (isFirstLoadRef.current) {
+        setIsLoading(true)
+        setLoadError(null)
+        setTimeout(async () => {
+          try {
+            const rows = await listPatients()
+            const allPatients = rows.map(toUIPatient)
+            setPatients(allPatients)
+          } catch (e: any) {
+            console.error('Falha ao listar pacientes:', e)
+            const msg = e?.message || 'Não foi possível carregar pacientes.'
+            setLoadError(msg)
+            try {
+              const fallback = patientService.getAllPatients()
+              setPatients(fallback)
+            } catch {}
+          } finally {
+            setIsLoading(false)
+            isFirstLoadRef.current = false
+          }
+        }, 800)
+      } else {
+        try {
+          const rows = await listPatients()
+          const allPatients = rows.map(toUIPatient)
+          setPatients(allPatients)
+        } catch (e: any) {
+          console.error('Falha ao atualizar lista de pacientes:', e)
+          const msg = e?.message || 'Erro ao atualizar lista de pacientes.'
+          setLoadError(msg)
+          try {
+            const fallback = patientService.getAllPatients()
+            setPatients(fallback)
+          } catch {}
+        }
+      }
     }
+    load()
   }, [refreshTrigger])
+
+  useEffect(() => {
+    const loadAvatar = async () => {
+      const { data: userRes } = await supabase.auth.getUser()
+      const user = userRes?.user
+      if (!user) return
+      const metaAvatar = (user.user_metadata as any)?.avatar_url || ''
+      if (metaAvatar) setAvatarUrl(metaAvatar)
+    }
+    loadAvatar()
+  }, [])
 
   // Restaurar página atual ao montar (evita voltar para página 1 ao fechar modais)
   useEffect(() => {
-    try {
-      const savedPage = localStorage.getItem('dashboardPage')
-      if (savedPage) {
-        const pageNum = parseInt(savedPage, 10)
-        if (!isNaN(pageNum) && pageNum > 0) {
-          setCurrentPage(pageNum)
-        }
-      }
-    } catch { }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Página inicial sempre 1; persistência futura via perfil do médico
+    setCurrentPage(1)
   }, [])
 
   // Persistir página ao mudar
   useEffect(() => {
-    try {
-      localStorage.setItem('dashboardPage', String(currentPage))
-    } catch { }
+    // Persistência de página será movida para perfil do médico em breve
   }, [currentPage])
 
   const filteredPatients = patients.filter(patient =>
     patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     patient.medicalRecord.includes(searchTerm)
   )
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (transferQuery.trim().length < 2) {
+        setDoctorOptions([])
+        return
+      }
+      try {
+        const { searchDoctors } = await import('@/services/doctorRepo')
+        const rows = await searchDoctors(transferQuery.trim(), { limit: 8 })
+        const opts = rows.map((r: any) => ({
+          id: r.id as string,
+          name: r.name as string,
+          crm: (r.crm ?? null) as string | null,
+          email: (r.email ?? null) as string | null
+        }))
+        setDoctorOptions(opts)
+      } catch (e) {
+        setDoctorOptions([])
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [transferQuery])
 
   // Reset página quando busca mudar
   useEffect(() => {
@@ -164,15 +223,38 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     })
   }
 
-  const handleDeletePatient = (patientId: string) => {
-    patientService.deletePatient(patientId)
+  const handleDeletePatient = async (patientId: string) => {
+    const { deletePatient } = await import('@/services/patientRepo')
+    await deletePatient(patientId)
     setPatients(prev => prev.filter(p => p.id !== patientId))
     setShowDeleteConfirm(null)
 
-    // Ajustar página se necessário
     const newTotalPages = Math.ceil((filteredPatients.length - 1) / patientsPerPage)
     if (currentPage > newTotalPages && newTotalPages > 0) {
       setCurrentPage(newTotalPages)
+    }
+  }
+
+  const handleConfirmTransfer = async () => {
+    if (!showTransferModal) return
+    setIsTransferring(true)
+    setTransferError(null)
+    try {
+      const { transferPatient } = await import('@/services/doctorRepo')
+      if (!selectedDoctorId) throw new Error('Selecione um médico da lista.')
+      await transferPatient(showTransferModal, selectedDoctorId)
+      const rows = await listPatients()
+      const allPatients = rows.map(toUIPatient)
+      setPatients(allPatients)
+      setShowTransferModal(null)
+      setTransferQuery('')
+      setSelectedDoctorId(null)
+      setDoctorOptions([])
+    } catch (e: any) {
+      const msg = e?.message || 'Falha ao transferir paciente.'
+      setTransferError(msg)
+    } finally {
+      setIsTransferring(false)
     }
   }
 
@@ -194,12 +276,26 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
           backgroundImage: `url('data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23334155" fill-opacity="0.4"%3E%3Cpath d="M20 20h40v40H20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')`
         }}></div>
 
-        <div className="relative max-w-7xl mx-auto px-8 py-12">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="flex items-center justify-center"
+      <div className="relative max-w-7xl mx-auto px-8 py-12">
+        <div className="absolute top-8 right-8">
+          <Link
+            href="/profile"
+            className="flex items-center space-x-2 px-3 py-2 rounded-lg border border-slate-200 text-blue-700 font-semibold hover:bg-blue-50 transition-colors"
+            title="Abrir Perfil do Médico"
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt="Avatar" className="w-7 h-7 rounded-lg object-cover" />
+            ) : (
+              <User className="w-4 h-4" />
+            )}
+            <span className="hidden sm:inline">Perfil</span>
+          </Link>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="flex items-center justify-center"
           >
             {/* Medical Logo Premium */}
             <div className="flex items-center justify-center">
@@ -260,6 +356,8 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                   <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
               </motion.button>
+
+              
             </div>
           </div>
         </motion.div>
@@ -284,6 +382,17 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
             />
           </div>
         </motion.div>
+
+        {/* Erro de carregamento */}
+        {loadError && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 bg-red-50 border border-red-200 text-red-700 rounded-xl p-4"
+          >
+            {loadError}
+          </motion.div>
+        )}
 
         {/* Patients Grid */}
         <div className="space-y-6">
@@ -466,6 +575,16 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                               <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
                             </motion.button>
                           )}
+
+                          <motion.button
+                            onClick={() => setShowTransferModal(patient.id)}
+                            className="relative p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 rounded-xl border border-indigo-200 hover:border-indigo-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            title="Transferir Paciente"
+                          >
+                            <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 group-hover/btn:text-indigo-700 mx-auto" />
+                          </motion.button>
 
                           <motion.button
                             onClick={() => setShowDeleteConfirm(patient.id)}
@@ -651,6 +770,98 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                     whileTap={{ scale: 0.98 }}
                   >
                     Excluir
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showTransferModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-md w-full p-8"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Stethoscope className="w-8 h-8 text-blue-600" />
+                </div>
+
+                <h3 className="text-2xl font-bold text-slate-800 mb-4">
+                  Transferir Paciente
+                </h3>
+
+                <p className="text-slate-600 mb-6 leading-relaxed">
+                  Busque pelo nome ou CRM do médico de destino.
+                </p>
+
+                <div className="mb-4">
+                  <input
+                    type="text"
+                    value={transferQuery}
+                    onChange={(e) => setTransferQuery(e.target.value)}
+                    placeholder="Digite o nome ou CRM..."
+                    className="w-full border border-slate-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                </div>
+
+                {doctorOptions.length > 0 && (
+                  <div className="mb-4 text-left max-h-56 overflow-auto border border-slate-200 rounded-xl">
+                    {doctorOptions.map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => setSelectedDoctorId(d.id)}
+                        className={clsx(
+                          "w-full text-left px-4 py-3 border-b last:border-b-0 transition-colors",
+                          selectedDoctorId === d.id ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+                        )}
+                      >
+                        <div className="font-semibold text-slate-800">{d.name}</div>
+                        <div className="text-sm text-slate-600">CRM: {d.crm || '—'} • {d.email || 'sem e-mail'}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {transferError && (
+                  <div className="mb-4 text-red-600 text-sm">
+                    {transferError}
+                  </div>
+                )}
+
+                <div className="flex space-x-4">
+                  <motion.button
+                    onClick={() => { setShowTransferModal(null); setTransferQuery(''); setSelectedDoctorId(null); setDoctorOptions([]); setTransferError(null); }}
+                    className="flex-1 bg-slate-100 text-slate-700 py-3 rounded-xl font-semibold hover:bg-slate-200 transition-colors duration-200"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Cancelar
+                  </motion.button>
+
+                  <motion.button
+                    onClick={handleConfirmTransfer}
+                    disabled={isTransferring || !selectedDoctorId}
+                    className={clsx(
+                      "flex-1 py-3 rounded-xl font-semibold transition-all duration-200",
+                      isTransferring || !selectedDoctorId
+                        ? "bg-blue-200 text-white cursor-not-allowed"
+                        : "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-lg"
+                    )}
+                    whileHover={!isTransferring && selectedDoctorId ? { scale: 1.02 } : {}}
+                    whileTap={!isTransferring && selectedDoctorId ? { scale: 0.98 } : {}}
+                  >
+                    {isTransferring ? 'Transferindo...' : 'Confirmar Transferência'}
                   </motion.button>
                 </div>
               </div>

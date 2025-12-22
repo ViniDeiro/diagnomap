@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import LoadingScreen from '@/components/LoadingScreen'
 import DengueFlowchartComplete from '@/components/DengueFlowchartComplete'
 import EmergencyFlowchart from '@/components/EmergencyFlowchart'
@@ -12,28 +13,52 @@ import PrescriptionViewer from '@/components/PrescriptionViewer'
 import ReportViewer from '@/components/ReportViewer'
 import MedicalPrescriptionViewer from '@/components/MedicalPrescriptionViewer'
 import { Patient, PatientFormData } from '@/types/patient'
+
 import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { GasometryFlowchart } from '@/components/GasometryFlowchart'
+import { supabase } from '@/services/supabaseClient'
 
 type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'gasometry-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form'
 
 export default function Home() {
+  const router = useRouter()
   const [appState, setAppState] = useState<AppState>('loading')
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
   const [currentEmergencyPatient, setCurrentEmergencyPatient] = useState<EmergencyPatient | null>(null)
   const [selectedFlowchart, setSelectedFlowchart] = useState<EmergencyFlowchartType | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [previousState, setPreviousState] = useState<AppState>('dashboard')
+  const [isFading, setIsFading] = useState(false)
 
   useEffect(() => {
-    // Simular carregamento inicial - tempo estendido para apreciar o design premium
-    const timer = setTimeout(() => {
-      setAppState('dashboard')
-    }, 6000)
-
-    return () => clearTimeout(timer)
+    let active = true
+    async function ensureAuth() {
+      const { data: userRes } = await supabase.auth.getUser()
+      const user = userRes?.user
+      if (!user) {
+        setTimeout(() => {
+          if (!active) return
+          setIsFading(true)
+          setTimeout(() => {
+            if (!active) return
+            router.replace('/login')
+          }, 500)
+        }, 4000)
+        return
+      }
+      setTimeout(() => {
+        if (!active) return
+        setIsFading(true)
+        setTimeout(() => {
+          if (!active) return
+          setAppState('dashboard')
+        }, 500)
+      }, 2500)
+    }
+    ensureAuth()
+    return () => { active = false }
   }, [])
 
   const handleNewPatient = () => {
@@ -283,7 +308,13 @@ export default function Home() {
   const isDashboardActive = ['dashboard', 'prescriptions', 'report', 'medical-prescription'].includes(appState)
 
   const renderContent = () => {
-    if (appState === 'loading') return <LoadingScreen />
+    if (appState === 'loading') {
+      return (
+        <div className={`transition-opacity duration-500 ease-out ${isFading ? 'opacity-0' : 'opacity-100'}`}>
+          <LoadingScreen />
+        </div>
+      )
+    }
 
     if (appState === 'emergency-selector') {
       return (
