@@ -27,14 +27,12 @@ export default function SignupPage() {
     const loadUfs = async () => {
       try {
         const { data, error } = await supabase.from('municipalities').select('uf').order('uf', { ascending: true })
+        let distinct: string[] = []
         if (!error && Array.isArray(data)) {
-          const distinct = Array.from(new Set((data as any[]).map(r => String((r as any).uf || '').trim()).filter(Boolean))).sort()
-          if (distinct.length > 0) {
-            setUfs(distinct)
-            return
-          }
+          distinct = Array.from(new Set((data as any[]).map(r => String((r as any).uf || '').trim()).filter(Boolean)))
         }
-        setUfs(ALL_UFS)
+        const union = Array.from(new Set([...distinct, ...ALL_UFS])).sort()
+        setUfs(union)
       } catch {
         setUfs(ALL_UFS)
       }
