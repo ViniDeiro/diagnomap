@@ -20,19 +20,119 @@ export default function SignupPage() {
   const [municipalityId, setMunicipalityId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadingMunicipalities, setLoadingMunicipalities] = useState(false)
+  const ALL_UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
   useEffect(() => {
-    const loadMunicipalities = async () => {
-      const { data, error } = await supabase.from('municipalities').select('id,name,uf').order('name', { ascending: true })
-      if (!error && data) {
-        const rows = data as Municipality[]
-        setMunicipalities(rows)
-        const distinctUfs = Array.from(new Set(rows.map(r => (r.uf || '').trim()).filter(Boolean))).sort()
-        setUfs(distinctUfs)
+    const loadUfs = async () => {
+      try {
+        const { data, error } = await supabase.from('municipalities').select('uf').order('uf', { ascending: true })
+        if (!error && Array.isArray(data)) {
+          const distinct = Array.from(new Set((data as any[]).map(r => String((r as any).uf || '').trim()).filter(Boolean))).sort()
+          if (distinct.length > 0) {
+            setUfs(distinct)
+            return
+          }
+        }
+        setUfs(ALL_UFS)
+      } catch {
+        setUfs(ALL_UFS)
       }
     }
-    loadMunicipalities()
+    loadUfs()
   }, [])
+
+  useEffect(() => {
+    const loadMunicipalitiesByUf = async (uf: string) => {
+      if (!uf) return
+      setLoadingMunicipalities(true)
+      setMunicipalityId(null)
+      try {
+        const { data, error } = await supabase.from('municipalities').select('id,name,uf').eq('uf', uf).order('name', { ascending: true })
+        if (!error && Array.isArray(data)) {
+          setMunicipalities(data as Municipality[])
+          setLoadingMunicipalities(false)
+          return
+        }
+      } catch {}
+      try {
+        const estadosCsv = await fetch('https://raw.githubusercontent.com/kelvins/Municipios-Brasileiros/main/csv/estados.csv').then(r => r.text())
+        const municipiosCsv = await fetch('https://raw.githubusercontent.com/kelvins/Municipios-Brasileiros/main/csv/municipios.csv').then(r => r.text())
+        const parseCsvLine = (line: string) => {
+          const result: string[] = []
+          let cur = ''
+          let inQuotes = false
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i]
+            if (inQuotes) {
+              if (ch === '"') {
+                if (line[i + 1] === '"') {
+                  cur += '"'
+                  i++
+                } else {
+                  inQuotes = false
+                }
+              } else {
+                cur += ch
+              }
+            } else {
+              if (ch === '"') {
+                inQuotes = true
+              } else if (ch === ',') {
+                result.push(cur)
+                cur = ''
+              } else {
+                cur += ch
+              }
+            }
+          }
+          result.push(cur)
+          return result.map(s => s.trim())
+        }
+        const parseCsv = (text: string) => {
+          const lines = text.trim().split(/\r?\n/)
+          const header = parseCsvLine(lines[0])
+          const idx = Object.fromEntries(header.map((h, i) => [h, i]))
+          const rows: string[][] = []
+          for (let i = 1; i < lines.length; i++) {
+            if (!lines[i]) continue
+            const cols = parseCsvLine(lines[i])
+            rows.push(cols)
+          }
+          return { header, idx, rows }
+        }
+        const estados = parseCsv(estadosCsv)
+        const municipios = parseCsv(municipiosCsv)
+        const idxCodigoUf = estados.idx['codigo_uf']
+        const idxUfSigla = estados.idx['uf']
+        const ufSiglas = new Map<string, string>()
+        estados.rows.forEach(cols => {
+          const codigo = String(cols[idxCodigoUf] || '')
+          const sigla = String(cols[idxUfSigla] || '').toUpperCase()
+          if (codigo && sigla) ufSiglas.set(codigo, sigla)
+        })
+        const idxCodigoIbge = municipios.idx['codigo_ibge']
+        const idxNome = municipios.idx['nome']
+        const idxCodigoUfMunicipio = municipios.idx['codigo_uf']
+        const filtered: Municipality[] = []
+        municipios.rows.forEach(cols => {
+          const codigoUf = String(cols[idxCodigoUfMunicipio] || '')
+          const sigla = ufSiglas.get(codigoUf) || ''
+          if (sigla === uf) {
+            const name = String(cols[idxNome] || '')
+            filtered.push({ id: NaN as unknown as number, name, uf })
+          }
+        })
+        setMunicipalities(filtered)
+      } catch {
+        setMunicipalities([])
+        setError('Falha ao carregar municípios. Verifique sua conexão.')
+      } finally {
+        setLoadingMunicipalities(false)
+      }
+    }
+    if (selectedUf) loadMunicipalitiesByUf(selectedUf)
+  }, [selectedUf])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,14 +246,12 @@ export default function SignupPage() {
                   value={municipalityId ?? ''}
                   onChange={(e) => setMunicipalityId(Number(e.target.value) || null)}
                   className="w-full bg-transparent py-3 outline-none"
-                  disabled={!selectedUf}
+                  disabled={!selectedUf || loadingMunicipalities}
                 >
-                  <option value="">{selectedUf ? 'Selecione...' : 'Escolha o estado primeiro'}</option>
-                  {municipalities
-                    .filter(m => (m.uf || '').trim() === selectedUf)
-                    .map(m => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
-                    ))}
+                  <option value="">{selectedUf ? (loadingMunicipalities ? 'Carregando...' : 'Selecione...') : 'Escolha o estado primeiro'}</option>
+                  {municipalities.map(m => (
+                    <option key={`${m.id}-${m.name}`} value={m.id}>{m.name}</option>
+                  ))}
                 </select>
               </div>
             </div>
