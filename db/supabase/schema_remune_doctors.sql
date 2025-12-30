@@ -130,6 +130,33 @@ begin
   end if;
 end $$;
 
+-- Policies robustas para produção (permitem operações do usuário autenticado)
+do $$
+begin
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='doctors' and policyname='doctors_insert_own') then
+    create policy doctors_insert_own on public.doctors
+      for insert to authenticated
+      with check (auth.uid() = auth_user_id);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='doctors' and policyname='doctors_select_own') then
+    create policy doctors_select_own on public.doctors
+      for select to authenticated
+      using (auth.uid() = auth_user_id);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='doctors' and policyname='doctors_update_own') then
+    create policy doctors_update_own on public.doctors
+      for update to authenticated
+      using (auth.uid() = auth_user_id)
+      with check (auth.uid() = auth_user_id);
+  end if;
+  -- Municípios: leitura pública (anon e authenticated) segura
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='municipalities' and policyname='municipalities_select_public') then
+    create policy municipalities_select_public on public.municipalities
+      for select to anon, authenticated
+      using (true);
+  end if;
+end $$;
+
 -- Comentários:
 -- 1) Para produção, substitua políticas abertas por regras de acesso por usuário/perfil.
 -- 2) A transferência de paciente deve sempre registrar em patient_transfers e atualizar patients.assigned_doctor_id.

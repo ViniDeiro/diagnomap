@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { UserPlus, Mail, Lock, MapPin } from 'lucide-react'
-import { signUpDoctor, signInDoctor } from '@/services/doctorRepo'
+import { signUpDoctor, signInDoctor, createDoctorProfile } from '@/services/doctorRepo'
 import { supabase } from '@/services/supabaseClient'
 
 type Municipality = { id: number; name: string; uf?: string }
@@ -137,14 +137,21 @@ export default function SignupPage() {
     setError(null)
     setLoading(true)
     try {
-      await signUpDoctor(email, password, {
+      await signUpDoctor(email, password)
+      const signed = await signInDoctor(email, password)
+      if (!signed?.user?.id) {
+        setError('Confirme seu email para concluir o cadastro e tente novamente.')
+        setLoading(false)
+        return
+      }
+      const authUserId = signed.user.id
+      await createDoctorProfile({
         name,
         municipality_id: municipalityId ?? null,
-        status: 'active'
+        status: 'active',
+        email,
+        auth_user_id: authUserId
       })
-      try {
-        await signInDoctor(email, password)
-      } catch {}
       router.push('/')
     } catch (err: any) {
       setError(err?.message || 'Erro ao cadastrar')

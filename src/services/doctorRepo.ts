@@ -130,11 +130,10 @@ export async function transferPatient(patientId: string, toDoctorId: string, opt
 }
 
 // Auth helpers (opcional): cadastro e login via Supabase Auth
-export async function signUpDoctor(email: string, password: string, profile: Omit<DoctorProfile, 'email'>) {
-  const { data: signUp, error: signUpErr } = await supabase.auth.signUp({ email, password });
-  if (signUpErr) throw signUpErr;
-  const authUserId = signUp.user?.id ?? null;
-  return await createDoctorProfile({ ...profile, email, auth_user_id: authUserId } as DoctorProfile);
+export async function signUpDoctor(email: string, password: string) {
+  const { data, error } = await supabase.auth.signUp({ email, password });
+  if (error) throw error;
+  return data;
 }
 
 export async function signInDoctor(email: string, password: string) {
