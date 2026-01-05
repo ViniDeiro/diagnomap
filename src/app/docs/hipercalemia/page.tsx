@@ -3,9 +3,6 @@ import path from 'path'
 import React from 'react'
 import DocViewer from './DocViewer'
 
-export const runtime = 'nodejs'
-export const dynamic = 'force-static'
-
 export default function Page() {
   const docsDir = path.resolve(process.cwd(), 'docs')
   let docs: { id: string; title: string; markdown: string }[] = []

@@ -1,8 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+function getEnv(name: string): string | undefined {
+  const v = process.env[name];
+  return typeof v === 'string' && v.length > 0 ? v : undefined;
+}
 
-export const supabase = createClient(url, anonKey, {
+const url = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+const anonKey = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+
+const safeUrl = url ?? 'https://example.supabase.co';
+const safeKey = anonKey ?? 'invalid';
+
+export const supabase = createClient(safeUrl, safeKey, {
   auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
 });
