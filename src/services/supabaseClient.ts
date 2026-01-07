@@ -1,12 +1,16 @@
 import { createClient } from '@supabase/supabase-js';
 
-function getEnv(name: string): string | undefined {
-  const v = process.env[name];
-  return typeof v === 'string' && v.length > 0 ? v : undefined;
+function sanitize(value?: string): string | undefined {
+  if (!value) return undefined
+  const trimmed = value.trim()
+  const unquoted = trimmed.replace(/^['"`]\s*(.*?)\s*['"`]$/, '$1')
+  return unquoted
 }
 
-const url = getEnv('NEXT_PUBLIC_SUPABASE_URL');
-const anonKey = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+const RAW_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined
+const RAW_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined
+const url = sanitize(RAW_URL);
+const anonKey = sanitize(RAW_KEY);
 
 const safeUrl = url ?? 'https://example.supabase.co';
 const safeKey = anonKey ?? 'invalid';

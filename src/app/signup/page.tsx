@@ -22,9 +22,14 @@ export default function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(false)
   const ALL_UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+  const configured = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   useEffect(() => {
     const loadUfs = async () => {
+      if (!configured) {
+        setUfs(ALL_UFS)
+        return
+      }
       try {
         const { data, error } = await supabase.from('municipalities').select('uf').order('uf', { ascending: true })
         let distinct: string[] = []
@@ -45,6 +50,84 @@ export default function SignupPage() {
       if (!uf) return
       setLoadingMunicipalities(true)
       setMunicipalityId(null)
+      if (!configured) {
+        try {
+          const estadosCsv = await fetch('https://raw.githubusercontent.com/kelvins/Municipios-Brasileiros/main/csv/estados.csv').then(r => r.text())
+          const municipiosCsv = await fetch('https://raw.githubusercontent.com/kelvins/Municipios-Brasileiros/main/csv/municipios.csv').then(r => r.text())
+          const parseCsvLine = (line: string) => {
+            const result: string[] = []
+            let cur = ''
+            let inQuotes = false
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i]
+              if (inQuotes) {
+                if (ch === '"') {
+                  if (line[i + 1] === '"') {
+                    cur += '"'
+                    i++
+                  } else {
+                    inQuotes = false
+                  }
+                } else {
+                  cur += ch
+                }
+              } else {
+                if (ch === '"') {
+                  inQuotes = true
+                } else if (ch === ',') {
+                  result.push(cur)
+                  cur = ''
+                } else {
+                  cur += ch
+                }
+              }
+            }
+            result.push(cur)
+            return result.map(s => s.trim())
+          }
+          const parseCsv = (text: string) => {
+            const lines = text.trim().split(/\r?\n/)
+            const header = parseCsvLine(lines[0])
+            const idx = Object.fromEntries(header.map((h, i) => [h, i]))
+            const rows: string[][] = []
+            for (let i = 1; i < lines.length; i++) {
+              if (!lines[i]) continue
+              const cols = parseCsvLine(lines[i])
+              rows.push(cols)
+            }
+            return { header, idx, rows }
+          }
+          const estados = parseCsv(estadosCsv)
+          const municipios = parseCsv(municipiosCsv)
+          const idxCodigoUf = estados.idx['codigo_uf']
+          const idxUfSigla = estados.idx['uf']
+          const ufSiglas = new Map<string, string>()
+          estados.rows.forEach(cols => {
+            const codigo = String(cols[idxCodigoUf] || '')
+            const sigla = String(cols[idxUfSigla] || '').toUpperCase()
+            if (codigo && sigla) ufSiglas.set(codigo, sigla)
+          })
+          const idxCodigoIbge = municipios.idx['codigo_ibge']
+          const idxNome = municipios.idx['nome']
+          const idxCodigoUfMunicipio = municipios.idx['codigo_uf']
+          const filtered: Municipality[] = []
+          municipios.rows.forEach(cols => {
+            const codigoUf = String(cols[idxCodigoUfMunicipio] || '')
+            const sigla = ufSiglas.get(codigoUf) || ''
+            if (sigla === uf) {
+              const name = String(cols[idxNome] || '')
+              filtered.push({ id: NaN as unknown as number, name, uf })
+            }
+          })
+          setMunicipalities(filtered)
+        } catch {
+          setMunicipalities([])
+          setError('Falha ao carregar municípios. Verifique sua conexão.')
+        } finally {
+          setLoadingMunicipalities(false)
+        }
+        return
+      }
       try {
         const { data, error } = await supabase.from('municipalities').select('id,name,uf').eq('uf', uf).order('name', { ascending: true })
         if (!error && Array.isArray(data)) {
@@ -137,6 +220,11 @@ export default function SignupPage() {
     setError(null)
     setLoading(true)
     try {
+      if (!configured) {
+        setError('Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+        setLoading(false)
+        return
+      }
       await signUpDoctor(email, password)
       const signed = await signInDoctor(email, password)
       if (!signed?.user?.id) {
@@ -169,6 +257,12 @@ export default function SignupPage() {
           </div>
           <h1 className="text-2xl font-bold text-slate-800">Cadastro</h1>
         </div>
+
+        {!configured && (
+          <div className="mb-4 text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-sm">
+            Supabase não configurado. O carregamento de municípios usará fonte pública e o cadastro ficará indisponível.
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 text-red-600 bg-red-50 border border-red-200 rounded-xl p-3 text-sm">
@@ -264,7 +358,7 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !configured}
             className="w-full bg-gradient-to-r from-blue-600 to-slate-700 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
           >
             {loading ? 'Cadastrando...' : 'Cadastrar'}
