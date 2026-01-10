@@ -70,6 +70,18 @@ export async function insertPatientWithFlowLink(payload: PatientPayload) {
     .select()
     .single()
   if (error) throw error
+  if (data && !data.assigned_doctor_id) {
+    const current = await getCurrentDoctor();
+    if (current?.id) {
+      const { data: updated } = await supabase
+        .from('patients')
+        .update({ assigned_doctor_id: current.id })
+        .eq('id', data.id)
+        .select()
+        .single()
+      if (updated) return updated
+    }
+  }
   return data
 }
 

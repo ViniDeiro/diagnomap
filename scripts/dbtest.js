@@ -105,13 +105,51 @@ async function listDoctors() {
   }
 }
 
+async function listPatientsForDoctor(email) {
+  const supabase = await testWithSupabase()
+  console.log('Listando pacientes do médico atual...')
+  let doctorId = null
+  if (email) {
+    const { data: docByEmail } = await supabase.from('doctors').select('id').eq('email', email).single()
+    doctorId = docByEmail?.id || null
+  }
+  if (!doctorId) {
+    const { data: auth } = await supabase.auth.getUser()
+    const uid = auth?.user?.id
+    if (uid) {
+      const { data: docByAuth } = await supabase.from('doctors').select('id').eq('auth_user_id', uid).single()
+      doctorId = docByAuth?.id || null
+    }
+  }
+  const query = doctorId
+    ? supabase.from('patients').select('id,name,status,assigned_doctor_id,created_at').eq('assigned_doctor_id', doctorId).order('created_at', { ascending: false })
+    : supabase.from('patients').select('id,name,status,assigned_doctor_id,created_at').order('created_at', { ascending: false })
+  const { data, error } = await query
+  if (error) throw error
+  if (!Array.isArray(data) || data.length === 0) {
+    console.log('Nenhum paciente encontrado.')
+    return
+  }
+  for (const row of data) {
+    const created = row.created_at ? new Date(row.created_at).toISOString() : 'N/A'
+    console.log(`- ${row.name} | status=${row.status} | assigned_doctor_id=${row.assigned_doctor_id ?? 'N/A'} | criado=${created} | id=${row.id}`)
+  }
+}
+
 async function main() {
   const dbUrl = getDbUrl()
   const args = process.argv.slice(2)
   const listOnly = args.includes('--list-doctors')
+  const listPatientsArg = args.includes('--list-patients')
+  const emailArgIdx = args.findIndex(a => a.startsWith('--email='))
+  const emailArg = emailArgIdx >= 0 ? args[emailArgIdx].split('=').slice(1).join('=') : null
 
   if (listOnly) {
     await listDoctors()
+    return
+  }
+  if (listPatientsArg) {
+    await listPatientsForDoctor(emailArg)
     return
   }
 

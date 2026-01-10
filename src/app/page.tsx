@@ -145,6 +145,7 @@ export default function Home() {
   const handlePatientFormSubmit = (formData: PatientFormData) => {
     const newPatient = patientService.createPatient(formData)
     setCurrentPatient(newPatient)
+    setRefreshTrigger(prev => prev + 1)
     setAppState('flowchart')
   }
 
@@ -162,6 +163,7 @@ export default function Home() {
     // Buscar o paciente atualizado (o objeto criado inicialmente ainda tem currentStep='start')
     const fresh = patientService.getPatientById(newPatient.id) || newPatient
     setCurrentPatient(fresh)
+    setRefreshTrigger(prev => prev + 1)
     setAppState('flowchart')
   }
 

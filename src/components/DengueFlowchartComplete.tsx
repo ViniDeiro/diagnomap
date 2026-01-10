@@ -85,7 +85,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   // Helper: parse number safely from string/localStorage
   const parseNum = (s: string | null): number | undefined => {
     if (!s) return undefined
-    const n = Number(s)
+    const normalized = s.replace(/\s+/g, '').replace(',', '.')
+    const n = Number(normalized)
     return isNaN(n) ? undefined : n
   }
 
@@ -259,7 +260,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     switch (kind) {
       case 'hb': {
         const range = getHbRange()
-        const refText = `(${range.min.toFixed(1)}–${range.max.toFixed(1)} g/dL)`
+        const refText = `(${range.min.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}–${range.max.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} g/dL)`
         // Classificação de anemia por gravidade
         if (value < 5) return { label: `Anemia extremamente grave (< 5 g/dL) ${refText}`, input: 'border-red-600 bg-red-50 focus:ring-red-600 focus:border-red-600', text: 'text-red-800' }
         if (value < 7) return { label: `Anemia grave (5,0–6,9 g/dL) ${refText}`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
@@ -271,7 +272,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       case 'ht': {
         if (hbContext == null || hbContext <= 0) return { label: 'Informe hemoglobina para avaliar razão Ht/Hb', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
         const ratio = value / hbContext
-        const ratioText = `Razão Ht/Hb: ${ratio.toFixed(1)}x`
+        const ratioText = `Razão Ht/Hb: ${ratio.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`
         if (ratio >= 2.8 && ratio <= 3.2) return { label: `${ratioText} – Normal (2,8–3,2x)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
         if (ratio >= 3.21 && ratio <= 3.59) return { label: `${ratioText} – Aumentado (3,21–3,59x)`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
         if (ratio >= 3.6) return { label: `${ratioText} – Hemoconcentrado (≥ 3,6x)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
@@ -322,13 +323,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     const peso = patient.weight || (patient.age >= 18 ? 70 : (patient.age * 2 + 10))
     const mlkgH = peso > 0 ? (value / peso) : undefined
     if (mlkgH != null && mlkgH < 0.5) {
-      return { label: `Oligúria (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+      return { label: `Oligúria (${mlkgH.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ml/kg/h)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
     }
     if (mlkgH != null && mlkgH <= 2) {
-      return { label: `Diurese normal (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+      return { label: `Diurese normal (${mlkgH.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ml/kg/h)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
     }
     if (mlkgH != null && mlkgH > 2) {
-      return { label: `Poliúria (${mlkgH.toFixed(2)} ml/kg/h)`, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
+      return { label: `Poliúria (${mlkgH.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ml/kg/h)`, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
     }
     return { label: `Diurese informada: ${value} ml/h`, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
   }
@@ -3982,7 +3983,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             let bgClass = 'bg-slate-50 border-slate-200'
 
             if (ratio !== undefined) {
-              const ratioStr = `${ratio.toFixed(2)}x`
+              const ratioStr = `${ratio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`
               if (ratio >= 3.6) {
                 previewText = `Hemoconcentração detectada (Razão Ht/Hb ${ratioStr}) — Reclassificar para Grupo D`
                 highlightClass = 'text-red-800'
@@ -3994,11 +3995,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               }
             } else if (ht != null) {
               if (ht >= 45) {
-                previewText = `Hematócrito elevado (${ht}%) — Reclassificar para Grupo D`
+                previewText = `Hematócrito elevado (${ht.toLocaleString('pt-BR')}%) — Reclassificar para Grupo D`
                 highlightClass = 'text-red-800'
                 bgClass = 'bg-red-50 border-red-200'
               } else {
-                previewText = `Hematócrito estável (${ht}%) — Manter no Grupo C`
+                previewText = `Hematócrito estável (${ht.toLocaleString('pt-BR')}%) — Manter no Grupo C`
                 highlightClass = 'text-green-800'
                 bgClass = 'bg-green-50 border-green-200'
               }
@@ -4030,6 +4031,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
         if (ratio !== undefined) {
           if (ratio >= 3.6) return [
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
             { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
           ]
           return [
@@ -4039,6 +4041,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         }
         if (ht != null) {
           if (ht >= 45) return [
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
             { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
           ]
           return [
@@ -4048,8 +4051,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         }
 
         return [
-          { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' },
-          { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
+          { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
+          { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
         ]
       })()
     },

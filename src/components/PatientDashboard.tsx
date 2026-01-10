@@ -29,6 +29,8 @@ import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
 import { listPatients } from '@/services/patientRepo'
 import { toUIPatient } from '@/services/patientRepo'
+import { updatePatientWithFlowLink } from '@/services/patientRepo'
+import { fromUIPatient } from '@/services/patientRepo'
 import { clsx } from 'clsx'
 import { supabase } from '@/services/supabaseClient'
 
@@ -78,7 +80,29 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
           try {
             const rows = await listPatients()
             const allPatients = rows.map(toUIPatient)
-            setPatients(allPatients)
+            if (allPatients.length === 0) {
+              const fallback = patientService.getAllPatients()
+              setPatients(fallback)
+              try {
+                for (const p of fallback) {
+                  const payload = fromUIPatient(p)
+                  await updatePatientWithFlowLink(p.id, payload)
+                }
+              } catch {}
+            } else {
+              setPatients(allPatients)
+              try {
+                const fallback = patientService.getAllPatients()
+                if (fallback.length > allPatients.length) {
+                  for (const p of fallback) {
+                    const payload = fromUIPatient(p)
+                    await updatePatientWithFlowLink(p.id, payload)
+                  }
+                  const rows2 = await listPatients()
+                  setPatients(rows2.map(toUIPatient))
+                }
+              } catch {}
+            }
           } catch (e: any) {
             console.error('Falha ao listar pacientes:', e)
             const msg = e?.message || 'Não foi possível carregar pacientes.'
@@ -96,7 +120,29 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
         try {
           const rows = await listPatients()
           const allPatients = rows.map(toUIPatient)
-          setPatients(allPatients)
+          if (allPatients.length === 0) {
+            const fallback = patientService.getAllPatients()
+            setPatients(fallback)
+            try {
+              for (const p of fallback) {
+                const payload = fromUIPatient(p)
+                await updatePatientWithFlowLink(p.id, payload)
+              }
+            } catch {}
+          } else {
+            setPatients(allPatients)
+            try {
+              const fallback = patientService.getAllPatients()
+              if (fallback.length > allPatients.length) {
+                for (const p of fallback) {
+                  const payload = fromUIPatient(p)
+                  await updatePatientWithFlowLink(p.id, payload)
+                }
+                const rows2 = await listPatients()
+                setPatients(rows2.map(toUIPatient))
+              }
+            } catch {}
+          }
         } catch (e: any) {
           console.error('Falha ao atualizar lista de pacientes:', e)
           const msg = e?.message || 'Erro ao atualizar lista de pacientes.'

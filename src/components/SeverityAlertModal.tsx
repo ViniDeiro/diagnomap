@@ -89,7 +89,7 @@ const SeverityAlertModal: React.FC<SeverityAlertModalProps> = ({
     }
     // Amarelo: taquicardia moderada
     if (isTachycardiaModerate) {
-      return 'Paciente com sinais de Insuficiência respiratória e desconforto. Atentar para piora ventilatória com necessidade de suporte invasivo (Intubação orotraqueal e ventilação mecânica). Grupo C ou D.'
+      return 'Paciente com taquicardia moderada. Atentar para sinais de sepse e choque séptico. Potencialmente grave. Possivelmente classificado como grupo C ou D'
     }
     // Vermelho: alteração severa de FR
     if (isRespiratoryRateSevere) {
@@ -189,4 +189,3 @@ const SeverityAlertModal: React.FC<SeverityAlertModalProps> = ({
 }
 
 export default SeverityAlertModal
-

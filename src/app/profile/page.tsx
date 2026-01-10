@@ -59,6 +59,17 @@ export default function ProfilePage() {
         .eq('auth_user_id', user.id)
         .single()
       if (data) setProfile(data as DoctorRow)
+      if (data?.municipality_id) {
+        const { data: muni } = await supabase
+          .from('municipalities')
+          .select('id,uf')
+          .eq('id', data.municipality_id)
+          .single()
+        if (muni) {
+          setSelectedUf((muni as any).uf || '')
+          setMunicipalityId((muni as any).id as any)
+        }
+      }
 
       const { data: munis } = await supabase.from('municipalities').select('id,name,uf').order('name', { ascending: true })
       if (Array.isArray(munis)) {
@@ -104,9 +115,14 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       setName(profile.name || '')
+      setCrm((profile as any).crm || '')
+      setSpecialty((profile as any).specialty || '')
+      setPhone((profile as any).phone || '')
       setMunicipalityId(profile.municipality_id || null)
-      const ufOfMun = municipalities.find(m => m.id === (profile.municipality_id || -1))?.uf || ''
-      setSelectedUf(ufOfMun)
+      if (profile.municipality_id && municipalities.length > 0) {
+        const muni = municipalities.find(m => m.id === profile.municipality_id)
+        if (muni?.uf) setSelectedUf(muni.uf)
+      }
     }
   }, [profile, municipalities])
 
@@ -161,17 +177,17 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
-      <div className="max-w-6xl mx-auto px-6 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
         {!online && (
           <div className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 px-6 py-4 text-amber-800">
             Supabase não configurado para ambiente local. Exibindo visual do perfil em modo demonstração.
           </div>
         )}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-slate-800 to-slate-900 text-white shadow-xl">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 text-white shadow-2xl ring-1 ring-white/10">
           <div className="absolute inset-0 opacity-20 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-white/40 via-transparent to-transparent" />
-          <div className="relative px-8 pt-8 pb-6 flex items-center justify-between">
+          <div className="relative px-4 sm:px-8 py-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 overflow-hidden flex items-center justify-center ring-1 ring-white/30">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 overflow-hidden flex items-center justify-center ring-1 ring-white/30">
                 {avatarUrl ? (
                   <Image src={avatarUrl} alt="Avatar" width={64} height={64} className="w-full h-full object-cover" />
                 ) : (
@@ -180,7 +196,7 @@ export default function ProfilePage() {
               </div>
               <div>
                 <div className="text-sm uppercase tracking-wide text-white/80">Perfil</div>
-                <h1 className="text-2xl md:text-3xl font-semibold">{name || profile?.name || 'Médico'}</h1>
+                <h1 className="text-2xl md:text-3xl font-semibold leading-tight">{name || profile?.name || 'Médico'}</h1>
                 <div className="flex items-center text-white/80 text-sm mt-1">
                   <Mail className="w-4 h-4 mr-2" />
                   <span>{userEmail}</span>
@@ -199,10 +215,10 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 sm:gap-8 mt-8">
+          <div className="xl:col-span-2 space-y-8">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60">
-              <div className="px-8 pt-8">
+              <div className="px-4 sm:px-8 pt-6 sm:pt-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center shadow-md">
                     <User className="w-6 h-6" />
@@ -210,15 +226,15 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-semibold text-slate-800">Informações Pessoais</h2>
                 </div>
               </div>
-              <div className="px-8 pb-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="px-4 sm:px-8 pb-6 sm:pb-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="group">
                     <div className="text-xs text-slate-500 uppercase mb-1">Nome</div>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="group">
@@ -227,7 +243,7 @@ export default function ProfilePage() {
                       type="text"
                       value={crm}
                       onChange={(e) => setCrm(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="group">
@@ -236,7 +252,7 @@ export default function ProfilePage() {
                       type="text"
                       value={specialty}
                       onChange={(e) => setSpecialty(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     />
                   </div>
                   <div className="group">
@@ -245,14 +261,14 @@ export default function ProfilePage() {
                       type="text"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                      className="w-full bg-white border border-slate-300 rounded-xl px-3 py-3 shadow-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mt-6">
                   <div className="group">
                     <div className="text-xs text-slate-500 uppercase mb-1">Estado (UF)</div>
-                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
+                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 shadow-sm">
                       <MapPin className="w-5 h-5 text-slate-400 mr-2" />
                       <select
                         value={selectedUf}
@@ -272,7 +288,7 @@ export default function ProfilePage() {
                   </div>
                   <div className="group">
                     <div className="text-xs text-slate-500 uppercase mb-1">Município</div>
-                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
+                    <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3 shadow-sm">
                       <MapPin className="w-5 h-5 text-slate-400 mr-2" />
                       <select
                         value={municipalityId ?? ''}
@@ -292,7 +308,7 @@ export default function ProfilePage() {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="inline-flex items-center bg-gradient-to-r from-blue-600 to-slate-700 text-white px-6 py-3 rounded-xl font-semibold shadow hover:shadow-lg transition-all"
+                    className="inline-flex items-center bg-gradient-to-r from-blue-600 to-slate-700 text-white px-6 py-3 rounded-2xl font-semibold shadow hover:shadow-lg transition-all disabled:opacity-50"
                   >
                     {saving ? 'Salvando...' : 'Salvar'}
                   </button>
@@ -301,7 +317,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60">
-              <div className="px-8 pt-8">
+              <div className="px-4 sm:px-8 pt-6 sm:pt-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center shadow-md">
                     <BarChart3 className="w-6 h-6" />
@@ -309,8 +325,8 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-semibold text-slate-800">Estatísticas</h2>
                 </div>
               </div>
-              <div className="px-8 pb-8">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="px-4 sm:px-8 pb-6 sm:pb-8">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 hover:shadow-md transition-shadow">
                     <div className="text-slate-500 text-sm">Pacientes atribuídos</div>
                     <div className="mt-2 text-3xl font-semibold text-slate-800">{stats.total}</div>
@@ -334,7 +350,7 @@ export default function ProfilePage() {
 
           <div className="space-y-8">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60">
-              <div className="px-8 pt-8">
+              <div className="px-4 sm:px-8 pt-6 sm:pt-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-emerald-600 text-white rounded-xl flex items-center justify-center shadow-md">
                     <Activity className="w-6 h-6" />
@@ -342,7 +358,7 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-semibold text-slate-800">Atividades Recentes</h2>
                 </div>
               </div>
-              <div className="px-8 pb-8">
+              <div className="px-4 sm:px-8 pb-6 sm:pb-8">
                 <div className="space-y-4">
                   {recentPatients.length === 0 && (
                     <div className="text-slate-500">Sem atividades recentes</div>
@@ -367,7 +383,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60">
-              <div className="px-8 pt-8">
+              <div className="px-4 sm:px-8 pt-6 sm:pt-8">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-slate-600 text-white rounded-xl flex items-center justify-center shadow-md">
                     <User className="w-6 h-6" />
@@ -375,7 +391,7 @@ export default function ProfilePage() {
                   <h2 className="text-xl font-semibold text-slate-800">Imagem de Perfil</h2>
                 </div>
               </div>
-              <div className="px-8 pb-8">
+              <div className="px-4 sm:px-8 pb-6 sm:pb-8">
                 <div className="flex items-center gap-4">
                   <div className="w-20 h-20 rounded-2xl bg-slate-200 overflow-hidden flex items-center justify-center">
                     {avatarUrl ? (
@@ -399,6 +415,15 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        </div>
+        <div className="sm:hidden fixed inset-x-0 bottom-0 z-40 bg-white/90 backdrop-blur border-t border-slate-200 px-4 py-3">
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full inline-flex items-center justify-center bg-gradient-to-r from-blue-600 to-slate-700 text-white px-6 py-3 rounded-2xl font-semibold shadow hover:shadow-lg transition-all disabled:opacity-50"
+          >
+            {saving ? 'Salvando...' : 'Salvar alterações'}
+          </button>
         </div>
       </div>
     </div>
