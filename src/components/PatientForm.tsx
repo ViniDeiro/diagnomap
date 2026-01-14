@@ -402,6 +402,9 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
   // Controle explícito: usuário deve clicar para selecionar o fluxo
   const [hasSelectedFlow, setHasSelectedFlow] = useState<boolean>(!!skipFlowSelection)
 
+  // Identifica fluxos genéricos (como diarreia) que pulam etapas e vão direto para o salvamento
+  const isGenericFlow = ['diarreia'].includes(formData.selectedFlowchart as string || '')
+
   // Seleção de fluxograma é feita via EmergencySelector
 
   const emergencyOption = {
@@ -471,7 +474,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         newErrors.gender = 'Sexo é obrigatório'
       }
 
-      if (!onlyPersonalData && formData.symptoms.length === 0) {
+      if (!onlyPersonalData && !isGenericFlow && formData.symptoms.length === 0) {
         newErrors.symptoms = 'Selecione pelo menos um sintoma'
       }
     }
@@ -727,13 +730,18 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
             <div className="flex items-center space-x-8">
               {(onlyPersonalData
                 ? [{ step: 2, label: 'Dados Pessoais', icon: User }]
-                : [
-                    { step: 1, label: 'Fluxograma', icon: Target },
-                    { step: 2, label: 'Dados Pessoais', icon: User },
-                    { step: 3, label: 'Sintomas Clínicos', icon: Heart },
-                    { step: 4, label: 'Sinais Vitais', icon: Activity },
-                    { step: 5, label: 'Exame Físico', icon: Stethoscope }
-                  ]
+                : isGenericFlow
+                  ? [
+                      { step: 1, label: 'Fluxograma', icon: Target },
+                      { step: 2, label: 'Dados Pessoais', icon: User }
+                    ]
+                  : [
+                      { step: 1, label: 'Fluxograma', icon: Target },
+                      { step: 2, label: 'Dados Pessoais', icon: User },
+                      { step: 3, label: 'Sintomas Clínicos', icon: Heart },
+                      { step: 4, label: 'Sinais Vitais', icon: Activity },
+                      { step: 5, label: 'Exame Físico', icon: Stethoscope }
+                    ]
                 ).map(({ step, label, icon: Icon }) => (
                 <div key={step} className="flex items-center space-x-3">
                   <div className={clsx(
@@ -1065,14 +1073,14 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       Voltar
                     </motion.button>
                   )}
-                  {onlyPersonalData ? (
+                  {onlyPersonalData || isGenericFlow ? (
                     <motion.button
                       type="submit"
                       className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <span>Continuar para Fluxograma</span>
+                      <span>{isGenericFlow ? 'Iniciar Atendimento' : 'Continuar para Fluxograma'}</span>
                       <Target className="w-5 h-5" />
                     </motion.button>
                   ) : (

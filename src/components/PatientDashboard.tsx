@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { emergencyFlowcharts } from '@/data/emergencyFlowcharts'
 import {
   Plus,
   Search,
@@ -310,6 +311,11 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const endIndex = startIndex + patientsPerPage
   const currentPatients = filteredPatients.slice(startIndex, endIndex)
 
+  const getFlowchartName = (id?: string) => {
+    if (!id) return 'Não definido'
+    return emergencyFlowcharts[id]?.name || id.charAt(0).toUpperCase() + id.slice(1)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
 
@@ -528,35 +534,37 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           {getGroupBadge(patient.flowchartState.group)}
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
-                          <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                            <Calendar className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Idade</p>
-                              <p className="font-bold text-slate-800">{patient.age} anos</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
+                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100 col-span-2 md:col-span-3 xl:col-span-2">
+                            <Activity className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[10px] text-slate-500 uppercase font-bold">Protocolo</p>
+                              <p className="text-sm font-bold text-slate-800 truncate" title={getFlowchartName(patient.selectedFlowchart)}>
+                                {getFlowchartName(patient.selectedFlowchart)}
+                              </p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                            <Clock className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Admissão</p>
-                              <p className="font-bold text-slate-800">
+                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                            <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-slate-500 uppercase font-bold">Idade</p>
+                              <p className="text-sm font-bold text-slate-800 truncate">{patient.age} anos</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                            <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-slate-500 uppercase font-bold">Admissão</p>
+                              <p className="text-sm font-bold text-slate-800 truncate">
                                 {formatDate(patient.admission.date)}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                            <Shield className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Status</p>
-                              <p className="font-bold text-slate-800">{getStatusText(patient.status)}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
-                            <Clock className="w-5 h-5 text-blue-600" />
-                            <div>
-                              <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Retorno</p>
-                              <p className="font-bold text-slate-800">{getVisitText(patient.returnCount)}</p>
+                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                            <Shield className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-[10px] text-slate-500 uppercase font-bold">Status</p>
+                              <p className="text-sm font-bold text-slate-800 truncate">{getStatusText(patient.status)}</p>
                             </div>
                           </div>
                         </div>

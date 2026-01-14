@@ -488,6 +488,376 @@ export const dengueFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Diarreia
+export const diarreiaFlowchart: EmergencyFlowchart = {
+  id: 'diarreia',
+  name: 'Diarreia Aguda e Crônica',
+  description: 'Protocolo para definição, classificação e manejo da diarreia.',
+  category: 'gastrointestinal',
+  priority: 'medium',
+  icon: 'activity',
+  color: 'from-amber-500 to-orange-600',
+  initialStep: 'start',
+  finalSteps: ['outcome', 'not_diarrhea', 'chronic_flow'],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Definição de Diarreia',
+      description: 'Critérios para definição de caso',
+      type: 'question',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Critérios:</strong>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Maior ou igual a 3 evacuações em 24 horas</li>
+            <li>Fezes líquidas ou amolecidas</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Preenche critérios', nextStep: 'duration', value: 'yes' },
+        { text: 'Não preenche critérios', nextStep: 'not_diarrhea', value: 'no' }
+      ]
+    },
+    not_diarrhea: {
+      id: 'not_diarrhea',
+      title: 'Não é Diarreia',
+      description: 'Quadro não compatível com a definição de diarreia.',
+      type: 'result',
+      content: `
+        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-500">
+          <h4 class="font-bold text-gray-800">Encerrar Fluxo</h4>
+          <p class="text-gray-700">Considerar outros diagnósticos diferenciais.</p>
+        </div>
+      `,
+      options: []
+    },
+    duration: {
+      id: 'duration',
+      title: 'Classificação por Duração',
+      description: 'Tempo de início dos sintomas',
+      type: 'question',
+      options: [
+        { text: 'Menor ou igual a 14 dias (Aguda)', nextStep: 'warning_check', value: 'acute' },
+        { text: 'Maior que 14 dias e menor ou igual a 30 dias (Persistente)', nextStep: 'persistent_flow', value: 'persistent' },
+        { text: 'Maior que 4 semanas (Crônica)', nextStep: 'chronic_flow', value: 'chronic' }
+      ]
+    },
+    persistent_flow: {
+      id: 'persistent_flow',
+      title: 'Diarreia Persistente',
+      description: 'Duração entre 14 e 30 dias',
+      type: 'result',
+      content: `
+        <div class="bg-amber-50 p-4 rounded border-l-4 border-amber-500">
+          <h4 class="font-bold text-amber-800">Diarreia Persistente</h4>
+          <p class="text-amber-700">Avaliar causas infecciosas persistentes, intolerâncias alimentares secundárias ou doenças inflamatórias iniciais.</p>
+          <p class="mt-2 text-sm">Recomendado: Solicitar exames complementares (Hemograma, Eletrólitos, Ureia, Creatinina, Exames de fezes).</p>
+        </div>
+      `,
+      options: [
+        { text: 'Solicitar Exames', nextStep: 'exams_check', value: 'exams' }
+      ]
+    },
+    chronic_flow: {
+      id: 'chronic_flow',
+      title: 'Diarreia Crônica',
+      description: 'Duração maior que 4 semanas',
+      type: 'result',
+      content: `
+        <div class="bg-purple-50 p-4 rounded border-l-4 border-purple-500">
+          <h4 class="font-bold text-purple-800">Diarreia Crônica</h4>
+          <p class="text-purple-700">Necessita investigação ambulatorial especializada para doenças inflamatórias intestinais, síndromes disabsortivas, neoplasias, etc.</p>
+        </div>
+      `,
+      options: []
+    },
+    warning_check: {
+      id: 'warning_check',
+      title: 'Sinais de Alerta',
+      description: 'Avaliação de gravidade obrigatória',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <strong>Sinais de Alerta:</strong>
+          </div>
+          <ul class="list-disc pl-5 space-y-1 text-sm">
+            <li>Sangue nas fezes</li>
+            <li>Febre maior que 38,5 ºC</li>
+            <li>Maior que 6 evacuações/dia</li>
+            <li>Dor abdominal intensa</li>
+            <li>Vômitos persistentes</li>
+            <li>Idade maior que 70 anos</li>
+            <li>Imunossupressão</li>
+            <li>Uso recente de antibióticos</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim, possui sinais de alerta', nextStep: 'severe_potential', value: 'yes', critical: true },
+        { text: 'Não possui sinais de alerta', nextStep: 'hydration_assessment', value: 'no' }
+      ]
+    },
+    severe_potential: {
+      id: 'severe_potential',
+      title: 'Diarreia Potencialmente Grave',
+      description: 'Presença de sinais de alerta',
+      type: 'action',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-500">
+          <h4 class="font-bold text-red-800">Atenção</h4>
+          <p class="text-red-700">Classificado como POTENCIALMENTE GRAVE. Avaliar hidratação imediatamente.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar Hidratação', nextStep: 'hydration_assessment', value: 'assess' }
+      ]
+    },
+    hydration_assessment: {
+      id: 'hydration_assessment',
+      title: 'Avaliação de Hidratação',
+      description: 'Selecione o quadro que melhor descreve o paciente',
+      type: 'question',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="border p-3 rounded bg-green-50">
+            <strong>A) SEM DESIDRATAÇÃO</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Estado geral normal</li>
+              <li>Mucosas úmidas</li>
+              <li>Pulso normal</li>
+              <li>Sem sinais de choque</li>
+            </ul>
+          </div>
+          <div class="border p-3 rounded bg-yellow-50">
+            <strong>B) DESIDRATAÇÃO LEVE/MODERADA</strong> (maior ou igual a 2 sinais, incl. maior ou igual a 1 chave*)
+            <ul class="list-disc pl-5 mt-1">
+              <li>Irritabilidade ou hipoatividade*</li>
+              <li>Olhos fundos</li>
+              <li>Mucosas secas</li>
+              <li>Sede aumentada*</li>
+              <li>Turgor cutâneo diminuído</li>
+            </ul>
+          </div>
+          <div class="border p-3 rounded bg-red-50">
+            <strong>C) DESIDRATAÇÃO GRAVE</strong> (Qualquer um)
+            <ul class="list-disc pl-5 mt-1">
+              <li>Letargia ou coma</li>
+              <li>Incapaz de beber</li>
+              <li>Pulso radial ausente</li>
+              <li>Hipotensão / choque</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Quadro A (Sem Desidratação)', nextStep: 'plan_a', value: 'A' },
+        { text: 'Quadro B (Leve/Moderada)', nextStep: 'plan_b', value: 'B' },
+        { text: 'Quadro C (Grave)', nextStep: 'plan_c', value: 'C', critical: true }
+      ]
+    },
+    plan_a: {
+      id: 'plan_a',
+      title: 'PLANO A - Sem Desidratação',
+      description: 'Tratamento Domiciliar',
+      type: 'action',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+            <strong>Conduta:</strong>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Aumentar ingestão de líquidos (água, chás, sucos, água de coco)</li>
+            <li>Administrar SRO após cada evacuação líquida</li>
+            <li>Manter alimentação habitual</li>
+            <li>Manter aleitamento materno (se aplicável)</li>
+            <li>Orientar sinais de alerta (piora, vômitos, sangue, sede intensa)</li>
+            <li><strong>Se criança:</strong> Prescrever ZINCO por 10–14 dias</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar necessidade de exames', nextStep: 'exams_check', value: 'exams' }
+      ]
+    },
+    plan_b: {
+      id: 'plan_b',
+      title: 'PLANO B - Desidratação Leve/Moderada',
+      description: 'Terapia de Reidratação Oral (TRO) na Unidade',
+      type: 'action',
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3">
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <strong>Conduta:</strong>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Administrar SRO via oral na unidade de saúde</li>
+            <li>Pequenos volumes, frequentes (ex: colherada ou goles)</li>
+            <li>Reavaliar continuamente o estado de hidratação</li>
+            <li>Se vômitos: aguardar 10min e tentar novamente mais devagar</li>
+            <li><strong>Meta:</strong> Desaparecimento dos sinais de desidratação → Migrar para PLANO A</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Melhora (Ir para Plano A)', nextStep: 'plan_a', value: 'improved' },
+        { text: 'Sem melhora/Piora (Ir para Plano C)', nextStep: 'plan_c', value: 'worsened', critical: true },
+        { text: 'Solicitar Exames', nextStep: 'exams_check', value: 'exams' }
+      ]
+    },
+    plan_c: {
+      id: 'plan_c',
+      title: 'PLANO C - Desidratação Grave',
+      description: 'Reidratação Endovenosa (Urgência)',
+      type: 'action',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <strong>Conduta Imediata:</strong>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Iniciar reidratação endovenosa imediata (Ringer Lactato ou SF 0,9%)</li>
+            <li>Fase rápida de expansão (conforme idade/peso)</li>
+            <li>Encaminhar para hospital se necessário</li>
+            <li>Reavaliar após 2 horas (ou antes se necessário)</li>
+            <li>Se estabilizar e aceitar via oral: Introduzir SRO concomitante</li>
+            <li>Suspender EV quando plenamente hidratado</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Estabilizou (Ir para Plano B)', nextStep: 'plan_b', value: 'stabilized' },
+        { text: 'Solicitar Exames Obrigatórios', nextStep: 'exams_check', value: 'exams' }
+      ]
+    },
+    exams_check: {
+      id: 'exams_check',
+      title: 'Necessidade de Exames',
+      description: 'Verificar critérios para solicitação',
+      type: 'question',
+      content: `
+        <p class="mb-2">A diarreia se enquadra em algum destes casos?</p>
+        <ul class="list-disc pl-5 space-y-1 text-sm">
+          <li>Sanguinolenta (Disenteria)</li>
+          <li>Grave (Desidratação grave / Choque)</li>
+          <li>Persistente (maior que 14 dias)</li>
+          <li>Paciente Imunodeprimido</li>
+          <li>Paciente Idoso</li>
+        </ul>
+      `,
+      options: [
+        { text: 'Sim (Solicitar Hemograma/Bioquímica)', nextStep: 'request_general_exams', value: 'yes' },
+        { text: 'Não', nextStep: 'stool_exams_check', value: 'no' }
+      ]
+    },
+    request_general_exams: {
+      id: 'request_general_exams',
+      title: 'Solicitar Exames Gerais',
+      description: 'Exames laboratoriais indicados',
+      type: 'action',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+          <strong>Solicitar:</strong>
+          <ul class="list-disc pl-5 mt-1">
+            <li>Hemograma completo</li>
+            <li>Eletrólitos (Na, K)</li>
+            <li>Ureia e Creatinina</li>
+            <li>Gasometria venosa (se sinais de acidose/gravidade)</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir', nextStep: 'stool_exams_check', value: 'next' }
+      ]
+    },
+    stool_exams_check: {
+      id: 'stool_exams_check',
+      title: 'Exames de Fezes',
+      description: 'Indicações específicas',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>Verifique as indicações:</p>
+          <ul class="list-disc pl-5">
+            <li><strong>Sangue nas fezes:</strong> Solicitar Coprocultura</li>
+            <li><strong>Uso recente de ATB ou internação:</strong> Pesquisar Clostridium difficile (toxinas A e B)</li>
+            <li><strong>Viagem recente / HIV / Creche:</strong> Pesquisa de Ovos e Parasitas (EPF)</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Exames indicados', nextStep: 'antibiotics_check', value: 'indicated' },
+        { text: 'Nenhum exame indicado', nextStep: 'antibiotics_check', value: 'none' }
+      ]
+    },
+    antibiotics_check: {
+      id: 'antibiotics_check',
+      title: 'Antibioticoterapia',
+      description: 'Uso de antibióticos é exceção',
+      type: 'question',
+      content: `
+        <p class="mb-2">O paciente apresenta algum destes quadros?</p>
+        <ul class="list-disc pl-5 space-y-1 text-sm">
+          <li>Disenteria (sangue + muco) com toxemia (febre alta, queda do estado geral)</li>
+          <li>Suspeita de Cólera (diarreia aquosa profusa "água de arroz" + desidratação grave)</li>
+          <li>Imunossupressão grave</li>
+          <li>Sepse de foco abdominal suspeita</li>
+        </ul>
+      `,
+      options: [
+        { text: 'Sim (Considerar ATB)', nextStep: 'prescribe_abx', value: 'yes', critical: true },
+        { text: 'Não (Não prescrever ATB)', nextStep: 'outcome', value: 'no' }
+      ]
+    },
+    prescribe_abx: {
+      id: 'prescribe_abx',
+      title: 'Prescrição de Antibiótico',
+      description: 'Selecionar conforme protocolo local',
+      type: 'action',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+          <strong>Opções empíricas comuns (avaliar resistência local):</strong>
+          <ul class="list-disc pl-5 mt-1">
+            <li><strong>Disenteria:</strong> Ciprofloxacino 500mg 12/12h (3-5d) ou Ceftriaxona (se grave)</li>
+            <li><strong>Cólera:</strong> Doxiciclina ou Azitromicina</li>
+            <li><strong>Giardíase/Amebíase:</strong> Metronidazol (se confirmado ou alta suspeita)</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir', nextStep: 'outcome', value: 'next' }
+      ]
+    },
+    outcome: {
+      id: 'outcome',
+      title: 'Desfecho',
+      description: 'Orientações finais',
+      type: 'result',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+            <strong>Se sintomas resolverem:</strong>
+            <p>Alta com orientações de higiene e dieta.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Se sintomas persistirem:</strong>
+            <p>Reavaliar diagnóstico (Diarreia persistente ou crônica, intolerâncias, causas não infecciosas).</p>
+          </div>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 // Fluxograma de Gasometria (Placeholder para seleção)
 export const gasometryFlowchart: EmergencyFlowchart = {
   id: 'gasometria',
@@ -517,6 +887,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   sepsis: sepsisFlowchart,
   dengue: dengueFlowchart,
   gasometria: gasometryFlowchart,
+  diarreia: diarreiaFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -572,7 +943,7 @@ export const allFlowcharts = [
   // Gastrointestinais
   { id: 'colecistite', name: 'Colecistite', category: 'gastrointestinal', implemented: false },
   { id: 'colelitiase', name: 'Colelitíase', category: 'gastrointestinal', implemented: false },
-  { id: 'diarreia', name: 'Diarreia', category: 'gastrointestinal', implemented: false },
+  { id: 'diarreia', name: 'Diarreia', category: 'gastrointestinal', implemented: true },
   { id: 'disfagia', name: 'Disfagia', category: 'gastrointestinal', implemented: false },
   { id: 'doenca_hemorroidaria', name: 'Doença hemorroidária', category: 'gastrointestinal', implemented: false },
   { id: 'dor_abdominal', name: 'Dor abdominal', category: 'gastrointestinal', implemented: false },

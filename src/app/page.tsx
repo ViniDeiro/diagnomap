@@ -104,7 +104,7 @@ export default function Home() {
         age: 0,
         gender: 'masculino',
         medicalRecord: `EM-${Date.now()}`,
-        selectedFlowchart: 'dengue', // Mantido para compatibilidade
+        selectedFlowchart: flowchart.id,
         admission: {
           date: new Date(),
           time: new Date().toLocaleTimeString(),
@@ -424,14 +424,77 @@ export default function Home() {
         )}
 
         {(appState === 'flowchart' || (isDashboardActive && previousState === 'flowchart')) && currentPatient && (
-          <DengueFlowchartComplete
-            patient={currentPatient}
-            onComplete={handleFlowchartComplete}
-            onUpdate={handleFlowchartUpdate}
-            onBack={() => setAppState('dashboard')}
-            onViewPrescriptions={handleViewPrescriptions}
-            onViewReport={handleViewReport}
-          />
+          currentPatient.selectedFlowchart === 'dengue' || !currentPatient.selectedFlowchart ? (
+            <DengueFlowchartComplete
+              patient={currentPatient}
+              onComplete={handleFlowchartComplete}
+              onUpdate={handleFlowchartUpdate}
+              onBack={() => setAppState('dashboard')}
+              onViewPrescriptions={handleViewPrescriptions}
+              onViewReport={handleViewReport}
+            />
+          ) : (
+            (() => {
+              const genericFlowchart = getFlowchartById(currentPatient.selectedFlowchart)
+              if (genericFlowchart) {
+                // Adaptar Patient -> EmergencyPatient para uso no fluxo genérico
+                const emergencyPatientAdapter: EmergencyPatient = {
+                  id: currentPatient.id,
+                  name: currentPatient.name,
+                  birthDate: new Date(currentPatient.birthDate),
+                  age: currentPatient.age,
+                  gender: currentPatient.gender,
+                  medicalRecord: currentPatient.medicalRecord,
+                  selectedFlowchart: currentPatient.selectedFlowchart,
+                  admission: {
+                    date: new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()),
+                    time: new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()).toLocaleTimeString(),
+                    symptoms: currentPatient.admission?.symptoms || [],
+                    vitalSigns: currentPatient.admission?.vitalSigns
+                  },
+                  flowchartState: {
+                    currentStep: genericFlowchart.initialStep,
+                    history: [],
+                    answers: {},
+                    progress: 0,
+                    lastUpdate: new Date(),
+                    ...currentPatient.flowchartState
+                  },
+                  labResults: { status: 'not_requested' },
+                  treatment: {
+                    prescriptions: [],
+                    observations: []
+                  },
+                  status: 'active',
+                  createdAt: new Date(currentPatient.createdAt || new Date()),
+                  updatedAt: new Date(currentPatient.updatedAt || new Date()),
+                  emergencyType: currentPatient.selectedFlowchart as any,
+                  emergencyState: {
+                    currentStep: genericFlowchart.initialStep,
+                    history: [],
+                    answers: {},
+                    progress: 0,
+                    lastUpdate: new Date(),
+                    ...currentPatient.flowchartState
+                  }
+                }
+
+                return (
+                  <EmergencyFlowchart
+                    patient={emergencyPatientAdapter}
+                    flowchart={genericFlowchart}
+                    onComplete={handleFlowchartComplete}
+                    onBack={() => setAppState('dashboard')}
+                    onUpdate={(pid, step, hist, ans, prog, risk) => {
+                      // Usa o handler padrão que atualiza o Patient no storage
+                      handleFlowchartUpdate(pid, step, hist, ans, prog, risk as any)
+                    }}
+                  />
+                )
+              }
+              return null
+            })()
+          )
         )}
 
         {appState === 'prescriptions' && currentPatient && (

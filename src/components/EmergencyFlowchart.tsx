@@ -22,7 +22,8 @@ import {
   FileText,
   Pill,
   Syringe,
-  Microscope
+  Microscope,
+  ArrowLeft
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { EmergencyPatient, EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
@@ -32,13 +33,15 @@ interface EmergencyFlowchartProps {
   flowchart: EmergencyFlowchart
   onComplete: () => void
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => void
+  onBack?: () => void
 }
 
 const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({ 
   patient, 
   flowchart, 
   onComplete, 
-  onUpdate 
+  onUpdate,
+  onBack
 }) => {
   const [currentStep, setCurrentStep] = useState(patient.emergencyState.currentStep || flowchart.initialStep)
   const [history, setHistory] = useState<string[]>(patient.emergencyState.history || [])
@@ -47,11 +50,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   // Carregar estado do paciente na inicialização
   useEffect(() => {
-    setCurrentStep(patient.emergencyState.currentStep || flowchart.initialStep)
-    setHistory(patient.emergencyState.history || [])
-    setAnswers(patient.emergencyState.answers || {})
-    setProgress(patient.emergencyState.progress || 0)
-  }, [patient, flowchart])
+    // Só atualiza se o ID do paciente mudar ou se for inicialização, evitando reset durante a navegação
+    if (patient.id) {
+      setCurrentStep(patient.emergencyState.currentStep || flowchart.initialStep)
+      setHistory(patient.emergencyState.history || [])
+      setAnswers(patient.emergencyState.answers || {})
+      setProgress(patient.emergencyState.progress || 0)
+    }
+  }, [patient.id, flowchart.initialStep])
 
   // Função para calcular progresso baseado no fluxograma específico
   const calculateProgress = (currentStep: string, history: string[]): number => {
@@ -113,9 +119,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     onUpdate(patient.id, nextStep, newHistory, newAnswers, newProgress, riskGroup)
 
     if (flowchart.finalSteps.includes(nextStep)) {
-      setTimeout(() => {
-        onComplete()
-      }, 2000)
+      // No automatic completion
     }
   }
 
@@ -156,188 +160,277 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header do Fluxograma */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <div className={clsx(
-              "p-3 rounded-xl text-white",
-              `bg-gradient-to-r ${flowchart.color}`
-            )}>
-              <Stethoscope className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">{flowchart.name}</h1>
-              <p className="text-gray-600">{flowchart.description}</p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <span className={clsx(
-              "px-3 py-1 rounded-full text-xs font-medium",
-              flowchart.priority === 'high' && "bg-red-100 text-red-800",
-              flowchart.priority === 'medium' && "bg-yellow-100 text-yellow-800",
-              flowchart.priority === 'low' && "bg-green-100 text-green-800"
-            )}>
-              {flowchart.priority.toUpperCase()}
-            </span>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pb-12">
+      {/* Premium Medical Header */}
+      <div className="relative bg-white shadow-xl border-b border-slate-200/50 sticky top-0 z-50 mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
 
-        {/* Barra de Progresso */}
-        <div className="w-full bg-gray-200 rounded-full h-2">
+        <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-6">
           <motion.div
-            className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.5 }}
-          />
-        </div>
-        <div className="flex justify-between text-sm text-gray-600 mt-1">
-          <span>Progresso: {Math.round(progress)}%</span>
-          <span>Step {history.length + 1} de {Object.keys(flowchart.steps).length}</span>
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0"
+          >
+            {/* Left - Patient Info */}
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-2xl blur-xl opacity-20 scale-110"></div>
+                <div className="relative w-12 h-12 lg:w-14 lg:h-14 bg-gradient-to-br from-blue-600 to-slate-700 rounded-2xl flex items-center justify-center shadow-2xl border border-blue-100">
+                  <Stethoscope className="w-6 h-6 lg:w-7 lg:h-7 text-white" />
+                </div>
+              </div>
+
+              <div>
+                <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 to-blue-700 bg-clip-text text-transparent">
+                  {patient.name || 'Paciente Sem Nome'}
+                </h1>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Heart className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-slate-600">
+                    {patient.age ? `${patient.age} anos` : 'Idade não informada'} • {patient.medicalRecord || 'N/A'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right - Actions */}
+            <div className="flex items-center space-x-3">
+              {onBack && (
+                <motion.button
+                  onClick={onBack}
+                  className="group flex items-center space-x-2 px-4 py-2 bg-gradient-to-br from-slate-100 to-slate-200 hover:from-slate-200 hover:to-slate-300 border border-slate-300 text-slate-700 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </motion.button>
+              )}
+
+              <motion.button
+                onClick={goBack}
+                disabled={history.length === 0}
+                className={clsx(
+                  "group flex items-center space-x-2 px-4 py-2 rounded-xl border transition-all duration-200 font-medium",
+                  history.length > 0
+                    ? "bg-gradient-to-br from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 border-amber-300 text-amber-700 shadow-lg hover:shadow-xl"
+                    : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
+                )}
+                whileHover={history.length > 0 ? { scale: 1.02 } : {}}
+                whileTap={history.length > 0 ? { scale: 0.98 } : {}}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Voltar</span>
+              </motion.button>
+
+              <motion.button
+                onClick={restart}
+                className="group flex items-center space-x-2 px-4 py-2 bg-gradient-to-br from-blue-100 to-blue-200 hover:from-blue-200 hover:to-blue-300 border border-blue-300 text-blue-700 rounded-xl transition-all duration-200 font-medium shadow-lg hover:shadow-xl"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span className="hidden sm:inline">Reiniciar</span>
+              </motion.button>
+            </div>
+          </motion.div>
         </div>
       </div>
 
-      {/* Conteúdo Principal */}
-      <AnimatePresence mode="wait">
+      <div className="max-w-6xl mx-auto px-4 lg:px-8">
+        
+        {/* Progress Card */}
         <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6 mb-8"
         >
-          {/* Header do Step */}
-          <div className={clsx(
-            "p-6 text-white",
-            `bg-gradient-to-r ${getStepColor(currentStepData)}`
-          )}>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                {getStepIcon(currentStepData)}
-                <div>
-                  <h2 className="text-xl font-bold">{currentStepData.title}</h2>
-                  <p className="text-sm opacity-90">{currentStepData.description}</p>
-                </div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-slate-700 rounded-xl flex items-center justify-center">
+                <Zap className="w-5 h-5 text-white" />
               </div>
-              <div className="flex items-center space-x-2">
-                {currentStepData.critical && (
-                  <div className="flex items-center space-x-1 bg-red-500 bg-opacity-20 px-2 py-1 rounded">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span className="text-xs">CRÍTICO</span>
-                  </div>
-                )}
-                {currentStepData.timeSensitive && (
-                  <div className="flex items-center space-x-1 bg-orange-500 bg-opacity-20 px-2 py-1 rounded">
-                    <Timer className="w-4 h-4" />
-                    <span className="text-xs">TEMPO</span>
-                  </div>
-                )}
-                {currentStepData.requiresSpecialist && (
-                  <div className="flex items-center space-x-1 bg-purple-500 bg-opacity-20 px-2 py-1 rounded">
-                    <UserCheck className="w-4 h-4" />
-                    <span className="text-xs">ESPECIALISTA</span>
-                  </div>
-                )}
+              <div>
+                <h3 className="font-bold text-slate-800">{flowchart.name}</h3>
+                <p className="text-sm text-slate-600">{flowchart.description}</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-slate-700 bg-clip-text text-transparent">
+                {Math.round(progress)}%
+              </span>
+              <div className={clsx(
+                "px-3 py-1 rounded-xl text-sm font-bold border",
+                flowchart.priority === 'high' ? "bg-red-100 text-red-800 border-red-200" :
+                flowchart.priority === 'medium' ? "bg-yellow-100 text-yellow-800 border-yellow-200" :
+                "bg-green-100 text-green-800 border-green-200"
+              )}>
+                {flowchart.priority.toUpperCase()}
               </div>
             </div>
           </div>
 
-          {/* Conteúdo do Step */}
-          <div className="p-6">
-            {currentStepData.content && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-                <div className="prose prose-sm max-w-none">
-                  <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
-                </div>
-              </div>
-            )}
-
-            {/* Opções */}
-            {currentStepData.options && currentStepData.options.length > 0 && (
-              <div className="space-y-3">
-                {currentStepData.options.map((option, index) => (
-                  <motion.button
-                    key={index}
-                    onClick={() => handleAnswer(option.nextStep, option.value)}
-                    className={clsx(
-                      "w-full p-4 text-left rounded-xl border-2 transition-all duration-200",
-                      "hover:shadow-md hover:scale-[1.02]",
-                      option.critical 
-                        ? "border-red-300 bg-red-50 hover:bg-red-100 hover:border-red-400"
-                        : option.requiresImmediateAction
-                        ? "border-orange-300 bg-orange-50 hover:bg-orange-100 hover:border-orange-400"
-                        : "border-gray-200 bg-white hover:bg-gray-50 hover:border-blue-300"
-                    )}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-gray-800">{option.text}</span>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
-                    </div>
-                    {option.critical && (
-                      <div className="flex items-center space-x-1 mt-2">
-                        <AlertTriangle className="w-4 h-4 text-red-500" />
-                        <span className="text-xs text-red-600">Ação Crítica</span>
-                      </div>
-                    )}
-                  </motion.button>
-                ))}
-              </div>
-            )}
-
-            {/* Step Final */}
-            {flowchart.finalSteps.includes(currentStep) && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                  <div>
-                    <h3 className="font-semibold text-green-800">Fluxograma Concluído</h3>
-                    <p className="text-green-700">Protocolo finalizado com sucesso</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
+          <div className="w-full bg-gradient-to-r from-slate-200 to-slate-300 rounded-full h-4 shadow-inner">
+            <motion.div
+              className="bg-gradient-to-r from-blue-600 via-blue-500 to-slate-600 h-4 rounded-full shadow-lg"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.8, ease: "easeOut" }}
+            />
           </div>
         </motion.div>
-      </AnimatePresence>
 
-      {/* Controles de Navegação */}
-      <div className="flex justify-between items-center mt-6">
-        <div className="flex space-x-3">
-          <button
-            onClick={goBack}
-            disabled={history.length === 0}
-            className={clsx(
-              "flex items-center space-x-2 px-4 py-2 rounded-lg border transition-colors",
-              history.length === 0
-                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                : "border-gray-300 text-gray-700 hover:bg-gray-50"
-            )}
+        {/* Conteúdo Principal */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
           >
-            <ChevronLeft className="w-4 h-4" />
-            <span>Voltar</span>
-          </button>
-          
-          <button
-            onClick={restart}
-            className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            <RotateCcw className="w-4 h-4" />
-            <span>Reiniciar</span>
-          </button>
-        </div>
+            {/* Header do Step */}
+            <div className={clsx(
+              "p-6 text-white",
+              `bg-gradient-to-r ${getStepColor(currentStepData)}`
+            )}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {getStepIcon(currentStepData)}
+                  <div>
+                    <h2 className="text-xl font-bold">{currentStepData.title}</h2>
+                    <p className="text-sm opacity-90">{currentStepData.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {currentStepData.critical && (
+                    <div className="flex items-center space-x-1 bg-red-500 bg-opacity-20 px-2 py-1 rounded">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-xs">CRÍTICO</span>
+                    </div>
+                  )}
+                  {currentStepData.timeSensitive && (
+                    <div className="flex items-center space-x-1 bg-orange-500 bg-opacity-20 px-2 py-1 rounded">
+                      <Timer className="w-4 h-4" />
+                      <span className="text-xs">TEMPO</span>
+                    </div>
+                  )}
+                  {currentStepData.requiresSpecialist && (
+                    <div className="flex items-center space-x-1 bg-purple-500 bg-opacity-20 px-2 py-1 rounded">
+                      <UserCheck className="w-4 h-4" />
+                      <span className="text-xs">ESPECIALISTA</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
-        <div className="text-sm text-gray-500">
-          {flowchart.category} • {flowchart.priority} priority
-        </div>
+            {/* Conteúdo do Step */}
+            <div className="p-6">
+              {currentStepData.content && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                  <div className="prose prose-sm max-w-none">
+                    <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Opções */}
+              {currentStepData.options && currentStepData.options.length > 0 && (
+                <div className="grid gap-4">
+                  {currentStepData.options.map((option, index) => (
+                    <motion.button
+                      key={index}
+                      onClick={() => handleAnswer(option.nextStep, option.value)}
+                      className={clsx(
+                        "w-full p-6 text-left rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group",
+                        option.critical 
+                          ? "bg-red-50 border-red-200 hover:border-red-400 hover:bg-red-100 shadow-sm"
+                          : option.requiresImmediateAction
+                          ? "bg-orange-50 border-orange-200 hover:border-orange-400 hover:bg-orange-100 shadow-sm"
+                          : "bg-white border-slate-100 hover:border-blue-300 hover:shadow-xl hover:bg-slate-50"
+                      )}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                    >
+                      <div className="flex items-center justify-between relative z-10">
+                        <div className="flex-1">
+                          <span className={clsx(
+                            "text-lg font-semibold block mb-1",
+                            option.critical ? "text-red-900" : 
+                            option.requiresImmediateAction ? "text-orange-900" : "text-slate-800"
+                          )}>
+                            {option.text}
+                          </span>
+                          {option.description && (
+                            <span className={clsx(
+                              "text-sm block",
+                              option.critical ? "text-red-700" : "text-slate-500"
+                            )}>
+                              {option.description}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className={clsx(
+                          "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ml-4",
+                          option.critical 
+                            ? "bg-red-100 text-red-600 group-hover:bg-red-200" 
+                            : "bg-slate-100 text-slate-400 group-hover:bg-blue-100 group-hover:text-blue-600"
+                        )}>
+                          <ChevronRight className="w-6 h-6" />
+                        </div>
+                      </div>
+
+                      {/* Background decoration for critical options */}
+                      {option.critical && (
+                        <div className="absolute right-0 top-0 w-24 h-24 bg-red-500 opacity-5 rounded-bl-full -mr-8 -mt-8 pointer-events-none" />
+                      )}
+                      
+                      {option.critical && (
+                        <div className="flex items-center space-x-2 mt-3 pt-3 border-t border-red-100">
+                          <AlertTriangle className="w-4 h-4 text-red-600" />
+                          <span className="text-sm font-medium text-red-700">Requer Atenção Imediata</span>
+                        </div>
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+
+              {/* Step Final */}
+              {flowchart.finalSteps.includes(currentStep) && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 p-6 bg-green-50 border border-green-200 rounded-2xl"
+                >
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-green-800">Fluxograma Concluído</h3>
+                      <p className="text-green-700 mt-1">Protocolo finalizado com sucesso. O paciente pode ser liberado ou encaminhado conforme decisão clínica.</p>
+                    </div>
+                    <button
+                      onClick={onComplete}
+                      className="mt-4 px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                    >
+                      <CheckCircle className="w-5 h-5" />
+                      <span>Finalizar Atendimento</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Removed redundant bottom navigation */}
       </div>
     </div>
   )
