@@ -534,37 +534,49 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                           {getGroupBadge(patient.flowchartState.group)}
                         </div>
 
-                        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 mb-6">
-                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100 col-span-2 md:col-span-3 xl:col-span-2">
+                        <div className="flex flex-col gap-3 mb-6">
+                          {/* Linha 1: Protocolo (Destaque) */}
+                          <div className="flex items-center space-x-2 bg-blue-50/50 rounded-lg px-3 py-2 border border-blue-100">
                             <Activity className="w-4 h-4 text-blue-600 flex-shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-[10px] text-slate-500 uppercase font-bold">Protocolo</p>
+                              <p className="text-[10px] text-blue-600 uppercase font-bold">Protocolo Ativo</p>
                               <p className="text-sm font-bold text-slate-800 truncate" title={getFlowchartName(patient.selectedFlowchart)}>
                                 {getFlowchartName(patient.selectedFlowchart)}
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                            <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-[10px] text-slate-500 uppercase font-bold">Idade</p>
-                              <p className="text-sm font-bold text-slate-800 truncate">{patient.age} anos</p>
+
+                          {/* Linha 2: Dados Gerais */}
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                              <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">Idade</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{patient.age} anos</p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                            <Clock className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-[10px] text-slate-500 uppercase font-bold">Admissão</p>
-                              <p className="text-sm font-bold text-slate-800 truncate">
-                                {formatDate(patient.admission.date)}
-                              </p>
+                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                              <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">Admissão</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">
+                                  {formatDate(patient.admission.date)}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                            <Shield className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                            <div className="min-w-0">
-                              <p className="text-[10px] text-slate-500 uppercase font-bold">Status</p>
-                              <p className="text-sm font-bold text-slate-800 truncate">{getStatusText(patient.status)}</p>
+                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                              <Shield className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">Status</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{getStatusText(patient.status)}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                              <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                              <div className="min-w-0">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">Retorno</p>
+                                <p className="text-sm font-bold text-slate-800 truncate">{getVisitText(patient.returnCount)}</p>
+                              </div>
                             </div>
                           </div>
                         </div>
