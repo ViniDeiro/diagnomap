@@ -3,6 +3,7 @@ import { Patient } from "./patient"
 export type EmergencyType =
   | 'dengue'
   | 'diarreia'
+  | 'geca'
   | 'covid19'
   | 'iam' // Infarto Agudo do Miocárdio
   | 'avc' // Acidente Vascular Cerebral
