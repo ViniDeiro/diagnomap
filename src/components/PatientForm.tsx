@@ -402,8 +402,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
   // Controle explícito: usuário deve clicar para selecionar o fluxo
   const [hasSelectedFlow, setHasSelectedFlow] = useState<boolean>(!!skipFlowSelection)
 
-  // Identifica fluxos genéricos (como diarreia) que pulam etapas e vão direto para o salvamento
-  const isGenericFlow = ['diarreia'].includes(formData.selectedFlowchart as string || '')
+  // Identifica fluxos genéricos (como diarreia e GECA) que pulam etapas e vão direto para o salvamento
+  const isGenericFlow = ['diarreia', 'geca'].includes(formData.selectedFlowchart as string || '')
 
   // Seleção de fluxograma é feita via EmergencySelector
 
