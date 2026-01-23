@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { emergencyFlowcharts } from '@/data/emergencyFlowcharts'
+import { AnimatedLogo } from './AnimatedLogo'
 import {
   Plus,
   Search,
@@ -344,24 +345,22 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
           </Link>
         </div>
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex items-center justify-center"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="flex items-center justify-center"
           >
-            {/* Medical Logo Premium */}
+            {/* Medical Logo Premium - Animado */}
             <div className="flex items-center justify-center">
               <motion.div
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="relative"
+                className="relative group cursor-pointer"
+                whileHover={{ scale: 1.05 }}
               >
-                <img
-                  src="/logo.jpeg"
-                  alt="Siga o Fluxo"
-                  className="h-16 sm:h-20 lg:h-24 w-auto object-contain scale-[1.8]"
-                />
+                <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+                <AnimatedLogo className="h-16 sm:h-20 lg:h-24 w-auto" />
               </motion.div>
             </div>
           </motion.div>

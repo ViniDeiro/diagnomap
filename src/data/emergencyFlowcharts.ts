@@ -1227,6 +1227,296 @@ export const gecaFlowchart: EmergencyFlowchart = {
 }
 
 // Mapa de todos os fluxogramas disponíveis
+// Fluxograma de Picada de Aranha
+export const spiderBiteFlowchart: EmergencyFlowchart = {
+  id: 'spider_bite',
+  name: 'Picada de Aranha',
+  description: 'Protocolo de classificação e manejo de acidentes por aranha.',
+  category: 'trauma',
+  priority: 'medium',
+  icon: 'alert-circle',
+  color: 'from-amber-700 to-orange-900',
+  initialStep: 'start',
+  finalSteps: ['discharge', 'transfer', 'urgent_referral', 'end_flow'],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Confirmação do Evento',
+      description: 'Paciente relata picada ou apresenta lesão compatível?',
+      type: 'question',
+      options: [
+        { text: 'História de picada ou lesão compatível', nextStep: 'time_check', value: 'confirmed' },
+        { text: 'Sem história clara ou lesão atípica', nextStep: 'end_flow', value: 'not_spider' }
+      ]
+    },
+    end_flow: {
+      id: 'end_flow',
+      title: 'Fluxo Encerrado',
+      description: 'Caso não compatível com picada de aranha.',
+      type: 'result',
+      content: `
+        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-500">
+          <h4 class="font-bold text-gray-800">Considerar outros diagnósticos</h4>
+          <p class="text-gray-700">Avaliar celulite, abscesso, alergias ou picada de outros insetos.</p>
+        </div>
+      `,
+      options: []
+    },
+    time_check: {
+      id: 'time_check',
+      title: 'Tempo desde a Picada',
+      description: 'Quanto tempo faz desde o acidente?',
+      type: 'question',
+      options: [
+        { text: 'Menos de 24 horas', nextStep: 'triage', value: 'acute' },
+        { text: 'Entre 24 e 72 horas', nextStep: 'brown_spider_warning', value: 'subacute' },
+        { text: 'Mais de 72 horas', nextStep: 'triage', value: 'late' }
+      ]
+    },
+    brown_spider_warning: {
+      id: 'brown_spider_warning',
+      title: 'Atenção: Aranha-marrom',
+      description: 'Evolução tardia (>24h).',
+      type: 'action',
+      content: `
+        <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+          <strong>Suspeita de Loxosceles:</strong>
+          <p>Lesões por aranha-marrom podem evoluir significativamente entre 24-72h (necrose, hemólise).</p>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir para Triagem', nextStep: 'triage', value: 'next' }
+      ]
+    },
+    triage: {
+      id: 'triage',
+      title: 'Avaliação de Gravidade (Triagem)',
+      description: 'Sinais de perigo imediato?',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2">
+            <p>Verificar presença de:</p>
+            <ul class="list-disc pl-5 font-bold text-red-700">
+                <li>Rebaixamento de consciência</li>
+                <li>Dispneia ou Dor torácica</li>
+                <li>Vômitos persistentes</li>
+                <li>Convulsão</li>
+                <li>Hipotensão / Choque</li>
+            </ul>
+        </div>
+      `,
+      options: [
+        { text: 'SIM - Sinais presentes', nextStep: 'urgent_referral', value: 'severe', critical: true },
+        { text: 'NÃO - Estável', nextStep: 'symptom_evaluation', value: 'stable' }
+      ]
+    },
+    urgent_referral: {
+      id: 'urgent_referral',
+      title: 'ENCAMINHAMENTO URGENTE',
+      description: 'Emergência Médica',
+      type: 'result',
+      content: `
+        <div class="bg-red-100 p-4 rounded border-l-4 border-red-600">
+          <h4 class="font-bold text-red-900 text-lg">EMERGÊNCIA</h4>
+          <p class="text-red-800 mb-2">Monitorização e suporte imediato.</p>
+          <ul class="list-disc pl-5 text-red-800">
+            <li>Acesso venoso e O2 se necessário</li>
+            <li>Monitorização cardíaca</li>
+            <li>Tratar choque/convulsão conforme protocolo</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    symptom_evaluation: {
+      id: 'symptom_evaluation',
+      title: 'Característica dos Sintomas',
+      description: 'Qual o padrão predominante?',
+      type: 'question',
+      options: [
+        { text: 'Dor leve, eritema discreto, sem sistêmicos', nextStep: 'mild_treatment', value: 'mild' },
+        { text: 'Dor INTENSA imediata, irradiação, sudorese', nextStep: 'phoneutria_suspicion', value: 'phoneutria' },
+        { text: 'Lesão progressiva, violácea/bolha/necrose', nextStep: 'loxosceles_suspicion', value: 'loxosceles' },
+        { text: 'Dor + Câimbras/Rigidez abdominal/Taquicardia', nextStep: 'latrodectus_suspicion', value: 'latrodectus' }
+      ]
+    },
+    phoneutria_suspicion: {
+      id: 'phoneutria_suspicion',
+      title: 'Suspeita: Aranha-Armadeira',
+      description: 'Gênero Phoneutria',
+      type: 'action',
+      group: 'phoneutria',
+      content: `
+        <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+          <strong>Característica:</strong> Dor imediata e intensa.
+          <p>Verificar sinais sistêmicos na próxima etapa.</p>
+        </div>
+      `,
+      options: [{ text: 'Avaliar Sistêmicos', nextStep: 'systemic_check', value: 'next' }]
+    },
+    loxosceles_suspicion: {
+      id: 'loxosceles_suspicion',
+      title: 'Suspeita: Aranha-Marrom',
+      description: 'Gênero Loxosceles',
+      type: 'action',
+      group: 'loxosceles',
+      content: `
+         <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
+          <strong>Característica:</strong> Lesão dermonecrótica, evolução lenta.
+        </div>
+      `,
+      options: [{ text: 'Avaliar Sistêmicos', nextStep: 'systemic_check', value: 'next' }]
+    },
+    latrodectus_suspicion: {
+      id: 'latrodectus_suspicion',
+      title: 'Suspeita: Viúva-Negra',
+      description: 'Gênero Latrodectus',
+      type: 'action',
+      group: 'latrodectus',
+      content: `
+         <div class="bg-slate-800 text-white p-3 rounded border-l-4 border-slate-500">
+          <strong>Característica:</strong> Latrodectismo (dor muscular, fácies dolorosa, contraturas).
+        </div>
+      `,
+      options: [{ text: 'Avaliar Sistêmicos', nextStep: 'systemic_check', value: 'next' }]
+    },
+    systemic_check: {
+      id: 'systemic_check',
+      title: 'Avaliação Sistêmica',
+      description: 'Presença de sinais sistêmicos?',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2">
+            <strong>Sinais de Alerta:</strong>
+            <ul class="list-disc pl-5 text-sm">
+                <li>Sudorese intensa / Vômitos</li>
+                <li>Taquicardia / Hipertensão</li>
+                <li>Espasmos musculares / Alteração neurológica</li>
+                <li>Hemólise (urina escura) - Loxosceles</li>
+            </ul>
+        </div>
+      `,
+      options: [
+        { text: 'SIM - Sinais Sistêmicos', nextStep: 'moderate_severe', value: 'yes', critical: true },
+        { text: 'NÃO - Apenas local', nextStep: 'mild_treatment', value: 'no' }
+      ]
+    },
+    moderate_severe: {
+      id: 'moderate_severe',
+      title: 'Classificação: Moderado/Grave',
+      description: 'Indicação de observação e possível soroterapia.',
+      type: 'action',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+          <strong>Conduta:</strong>
+          <ul class="list-disc pl-5">
+            <li>Internação/Observação hospitalar</li>
+            <li>Monitorização contínua</li>
+            <li>Avaliar indicação de Antiveneno</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar Antiveneno', nextStep: 'antivenom', value: 'next' }
+      ]
+    },
+    antivenom: {
+      id: 'antivenom',
+      title: 'Indicação de Antiveneno',
+      description: 'Critérios para uso de soro específico.',
+      type: 'question',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <p><strong>Considerar ANTIVENENO se:</strong></p>
+        <ul class="list-disc pl-5 mb-2">
+          <li>Sintomas sistêmicos moderados/graves</li>
+          <li>Dor intensa refratária (Armadeira)</li>
+          <li>Lesão extensa ou hemólise (Marrom)</li>
+          <li>Espasmos importantes (Viúva-negra)</li>
+        </ul>
+        <p class="text-sm text-red-600 font-bold">Uso exclusivo hospitalar.</p>
+      `,
+      options: [
+        { text: 'Indicado (Solicitar Soro)', nextStep: 'exams', value: 'yes', critical: true },
+        { text: 'Não Indicado (Suporte)', nextStep: 'exams', value: 'no' }
+      ]
+    },
+    mild_treatment: {
+      id: 'mild_treatment',
+      title: 'Tratamento - Casos Leves',
+      description: 'Manejo sintomático local.',
+      type: 'action',
+      content: `
+        <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+          <strong>Protocolo Leve:</strong>
+          <ul class="list-disc pl-5">
+            <li>Limpeza local com água e sabão</li>
+            <li>Compressa fria (alívio da dor)</li>
+            <li>Analgesia simples (Dipirona/Paracetamol)</li>
+            <li><strong>NÃO</strong> fazer torniquete, incisão ou sucção!</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Orientações de Alta', nextStep: 'discharge', value: 'next' }
+      ]
+    },
+    exams: {
+      id: 'exams',
+      title: 'Exames Complementares',
+      description: 'Necessidade de investigação laboratorial.',
+      type: 'action',
+      content: `
+        <p><strong>Solicitar se:</strong> Moderado/Grave, Loxosceles confirmado ou dúvida diagnóstica.</p>
+        <ul class="list-disc pl-5 mt-2 bg-blue-50 p-2 rounded">
+            <li>Hemograma (leucocitose, plaquetas)</li>
+            <li>Função Renal (Ureia/Cr)</li>
+            <li>Eletrolitos</li>
+            <li>CPK (se dores musculares)</li>
+            <li>Coagulograma</li>
+        </ul>
+      `,
+      options: [
+        { text: 'Concluir Protocolo (Observação)', nextStep: 'transfer', value: 'finish' }
+      ]
+    },
+    transfer: {
+      id: 'transfer',
+      title: 'Observação / Internação',
+      description: 'Paciente deve permanecer sob cuidados médicos.',
+      type: 'result',
+      content: `
+            <div class="bg-blue-100 p-4 rounded text-blue-900">
+                <strong>Conduta Definida</strong>
+                <p>Manter paciente em observação para monitorar evolução da lesão e sintomas sistêmicos. Reavaliar periodicamente.</p>
+            </div>
+        `,
+      options: []
+    },
+    discharge: {
+      id: 'discharge',
+      title: 'Alta com Orientações',
+      description: 'Sinais de retorno imediato.',
+      type: 'result',
+      content: `
+        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
+          <h4 class="font-bold text-green-800">Alta Médica</h4>
+          <p>Orientar retorno imediato se:</p>
+          <ul class="list-disc pl-5 mt-1 text-green-700">
+            <li>Piora da dor ou aumento da lesão</li>
+            <li>Surgimento de bolhas ou escurecimento (necrose)</li>
+            <li>Febre, vômitos ou alteração urinária</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -1235,6 +1525,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   gasometria: gasometryFlowchart,
   diarreia: diarreiaFlowchart,
   geca: gecaFlowchart,
+  spider_bite: spiderBiteFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -1377,7 +1668,7 @@ export const allFlowcharts = [
 
   // Traumatológicos/Acidentes
   { id: 'mordedura_cachorro', name: 'Mordedura de cachorro', category: 'trauma', implemented: false },
-  { id: 'picada_aranha', name: 'Picada de aranha', category: 'trauma', implemented: false },
+  { id: 'picada_aranha', name: 'Picada de aranha', category: 'trauma', implemented: true },
   { id: 'picada_cobras', name: 'Picada de cobras', category: 'trauma', implemented: false },
   { id: 'picada_escorpiao', name: 'Picada de escorpião', category: 'trauma', implemented: false },
   { id: 'queimaduras', name: 'Queimaduras', category: 'trauma', implemented: false },

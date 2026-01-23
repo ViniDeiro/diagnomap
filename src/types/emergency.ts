@@ -42,6 +42,7 @@ export type EmergencyType =
   | 'preterm_labor'
   | 'uterine_rupture'
   | 'amniotic_embolism'
+  | 'spider_bite' // Picada de Aranha
 
 export interface EmergencyFlowchart {
   id: EmergencyType
