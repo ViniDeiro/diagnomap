@@ -18,7 +18,7 @@ const Header: React.FC = () => {
           {/* Logo Animado */}
           <div className="flex items-center relative z-10 group cursor-pointer">
              <div className="transform transition-transform duration-500 group-hover:scale-105">
-                <AnimatedLogo className="h-10 sm:h-12 lg:h-14 w-auto" />
+                <AnimatedLogo className="h-12 sm:h-14 lg:h-16 w-auto" />
              </div>
           </div>
 

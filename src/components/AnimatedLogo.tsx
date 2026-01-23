@@ -3,7 +3,9 @@ import { motion } from 'framer-motion'
 
 export const AnimatedLogo: React.FC<{ className?: string }> = ({ className }) => {
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
+    <div className={`flex items-center ${className || ''}`}>
+      {/* Símbolo (ECG + Seta) */}
+      <div className="relative w-full max-w-[160px] sm:max-w-[200px] h-auto aspect-[2/1] mr-4">
       <svg
         viewBox="0 0 425 231"
         fill="none"
@@ -89,6 +91,22 @@ export const AnimatedLogo: React.FC<{ className?: string }> = ({ className }) =>
           }}
         />
       </svg>
+      </div>
+
+      {/* Texto "Siga o Fluxo" */}
+      <motion.div
+        className="flex flex-col justify-center"
+        initial={{ opacity: 0, x: -20 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1.5, duration: 0.8 }}
+      >
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-800 leading-none">
+          Siga o
+        </h1>
+        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 leading-none">
+          Fluxo
+        </h1>
+      </motion.div>
     </div>
   )
 }
