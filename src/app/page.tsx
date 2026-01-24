@@ -19,8 +19,10 @@ import { patientService } from '@/services/patientService'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { GasometryFlowchart } from '@/components/GasometryFlowchart'
 import { supabase } from '@/services/supabaseClient'
+import Header from '@/components/Header'
+import ProfileScreen from '@/components/ProfileScreen'
 
-type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'gasometry-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form'
+type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'gasometry-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form' | 'profile'
 
 export default function Home() {
   const router = useRouter()
@@ -408,9 +410,26 @@ export default function Home() {
       )
     }
 
+    if (appState === 'profile') {
+      return (
+        <ProfileScreen 
+          onBack={() => setAppState('dashboard')}
+          onSignOut={() => router.replace('/login')}
+        />
+      )
+    }
+
     // Dashboard and Overlays
     return (
       <>
+        {/* Renderizar Header apenas se não estiver em loading, login ou em fluxogramas */}
+        {appState !== 'loading' && 
+         appState !== 'flowchart' && 
+         appState !== 'emergency-flowchart' && 
+         appState !== 'gasometry-flowchart' && 
+         <Header onProfileClick={() => setAppState('profile')} />
+        }
+
         {(appState === 'dashboard' || (isDashboardActive && previousState !== 'flowchart')) && (
           <PatientDashboard
             refreshTrigger={refreshTrigger}

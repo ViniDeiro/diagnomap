@@ -148,8 +148,15 @@ export async function getPatientById(id: string) {
 }
 
 export async function deletePatient(id: string) {
+  // Tenta deletar pelo ID interno (UUID do banco)
   const { error } = await supabase.from('patients').delete().eq('id', id);
-  if (error) throw error;
+  
+  // Se não encontrou ou falhou (talvez seja um external_id), tenta deletar pelo external_id
+  if (error || !error) {
+     const { error: extError } = await supabase.from('patients').delete().eq('external_id', id);
+     // Se ambos falharem, lançar erro, mas se um funcionar, ok.
+     if (error && extError) throw error;
+  }
 }
 
 // Optional helper to map local form data into DB payload structure

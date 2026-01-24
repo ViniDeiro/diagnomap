@@ -115,7 +115,23 @@ class PatientService {
 
     try {
       const payload = fromUIPatient(patient)
-      insertPatientWithFlowLink(payload).catch((err) => {
+      // Tenta inserir e aguarda para atualizar o ID local com o ID real do banco
+      insertPatientWithFlowLink(payload).then((dbPatient) => {
+        if (dbPatient && dbPatient.id) {
+          const currentPatients = this.loadFromStorage()
+          const idx = currentPatients.findIndex(p => p.id === id)
+          if (idx !== -1) {
+            // Atualiza o ID local para corresponder ao do banco
+            currentPatients[idx].id = dbPatient.id
+            // Atualiza também o medicalRecord se o banco tiver gerado algo diferente
+            if (dbPatient.medical_record) {
+               currentPatients[idx].medicalRecord = dbPatient.medical_record
+            }
+            this.saveToStorage(currentPatients)
+            console.log('Paciente sincronizado com banco:', dbPatient.id)
+          }
+        }
+      }).catch((err) => {
         console.error('Erro ao inserir paciente no banco:', err)
       })
     } catch (err) {

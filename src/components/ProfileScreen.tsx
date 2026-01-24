@@ -1,8 +1,4 @@
-"use client"
-
 import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { supabase } from '@/services/supabaseClient'
 import { signOutDoctor, updateDoctorProfile } from '@/services/doctorRepo'
 import { 
@@ -19,8 +15,12 @@ type DoctorRow = {
   municipality_id: number | null
 }
 
-export default function ProfilePage() {
-  const router = useRouter()
+interface ProfileScreenProps {
+  onBack: () => void
+  onSignOut: () => void
+}
+
+export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps) {
   const [loading, setLoading] = useState(true)
   const [userEmail, setUserEmail] = useState<string>('')
   const [profile, setProfile] = useState<DoctorRow | null>(null)
@@ -43,7 +43,7 @@ export default function ProfilePage() {
       const { data: userRes } = await supabase.auth.getUser()
       const user = userRes?.user
       if (!user) {
-        router.replace('/login')
+        onSignOut()
         return
       }
       setUserEmail(user.email || '')
@@ -78,16 +78,29 @@ export default function ProfilePage() {
           waiting: waitingCount || 0,
           discharged: dischargedCount || 0,
         })
+        
+        // Carregar pacientes recentes reais
+        const { data: recent } = await supabase
+          .from('patients')
+          .select('id,name,status,selected_flowchart,updated_at')
+          .eq('assigned_doctor_id', data.id)
+          .order('updated_at', { ascending: false })
+          .limit(5)
+          
+        if (recent) {
+          setRecentPatients(recent.map(r => ({
+            id: r.id as any,
+            name: (r as any).name,
+            status: (r as any).status,
+            selected_flowchart: (r as any).selected_flowchart,
+            updated_at: (r as any).updated_at
+          })))
+        }
       }
       setLoading(false)
     }
     load()
-  }, [router])
-
-  const handleSignOut = async () => {
-    await signOutDoctor()
-    router.replace('/login')
-  }
+  }, [])
 
   const handleSave = async () => {
     if (!profile) return
@@ -108,8 +121,27 @@ export default function ProfilePage() {
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    // Lógica de upload simplificada (mantendo a original se necessário, ou mockando visualmente se for só frontend)
-    // ...
+    
+    // Upload simplificado para o Supabase Storage
+    const { data: userRes } = await supabase.auth.getUser()
+    const user = userRes?.user
+    if (!user) return
+
+    const filePath = `${user.id}/${Date.now()}_${file.name}`
+    const { error: upErr } = await supabase.storage.from('avatars').upload(filePath, file, {
+      cacheControl: '3600',
+      upsert: true
+    })
+    
+    if (upErr) {
+      console.error('Erro no upload:', upErr)
+      return
+    }
+
+    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(filePath)
+    const url = pub?.publicUrl || ''
+    setAvatarUrl(url)
+    await supabase.auth.updateUser({ data: { avatar_url: url } })
   }
 
   if (loading) {
@@ -131,16 +163,16 @@ export default function ProfilePage() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Link 
-            href="/" 
+          <button 
+            onClick={onBack}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-50 transition-colors shadow-sm text-sm font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Voltar ao Dashboard</span>
-          </Link>
+          </button>
           
           <button 
-            onClick={handleSignOut}
+            onClick={onSignOut}
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors shadow-sm text-sm font-medium"
           >
             <LogOut className="w-4 h-4" />

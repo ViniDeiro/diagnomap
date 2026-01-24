@@ -272,8 +272,22 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   }
 
   const handleDeletePatient = async (patientId: string) => {
-    const { deletePatient } = await import('@/services/patientRepo')
-    await deletePatient(patientId)
+    try {
+      // Tentar deletar do banco
+      const { deletePatient } = await import('@/services/patientRepo')
+      await deletePatient(patientId)
+    } catch (e) {
+      console.warn('Erro ao deletar do banco (pode ser paciente local):', e)
+    }
+
+    // Deletar do serviço local
+    try {
+      patientService.deletePatient(patientId)
+    } catch (e) {
+      console.warn('Erro ao deletar localmente:', e)
+    }
+
+    // Atualizar estado da UI
     setPatients(prev => prev.filter(p => p.id !== patientId))
     setShowDeleteConfirm(null)
 
@@ -312,127 +326,67 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const endIndex = startIndex + patientsPerPage
   const currentPatients = filteredPatients.slice(startIndex, endIndex)
 
+  // Pacientes Recentes (Ex: status 'discharged' ou 'active' ordenados por update)
+  const recentPatients = patients
+    .sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.createdAt).getTime()
+      const dateB = new Date(b.updatedAt || b.createdAt).getTime()
+      return dateB - dateA
+    })
+    .slice(0, 3) // Pegar os 3 mais recentes
+
   const getFlowchartName = (id?: string) => {
     if (!id) return 'Não definido'
     return emergencyFlowcharts[id]?.name || id.charAt(0).toUpperCase() + id.slice(1)
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
-
-      {/* Premium Medical Header */}
-      <div className="relative bg-white shadow-xl border-b border-slate-200/50">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
-
-        {/* Subtle geometric pattern */}
-        <div className="absolute inset-0 opacity-[0.02]" style={{
-          backgroundImage: `url('data:image/svg+xml,%3Csvg width="80" height="80" viewBox="0 0 80 80" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23334155" fill-opacity="0.4"%3E%3Cpath d="M20 20h40v40H20z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')`
-        }}></div>
-
-      <div className="relative max-w-7xl mx-auto px-8 py-12">
-        <div className="absolute top-8 right-8">
-          <Link
-            href="/profile"
-            className="flex items-center space-x-2 px-3 py-2 rounded-lg border border-slate-200 text-blue-700 font-semibold hover:bg-blue-50 transition-colors"
-            title="Abrir Perfil do Médico"
-          >
-            {avatarUrl ? (
-              <img src={avatarUrl} alt="Avatar" className="w-7 h-7 rounded-lg object-cover" />
-            ) : (
-              <User className="w-4 h-4" />
-            )}
-            <span className="hidden sm:inline">Perfil</span>
-          </Link>
-        </div>
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="flex items-center justify-center"
-          >
-            {/* Medical Logo Premium - Animado */}
-            <div className="flex items-center justify-center">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="relative group cursor-pointer"
-                whileHover={{ scale: 1.05 }}
-              >
-                <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                <AnimatedLogo className="h-16 sm:h-20 lg:h-24 w-auto" />
-              </motion.div>
-            </div>
-          </motion.div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-slate-50">
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-8 py-12">
+      <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Professional Action Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-          className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-4 sm:p-6 lg:p-8 mb-8 sm:mb-12"
-        >
-          <div className="flex flex-col xl:flex-row gap-4 sm:gap-6 lg:gap-8 justify-between items-start xl:items-center">
-            <div className="flex-1">
-              <div className="flex items-center space-x-3 sm:space-x-4 mb-4">
-                <div className="w-2 h-8 sm:h-12 bg-gradient-to-b from-blue-600 to-slate-700 rounded-full"></div>
-                <div>
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-800">Gestão de Pacientes</h2>
-                  <p className="text-sm sm:text-base text-slate-600 font-medium mt-1">
-                    {patients.length} {patients.length === 1 ? 'paciente em acompanhamento' : 'pacientes em acompanhamento'}
-                  </p>
-                </div>
+        {/* Top Section: Title & New Patient Button */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+           <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-700 mb-1">Atendimentos em Andamento</h1>
+              <p className="text-slate-500 font-medium">
+                {patients.length} {patients.length === 1 ? 'paciente' : 'pacientes'} em atendimento ativo
+              </p>
+           </div>
+           
+           <motion.button
+              onClick={onNewPatient}
+              className="relative overflow-hidden bg-gradient-to-r from-blue-500 to-cyan-400 text-white px-6 py-3 rounded-xl font-semibold shadow-lg shadow-blue-500/30 hover:shadow-blue-500/40 transition-all duration-300 group"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+           >
+              <div className="flex items-center space-x-2 relative z-10">
+                 <div className="bg-white/20 p-1 rounded-md">
+                    <Plus className="w-5 h-5 text-white" />
+                 </div>
+                 <span>Novo Atendimento</span>
+                 <Zap className="w-4 h-4 text-white/80" />
               </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full xl:w-auto">
-              <motion.button
-                onClick={onNewPatient}
-                className="group relative bg-gradient-to-r from-blue-600 to-slate-700 text-white px-4 sm:px-6 lg:px-8 py-3 sm:py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 flex items-center space-x-2 sm:space-x-3 font-semibold text-sm sm:text-base lg:text-lg overflow-hidden justify-center"
-                whileHover={{ scale: 1.02, y: -1 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-700 to-slate-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                <div className="relative flex items-center space-x-2 sm:space-x-3">
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </div>
-                  <span>Novo Atendimento</span>
-                  <Zap className="w-4 h-4 sm:w-5 sm:h-5" />
-                </div>
-              </motion.button>
-
               
-            </div>
-          </div>
-        </motion.div>
+              {/* Shine effect */}
+              <div className="absolute top-0 -left-full w-full h-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 group-hover:animate-shine" />
+           </motion.button>
+        </div>
 
-        {/* Premium Search */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-2 mb-8 sm:mb-12"
-        >
-          <div className="relative">
-            <div className="absolute inset-y-0 left-4 sm:left-6 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 sm:h-6 sm:w-6 text-slate-400" />
-            </div>
-            <input
+        {/* Search Bar - Clean Pill Style */}
+        <div className="relative mb-8 group">
+           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
+              <Search className="h-5 w-5 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+           </div>
+           <input
               type="text"
               placeholder="Buscar paciente por nome ou ID..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-12 sm:pl-16 pr-4 sm:pr-8 py-4 sm:py-6 bg-transparent text-slate-800 placeholder-slate-500 text-base sm:text-lg font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 rounded-xl transition-all duration-200"
-            />
-          </div>
-        </motion.div>
+              className="w-full pl-14 pr-6 py-4 bg-white border border-slate-200 text-slate-700 placeholder-slate-400 text-lg rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-300 transition-all duration-300"
+           />
+        </div>
 
         {/* Erro de carregamento */}
         {loadError && (
@@ -456,235 +410,163 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 className="flex justify-center py-20"
               >
                 <div className="relative">
-                  <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin border-t-blue-600"></div>
-                  <div className="absolute inset-0 w-12 h-12 border-4 border-slate-200 rounded-full animate-spin border-r-slate-600" style={{ animationDelay: '0.5s' }}></div>
+                  <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin border-t-blue-500"></div>
                 </div>
               </motion.div>
             ) : filteredPatients.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-20"
+                className="text-center py-20 bg-white rounded-3xl shadow-sm border border-slate-100"
               >
-                <div className="relative inline-flex items-center justify-center w-20 h-20 mb-8">
-                  <div className="absolute inset-0 bg-gradient-to-r from-slate-300 to-blue-300 rounded-2xl blur-lg opacity-50"></div>
-                  <div className="relative w-20 h-20 bg-gradient-to-br from-slate-100 to-blue-100 rounded-2xl flex items-center justify-center border border-slate-200">
-                    <User className="w-10 h-10 text-slate-500" />
-                  </div>
+                <div className="relative inline-flex items-center justify-center w-20 h-20 mb-6 bg-slate-50 rounded-full">
+                    <User className="w-10 h-10 text-slate-300" />
                 </div>
 
-                <h3 className="text-2xl font-bold text-slate-800 mb-4">
-                  {searchTerm ? 'Paciente não encontrado' : 'Nenhum paciente cadastrado'}
+                <h3 className="text-xl font-bold text-slate-700 mb-2">
+                  {searchTerm ? 'Paciente não encontrado' : 'Nenhum paciente ativo'}
                 </h3>
-                <p className="text-slate-600 text-lg mb-8 max-w-md mx-auto">
+                <p className="text-slate-400 mb-8 max-w-md mx-auto">
                   {searchTerm
-                    ? 'Verifique os dados inseridos e tente novamente'
-                    : 'Inicie um novo atendimento para começar o diagnóstico'
+                    ? 'Verifique o nome ou ID e tente novamente.'
+                    : 'Clique em "Novo Atendimento" para começar.'
                   }
                 </p>
-                {!searchTerm && (
-                  <motion.button
-                    onClick={onNewPatient}
-                    className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold text-lg"
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    Iniciar Primeiro Atendimento
-                  </motion.button>
-                )}
               </motion.div>
             ) : (
               currentPatients.map((patient, index) => (
                 <motion.div
                   key={patient.id}
-                  initial={{ opacity: 0, y: 20, scale: 0.98 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ delay: index * 0.08, duration: 0.4 }}
-                  onHoverStart={() => setHoveredCard(patient.id)}
-                  onHoverEnd={() => setHoveredCard(null)}
-                  className="group bg-white rounded-2xl shadow-xl hover:shadow-2xl border border-slate-200/60 hover:border-blue-200/60 transition-all duration-300 overflow-hidden"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                  className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow duration-300 relative overflow-hidden group"
                 >
-                  {/* Premium border gradient */}
-                  <div className="h-1 bg-gradient-to-r from-blue-600 via-slate-400 to-blue-600"></div>
-
-                  <div className="p-4 sm:p-6 lg:p-8">
-                    <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
-                      <div className="flex-1">
-                        <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4 lg:space-x-6 mb-6">
-                          <motion.div
-                            animate={hoveredCard === patient.id ? { scale: 1.05 } : { scale: 1 }}
-                            className="flex items-center space-x-3 sm:space-x-4"
-                          >
-                            <div className="relative">
-                              <div className="absolute inset-0 bg-gradient-to-r from-emerald-200 to-blue-200 rounded-xl blur-md opacity-50"></div>
-                              <div className="relative w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-white to-slate-50 rounded-xl flex items-center justify-center border-2 border-slate-200 shadow-lg">
-                                {getStatusIcon(patient.status)}
+                  <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+                     
+                     {/* Esquerda: Identificação e Status */}
+                     <div className="flex items-start gap-4 flex-1 min-w-0">
+                        <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+                           <Activity className="w-7 h-7 text-blue-500" />
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                           <div className="flex items-center gap-3 mb-1 flex-wrap">
+                              <h3 className="text-xl font-bold text-slate-800 truncate">{patient.name}</h3>
+                              {getGroupBadge(patient.flowchartState.group)}
+                           </div>
+                           <p className="text-slate-400 text-sm font-medium mb-4 uppercase tracking-wide">ID: {patient.medicalRecord}</p>
+                           
+                           {/* Protocolo Badge - Clean */}
+                           <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 inline-block w-full sm:w-auto">
+                              <p className="text-[10px] text-blue-500 font-bold uppercase mb-1">Protocolo Ativo</p>
+                              <div className="flex items-center gap-2">
+                                 <Zap className="w-4 h-4 text-slate-400" />
+                                 <span className="font-semibold text-slate-700 text-sm truncate max-w-[200px]">
+                                    {getFlowchartName(patient.selectedFlowchart)}
+                                 </span>
                               </div>
-                            </div>
-                            <div>
-                              <h3 className="text-lg sm:text-xl lg:text-2xl font-bold text-slate-800 mb-1">
-                                {patient.name}
-                              </h3>
-                              <p className="text-sm sm:text-base text-slate-600 font-medium">
-                                ID: {patient.medicalRecord}
-                              </p>
-                            </div>
-                          </motion.div>
-                          {getGroupBadge(patient.flowchartState.group)}
+                           </div>
+                        </div>
+                     </div>
+
+                     {/* Centro: Métricas Grid Clean */}
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 xl:px-8 xl:border-l xl:border-r border-slate-100 flex-[1.5]">
+                        <div className="min-w-0">
+                           <div className="flex items-center gap-2 text-slate-400 mb-1">
+                              <Calendar className="w-4 h-4" />
+                              <span className="text-xs font-bold uppercase">Idade</span>
+                           </div>
+                           <p className="font-semibold text-slate-700 truncate">{patient.age} anos</p>
+                        </div>
+                        
+                        <div className="min-w-0">
+                           <div className="flex items-center gap-2 text-slate-400 mb-1">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-xs font-bold uppercase">Admissão</span>
+                           </div>
+                           <p className="font-semibold text-slate-700 truncate">{formatDate(patient.admission.date)}</p>
                         </div>
 
-                        <div className="flex flex-col gap-3 mb-6">
-                          {/* Linha 1: Protocolo (Destaque) */}
-                          <div className="flex items-center space-x-2 bg-blue-50/50 rounded-lg px-3 py-2 border border-blue-100">
-                            <Activity className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-[10px] text-blue-600 uppercase font-bold">Protocolo Ativo</p>
-                              <p className="text-sm font-bold text-slate-800 truncate" title={getFlowchartName(patient.selectedFlowchart)}>
-                                {getFlowchartName(patient.selectedFlowchart)}
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Linha 2: Dados Gerais */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                              <Calendar className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Idade</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{patient.age} anos</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                              <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Admissão</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">
-                                  {formatDate(patient.admission.date)}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                              <Shield className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Status</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{getStatusText(patient.status)}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center space-x-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                              <Clock className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                              <div className="min-w-0">
-                                <p className="text-[10px] text-slate-500 uppercase font-bold">Retorno</p>
-                                <p className="text-sm font-bold text-slate-800 truncate">{getVisitText(patient.returnCount)}</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3 lg:space-x-4 lg:ml-8">
-                        <div className="flex space-x-3 sm:space-x-2 lg:space-x-3">
-                          <motion.button
-                            onClick={() => onViewReport(patient)}
-                            className="relative p-3 sm:p-4 bg-gradient-to-br from-purple-50 to-violet-50 hover:from-purple-100 hover:to-violet-100 rounded-xl border border-purple-200 hover:border-purple-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            title="Gerar Relatório Completo"
-                          >
-                            <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 group-hover/btn:text-purple-700 mx-auto" />
-                          </motion.button>
-
-                          <motion.button
-                            onClick={() => onViewMedicalPrescription(patient)}
-                            className="relative p-3 sm:p-4 bg-gradient-to-br from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 rounded-xl border border-green-200 hover:border-green-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            title="Gerar Receituário Médico"
-                          >
-                            <Pill className="w-5 h-5 sm:w-6 sm:h-6 text-green-600 group-hover/btn:text-green-700 mx-auto" />
-                          </motion.button>
-
-                          {patient.treatment.prescriptions.length > 0 && (
-                            <motion.button
-                              onClick={() => onViewPrescriptions(patient)}
-                              className="relative p-3 sm:p-4 bg-gradient-to-br from-amber-50 to-orange-50 hover:from-amber-100 hover:to-orange-100 rounded-xl border border-amber-200 hover:border-amber-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              title="Visualizar Prescrições"
-                            >
-                              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 group-hover/btn:text-amber-700 mx-auto" />
-                            </motion.button>
-                          )}
-
-                          {/* Botão de Retorno somente para pacientes do Grupo B */}
-                          {patient.flowchartState.group === 'B' && (
-                            <motion.button
-                              onClick={() => onReturnVisit(patient)}
-                              className="relative p-3 sm:p-4 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              title="Agendar/Iniciar Retorno (Grupo B)"
-                            >
-                              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
-                            </motion.button>
-                          )}
-
-                          {/* Botão de Retorno para pacientes do Grupo C após alta */}
-                          {patient.flowchartState.group === 'C' && patient.status === 'discharged' && (
-                            <motion.button
-                              onClick={() => onReturnVisit(patient)}
-                              className="relative p-3 sm:p-4 bg-gradient-to-br from-cyan-50 to-sky-50 hover:from-cyan-100 hover:to-sky-100 rounded-xl border border-cyan-200 hover:border-cyan-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              title="Agendar/Iniciar Retorno (Grupo C)"
-                            >
-                              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600 group-hover/btn:text-cyan-700 mx-auto" />
-                            </motion.button>
-                          )}
-
-                          <motion.button
-                            onClick={() => setShowTransferModal(patient.id)}
-                            className="relative p-3 sm:p-4 bg-gradient-to-br from-indigo-50 to-blue-50 hover:from-indigo-100 hover:to-blue-100 rounded-xl border border-indigo-200 hover:border-indigo-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            title="Transferir Paciente"
-                          >
-                            <Stethoscope className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600 group-hover/btn:text-indigo-700 mx-auto" />
-                          </motion.button>
-
-                          <motion.button
-                            onClick={() => setShowDeleteConfirm(patient.id)}
-                            className="relative p-3 sm:p-4 bg-gradient-to-br from-red-50 to-rose-50 hover:from-red-100 hover:to-rose-100 rounded-xl border border-red-200 hover:border-red-300 transition-all duration-200 group/btn shadow-lg flex-1 sm:flex-none"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            title="Excluir Paciente"
-                          >
-                            <Trash2 className="w-5 h-5 sm:w-6 sm:h-6 text-red-600 group-hover/btn:text-red-700 mx-auto" />
-                          </motion.button>
+                        <div className="min-w-0">
+                           <div className="flex items-center gap-2 text-slate-400 mb-1">
+                              <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                              <span className="text-xs font-bold uppercase">Status</span>
+                           </div>
+                           <p className="font-semibold text-slate-700 truncate">{getStatusText(patient.status)}</p>
                         </div>
 
+                        <div className="min-w-0">
+                           <div className="flex items-center gap-2 text-slate-400 mb-1">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-xs font-bold uppercase">Retorno</span>
+                           </div>
+                           <p className="font-semibold text-slate-700 truncate">{getVisitText(patient.returnCount)}</p>
+                        </div>
+                     </div>
+
+                     {/* Direita: Ação Principal + Menu */}
+                     <div className="flex flex-col sm:flex-row items-center gap-3 justify-end w-full xl:w-auto xl:min-w-[340px]">
+                        
+                        {/* Botão Continuar Atendimento (Grande e Destacado) */}
                         <motion.button
-                          onClick={() => onSelectPatient(patient)}
-                          className="relative bg-gradient-to-r from-blue-600 to-slate-700 hover:from-blue-700 hover:to-slate-800 text-white px-4 sm:px-6 py-3 sm:py-4 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 sm:space-x-3 font-semibold text-sm sm:text-base shadow-xl hover:shadow-2xl overflow-hidden group/btn w-full sm:w-auto"
-                          whileHover={{ scale: 1.02, x: 2 }}
-                          whileTap={{ scale: 0.98 }}
+                           onClick={() => onSelectPatient(patient)}
+                           className="order-1 sm:order-2 flex-1 sm:flex-none bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-xl font-bold shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-300 flex items-center justify-center gap-2 group/btn whitespace-nowrap"
+                           whileHover={{ scale: 1.02 }}
+                           whileTap={{ scale: 0.98 }}
                         >
-                          <div className="absolute inset-0 bg-gradient-to-r from-slate-700 to-blue-700 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></div>
-                          <div className="relative flex items-center space-x-2 sm:space-x-3">
-                            <span className="font-semibold">
-                              {patient.status === 'active' && patient.flowchartState.currentStep !== 'end'
-                                ? 'Continuar Atendimento'
-                                : 'Visualizar Histórico'}
-                            </span>
-                            <motion.div
-                              animate={{ x: hoveredCard === patient.id ? 3 : 0 }}
-                              transition={{ duration: 0.2 }}
-                            >
-                              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
-                            </motion.div>
-                          </div>
+                           <span>Continuar Atendimento</span>
+                           <ChevronRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
                         </motion.button>
-                      </div>
-                    </div>
+
+                        {/* Ações Secundárias (Visíveis) */}
+                        <div className="order-2 sm:order-1 flex items-center gap-1 bg-slate-50 p-1 rounded-xl border border-slate-100">
+                           <button 
+                              onClick={() => onViewReport(patient)} 
+                              className="p-2.5 text-slate-500 hover:text-blue-600 hover:bg-white rounded-lg transition-all relative group/action"
+                              title="Relatório"
+                           >
+                              <FileText className="w-5 h-5" />
+                           </button>
+                           
+                           <button 
+                              onClick={() => onViewMedicalPrescription(patient)} 
+                              className="p-2.5 text-slate-500 hover:text-green-600 hover:bg-white rounded-lg transition-all relative group/action"
+                              title="Receituário"
+                           >
+                              <Pill className="w-5 h-5" />
+                           </button>
+
+                           {patient.treatment.prescriptions.length > 0 && (
+                              <button 
+                                 onClick={() => onViewPrescriptions(patient)} 
+                                 className="p-2.5 text-slate-500 hover:text-amber-600 hover:bg-white rounded-lg transition-all relative group/action"
+                                 title="Prescrições"
+                              >
+                                 <FileText className="w-5 h-5" />
+                              </button>
+                           )}
+
+                           <div className="w-px h-6 bg-slate-200 mx-1"></div>
+
+                           <button 
+                              onClick={() => setShowTransferModal(patient.id)} 
+                              className="p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition-all relative group/action"
+                              title="Transferir"
+                           >
+                              <Stethoscope className="w-5 h-5" />
+                           </button>
+
+                           <button 
+                              onClick={() => setShowDeleteConfirm(patient.id)} 
+                              className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-white rounded-lg transition-all relative group/action"
+                              title="Excluir"
+                           >
+                              <Trash2 className="w-5 h-5" />
+                           </button>
+                        </div>
+                     </div>
+
                   </div>
                 </motion.div>
               ))
@@ -692,103 +574,76 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
           </AnimatePresence>
         </div>
 
-        {/* Paginação */}
+        {/* Paginação Clean */}
         {totalPages > 1 && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-12 flex justify-center"
-          >
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6">
-              <div className="flex items-center space-x-4">
-                <motion.button
+          <div className="mt-12 flex justify-center">
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-2 flex items-center gap-2">
+                <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className={clsx(
-                    "p-3 rounded-xl transition-all duration-200 flex items-center justify-center",
-                    currentPage === 1
-                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-lg"
-                  )}
-                  whileHover={currentPage > 1 ? { scale: 1.05 } : {}}
-                  whileTap={currentPage > 1 ? { scale: 0.95 } : {}}
+                  className="p-3 rounded-xl hover:bg-slate-50 text-slate-400 disabled:opacity-50 transition-colors"
                 >
                   <ChevronLeft className="w-5 h-5" />
-                </motion.button>
-
-                <div className="flex items-center space-x-2">
-                  {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                    let pageNumber: number
-
-                    if (totalPages <= 5) {
-                      pageNumber = i + 1
-                    } else if (currentPage <= 3) {
-                      pageNumber = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNumber = totalPages - 4 + i
-                    } else {
-                      pageNumber = currentPage - 2 + i
-                    }
-
-                    return (
-                      <motion.button
-                        key={pageNumber}
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className={clsx(
-                          "w-12 h-12 rounded-xl font-semibold transition-all duration-200",
-                          currentPage === pageNumber
-                            ? "bg-gradient-to-r from-blue-600 to-slate-700 text-white shadow-lg"
-                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                        )}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {pageNumber}
-                      </motion.button>
-                    )
-                  })}
-
-                  {totalPages > 5 && currentPage < totalPages - 2 && (
-                    <>
-                      <div className="px-2 text-slate-400">
-                        <MoreHorizontal className="w-5 h-5" />
-                      </div>
-                      <motion.button
-                        onClick={() => setCurrentPage(totalPages)}
-                        className="w-12 h-12 rounded-xl font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all duration-200"
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                      >
-                        {totalPages}
-                      </motion.button>
-                    </>
-                  )}
-                </div>
-
-                <motion.button
+                </button>
+                <span className="text-slate-600 font-medium px-4">
+                   Página {currentPage} de {totalPages}
+                </span>
+                <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className={clsx(
-                    "p-3 rounded-xl transition-all duration-200 flex items-center justify-center",
-                    currentPage === totalPages
-                      ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                      : "bg-gradient-to-r from-blue-600 to-slate-700 text-white hover:shadow-lg"
-                  )}
-                  whileHover={currentPage < totalPages ? { scale: 1.05 } : {}}
-                  whileTap={currentPage < totalPages ? { scale: 0.95 } : {}}
+                  className="p-3 rounded-xl hover:bg-slate-50 text-slate-400 disabled:opacity-50 transition-colors"
                 >
                   <ChevronRight className="w-5 h-5" />
-                </motion.button>
-              </div>
-
-              <div className="mt-4 text-center text-sm text-slate-600">
-                Página {currentPage} de {totalPages} • {filteredPatients.length} {filteredPatients.length === 1 ? 'paciente' : 'pacientes'}
-              </div>
+                </button>
             </div>
-          </motion.div>
+          </div>
         )}
+
+        {/* Seção Pacientes Recentes */}
+        <div className="mt-12">
+           <h2 className="text-xl font-bold text-slate-700 mb-6">Pacientes Recentes</h2>
+           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {recentPatients.length === 0 ? (
+                // Placeholder para quando não houver recentes
+                <div className="col-span-3 text-center py-8 text-slate-400 bg-white rounded-3xl border border-slate-100 border-dashed">
+                  Nenhum paciente recente encontrado.
+                </div>
+              ) : (
+                recentPatients.map((patient) => (
+                  <motion.div 
+                    key={patient.id}
+                    whileHover={{ y: -4 }}
+                    className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group"
+                    onClick={() => onSelectPatient(patient)}
+                  >
+                     <div className="flex items-center gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
+                          <User className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div className="min-w-0">
+                           <h4 className="font-bold text-slate-800 truncate text-sm">{patient.name}</h4>
+                           <p className="text-xs text-slate-400 truncate">ID: {patient.medicalRecord}</p>
+                        </div>
+                     </div>
+                     
+                     <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 p-2 rounded-lg">
+                           <Zap className="w-3 h-3 text-slate-400" />
+                           <span className="truncate">{getFlowchartName(patient.selectedFlowchart)}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                           <span>{patient.age} anos</span>
+                           <span>{formatDate(patient.updatedAt || patient.createdAt)}</span>
+                        </div>
+                     </div>
+                  </motion.div>
+                ))
+              )}
+           </div>
+        </div>
       </div>
+
 
       {/* Modal de Confirmação de Exclusão */}
       <AnimatePresence>
