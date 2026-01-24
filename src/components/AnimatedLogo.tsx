@@ -38,7 +38,7 @@ export const AnimatedLogo: React.FC<{ className?: string }> = ({ className }) =>
         <motion.g
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.5, duration: 1.0 }}
+          transition={{ delay: 2.5, duration: 1.5 }}
         >
           {/* Olho/Símbolo Superior */}
           <path d="M306.543 75.4784C309.583 72.4513 317.278 72.0228 328.999 72.0016C329.551 72.0006 330 72.4484 330 73.0007V79.5877C330 79.8522 329.892 80.1095 329.705 80.2969C323.222 86.8058 321.382 88.6513 316.937 89.694C313.81 90.4274 307.443 89.3013 305.5 85.5007C303.557 81.7001 304.188 77.8232 306.543 75.4784Z" fill="#0F437D" stroke="#0F437D"/>
@@ -66,7 +66,7 @@ export const AnimatedLogo: React.FC<{ className?: string }> = ({ className }) =>
           initial={{ pathLength: 0, opacity: 0 }}
           animate={{ pathLength: 1, opacity: 1 }}
           transition={{
-            duration: 1.8,
+            duration: 3.0,
             ease: "easeInOut",
             repeat: 0 // Uma vez só
           }}
@@ -83,8 +83,8 @@ export const AnimatedLogo: React.FC<{ className?: string }> = ({ className }) =>
           initial={{ opacity: 0, scale: 0.5, x: -10 }}
           animate={{ opacity: 1, scale: 1, x: 0 }}
           transition={{
-            delay: 1.7, // Aparece logo quando o traço chega no fim
-            duration: 0.4,
+            delay: 2.9, // Aparece logo quando o traço chega no fim
+            duration: 0.6,
             type: "spring",
             bounce: 0.4,
             repeat: 0
