@@ -402,8 +402,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
   // Controle explícito: usuário deve clicar para selecionar o fluxo
   const [hasSelectedFlow, setHasSelectedFlow] = useState<boolean>(!!skipFlowSelection)
 
-  // Identifica fluxos genéricos (como diarreia e GECA) que pulam etapas e vão direto para o salvamento
-  const isGenericFlow = ['diarreia', 'geca'].includes(formData.selectedFlowchart as string || '')
+  // Apenas dengue usa as etapas clínicas adicionais (sintomas, sinais vitais e exame físico)
+  const isDengueFlow = (formData.selectedFlowchart || '') === 'dengue'
 
   // Seleção de fluxograma é feita via EmergencySelector
 
@@ -474,12 +474,12 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         newErrors.gender = 'Sexo é obrigatório'
       }
 
-      if (!onlyPersonalData && !isGenericFlow && formData.symptoms.length === 0) {
+      if (!onlyPersonalData && isDengueFlow && formData.symptoms.length === 0) {
         newErrors.symptoms = 'Selecione pelo menos um sintoma'
       }
     }
 
-    if (formData.vitalSigns?.temperature && !formData.vitalSigns?.feverDays) {
+    if (isDengueFlow && formData.vitalSigns?.temperature && !formData.vitalSigns?.feverDays) {
       newErrors.feverDays = 'Informe há quantos dias o paciente está com febre'
     }
 
@@ -648,10 +648,11 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
         ...formData,
         age: calculateAge(formData.birthDate)
       }
-      // Gera um resumo textual do exame físico e anexa às observações gerais
-      const phys = summarizePhysicalExam(physicalExam)
-      dataToSubmit.generalObservations = [formData.generalObservations || '', phys].filter(Boolean).join('\n\n')
-      const sev = detectSeverityFromVitals()
+      if (isDengueFlow) {
+        const phys = summarizePhysicalExam(physicalExam)
+        dataToSubmit.generalObservations = [formData.generalObservations || '', phys].filter(Boolean).join('\n\n')
+      }
+      const sev = isDengueFlow ? detectSeverityFromVitals() : null
       if (sev && onSeverityRedirect) {
         onSeverityRedirect(dataToSubmit, sev.group)
       } else {
@@ -730,7 +731,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
             <div className="flex items-center space-x-8">
               {(onlyPersonalData
                 ? [{ step: 2, label: 'Dados Pessoais', icon: User }]
-                : isGenericFlow
+                : !isDengueFlow
                   ? [
                       { step: 1, label: 'Fluxograma', icon: Target },
                       { step: 2, label: 'Dados Pessoais', icon: User }
@@ -800,7 +801,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                         onOpenGasometry?.()
                         return
                       }
-                      setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id as "dengue" | "zika" | "chikungunya" }))
+                      setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id }))
                       setHasSelectedFlow(true)
                       setCurrentStep(2)
                     }}
@@ -1016,15 +1017,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       onChange={(list) => setFormData(prev => ({ ...prev, allergies: list }))}
                       municipalityId={doctorMunicipalityId ?? undefined}
                       placeholder="Buscar medicamento por nome"
-                      allowedNames={(() => {
-                        const flow = (formData.selectedFlowchart || 'dengue') as 'dengue' | 'zika' | 'chikungunya'
-                        const map: Record<'dengue' | 'zika' | 'chikungunya', string[]> = {
-                          dengue: ['paracetamol', 'dipirona'],
-                          zika: ['paracetamol', 'dipirona'],
-                          chikungunya: ['paracetamol', 'dipirona']
-                        }
-                        return map[flow]
-                      })()}
+                      allowedNames={isDengueFlow ? ['paracetamol', 'dipirona'] : undefined}
                     />
                     {formData.allergies && formData.allergies.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -1073,14 +1066,14 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                       Voltar
                     </motion.button>
                   )}
-                  {onlyPersonalData || isGenericFlow ? (
+                  {onlyPersonalData || !isDengueFlow ? (
                     <motion.button
                       type="submit"
                       className="bg-gradient-to-r from-blue-600 to-slate-700 text-white px-8 py-4 rounded-xl hover:shadow-xl transition-all duration-300 font-semibold flex items-center space-x-2"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      <span>{isGenericFlow ? 'Iniciar Atendimento' : 'Continuar para Fluxograma'}</span>
+                      <span>{onlyPersonalData ? 'Continuar para Fluxograma' : 'Iniciar Atendimento'}</span>
                       <Target className="w-5 h-5" />
                     </motion.button>
                   ) : (
@@ -1100,7 +1093,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
             )}
 
             {/* Step 3: Sintomas */}
-            {currentStep === 3 && (
+            {currentStep === 3 && isDengueFlow && (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1200,7 +1193,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
             )}
 
             {/* Step 4: Sinais Vitais */}
-            {currentStep === 4 && (
+            {currentStep === 4 && isDengueFlow && (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -1539,7 +1532,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
             )}
 
             {/* Step 5: Exame Físico */}
-            {currentStep === 5 && (
+            {currentStep === 5 && isDengueFlow && (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}

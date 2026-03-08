@@ -6,25 +6,13 @@ import {
   X, 
   Download, 
   FileText, 
-  Calendar, 
-  User, 
-  Activity, 
-  AlertTriangle, 
-  CheckCircle, 
-  Heart, 
-  Thermometer,
-  Droplets,
-  Shield,
-  Brain,
   Stethoscope,
-  Award,
-  Clock,
-  Target,
   Zap,
   Clipboard,
   ClipboardCheck
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
+import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -202,6 +190,96 @@ ${formatDate(new Date())}`
   }
 
   const generateNarrativeReport = () => {
+    if (patient.selectedFlowchart && patient.selectedFlowchart !== 'dengue') {
+      const flowchart = getFlowchartById(patient.selectedFlowchart)
+      const currentStep = patient.flowchartState?.currentStep
+      const history = patient.flowchartState?.history || []
+      const stepSequence = Array.from(new Set([...history, currentStep].filter(Boolean))) as string[]
+      const answers = patient.flowchartState?.answers || {}
+      const safeParse = (value?: string) => {
+        if (!value) return null
+        try {
+          return JSON.parse(value)
+        } catch {
+          return null
+        }
+      }
+      const tvpPrescriptionMap: Record<string, string> = {
+        rivaroxabana: 'Rivaroxabana',
+        apixabana: 'Apixabana',
+        dabigatrana: 'Dabigatrana',
+        edoxabana: 'Edoxabana',
+        enoxaparina: 'Enoxaparina',
+        hnf: 'Heparina não fracionada',
+        varfarina: 'Varfarina'
+      }
+      const timeline = stepSequence.map((stepId, index) => {
+        const step = flowchart?.steps?.[stepId]
+        const rawAnswer = answers[stepId]
+        const parsed = safeParse(rawAnswer)
+        let decision = ''
+        if (parsed?.score != null) {
+          decision = `Escore ${parsed.score} (${(parsed.classificacao || '').toUpperCase()})`
+        } else if (Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) && parsed.opcoesTerapeuticasSelecionadas.length > 0) {
+          const meds = parsed.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
+          decision = `Prescrições selecionadas: ${meds.join(', ')}`
+        } else if (Array.isArray(parsed?.sinaisEAchados)) {
+          decision = `${parsed.sinaisEAchados.length} sinais/achados marcados`
+        } else if (typeof parsed?.decision === 'string') {
+          decision = `Decisão: ${parsed.decision}`
+        } else if (step?.options && rawAnswer) {
+          const selectedOption = step.options.find(opt => opt.value === rawAnswer || opt.nextStep === rawAnswer || opt.text === rawAnswer)
+          decision = selectedOption ? selectedOption.text : rawAnswer
+        }
+        return `${index + 1}. ${step?.title || stepId}${decision ? ` — ${decision}` : ''}`
+      })
+      const dynamicMedsFromAnswers = Object.values(answers)
+        .map(value => safeParse(value))
+        .filter(entry => Array.isArray(entry?.opcoesTerapeuticasSelecionadas))
+        .flatMap(entry => entry.opcoesTerapeuticasSelecionadas as string[])
+        .map(id => tvpPrescriptionMap[id] || id)
+      const prescribedMeds = Array.from(new Set([
+        ...patient.treatment.prescriptions.map(p => p.medication),
+        ...dynamicMedsFromAnswers
+      ]))
+      const examEvents = timeline.filter(line =>
+        line.toLowerCase().includes('d-dímero') ||
+        line.toLowerCase().includes('doppler') ||
+        line.toLowerCase().includes('us')
+      )
+      const possibleDiagnosis = flowchart?.name || patient.selectedFlowchart.toUpperCase()
+      const vital = patient.admission?.vitalSigns || {}
+      const vitalSummary = [
+        vital.temperature != null ? `T ${vital.temperature}°C` : null,
+        vital.heartRate != null ? `FC ${vital.heartRate} bpm` : null,
+        vital.respiratoryRate != null ? `FR ${vital.respiratoryRate} irpm` : null,
+        vital.bloodPressure ? `PA ${vital.bloodPressure}` : null,
+        vital.oxygenSaturation != null ? `SpO₂ ${vital.oxygenSaturation}%` : null
+      ].filter(Boolean).join(', ')
+      const chronologyText = timeline.length > 0 ? `Evolução cronológica: ${timeline.join(' | ')}.` : ''
+      return {
+        introduction: `Paciente ${patient.name}, ${patient.age} anos, atendido em ${formatDate(patient.admission.date)} para protocolo ${possibleDiagnosis}.`,
+        complaints: patient.admission.symptoms.length > 0
+          ? `Sintomas apresentados: ${patient.admission.symptoms.join(', ')}.`
+          : 'Sem sintomas estruturados registrados no formulário.',
+        physicalExam: vitalSummary
+          ? `Dados clínicos iniciais: ${vitalSummary}.`
+          : 'Sinais vitais não registrados de forma estruturada.',
+        laboratoryResults: examEvents.length > 0
+          ? `Exames solicitados e decisões diagnósticas: ${examEvents.join(' | ')}.`
+          : 'Exames complementares não registrados no fluxo.',
+        classification: `Diagnósticos considerados: ${possibleDiagnosis}.`,
+        treatment: chronologyText || 'Tratamento definido conforme decisões registradas no fluxograma clínico.',
+        prescriptions: prescribedMeds.length > 0
+          ? `Medicamentos prescritos: ${prescribedMeds.join(', ')}.`
+          : 'Nenhum medicamento estruturado foi registrado.',
+        shockManagement: '',
+        observations: patient.generalObservations ? `Observações do atendimento: ${patient.generalObservations}.` : '',
+        followUp: 'Orientações fornecidas: manter seguimento clínico, vigilância de sinais de alarme e retorno imediato em piora.',
+        conclusion: 'Relatório cronológico concluído com base nas interações e decisões médicas registradas durante o atendimento.'
+      }
+    }
+
     const groupInfo = getGroupInfo(patient.flowchartState.group)
     const admissionDate = formatDateOnly(patient.admission.date)
     const admissionTime = patient.admission.time

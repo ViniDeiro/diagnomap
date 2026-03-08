@@ -12,7 +12,8 @@
     "db:seed:municipios": "node scripts/seed_municipalities.js",
     "db:seed:remune:mogi": "node scripts/seed_remune_mogi.js",
     "db:test": "node scripts/dbtest.js",
-    "db:clean": "node scripts/clean_patients.js"
+    "db:clean": "node scripts/clean_patients.js",
+    "test:usability": "node scripts/usability-tests.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",

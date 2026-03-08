@@ -9,24 +9,95 @@ import {
   Heart, 
   Stethoscope, 
   Activity, 
-  Clock, 
   CheckCircle,
   Brain,
   Target,
-  Shield,
   Zap,
-  Award,
   RotateCcw,
   Timer,
   UserCheck,
-  FileText,
   Pill,
   Syringe,
   Microscope,
-  ArrowLeft
+  ArrowLeft,
+  Info,
+  X
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { EmergencyPatient, EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
+
+const tvpClassicSigns = [
+  'Dor unilateral na perna (panturrilha ou coxa), tipo peso/pressão, que piora ao deambular ou ao ficar em pé',
+  'Edema unilateral, de início insidioso ou súbito',
+  'Sensação de calor, rubor ou mudança de coloração (eritema ou cianose leve) no membro afetado',
+  'Rigidez ou sensação de tensão na panturrilha',
+  'Sensibilidade à palpação em trajeto venoso profundo (especialmente panturrilha)',
+  'Aumento de circunferência da panturrilha ou coxa comparado ao lado contralateral',
+  'Dor à compressão da panturrilha ou ao espremer o gastrocnêmio',
+  'Febre baixa inespecífica e taquicardia podem ocorrer'
+]
+
+const tvpPhysicalExamFindings = [
+  'Edema assimétrico, frequentemente com cacifo',
+  'Aumento da circunferência da panturrilha em relação ao lado oposto',
+  'Calor local e rubor; pele brilhante e tensa',
+  'Veias superficiais colaterais dilatadas (circulação de derivação)',
+  'Dor à palpação profunda da panturrilha ou do trajeto venoso',
+  'Sinais cutâneos: leve cianose distal em casos extensos',
+  'Pulsos arteriais geralmente preservados',
+  'Sinal de Homans (dor à dorsiflexão do pé) não é confiável e não deve ser usado isoladamente'
+]
+
+const tvpAlertSigns = [
+  'Edema súbito e importante com dor intensa e cianose: suspeitar flegmasia cerulea dolens (urgência)',
+  'Edema que envolve toda a perna, inclusive raiz da coxa/inguinal (possível TVP iliofemoral)',
+  'Progressão rápida do edema e dor em horas/dias',
+  'Veias superficiais muito proeminentes e tensas',
+  'Dor de início recente associada a imobilização, cirurgia recente (≤4 semanas), trauma, câncer ativo, gravidez/puerpério, uso de estrogênios, história prévia de TVP/TEV ou trombofilia',
+  'Sintomas respiratórios concomitantes (dispneia súbita, dor torácica pleurítica, hemoptise, síncope): suspeitar embolia pulmonar'
+]
+
+const tvpWellsCriteria = [
+  { id: 'cancer_ativo', text: 'Câncer ativo (tratamento nos últimos 6 meses ou paliativo)', score: 1 },
+  { id: 'paresia_imobilizacao', text: 'Paralisia/paresia ou imobilização com gesso em membro inferior', score: 1 },
+  { id: 'restrito_leito_cirurgia', text: 'Restrito ao leito ≥3 dias ou cirurgia maior nos últimos 12 semanas com anestesia', score: 1 },
+  { id: 'dor_trajeto_venoso', text: 'Dor à palpação ao longo do sistema venoso profundo', score: 1 },
+  { id: 'perna_inteira_edemaciada', text: 'Perna inteira edemaciada', score: 1 },
+  { id: 'panturrilha_3cm', text: 'Aumento de panturrilha ≥3 cm vs lado assintomático (10 cm abaixo da tuberosidade tibial)', score: 1 },
+  { id: 'edema_cacifo', text: 'Edema com cacifo limitado à perna sintomática', score: 1 },
+  { id: 'veias_colaterais', text: 'Veias colaterais superficiais (não varicosas)', score: 1 },
+  { id: 'tvp_previa', text: 'TVP prévia documentada', score: 1 },
+  { id: 'diagnostico_alternativo', text: 'Diagnóstico alternativo pelo menos tão provável quanto TVP', score: -2 }
+]
+
+const tvpAnticoagContraindications = [
+  { id: 'abs_sangramento_ativo', text: 'Sangramento ativo maior', severity: 'absoluta' },
+  { id: 'abs_avc_hemorragico', text: 'AVC hemorrágico recente', severity: 'absoluta' },
+  { id: 'abs_neurocirurgia_trauma', text: 'Neurocirurgia ou trauma maior recente', severity: 'absoluta' },
+  { id: 'abs_trombocitopenia_grave', text: 'Trombocitopenia grave', severity: 'absoluta' },
+  { id: 'abs_hipertensao_grave', text: 'Hipertensão grave não controlada', severity: 'absoluta' },
+  { id: 'rel_ulcera_ativa', text: 'Úlcera ativa', severity: 'relativa' },
+  { id: 'rel_disfuncao_renal_hepatica', text: 'Insuficiência renal ou hepática grave', severity: 'relativa' },
+  { id: 'rel_quedas', text: 'Alto risco de queda', severity: 'relativa' },
+  { id: 'rel_antiagregantes', text: 'Uso concomitante de antiagregantes', severity: 'relativa' }
+]
+
+const tvpTherapeuticOptions = [
+  { id: 'rivaroxabana', group: 'DOAC', text: 'Rivaroxabana: 15 mg 2x/dia por 21 dias; depois 20 mg 1x/dia; estendida 10 mg 1x/dia' },
+  { id: 'apixabana', group: 'DOAC', text: 'Apixabana: 10 mg 2x/dia por 7 dias; depois 5 mg 2x/dia; estendida 2,5 mg 2x/dia' },
+  { id: 'dabigatrana', group: 'DOAC', text: 'Dabigatrana: 150 mg 2x/dia após 5–10 dias de anticoagulação parenteral' },
+  { id: 'edoxabana', group: 'DOAC', text: 'Edoxabana: 60 mg 1x/dia após 5–10 dias de parenteral; 30 mg se CrCl 15–50 mL/min ou ≤60 kg' },
+  { id: 'enoxaparina', group: 'Parenteral', text: 'Enoxaparina: 1 mg/kg 2x/dia ou 1,5 mg/kg 1x/dia; se CrCl <30: 1 mg/kg 1x/dia' },
+  { id: 'hnf', group: 'Parenteral', text: 'HNF EV: bolus 80 U/kg (ou 5.000 U), depois 18 U/kg/h (ou 1.300 U/h), ajustar TTPa 1,5–2,5x basal' },
+  { id: 'varfarina', group: 'VKA', text: 'Varfarina: alvo INR 2–3; sobrepor com heparina por ≥5 dias e INR terapêutico por 24h' }
+]
+
+const tvpTreatmentDurations = [
+  { id: 'duracao_provocada', text: 'Provocada por fator transitório: 3 meses' },
+  { id: 'duracao_nao_provocada', text: 'Não provocada/trombofilia persistente: considerar estendido/indefinido se baixo-moderado risco de sangramento' },
+  { id: 'duracao_cancer', text: 'Câncer ativo: DOAC (apixabana/rivaroxabana/edoxabana) ou LMWH enquanto câncer/tratamento ativos' },
+  { id: 'duracao_gravidez', text: 'Gravidez: LMWH até 6 semanas pós-parto (mínimo 3 meses); evitar varfarina e DOACs na gestação' }
+]
 
 interface EmergencyFlowchartProps {
   patient: EmergencyPatient
@@ -47,6 +118,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [history, setHistory] = useState<string[]>(patient.emergencyState.history || [])
   const [answers, setAnswers] = useState<Record<string, string>>(patient.emergencyState.answers || {})
   const [progress, setProgress] = useState(patient.emergencyState.progress || 0)
+  const [selectedClinicalFindings, setSelectedClinicalFindings] = useState<string[]>([])
+  const [otherClinicalFinding, setOtherClinicalFinding] = useState('')
+  const [selectedWellsCriteria, setSelectedWellsCriteria] = useState<string[]>([])
+  const [selectedContraindications, setSelectedContraindications] = useState<string[]>([])
+  const [selectedTherapies, setSelectedTherapies] = useState<string[]>([])
+  const [selectedDurationPlan, setSelectedDurationPlan] = useState<string>('')
+  const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({})
+  const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
 
   // Carregar estado do paciente na inicialização
   useEffect(() => {
@@ -104,7 +183,38 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   const handleAnswer = (nextStep: string, value?: string) => {
     const newHistory = [...history, currentStep]
-    const newAnswers = { ...answers, [currentStep]: value || nextStep }
+    const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStep === 'avaliacao_clinica'
+    const isTVPWellsScore = flowchart.id === 'tvp' && currentStep === 'wells_score'
+    const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStep === 'tratamento_inicial'
+    const clinicalEvaluationAnswer = JSON.stringify({
+      decision: value || nextStep,
+      sinaisEAchados: selectedClinicalFindings,
+      outrosAchados: otherClinicalFinding.trim()
+    })
+    const wellsScoreAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: wellsScoreTotal,
+      classificacao: wellsRisk,
+      criteriosSelecionados: selectedWellsCriteria
+    })
+    const treatmentAnswer = JSON.stringify({
+      decision: value || nextStep,
+      opcoesTerapeuticasSelecionadas: selectedTherapies,
+      planoDuracaoSelecionado: selectedDurationPlan,
+      contraindicacoesSelecionadas: selectedContraindications,
+      possuiContraindicacaoAbsoluta: hasAbsoluteContraindication,
+      solicitarAvaliacaoCirurgiaoVascular: true
+    })
+    const newAnswers = {
+      ...answers,
+      [currentStep]: isTVPClinicalEvaluation
+        ? clinicalEvaluationAnswer
+        : isTVPWellsScore
+          ? wellsScoreAnswer
+          : isTVPTreatmentInitial
+            ? treatmentAnswer
+            : value || nextStep
+    }
     const newProgress = calculateProgress(nextStep, newHistory)
 
     setCurrentStep(nextStep)
@@ -146,6 +256,119 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
+  const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
+  const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
+  const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
+    const criterion = tvpWellsCriteria.find(item => item.id === criterionId)
+    return acc + (criterion?.score || 0)
+  }, 0)
+  const wellsRisk = wellsScoreTotal <= 0 ? 'baixa' : wellsScoreTotal <= 2 ? 'moderada' : 'alta'
+  const wellsNextStep = wellsScoreTotal <= 0 ? 'baixa_probabilidade' : 'moderada_probabilidade'
+  const wellsDecisionValue = wellsScoreTotal <= 0 ? 'low' : wellsScoreTotal <= 2 ? 'moderate' : 'high'
+  const hasAbsoluteContraindication = selectedContraindications.some(item => item.startsWith('abs_'))
+  const hasSelectedTherapy = selectedTherapies.length > 0
+  const isSectionOpen = (key: string, defaultValue = true) => sectionOpen[key] ?? defaultValue
+  const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
+
+  useEffect(() => {
+    if (!isTVPClinicalEvaluation) {
+      setSelectedClinicalFindings([])
+      setOtherClinicalFinding('')
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setSelectedClinicalFindings([])
+      setOtherClinicalFinding('')
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const achados = Array.isArray(parsed?.sinaisEAchados) ? parsed.sinaisEAchados : []
+      const outros = typeof parsed?.outrosAchados === 'string' ? parsed.outrosAchados : ''
+      setSelectedClinicalFindings(achados)
+      setOtherClinicalFinding(outros)
+    } catch {
+      setSelectedClinicalFindings([])
+      setOtherClinicalFinding('')
+    }
+  }, [isTVPClinicalEvaluation, answers, currentStep])
+
+  useEffect(() => {
+    if (!isTVPWellsScore) {
+      setSelectedWellsCriteria([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setSelectedWellsCriteria([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const criteria = Array.isArray(parsed?.criteriosSelecionados) ? parsed.criteriosSelecionados : []
+      setSelectedWellsCriteria(criteria)
+    } catch {
+      setSelectedWellsCriteria([])
+    }
+  }, [isTVPWellsScore, answers, currentStep])
+
+  useEffect(() => {
+    if (!isTVPTreatmentInitial) {
+      setSelectedContraindications([])
+      setSelectedTherapies([])
+      setSelectedDurationPlan('')
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setSelectedContraindications([])
+      setSelectedTherapies([])
+      setSelectedDurationPlan('')
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const items = Array.isArray(parsed?.contraindicacoesSelecionadas) ? parsed.contraindicacoesSelecionadas : []
+      const therapies = Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) ? parsed.opcoesTerapeuticasSelecionadas : []
+      const duration = typeof parsed?.planoDuracaoSelecionado === 'string' ? parsed.planoDuracaoSelecionado : ''
+      setSelectedContraindications(items)
+      setSelectedTherapies(therapies)
+      setSelectedDurationPlan(duration)
+    } catch {
+      setSelectedContraindications([])
+      setSelectedTherapies([])
+      setSelectedDurationPlan('')
+    }
+  }, [isTVPTreatmentInitial, answers, currentStep])
+
+  useEffect(() => {
+    if (isTVPClinicalEvaluation) {
+      setSectionOpen({
+        tvp_clinical_0: true,
+        tvp_clinical_1: false,
+        tvp_clinical_2: false,
+        tvp_clinical_other: true
+      })
+      return
+    }
+    if (isTVPWellsScore) {
+      setSectionOpen({
+        tvp_wells_criteria: true,
+        tvp_wells_interpretation: true
+      })
+      return
+    }
+    if (isTVPTreatmentInitial) {
+      setSectionOpen({
+        tvp_treatment_therapies: true,
+        tvp_treatment_duration: false,
+        tvp_treatment_contra: true,
+        tvp_treatment_guidance: false
+      })
+    }
+  }, [currentStep, isTVPClinicalEvaluation, isTVPWellsScore, isTVPTreatmentInitial])
 
   if (!currentStepData) {
     return (
@@ -330,7 +553,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
             {/* Conteúdo do Step */}
             <div className="p-6">
-              {currentStepData.content && (
+              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPTreatmentInitial && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
@@ -338,8 +561,481 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isTVPClinicalEvaluation && (
+                <div className="mb-6 p-4 bg-white rounded-2xl border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                      Checklist Clínico Inicial
+                    </h4>
+                    <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700">
+                      {selectedClinicalFindings.length} marcado(s)
+                    </span>
+                  </div>
+                  <div className="grid lg:grid-cols-2 gap-4">
+                    {[
+                      { title: 'Sinais e sintomas clássicos', items: tvpClassicSigns },
+                      { title: 'Achados ao exame físico', items: tvpPhysicalExamFindings },
+                      { title: 'Sinais de alerta (maior suspeita/gravidade)', items: tvpAlertSigns }
+                    ].map((section, index) => (
+                      <div key={section.title} className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-xl border border-blue-200">
+                        <button
+                          type="button"
+                          onClick={() => toggleSection(`tvp_clinical_${index}`)}
+                          className="w-full flex items-center justify-between text-left"
+                        >
+                          <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">{section.title}</h4>
+                          <ChevronRight className={clsx('w-4 h-4 text-blue-700 transition-transform', isSectionOpen(`tvp_clinical_${index}`, index === 0) ? 'rotate-90' : '')} />
+                        </button>
+                        {isSectionOpen(`tvp_clinical_${index}`, index === 0) && (
+                        <div className="space-y-1.5 mt-3">
+                          {section.items.map((item) => {
+                            const checked = selectedClinicalFindings.includes(item)
+                            return (
+                              <label
+                                key={item}
+                                className={clsx(
+                                  'flex items-start gap-2 p-2 rounded-lg transition-colors cursor-pointer',
+                                  checked ? 'bg-white border border-blue-200' : 'hover:bg-white/70'
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  className="mt-0.5 w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setSelectedClinicalFindings(prev => [...prev, item])
+                                    } else {
+                                      setSelectedClinicalFindings(prev => prev.filter(entry => entry !== item))
+                                    }
+                                  }}
+                                />
+                                <span className="text-sm text-slate-700 leading-snug">{item}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                        )}
+                      </div>
+                    ))}
+                    <div className="lg:col-span-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_clinical_other')}
+                        className="w-full flex items-center justify-between text-left mb-2"
+                      >
+                        <label className="block text-xs font-bold text-slate-800 uppercase tracking-wide">
+                          Outros achados
+                        </label>
+                        <ChevronRight className={clsx('w-4 h-4 text-slate-600 transition-transform', isSectionOpen('tvp_clinical_other', true) ? 'rotate-90' : '')} />
+                      </button>
+                      {isSectionOpen('tvp_clinical_other', true) && (
+                        <textarea
+                          value={otherClinicalFinding}
+                          onChange={(e) => setOtherClinicalFinding(e.target.value)}
+                          className="w-full min-h-20 p-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-800 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 transition-all"
+                          placeholder="Descreva outros achados clínicos relevantes"
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isTVPWellsScore && (
+                <div className="mb-6 p-5 bg-indigo-50 rounded-2xl border border-indigo-200">
+                  <div className="space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                          Escore de Wells para suspeita de TVP
+                        </h4>
+                        <button
+                          type="button"
+                          onClick={() => setWellsInfoOpen(true)}
+                          className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white border border-indigo-200 text-indigo-700 hover:bg-indigo-50 transition-colors"
+                          title="Observações práticas do Escore de Wells"
+                        >
+                          <Info className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className={clsx(
+                        'px-4 py-2 rounded-xl border text-sm font-bold',
+                        wellsRisk === 'alta'
+                          ? 'bg-red-100 border-red-300 text-red-800'
+                          : wellsRisk === 'moderada'
+                            ? 'bg-amber-100 border-amber-300 text-amber-800'
+                            : 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                      )}>
+                        Pontuação: {wellsScoreTotal} ({wellsRisk.toUpperCase()})
+                      </div>
+                    </div>
+
+                    <div className="bg-white/70 rounded-xl border border-indigo-200 p-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_wells_criteria')}
+                        className="w-full flex items-center justify-between text-left"
+                      >
+                        <span className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Critérios de pontuação</span>
+                        <ChevronRight className={clsx('w-4 h-4 text-indigo-700 transition-transform', isSectionOpen('tvp_wells_criteria', true) ? 'rotate-90' : '')} />
+                      </button>
+                    {isSectionOpen('tvp_wells_criteria', true) && (
+                    <div className="space-y-2 mt-3">
+                      {tvpWellsCriteria.map((criterion) => {
+                        const checked = selectedWellsCriteria.includes(criterion.id)
+                        return (
+                          <label
+                            key={criterion.id}
+                            className={clsx(
+                              'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
+                              checked ? 'bg-white border-indigo-300' : 'bg-white/70 border-slate-200 hover:border-slate-300'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedWellsCriteria(prev => [...prev, criterion.id])
+                                } else {
+                                  setSelectedWellsCriteria(prev => prev.filter(item => item !== criterion.id))
+                                }
+                              }}
+                            />
+                            <div className="flex-1">
+                              <span className="text-sm text-slate-700 leading-relaxed">{criterion.text}</span>
+                              <span className={clsx(
+                                'ml-2 inline-block text-xs font-bold px-2 py-0.5 rounded-md border',
+                                criterion.score > 0
+                                  ? 'text-blue-700 border-blue-200 bg-blue-50'
+                                  : 'text-red-700 border-red-200 bg-red-50'
+                              )}>
+                                {criterion.score > 0 ? `+${criterion.score}` : criterion.score}
+                              </span>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                    )}
+                    </div>
+
+                    <div className="bg-white/70 rounded-xl border border-indigo-200 p-3">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_wells_interpretation')}
+                        className="w-full flex items-center justify-between text-left"
+                      >
+                        <span className="text-xs font-bold text-indigo-900 uppercase tracking-wide">Interpretação e conduta</span>
+                        <ChevronRight className={clsx('w-4 h-4 text-indigo-700 transition-transform', isSectionOpen('tvp_wells_interpretation', true) ? 'rotate-90' : '')} />
+                      </button>
+                    {isSectionOpen('tvp_wells_interpretation', true) && (
+                    <>
+                    <div className="grid md:grid-cols-3 gap-3 mt-3">
+                      <div className={clsx(
+                        'rounded-xl p-3 border text-sm',
+                        wellsRisk === 'baixa' ? 'bg-emerald-100 border-emerald-300' : 'bg-white border-slate-200'
+                      )}>
+                        <div className="font-bold text-slate-800">Baixa (≤0)</div>
+                        <div className="text-slate-600 mt-1">D-dímero de alta sensibilidade; se positivo, USG compressiva.</div>
+                      </div>
+                      <div className={clsx(
+                        'rounded-xl p-3 border text-sm',
+                        wellsRisk === 'moderada' ? 'bg-amber-100 border-amber-300' : 'bg-white border-slate-200'
+                      )}>
+                        <div className="font-bold text-slate-800">Moderada (1–2)</div>
+                        <div className="text-slate-600 mt-1">USG direta ou D-dímero de alta sensibilidade seguido de USG se positivo.</div>
+                      </div>
+                      <div className={clsx(
+                        'rounded-xl p-3 border text-sm',
+                        wellsRisk === 'alta' ? 'bg-red-100 border-red-300' : 'bg-white border-slate-200'
+                      )}>
+                        <div className="font-bold text-slate-800">Alta (≥3)</div>
+                        <div className="text-slate-600 mt-1">USG compressiva urgente; se negativa e suspeita persistir, repetir em 5–7 dias.</div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl p-3 bg-white border border-slate-200 text-sm text-slate-700">
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Medir panturrilha 10 cm abaixo da tuberosidade tibial e comparar com o lado assintomático.</li>
+                        <li>Veias colaterais são veias não varicosas visíveis ou palpáveis.</li>
+                        <li>O escore é apoio à decisão e não substitui julgamento clínico.</li>
+                      </ul>
+                    </div>
+
+                    <motion.button
+                      onClick={() => handleAnswer(wellsNextStep, wellsDecisionValue)}
+                      className={clsx(
+                        'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
+                        wellsRisk === 'alta'
+                          ? 'bg-red-50 border-red-200 hover:border-red-400'
+                          : wellsRisk === 'moderada'
+                            ? 'bg-amber-50 border-amber-200 hover:border-amber-400'
+                            : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
+                      )}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <span className="font-semibold text-slate-800">
+                        Continuar conforme escore: {wellsRisk === 'baixa' ? 'Probabilidade Baixa' : wellsRisk === 'moderada' ? 'Probabilidade Moderada' : 'Probabilidade Alta'}
+                      </span>
+                      <ChevronRight className="w-5 h-5 text-slate-500" />
+                    </motion.button>
+                    </>
+                    )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isTVPWellsScore && wellsInfoOpen && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-2xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-indigo-600 to-blue-700 text-white">
+                      <h4 className="font-bold">Escore de Wells — Observações Práticas</h4>
+                      <button
+                        type="button"
+                        onClick={() => setWellsInfoOpen(false)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5 text-sm text-slate-700">
+                      <ul className="list-disc pl-5 space-y-2">
+                        <li>Use fita para medir a panturrilha 10 cm abaixo da tuberosidade tibial; compare com o lado assintomático.</li>
+                        <li>“Veias colaterais” referem-se a veias não-varicosas visíveis/palpáveis.</li>
+                        <li>O escore é menos validado em gestantes, pacientes em anticoagulação, hospitalizados ou com infecções/traumas extensos; interprete com cautela.</li>
+                        <li>Considere D-dímero ajustado à idade em idosos para melhorar especificidade.</li>
+                        <li>Reavalie se surgir diagnóstico alternativo plausível (p. ex., ruptura de cisto de Baker, celulite).</li>
+                        <li>Documente a pontuação e a via diagnóstica escolhida no prontuário.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isTVPTreatmentInitial && (
+                <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-200">
+                  <div className="space-y-5">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_treatment_therapies')}
+                        className="w-full flex items-center justify-between text-left mb-3"
+                      >
+                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                          Prescrição: opções terapêuticas e doses
+                        </h4>
+                        <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 inline-flex items-center gap-2">
+                          {selectedTherapies.length} opção(ões)
+                          <ChevronRight className={clsx('w-3 h-3 text-blue-700 transition-transform', isSectionOpen('tvp_treatment_therapies', true) ? 'rotate-90' : '')} />
+                        </span>
+                      </button>
+                      {isSectionOpen('tvp_treatment_therapies', true) && (
+                      <div className="space-y-2">
+                        {tvpTherapeuticOptions.map((item) => {
+                          const checked = selectedTherapies.includes(item.id)
+                          return (
+                            <label
+                              key={item.id}
+                              className={clsx(
+                                'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
+                                checked ? 'bg-blue-50 border-blue-300' : 'bg-white border-slate-200 hover:border-slate-300'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500"
+                                checked={checked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedTherapies(prev => [...prev, item.id])
+                                  } else {
+                                    setSelectedTherapies(prev => prev.filter(entry => entry !== item.id))
+                                  }
+                                }}
+                              />
+                              <div className="flex-1">
+                                <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 mb-1">
+                                  {item.group}
+                                </span>
+                                <p className="text-sm text-slate-700 leading-snug">{item.text}</p>
+                              </div>
+                            </label>
+                          )
+                        })}
+                      </div>
+                      )}
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_treatment_duration')}
+                        className="w-full flex items-center justify-between text-left mb-3"
+                      >
+                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                          Duração do tratamento
+                        </h4>
+                        <ChevronRight className={clsx('w-4 h-4 text-emerald-700 transition-transform', isSectionOpen('tvp_treatment_duration', false) ? 'rotate-90' : '')} />
+                      </button>
+                      {isSectionOpen('tvp_treatment_duration', false) && (
+                      <div className="space-y-2">
+                        {tvpTreatmentDurations.map((item) => (
+                          <label
+                            key={item.id}
+                            className={clsx(
+                              'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
+                              selectedDurationPlan === item.id ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-slate-300'
+                            )}
+                          >
+                            <input
+                              type="radio"
+                              name="tvp_duration_plan"
+                              className="mt-1 h-4 w-4 text-emerald-600 border-slate-300 focus:ring-emerald-500"
+                              checked={selectedDurationPlan === item.id}
+                              onChange={() => setSelectedDurationPlan(item.id)}
+                            />
+                            <p className="text-sm text-slate-700 leading-snug">{item.text}</p>
+                          </label>
+                        ))}
+                      </div>
+                      )}
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                    <button
+                      type="button"
+                      onClick={() => toggleSection('tvp_treatment_contra')}
+                      className="w-full flex items-center justify-between text-left mb-3"
+                    >
+                      <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                        Antes da anticoagulação: checklist de contraindicações
+                      </h4>
+                      <ChevronRight className={clsx('w-4 h-4 text-red-700 transition-transform', isSectionOpen('tvp_treatment_contra', true) ? 'rotate-90' : '')} />
+                    </button>
+                    {isSectionOpen('tvp_treatment_contra', true) && (
+                    <div className="space-y-2">
+                      {tvpAnticoagContraindications.map((item) => {
+                        const checked = selectedContraindications.includes(item.id)
+                        return (
+                          <label
+                            key={item.id}
+                            className={clsx(
+                              'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
+                              checked ? 'bg-white border-red-300' : 'bg-white/70 border-slate-200 hover:border-slate-300'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              className="mt-1 h-4 w-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedContraindications(prev => [...prev, item.id])
+                                } else {
+                                  setSelectedContraindications(prev => prev.filter(entry => entry !== item.id))
+                                }
+                              }}
+                            />
+                            <div className="flex-1">
+                              <span className="text-sm text-slate-700 leading-relaxed">{item.text}</span>
+                              <span className={clsx(
+                                'ml-2 inline-block text-xs font-bold px-2 py-0.5 rounded-md border',
+                                item.severity === 'absoluta'
+                                  ? 'text-red-700 border-red-200 bg-red-50'
+                                  : 'text-amber-700 border-amber-200 bg-amber-50'
+                              )}>
+                                {item.severity === 'absoluta' ? 'Absoluta' : 'Relativa'}
+                              </span>
+                            </div>
+                          </label>
+                        )
+                      })}
+                    </div>
+                    )}
+                    </div>
+
+                    <div className={clsx(
+                      'rounded-xl p-3 border text-sm',
+                      hasAbsoluteContraindication
+                        ? 'bg-red-100 border-red-300 text-red-800'
+                        : selectedContraindications.length > 0
+                          ? 'bg-amber-100 border-amber-300 text-amber-800'
+                          : 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                    )}>
+                      {hasAbsoluteContraindication
+                        ? 'Há contraindicação absoluta marcada: priorizar encaminhamento urgente e reavaliar estratégia.'
+                        : selectedContraindications.length > 0
+                          ? 'Há contraindicações relativas: individualizar risco/benefício e monitorar sangramento.'
+                          : 'Sem contraindicações marcadas: apto para anticoagulação conforme protocolo.'}
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_treatment_guidance')}
+                        className="w-full flex items-center justify-between text-left mb-3"
+                      >
+                        <span className="text-sm font-bold text-slate-800 uppercase tracking-wide">Complicações, internação e seguimento</span>
+                        <ChevronRight className={clsx('w-4 h-4 text-slate-700 transition-transform', isSectionOpen('tvp_treatment_guidance', false) ? 'rotate-90' : '')} />
+                      </button>
+                    {isSectionOpen('tvp_treatment_guidance', false) && (
+                    <div className="rounded-xl p-3 bg-white border border-slate-200 text-sm text-slate-700">
+                      <ul className="list-disc pl-5 space-y-1">
+                        <li>Sempre solicitar avaliação do cirurgião vascular após confirmação de TVP.</li>
+                        <li>Se suspeita de TEP, dor intensa com cianose ou flegmasia, escalar urgência imediatamente.</li>
+                        <li>Documentar contraindicações, decisão terapêutica e plano de seguimento no prontuário.</li>
+                        <li>Sangramento: considerar protamina (HNF/LMWH), idarucizumabe (dabigatrana), andexanet alfa ou PCC (apixabana/rivaroxabana).</li>
+                        <li>HIT: suspender heparina e iniciar anticoagulante não-heparínico.</li>
+                        <li>Ambulatorial se estável e baixo risco; internar se flegmasia, dor incapacitante, necessidade de HNF ou comorbidades descompensadas.</li>
+                        <li>Seguimento: deambulação precoce, reavaliação em 1–2 semanas e em 3 meses, monitorar sangramento e adesão.</li>
+                      </ul>
+                    </div>
+                    )}
+                    </div>
+
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <motion.button
+                        onClick={() => handleAnswer('anticoagulacao_iniciada', 'anticoag_vascular')}
+                        disabled={hasAbsoluteContraindication || !hasSelectedTherapy}
+                        className={clsx(
+                          'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
+                          hasAbsoluteContraindication || !hasSelectedTherapy
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
+                        )}
+                        whileHover={!hasAbsoluteContraindication && hasSelectedTherapy ? { scale: 1.01 } : {}}
+                        whileTap={!hasAbsoluteContraindication && hasSelectedTherapy ? { scale: 0.99 } : {}}
+                      >
+                        <span className="font-semibold text-slate-800">
+                          Iniciar anticoagulação + solicitar cirurgião vascular
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                      </motion.button>
+
+                      <motion.button
+                        onClick={() => handleAnswer('encaminhamento_urgente', 'contraindicacao_ou_gravidade')}
+                        className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-red-50 border-red-200 hover:border-red-400"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <span className="font-semibold text-slate-800">
+                          Encaminhar urgente por contraindicação/gravidade
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Opções */}
-              {currentStepData.options && currentStepData.options.length > 0 && (
+              {currentStepData.options && currentStepData.options.length > 0 && !isTVPWellsScore && !isTVPTreatmentInitial && (
                 <div className="grid gap-4">
                   {currentStepData.options.map((option, index) => (
                     <motion.button

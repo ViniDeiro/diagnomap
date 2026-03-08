@@ -43,6 +43,7 @@ export type EmergencyType =
   | 'uterine_rupture'
   | 'amniotic_embolism'
   | 'spider_bite' // Picada de Aranha
+  | 'tvp'
 
 export interface EmergencyFlowchart {
   id: EmergencyType

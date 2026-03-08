@@ -7,7 +7,6 @@ import {
   Download, 
   Pill,
   Stethoscope,
-  Zap,
   Clipboard,
   ClipboardCheck
 } from 'lucide-react'
@@ -25,6 +24,60 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<'orientations' | 'prescriptions'>('orientations')
+  const isDengue = !patient.selectedFlowchart || patient.selectedFlowchart === 'dengue'
+  const flowName = patient.selectedFlowchart ? patient.selectedFlowchart.toUpperCase() : 'DENGUE'
+
+  const tvpPrescriptionTemplates: Record<string, Omit<Prescription, 'id' | 'prescribedAt' | 'prescribedBy'>> = {
+    rivaroxabana: {
+      medication: 'Rivaroxabana',
+      dosage: '15 mg 2x/dia por 21 dias; depois 20 mg 1x/dia; prevenção estendida 10 mg 1x/dia',
+      frequency: 'Conforme fase terapêutica',
+      duration: 'Conforme avaliação clínica',
+      instructions: 'Ajustar duração conforme fator desencadeante e risco de sangramento'
+    },
+    apixabana: {
+      medication: 'Apixabana',
+      dosage: '10 mg 2x/dia por 7 dias; depois 5 mg 2x/dia; prevenção estendida 2,5 mg 2x/dia',
+      frequency: 'Conforme fase terapêutica',
+      duration: 'Conforme avaliação clínica',
+      instructions: 'Avaliar interações e função renal/hepática'
+    },
+    dabigatrana: {
+      medication: 'Dabigatrana',
+      dosage: '150 mg 2x/dia após 5–10 dias de anticoagulação parenteral',
+      frequency: '12/12h',
+      duration: 'Conforme avaliação clínica',
+      instructions: 'Exigir fase inicial parenteral antes do início'
+    },
+    edoxabana: {
+      medication: 'Edoxabana',
+      dosage: '60 mg 1x/dia após 5–10 dias de parenteral; 30 mg se CrCl 15–50 mL/min ou ≤60 kg',
+      frequency: '1x/dia',
+      duration: 'Conforme avaliação clínica',
+      instructions: 'Ajustar dose por função renal e peso'
+    },
+    enoxaparina: {
+      medication: 'Enoxaparina',
+      dosage: '1 mg/kg 2x/dia ou 1,5 mg/kg 1x/dia; se CrCl <30: 1 mg/kg 1x/dia',
+      frequency: 'Conforme esquema escolhido',
+      duration: 'Conforme avaliação clínica',
+      instructions: 'Preferir ajuste por peso e função renal'
+    },
+    hnf: {
+      medication: 'Heparina não fracionada (HNF)',
+      dosage: 'Bolus 80 U/kg (ou 5.000 U), depois 18 U/kg/h (ou 1.300 U/h)',
+      frequency: 'Infusão contínua EV',
+      duration: 'Conforme controle laboratorial',
+      instructions: 'Ajustar para TTPa entre 1,5 e 2,5 vezes o basal'
+    },
+    varfarina: {
+      medication: 'Varfarina',
+      dosage: 'Dose titulada para INR alvo 2–3',
+      frequency: '1x/dia',
+      duration: 'Conforme avaliação clínica',
+      instructions: 'Sobrepor com heparina por ≥5 dias e até INR terapêutico por 24h'
+    }
+  }
 
   const generatePDF = async () => {
     if (!reportRef.current) return
@@ -90,6 +143,39 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     })
   }
 
+  const getDynamicFlowPrescriptions = (): Prescription[] => {
+    if (!patient.flowchartState?.answers) return []
+    const parsedEntries = Object.values(patient.flowchartState.answers).map((value) => {
+      try {
+        return JSON.parse(value)
+      } catch {
+        return null
+      }
+    })
+    const selectedTherapies = parsedEntries
+      .filter(item => item && Array.isArray(item.opcoesTerapeuticasSelecionadas))
+      .flatMap(item => item.opcoesTerapeuticasSelecionadas as string[])
+    const uniqueTherapies = Array.from(new Set(selectedTherapies))
+    return uniqueTherapies
+      .filter(id => tvpPrescriptionTemplates[id])
+      .map((id) => ({
+        id: `flow_${id}`,
+        ...tvpPrescriptionTemplates[id],
+        prescribedAt: new Date(patient.updatedAt || new Date()),
+        prescribedBy: 'Fluxograma Clínico'
+      }))
+  }
+
+  const allPrescriptions = (() => {
+    const merged = [...patient.treatment.prescriptions, ...getDynamicFlowPrescriptions()]
+    const dedup = new Map<string, Prescription>()
+    merged.forEach((prescription) => {
+      const key = `${prescription.medication}_${prescription.dosage}`
+      if (!dedup.has(key)) dedup.set(key, prescription)
+    })
+    return Array.from(dedup.values())
+  })()
+
   // Função para calcular hidratação oral baseada no peso e idade
   const calculateHydration = (weight?: number, age?: number) => {
     if (!weight) return null
@@ -120,19 +206,12 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
 
   const generatePrescriptionText = () => {
     const hydration = calculateHydration(patient.weight, patient.age)
-    // Removido bloco de antitérmico das orientações; somente aparecerá em "Medicamentos Prescritos".
-
-    const antipyreticPrescriptions = patient.treatment.prescriptions.filter(p => {
-      const m = p.medication.toLowerCase()
-      return m.includes('paracetamol') || m.includes('dipirona')
-    })
-
-    const mappedPrescriptions = antipyreticPrescriptions.map((prescription, index) => {
+    const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
       const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
       return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
     }).join('\n\n')
 
-    const prescriptionsText = antipyreticPrescriptions.length > 0
+    const prescriptionsText = allPrescriptions.length > 0
       ? `Medicamentos Prescritos:\n${mappedPrescriptions}\n\n`
       : ''
 
@@ -154,7 +233,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       `Idade: ${patient.age} anos`,
       `Data: ${new Date().toLocaleDateString('pt-BR')}`,
       '',
-      'Diagnóstico: Dengue',
+      `Diagnóstico: ${flowName}`,
       `Classificação: ${patient.flowchartState.group ? `Grupo ${patient.flowchartState.group}` : 'Não classificado'}`,
       '',
       'Orientações:',
@@ -176,10 +255,12 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       '3. Seguimento Ambulatorial',
       ...followUpLines,
       '',
-      '4. Medicamentos Contraindicados',
-      '• Aspirina (ácido acetilsalicílico) e salicilatos',
-      '• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros',
-      '',
+      ...(isDengue ? [
+        '4. Medicamentos Contraindicados',
+        '• Aspirina (ácido acetilsalicílico) e salicilatos',
+        '• Anti-inflamatórios não esteroidais (AINEs): ibuprofeno, diclofenaco, naproxeno, entre outros',
+        ''
+      ] : []),
       prescriptionsText + 'Assinatura do Médico:',
       '__________________________________________________',
       'Dr. Rodrigo Machado / CRM: XXXX.XXX',
@@ -300,13 +381,15 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
 
             <div className="mb-8">
               <div className="text-lg">
-                <strong>Diagnóstico:</strong> Dengue
+                <strong>Diagnóstico:</strong> {flowName}
               </div>
             </div>
 
             {activeTab === 'orientations' && (
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Orientações</h2>
+                {isDengue ? (
+                <>
                 <div className="mb-8">
                   <h3 className="text-xl font-bold text-slate-800 mb-4">1. Hidratação Oral</h3>
                   {(() => {
@@ -372,21 +455,32 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                     <div>• AINEs: ibuprofeno, diclofenaco, naproxeno, entre outros</div>
                   </div>
                 </div>
+                </>
+                ) : (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <h3 className="font-bold text-slate-800 mb-2">Conduta clínica registrada</h3>
+                      <p className="text-slate-700">Fluxo de atendimento {flowName} com decisões registradas em ordem cronológica no relatório narrativo.</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <h3 className="font-bold text-slate-800 mb-2">Seguimento e segurança</h3>
+                      <ul className="space-y-1">
+                        <li>• Retorno imediato em piora clínica, dor torácica, dispneia, síncope ou sangramento.</li>
+                        <li>• Reavaliação ambulatorial em 1–2 semanas e em 3 meses.</li>
+                        <li>• Monitorar adesão, função renal/hepática e interações medicamentosas.</li>
+                      </ul>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {activeTab === 'prescriptions' && (
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Medicamentos Prescritos</h2>
-                {patient.treatment.prescriptions.filter(p => {
-                  const m = p.medication.toLowerCase()
-                  return m.includes('paracetamol') || m.includes('dipirona')
-                }).length > 0 ? (
+                {allPrescriptions.length > 0 ? (
                   <div className="space-y-4">
-                    {patient.treatment.prescriptions.filter(p => {
-                      const m = p.medication.toLowerCase()
-                      return m.includes('paracetamol') || m.includes('dipirona')
-                    }).map((prescription, index) => (
+                    {allPrescriptions.map((prescription, index) => (
                       <div key={prescription.id} className="border-l-4 border-slate-400 pl-6 text-lg">
                         <div className="font-bold">{index + 1}. {prescription.medication}</div>
                         <div className="ml-4 mt-2 space-y-1">
@@ -401,7 +495,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                     ))}
                   </div>
                 ) : (
-                  <p className="text-slate-600">Nenhum antitérmico prescrito no momento.</p>
+                  <p className="text-slate-600">Nenhuma prescrição registrada no atendimento.</p>
                 )}
                 <div className="mt-8 pt-6 border-t border-slate-200">
                   <div className="text-lg">

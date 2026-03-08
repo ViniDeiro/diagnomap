@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { clsx } from 'clsx'
 import { Thermometer, Activity, Brain, Heart, Stethoscope } from 'lucide-react'
 
@@ -37,6 +37,87 @@ const SectionTitle: React.FC<{ icon: React.ReactNode; title: string; subtitle?: 
     </div>
   </div>
 )
+
+const ExamSection: React.FC<{
+  icon: React.ReactNode
+  title: string
+  standardText: string
+  value?: string
+  onChange: (val: string) => void
+  placeholder: string
+}> = ({ icon, title, standardText, value, onChange, placeholder }) => {
+  const [mode, setMode] = useState<'normal' | 'abnormal'>(
+    (value && value.length > 0) ? 'abnormal' : 'normal'
+  )
+
+  useEffect(() => {
+    if (value && value.length > 0) {
+      setMode('abnormal')
+    }
+  }, [value])
+
+  const handleModeChange = (newMode: 'normal' | 'abnormal') => {
+    setMode(newMode)
+    if (newMode === 'normal') {
+      onChange('')
+    }
+  }
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+      <SectionTitle icon={icon} title={title} />
+      
+      <div className="flex gap-4 mb-4">
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <div className={clsx(
+            "w-4 h-4 rounded-full border flex items-center justify-center transition-colors",
+            mode === 'normal' ? "border-blue-600 bg-blue-600" : "border-slate-300 bg-white group-hover:border-blue-400"
+          )}>
+            {mode === 'normal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+          </div>
+          <input 
+            type="radio" 
+            className="hidden"
+            checked={mode === 'normal'} 
+            onChange={() => handleModeChange('normal')}
+          />
+          <span className={clsx("font-medium transition-colors", mode === 'normal' ? "text-blue-700" : "text-slate-600 group-hover:text-slate-800")}>Normal</span>
+        </label>
+
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <div className={clsx(
+            "w-4 h-4 rounded-full border flex items-center justify-center transition-colors",
+            mode === 'abnormal' ? "border-blue-600 bg-blue-600" : "border-slate-300 bg-white group-hover:border-blue-400"
+          )}>
+            {mode === 'abnormal' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+          </div>
+          <input 
+            type="radio" 
+            className="hidden"
+            checked={mode === 'abnormal'} 
+            onChange={() => handleModeChange('abnormal')}
+          />
+          <span className={clsx("font-medium transition-colors", mode === 'abnormal' ? "text-blue-700" : "text-slate-600 group-hover:text-slate-800")}>Anormal</span>
+        </label>
+      </div>
+
+      {mode === 'normal' ? (
+        <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-sm">
+          <span className="font-semibold text-slate-700">Padrão:</span> {standardText}
+        </div>
+      ) : (
+        <textarea
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          rows={3}
+          className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+          autoFocus
+        />
+      )}
+    </div>
+  )
+}
 
 const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange }) => {
   const update = <K extends keyof PhysicalExamData>(key: K, patch: Partial<PhysicalExamData[K]>) => {
@@ -371,50 +452,41 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange }) 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:col-span-2">
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-          <SectionTitle icon={<Heart className="w-5 h-5" />} title="Cardíaco" />
-          <p className="text-sm text-slate-600 mb-2">Padrão: Bulhas rítmicas, normofonéticas, sem sopros audíveis.</p>
-          <textarea
-            value={value.cardiac.altered ?? ''}
-            onChange={(e) => update('cardiac', { altered: e.target.value })}
-            placeholder="Descreva alterações cardíacas (sopros, arritmias, etc.)"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
-          />
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-          <SectionTitle icon={<Activity className="w-5 h-5" />} title="Pulmonar" />
-          <p className="text-sm text-slate-600 mb-2">Padrão: Murmúrio vesicular presente, sem ruídos adventícios.</p>
-          <textarea
-            value={value.pulmonary.altered ?? ''}
-            onChange={(e) => update('pulmonary', { altered: e.target.value })}
-            placeholder="Descreva alterações pulmonares (sibilos, estertores, etc.)"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
-          />
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-          <SectionTitle icon={<Stethoscope className="w-5 h-5" />} title="Abdome" />
-          <p className="text-sm text-slate-600 mb-2">Padrão: Plano, normotenso, ruídos hidro-aéreos presentes, sem alterações, sem sinais de irritação peritoneal.</p>
-          <textarea
-            value={value.abdomen.altered ?? ''}
-            onChange={(e) => update('abdomen', { altered: e.target.value })}
-            placeholder="Descreva alterações abdominais"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
-          />
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
-          <SectionTitle icon={<Activity className="w-5 h-5" />} title="Extremidades" />
-          <p className="text-sm text-slate-600 mb-2">Padrão: Pulsos periféricos simétricos, sem alterações. Sem empastamentos. Enchimento capilar normal, perfusão periférica preservada.</p>
-          <textarea
-            value={value.extremities.altered ?? ''}
-            onChange={(e) => update('extremities', { altered: e.target.value })}
-            placeholder="Descreva alterações em extremidades"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
-          />
-        </div>
+        <ExamSection
+          icon={<Heart className="w-5 h-5" />}
+          title="Cardíaco"
+          standardText="Bulhas rítmicas, normofonéticas, sem sopros audíveis."
+          value={value.cardiac.altered}
+          onChange={(v) => update('cardiac', { altered: v })}
+          placeholder="Descreva alterações cardíacas (sopros, arritmias, etc.)"
+        />
+
+        <ExamSection
+          icon={<Activity className="w-5 h-5" />}
+          title="Pulmonar"
+          standardText="Murmúrio vesicular presente, sem ruídos adventícios."
+          value={value.pulmonary.altered}
+          onChange={(v) => update('pulmonary', { altered: v })}
+          placeholder="Descreva alterações pulmonares (sibilos, estertores, etc.)"
+        />
+
+        <ExamSection
+          icon={<Stethoscope className="w-5 h-5" />}
+          title="Abdome"
+          standardText="Plano, normotenso, ruídos hidro-aéreos presentes, sem alterações, sem sinais de irritação peritoneal."
+          value={value.abdomen.altered}
+          onChange={(v) => update('abdomen', { altered: v })}
+          placeholder="Descreva alterações abdominais"
+        />
+
+        <ExamSection
+          icon={<Activity className="w-5 h-5" />}
+          title="Extremidades"
+          standardText="Pulsos periféricos simétricos, sem alterações. Sem empastamentos. Enchimento capilar normal, perfusão periférica preservada."
+          value={value.extremities.altered}
+          onChange={(v) => update('extremities', { altered: v })}
+          placeholder="Descreva alterações em extremidades"
+        />
       </div>
     </div>
   )

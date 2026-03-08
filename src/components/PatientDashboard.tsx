@@ -181,10 +181,12 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     // Persistência de página será movida para perfil do médico em breve
   }, [currentPage])
 
-  const filteredPatients = patients.filter(patient =>
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.medicalRecord.includes(searchTerm)
-  )
+  const filteredPatients = patients
+    .filter(patient =>
+      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      patient.medicalRecord.includes(searchTerm)
+    )
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   useEffect(() => {
     const t = setTimeout(async () => {
@@ -271,6 +273,21 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     })
   }
 
+  const getMedicalPrescriptionCount = (patient: Patient) => {
+    const structured = patient.treatment?.prescriptions?.length || 0
+    const flowAnswers = Object.values(patient.flowchartState?.answers || {})
+    const dynamic = flowAnswers.reduce((acc, value) => {
+      try {
+        const parsed = JSON.parse(value)
+        if (Array.isArray(parsed?.opcoesTerapeuticasSelecionadas)) {
+          return acc + parsed.opcoesTerapeuticasSelecionadas.length
+        }
+      } catch {}
+      return acc
+    }, 0)
+    return structured + dynamic
+  }
+
   const handleDeletePatient = async (patientId: string) => {
     try {
       // Tentar deletar do banco
@@ -327,7 +344,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
   const currentPatients = filteredPatients.slice(startIndex, endIndex)
 
   // Pacientes Recentes (Ex: status 'discharged' ou 'active' ordenados por update)
-  const recentPatients = patients
+  const recentPatients = [...patients]
     .sort((a, b) => {
       const dateA = new Date(a.updatedAt || a.createdAt).getTime()
       const dateB = new Date(b.updatedAt || b.createdAt).getTime()
@@ -535,13 +552,18 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
                               title="Receituário"
                            >
                               <Pill className="w-5 h-5" />
+                              {getMedicalPrescriptionCount(patient) > 0 && (
+                                <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center">
+                                  {getMedicalPrescriptionCount(patient)}
+                                </span>
+                              )}
                            </button>
 
                            {patient.treatment.prescriptions.length > 0 && (
                               <button 
                                  onClick={() => onViewPrescriptions(patient)} 
-                                 className="p-2.5 text-slate-500 hover:text-amber-600 hover:bg-white rounded-lg transition-all relative group/action"
-                                 title="Prescrições"
+                                 className="p-2.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 rounded-lg transition-all relative group/action border border-emerald-100"
+                                 title="Prescrições Ativas"
                               >
                                  <FileText className="w-5 h-5" />
                               </button>

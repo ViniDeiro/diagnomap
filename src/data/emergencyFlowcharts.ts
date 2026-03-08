@@ -1517,6 +1517,295 @@ export const spiderBiteFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de TVP (Trombose Venosa Profunda)
+export const tvpFlowchart: EmergencyFlowchart = {
+  id: 'tvp',
+  name: 'TVP - Trombose Venosa Profunda',
+  description: 'Estratificação clínica com Escore de Wells e conduta diagnóstica/terapêutica inicial.',
+  category: 'cardiovascular',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-indigo-600 to-blue-800',
+  initialStep: 'start',
+  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente'],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Suspeita Clínica de TVP',
+      description: 'Paciente com dor/edema unilateral de membro inferior.',
+      type: 'question',
+      options: [
+        { text: 'Prosseguir avaliação clínica', nextStep: 'avaliacao_clinica', value: 'start_eval' }
+      ]
+    },
+    avaliacao_clinica: {
+      id: 'avaliacao_clinica',
+      title: 'Avaliação Clínica Inicial',
+      description: 'Registrar sinais/sintomas e comparar com membro contralateral.',
+      type: 'action',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Achados sugestivos:</strong>
+          </div>
+          <ul class="list-disc pl-5 space-y-1 text-sm">
+            <li>Dor unilateral em panturrilha/coxa, pior à deambulação.</li>
+            <li>Edema assimétrico com ou sem cacifo, calor local e rubor.</li>
+            <li>Sensibilidade à palpação em trajeto venoso profundo.</li>
+            <li>Veias colaterais superficiais não varicosas.</li>
+            <li>Medir circunferência da panturrilha 10 cm abaixo da tuberosidade tibial e comparar lados.</li>
+          </ul>
+          <p class="text-xs text-slate-600"><strong>Nota:</strong> sinal de Homans não deve ser usado isoladamente.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar Escore de Wells para TVP', nextStep: 'wells_score', value: 'wells' }
+      ]
+    },
+    wells_score: {
+      id: 'wells_score',
+      title: 'Escore de Wells - TVP',
+      description: 'Somar critérios clínicos e classificar probabilidade pré-teste.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-indigo-50 p-3 rounded border-l-4 border-indigo-500">
+            <strong>Critérios (+1 cada):</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Câncer ativo (tratamento recente/paliativo)</li>
+              <li>Paralisia/paresia ou imobilização com gesso em MI</li>
+              <li>Leito maior ou igual a 3 dias ou cirurgia maior até 12 semanas</li>
+              <li>Dor à palpação ao longo do sistema venoso profundo</li>
+              <li>Perna inteira edemaciada</li>
+              <li>Panturrilha maior ou igual a 3 cm versus lado assintomático</li>
+              <li>Edema com cacifo limitado à perna sintomática</li>
+              <li>Veias colaterais superficiais não varicosas</li>
+              <li>TVP prévia documentada</li>
+            </ul>
+            <p class="mt-2"><strong>Subtrair 2 pontos:</strong> diagnóstico alternativo tão provável quanto TVP.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <strong>Interpretação:</strong> Baixa menor ou igual a 0 | Moderada 1-2 | Alta maior ou igual a 3.
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Baixa probabilidade (menor ou igual a 0)', nextStep: 'baixa_probabilidade', value: 'low' },
+        { text: 'Moderada/Alta probabilidade (maior ou igual a 1)', nextStep: 'moderada_probabilidade', value: 'moderate_high', critical: true }
+      ]
+    },
+    baixa_probabilidade: {
+      id: 'baixa_probabilidade',
+      title: 'Probabilidade Baixa',
+      description: 'Estratégia inicial com D-dímero de alta sensibilidade.',
+      type: 'question',
+      content: `
+        <div class="bg-green-50 p-3 rounded border-l-4 border-green-500 text-sm">
+          <p><strong>Conduta:</strong> Solicitar D-dímero de alta sensibilidade.</p>
+          <p>Se negativo, TVP pode ser excluída em paciente de baixa probabilidade.</p>
+          <p>Se positivo, prosseguir para ultrassonografia venosa compressiva.</p>
+        </div>
+      `,
+      options: [
+        { text: 'D-dímero negativo', nextStep: 'tvp_excluida', value: 'ddimer_negative' },
+        { text: 'D-dímero positivo', nextStep: 'us_compressiva', value: 'ddimer_positive' }
+      ]
+    },
+    moderada_probabilidade: {
+      id: 'moderada_probabilidade',
+      title: 'Moderada/Alta Probabilidade',
+      description: 'Realizar Doppler venoso de membros inferiores.',
+      type: 'action',
+      critical: true,
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Conduta direta:</strong> realizar US venosa compressiva (Doppler) sem etapa prévia de D-dímero.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Realizar Doppler venoso de membros inferiores', nextStep: 'us_compressiva', value: 'direct_us', critical: true }
+      ]
+    },
+    us_compressiva: {
+      id: 'us_compressiva',
+      title: 'US Venosa Compressiva de MMII',
+      description: 'Interpretar resultado e definir próximo passo.',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'US positiva para trombose', nextStep: 'tratamento_inicial', value: 'us_positive', critical: true },
+        { text: 'US negativa', nextStep: 'us_negativa_conduta', value: 'us_negative' }
+      ]
+    },
+    us_negativa_conduta: {
+      id: 'us_negativa_conduta',
+      title: 'US Negativa - Reavaliação',
+      description: 'Decisão baseada na persistência da suspeita clínica.',
+      type: 'question',
+      content: `
+        <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
+          <p>US negativa não exclui TVP em suspeita clínica alta.</p>
+          <p>Se persistir dúvida/suspeita clínica, repetir ultrassonografia em 5–7 dias.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Persistem dúvida ou sinais clínicos', nextStep: 'repetir_us', value: 'high_suspicion' },
+        { text: 'Dúvida afastada após reavaliação', nextStep: 'tvp_excluida', value: 'low_suspicion' }
+      ]
+    },
+    repetir_us: {
+      id: 'repetir_us',
+      title: 'Repetir Ultrassonografia em 5–7 dias',
+      description: 'Repetição do exame por persistência de suspeita clínica.',
+      type: 'question',
+      options: [
+        { text: 'Com trombose', nextStep: 'tratamento_inicial', value: 'repeat_positive', critical: true },
+        { text: 'Sem trombose', nextStep: 'seguimento_ambulatorial', value: 'repeat_negative' }
+      ]
+    },
+    tratamento_inicial: {
+      id: 'tratamento_inicial',
+      title: 'TVP Confirmada - Iniciar Anticoagulação',
+      description: 'Escolher estratégia inicial conforme cenário clínico.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <strong>Antes de anticoagular:</strong> verificar contraindicações absolutas/relativas e risco de sangramento.
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Solicitar avaliação do Cirurgião Vascular</strong> após confirmação de TVP, especialmente em casos extensos, iliofemorais ou com sinais de gravidade.
+          </div>
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Opções terapêuticas (resumo):</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Rivaroxabana: 15 mg 2x/dia por 21 dias, depois 20 mg 1x/dia.</li>
+              <li>Apixabana: 10 mg 2x/dia por 7 dias, depois 5 mg 2x/dia.</li>
+              <li>Dabigatrana: 150 mg 2x/dia após 5–10 dias de anticoagulação parenteral.</li>
+              <li>Edoxabana: 60 mg 1x/dia após 5–10 dias de parenteral (30 mg se CrCl 15–50 mL/min ou ≤60 kg).</li>
+              <li>Enoxaparina: 1 mg/kg 2x/dia (ou ajuste conforme função renal).</li>
+              <li>HNF EV: bolus 80 U/kg (ou 5.000 U) e infusão 18 U/kg/h (ou 1.300 U/h), com ajuste por TTPa.</li>
+              <li>Varfarina: alvo INR 2–3, sobreposta com heparina por pelo menos 5 dias.</li>
+            </ul>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <strong>Duração sugerida:</strong> 3 meses em evento provocado; considerar estendido em não provocada/trombofilia/câncer ativo.
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <strong>Complicações e seguimento:</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Suspeita de TEP: escalonar urgência e investigação imediata.</li>
+              <li>Sangramento: suspender anticoagulante e considerar antídotos/reversão conforme droga.</li>
+              <li>Reavaliar em 1–2 semanas e em 3 meses; monitorar adesão, função renal/hepática e sinais de recorrência.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar anticoagulação e solicitar avaliação vascular', nextStep: 'anticoagulacao_iniciada', value: 'outpatient' },
+        { text: 'Contraindicação relevante ou gravidade clínica', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
+      ]
+    },
+    conduta_gestante: {
+      id: 'conduta_gestante',
+      title: 'TVP na Gestação/Puerpério',
+      description: 'Estratégia preferencial com heparina de baixo peso molecular.',
+      type: 'action',
+      requiresSpecialist: true,
+      content: `
+        <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500 text-sm">
+          <p><strong>Conduta:</strong> LMWH durante a gestação e até 6 semanas pós-parto (mínimo total de 3 meses).</p>
+          <p>Evitar varfarina e DOACs na gestação.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Registrar conduta e iniciar seguimento', nextStep: 'anticoagulacao_iniciada', value: 'pregnancy_plan' }
+      ]
+    },
+    conduta_cancer: {
+      id: 'conduta_cancer',
+      title: 'TVP com Câncer Ativo',
+      description: 'Anticoagulação prolongada enquanto doença/tratamento ativos.',
+      type: 'action',
+      requiresSpecialist: true,
+      content: `
+        <div class="bg-indigo-50 p-3 rounded border-l-4 border-indigo-500 text-sm">
+          <p><strong>Opções:</strong> apixabana, rivaroxabana, edoxabana ou LMWH conforme perfil de risco e interações.</p>
+          <p>Geralmente manter por tempo estendido enquanto câncer ativo.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Registrar plano e iniciar anticoagulação', nextStep: 'anticoagulacao_iniciada', value: 'cancer_plan' }
+      ]
+    },
+    tvp_excluida: {
+      id: 'tvp_excluida',
+      title: 'TVP Excluída',
+      description: 'Baixa probabilidade com D-dímero negativo ou investigação sem trombose.',
+      type: 'result',
+      content: `
+        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
+          <h4 class="font-bold text-green-800">TVP improvável/excluída</h4>
+          <p class="text-green-700">Reavaliar diagnóstico alternativo: celulite, ruptura de cisto de Baker, lesão musculoesquelética, entre outros.</p>
+        </div>
+      `,
+      options: []
+    },
+    anticoagulacao_iniciada: {
+      id: 'anticoagulacao_iniciada',
+      title: 'Anticoagulação Iniciada',
+      description: 'Tratamento instituído com plano de seguimento.',
+      type: 'result',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-blue-50 p-4 rounded border-l-4 border-blue-500">
+            <h4 class="font-bold text-blue-800">Conduta Inicial Concluída</h4>
+            <ul class="list-disc pl-5 text-blue-700 text-sm mt-1">
+              <li>Documentar escore de Wells e via diagnóstica no prontuário.</li>
+              <li>Orientar sinais de sangramento e alerta para TEP.</li>
+              <li>Programar reavaliação em 1-2 semanas e em 3 meses.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    seguimento_ambulatorial: {
+      id: 'seguimento_ambulatorial',
+      title: 'Alta com Seguimento Ambulatorial',
+      description: 'Sem trombose em reavaliação e estabilidade clínica.',
+      type: 'result',
+      content: `
+        <div class="bg-emerald-50 p-4 rounded border-l-4 border-emerald-500">
+          <h4 class="font-bold text-emerald-800">Seguimento Ambulatorial</h4>
+          <p class="text-emerald-700">Manter orientação de retorno imediato se piora de edema/dor ou sintomas respiratórios súbitos.</p>
+        </div>
+      `,
+      options: []
+    },
+    encaminhamento_urgente: {
+      id: 'encaminhamento_urgente',
+      title: 'Encaminhamento Urgente',
+      description: 'Situação de maior gravidade ou necessidade de cuidado hospitalar.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
+          <h4 class="font-bold text-red-800">Prioridade Máxima</h4>
+          <ul class="list-disc pl-5 text-red-700 text-sm mt-1">
+            <li>Suspeita de TEP associada à TVP.</li>
+            <li>Flegmasia (dor intensa, edema importante, cianose).</li>
+            <li>Alto risco de sangramento, comorbidades descompensadas ou necessidade de HNF.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -1526,6 +1815,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   diarreia: diarreiaFlowchart,
   geca: gecaFlowchart,
   spider_bite: spiderBiteFlowchart,
+  tvp: tvpFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -1633,7 +1923,7 @@ export const allFlowcharts = [
   { id: 'tv_monomorfica_estavel', name: 'TV monomórfica estável', category: 'cardiovascular', implemented: false },
   { id: 'tv_monomorfica_instavel', name: 'TV monomórfica instável', category: 'cardiovascular', implemented: false },
   { id: 'tv_polimorfica', name: 'TV polimórfica', category: 'cardiovascular', implemented: false },
-  { id: 'tvp', name: 'TVP', category: 'cardiovascular', implemented: false },
+  { id: 'tvp', name: 'TVP', category: 'cardiovascular', implemented: true },
 
   // Distúrbios Hidroeletrolíticos (DHEL)
   { id: 'dhel_hipercalcemia', name: 'DHEL - Hipercalcemia', category: 'metabolic', implemented: false },

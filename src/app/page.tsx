@@ -521,8 +521,8 @@ export default function Home() {
             patient={currentPatient}
             onClose={handlePrescriptionsClose}
             onUpdate={handlePrescriptionsUpdate}
-            // Mostrar a versão verdinha (mínima) apenas quando vindo do fluxograma
-            mode={previousState === 'flowchart' ? 'prescription-only' : 'hydration-only'}
+            // Mostrar a versão verdinha (mínima) com as prescrições ativas
+            mode="prescription-only"
           />
         )}
 

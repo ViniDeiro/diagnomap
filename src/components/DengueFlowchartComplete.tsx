@@ -691,17 +691,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <div className="col-span-2">
                     <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
                     <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
+                      type="text"
+                      placeholder="Ex: 150.000"
                       className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
                       onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                        const rawValue = e.target.value.replace(/\D/g, '')
+                        const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                        e.target.value = formattedValue
+                        localStorage.setItem(`lab_platelets_${patient.id}`, rawValue)
+                        setLabs(prev => ({ ...prev, plt: parseNum(rawValue) }))
                       }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                      defaultValue={(() => {
+                        if (typeof window === 'undefined') return ''
+                        const val = localStorage.getItem(`lab_platelets_${patient.id}`)
+                        return val ? val.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+                      })()}
                     />
                     {labs.plt != null && (
                       <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
@@ -2429,17 +2433,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <div className="col-span-2">
                     <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
                     <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
+                      type="text"
+                      placeholder="Ex: 150.000"
                       className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labsB.plt).input)}
                       onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_platelets_b_${patient.id}`, value)
-                        setLabsB(prev => ({ ...prev, plt: parseNum(value) }))
+                        const rawValue = e.target.value.replace(/\D/g, '')
+                        const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                        e.target.value = formattedValue
+                        localStorage.setItem(`lab_platelets_b_${patient.id}`, rawValue)
+                        setLabsB(prev => ({ ...prev, plt: parseNum(rawValue) }))
                       }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_b_${patient.id}`) || '' : ''}
+                      defaultValue={(() => {
+                        if (typeof window === 'undefined') return ''
+                        const val = localStorage.getItem(`lab_platelets_b_${patient.id}`)
+                        return val ? val.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+                      })()}
                     />
                     {labsB.plt != null && (
                       <p className={clsx("text-xs mt-1", labStatus('plt', labsB.plt).text)}>{labStatus('plt', labsB.plt).label}</p>
@@ -3033,7 +3041,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 rounded-2xl border border-red-300">
             <div className="flex items-center space-x-3 mb-4">
               <AlertTriangle className="w-6 h-6 text-red-700" />
-              <h4 className="font-bold text-red-800 text-lg">Protocolo de UTI - Grupo D</h4>
+              <h4 className="font-bold text-red-800 text-lg">Protocolo de UTI - Grupo D (recomendar internação em UTI)</h4>
             </div>
 
             <div className="grid md:grid-cols-2 gap-6">
@@ -3044,7 +3052,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <li>• Pressão arterial invasiva</li>
                   <li>• Balanço hídrico horário</li>
                   <li>• Controle de diurese (sonda vesical)</li>
-                  <li>• Gasometria de 6/6h</li>
                 </ul>
               </div>
 
@@ -3063,7 +3070,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Iniciar tratamento intensivo', nextStep: 'treatment_d', value: 'continue' }
+        { text: 'Manejo inicial até ingresso na UTI', nextStep: 'treatment_d', value: 'continue' }
       ]
     },
 
@@ -3086,7 +3093,42 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Aguardar evolução (UTI)', nextStep: 'wait_reevaluation_d', value: 'continue' }
+        { text: 'Reavaliação após conduta inicial', nextStep: 'choose_reevaluation_interval_d', value: 'continue' }
+      ]
+    },
+
+    choose_reevaluation_interval_d: {
+      id: 'choose_reevaluation_interval_d',
+      title: 'Intervalo de Reavaliação - UTI',
+      description: 'Defina a frequência de monitoramento',
+      type: 'question',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-red-600',
+      content: (
+        <div className="bg-red-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-red-800 mb-2">Selecione o intervalo de reavaliação:</h4>
+          <p className="text-red-700 mb-4">Escolha a frequência para gerar as abas de acompanhamento durante as próximas 2 horas.</p>
+        </div>
+      ),
+      options: [
+        { 
+          text: 'A cada 15 min (8 reavaliações)', 
+          nextStep: 'reevaluation_d', 
+          value: '15min',
+          action: () => localStorage.setItem(`d_interval_choice_${patient.id}`, '15min')
+        },
+        { 
+          text: 'A cada 20 min (6 reavaliações)', 
+          nextStep: 'reevaluation_d', 
+          value: '20min',
+          action: () => localStorage.setItem(`d_interval_choice_${patient.id}`, '20min')
+        },
+        { 
+          text: 'A cada 30 min (4 reavaliações)', 
+          nextStep: 'reevaluation_d', 
+          value: '30min',
+          action: () => localStorage.setItem(`d_interval_choice_${patient.id}`, '30min')
+        }
       ]
     },
 
@@ -3327,17 +3369,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <div className="col-span-2">
                     <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
                     <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
+                      type="text"
+                      placeholder="Ex: 150.000"
                       className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
                       onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                        const rawValue = e.target.value.replace(/\D/g, '')
+                        const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                        e.target.value = formattedValue
+                        localStorage.setItem(`lab_platelets_${patient.id}`, rawValue)
+                        setLabs(prev => ({ ...prev, plt: parseNum(rawValue) }))
                       }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                      defaultValue={(() => {
+                        if (typeof window === 'undefined') return ''
+                        const val = localStorage.getItem(`lab_platelets_${patient.id}`)
+                        return val ? val.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+                      })()}
                     />
                     {labs.plt != null && (
                       <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
@@ -3881,17 +3927,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <div className="col-span-2">
                     <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
                     <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
+                      type="text"
+                      placeholder="Ex: 150.000"
                       className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', labs.plt).input)}
                       onChange={(e) => {
-                        const value = e.target.value
-                        localStorage.setItem(`lab_platelets_${patient.id}`, value)
-                        setLabs(prev => ({ ...prev, plt: parseNum(value) }))
+                        const rawValue = e.target.value.replace(/\D/g, '')
+                        const formattedValue = rawValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                        e.target.value = formattedValue
+                        localStorage.setItem(`lab_platelets_${patient.id}`, rawValue)
+                        setLabs(prev => ({ ...prev, plt: parseNum(rawValue) }))
                       }}
-                      defaultValue={typeof window !== 'undefined' ? localStorage.getItem(`lab_platelets_${patient.id}`) || '' : ''}
+                      defaultValue={(() => {
+                        if (typeof window === 'undefined') return ''
+                        const val = localStorage.getItem(`lab_platelets_${patient.id}`)
+                        return val ? val.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+                      })()}
                     />
                     {labs.plt != null && (
                       <p className={clsx("text-xs mt-1", labStatus('plt', labs.plt).text)}>{labStatus('plt', labs.plt).label}</p>
@@ -4031,22 +4081,19 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
         if (ratio !== undefined) {
           if (ratio >= 3.6) return [
-            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
-            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
+            { text: 'Hemoconcentração (Piora) - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
           ]
           return [
-            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
-            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
+            { text: 'Hematócrito em queda (Melhora) - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
           ]
         }
+        
         if (ht != null) {
           if (ht >= 45) return [
-            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
-            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
+            { text: 'Hematócrito Elevado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
           ]
           return [
-            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
-            { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
+            { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
           ]
         }
 
@@ -4150,32 +4197,62 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </ul>
           </div>
 
-          {/* Abas de reavaliação 1ª a 8ª — dentro do Grupo D */}
+          {/* Abas de reavaliação 1ª a Xª — dentro do Grupo D */}
           <div className="bg-white border-2 border-red-200 rounded-lg p-3">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <Activity className="w-5 h-5 text-red-600" />
-                <h4 className="font-semibold text-red-800">Reavaliações a cada 15 min (2h)</h4>
+                <h4 className="font-semibold text-red-800">
+                  {(() => {
+                    const selectedInterval = currentStep === 'reevaluation_d' && typeof window !== 'undefined' 
+                      ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '15min'
+                      : '15min'
+                      
+                    if (selectedInterval === '20min') return 'Reavaliações a cada 20 min (2h)'
+                    if (selectedInterval === '30min') return 'Reavaliações a cada 30 min (2h)'
+                    return 'Reavaliações a cada 15 min (2h)'
+                  })()}
+                </h4>
               </div>
-              <span className="text-xs font-medium text-red-700">8ª reavaliação obrigatória</span>
+              <span className="text-xs font-medium text-red-700">
+                {(() => {
+                    const selectedInterval = currentStep === 'reevaluation_d' && typeof window !== 'undefined' 
+                      ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '15min'
+                      : '15min'
+                      
+                    if (selectedInterval === '20min') return '6ª reavaliação obrigatória'
+                    if (selectedInterval === '30min') return '4ª reavaliação obrigatória'
+                    return '8ª reavaliação obrigatória'
+                  })()}
+              </span>
             </div>
             <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  onClick={() => setDReevalTab(n)}
-                  className={clsx(
-                    'px-2 py-2 rounded-lg text-sm font-medium border transition-colors',
-                    dReevalTab === n
-                      ? 'bg-red-100 text-red-800 border-red-300'
-                      : 'bg-white hover:bg-red-50 text-slate-700 border-slate-300'
-                  )}
-                  title={`${n}ª reavaliação`}
-                >
-                  {n}ª
-                </button>
-              ))}
+              {(() => {
+                const selectedInterval = currentStep === 'reevaluation_d' && typeof window !== 'undefined' 
+                  ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '15min'
+                  : '15min'
+                
+                let count = 8
+                if (selectedInterval === '20min') count = 6
+                if (selectedInterval === '30min') count = 4
+                
+                return Array.from({ length: count }, (_, i) => i + 1).map((n) => (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setDReevalTab(n)}
+                    className={clsx(
+                      'px-2 py-2 rounded-lg text-sm font-medium border transition-colors',
+                      dReevalTab === n
+                        ? 'bg-red-100 text-red-800 border-red-300'
+                        : 'bg-white hover:bg-red-50 text-slate-700 border-slate-300'
+                    )}
+                    title={`${n}ª reavaliação`}
+                  >
+                    {n}ª
+                  </button>
+                ))
+              })()}
             </div>
           </div>
 
@@ -4374,16 +4451,19 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <div className="col-span-2">
                     <label className="block text-xs text-slate-600 mb-1">Plaquetas (/mm³)</label>
                     <input
-                      type="number"
-                      min="0"
-                      max="1000000"
-                      placeholder="Ex: 150000"
+                      type="text"
+                      placeholder="Ex: 150.000"
                       className={clsx("w-full px-3 py-2 border rounded-lg text-sm focus:ring-2", labStatus('plt', dReevalData[dReevalTab]?.labs?.plt).input)}
                       onChange={(e) => {
-                        const value = parseNum(e.target.value)
+                        const rawValue = e.target.value.replace(/\D/g, '')
+                        const value = parseNum(rawValue)
                         updateDTabData({ labs: { plt: value } })
                       }}
-                      value={dReevalData[dReevalTab]?.labs?.plt ?? ''}
+                      value={(() => {
+                        const val = dReevalData[dReevalTab]?.labs?.plt
+                        if (val == null) return ''
+                        return String(val).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                      })()}
                     />
                     {dReevalData[dReevalTab]?.labs?.plt != null && (
                       <p className={clsx("text-xs mt-1", labStatus('plt', dReevalData[dReevalTab]?.labs?.plt).text)}>{labStatus('plt', dReevalData[dReevalTab]?.labs?.plt).label}</p>
@@ -4515,6 +4595,25 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           const opts: { text: string; nextStep: string; value: string }[] = [
             { text: `Ir para ${nextLabel}`, nextStep: 'reevaluation_d_tab_next', value: `goto_${dReevalTab + 1}` }
           ]
+          
+          // --- MELHORIA: Opção de Saída Antecipada (Early Exit) ---
+          // Só exibe se NÃO houver piora/hemoconcentração na aba atual
+          const currentHb = dReevalData[dReevalTab]?.labs?.hb
+          const currentHt = dReevalData[dReevalTab]?.labs?.ht
+          const currentRatio = currentHb != null && currentHt != null ? currentHt / currentHb : undefined
+          
+          const isWorsening = (currentRatio !== undefined && currentRatio >= 3.6) || 
+                              (currentHt !== undefined && currentHt >= 45)
+
+          if (!isWorsening) {
+            opts.push({ 
+              text: 'Melhora Clínica (Encerrar Reavaliações)', 
+              nextStep: 'maintenance_c_phase1', 
+              value: 'early_exit_to_c' 
+            })
+          }
+          // -------------------------------------------------------
+
           if (dReevalTab > 1) {
             opts.unshift({ text: `Voltar para ${prevLabel}`, nextStep: 'reevaluation_d_tab_prev', value: `back_${dReevalTab - 1}` })
           }
