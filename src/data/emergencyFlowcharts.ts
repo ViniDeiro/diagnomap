@@ -1186,6 +1186,223 @@ export const gasometryFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Crise Aguda de Asma (adulto)
+export const asthmaFlowchart: EmergencyFlowchart = {
+  id: 'asthma',
+  name: 'Crise Aguda de Asma',
+  description: 'Manejo da exacerbação de asma no PS/Sala Vermelha com reavaliação em 1 hora.',
+  category: 'respiratory',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-cyan-600 to-blue-700',
+  initialStep: 'asma_tipo',
+  finalSteps: [
+    'asma_alta_assistida',
+    'asma_observacao_ps',
+    'asma_internacao',
+    'asma_uti',
+    'asma_intubacao'
+  ],
+  steps: {
+    asma_tipo: {
+      id: 'asma_tipo',
+      title: 'Suspeita de Crise de Asma',
+      description: 'Confirmar cenário clínico inicial.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Quadro típico:</strong> dispneia, sibilância, tosse, aperto torácico e redução do fluxo aéreo.</p>
+          <p>O fluxo abaixo segue o modelo prático de emergência (GINA + SBPT).</p>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar fluxo de crise asmática', nextStep: 'asma_avaliacao_inicial', value: 'asma' }
+      ]
+    },
+    asma_avaliacao_inicial: {
+      id: 'asma_avaliacao_inicial',
+      title: 'Avaliação Inicial Imediata',
+      description: 'Preencher parâmetros para classificação automática da gravidade.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Preencher:</strong> SatO2, FR, FC, PFE (%) e achados clínicos de gravidade.</p>
+          <p>Se crise grave/ameaça à vida: monitorização imediata + tratamento agressivo.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar avaliação', nextStep: 'asma_classificacao_gravidade', value: 'avaliacao_ok' }
+      ]
+    },
+    asma_classificacao_gravidade: {
+      id: 'asma_classificacao_gravidade',
+      title: 'Classificação de Gravidade',
+      description: 'Leve, moderada, grave ou ameaça à vida.',
+      type: 'question',
+      options: [
+        { text: 'Leve', nextStep: 'asma_oxigenio', value: 'leve' },
+        { text: 'Moderada', nextStep: 'asma_oxigenio', value: 'moderada' },
+        { text: 'Grave', nextStep: 'asma_bloco_terapeutico', value: 'grave', critical: true },
+        { text: 'Ameaça à vida', nextStep: 'asma_falencia_respiratoria', value: 'ameaca_vida', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    asma_oxigenio: {
+      id: 'asma_oxigenio',
+      title: 'Oxigenoterapia',
+      description: 'Aplicar O2 quando indicado.',
+      type: 'question',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border border-blue-200 text-sm">
+          <p><strong>Regra:</strong> se SatO2 &lt; 94%, iniciar O2 suplementar (meta 93–95%).</p>
+        </div>
+      `,
+      options: [
+        { text: 'SatO2 < 94%: iniciar O2 suplementar', nextStep: 'asma_bloco_terapeutico', value: 'o2_sim' },
+        { text: 'SatO2 ≥ 94%: seguir sem O2 inicial', nextStep: 'asma_bloco_terapeutico', value: 'o2_nao' }
+      ]
+    },
+    asma_bloco_terapeutico: {
+      id: 'asma_bloco_terapeutico',
+      title: 'Primeiro Bloco Terapêutico (0–60 min)',
+      description: 'SABA + ipratrópio + corticoide sistêmico precoce.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Salbutamol:</strong> 2,5–5 mg nebulização a cada 20 min (3 doses) OU MDI 4–8 jatos.</p>
+          <p><strong>Ipratrópio:</strong> 0,5 mg nebulização associado nas crises moderadas/graves.</p>
+          <p><strong>Corticoide precoce (1ª hora):</strong> Prednisona 40–60 mg VO ou Metilprednisolona 60–125 mg EV.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'reavaliar_1h' }
+      ]
+    },
+    asma_reavaliacao_1h: {
+      id: 'asma_reavaliacao_1h',
+      title: 'Reavaliação Após 1 Hora',
+      description: 'Preencher novos parâmetros para decidir evolução.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>Reavaliar: sintomas, FR, SatO2, PFE e resposta clínica global.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar reavaliação', nextStep: 'asma_decisao_1h', value: 'reav_1h_ok' }
+      ]
+    },
+    asma_decisao_1h: {
+      id: 'asma_decisao_1h',
+      title: 'Decisão Pós-Reavaliação',
+      description: 'Definir melhora, resposta parcial ou falha.',
+      type: 'question',
+      options: [
+        { text: 'Melhora (PFE > 70%)', nextStep: 'asma_alta_assistida', value: 'melhora' },
+        { text: 'Resposta parcial (PFE 40–69%)', nextStep: 'asma_observacao_ps', value: 'parcial' },
+        { text: 'Sem resposta / grave', nextStep: 'asma_escalonamento', value: 'sem_resposta', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    asma_escalonamento: {
+      id: 'asma_escalonamento',
+      title: 'Escalonamento Terapêutico',
+      description: 'Magnésio, SABA contínuo e terapias adjuvantes.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Magnésio EV:</strong> 2 g em 20 min.</p>
+          <p><strong>SABA contínuo:</strong> salbutamol 10–15 mg/h.</p>
+          <p><strong>Selecionados:</strong> terbutalina SC 0,25 mg; adrenalina IM 0,3–0,5 mg (anafilaxia/broncoespasmo refratário).</p>
+        </div>
+      `,
+      options: [
+        { text: 'Mantém hipoxemia/necessidade repetida de broncodilatador', nextStep: 'asma_internacao', value: 'internar' },
+        { text: 'Evolui para fadiga/hipercapnia/consciência alterada', nextStep: 'asma_falencia_respiratoria', value: 'falencia', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    asma_falencia_respiratoria: {
+      id: 'asma_falencia_respiratoria',
+      title: 'Falência Respiratória / Status Asthmaticus',
+      description: 'Via aérea avançada e terapia intensiva.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Critérios críticos:</strong> hipercapnia progressiva, exaustão respiratória, alteração de consciência, tórax silencioso.</p>
+          <p>Indicar IOT + ventilação mecânica protetora e suporte de UTI.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Indicar intubação orotraqueal imediata', nextStep: 'asma_intubacao', value: 'iot', critical: true, requiresImmediateAction: true },
+        { text: 'UTI com broncodilatação intensiva sem IOT imediata', nextStep: 'asma_uti', value: 'uti' }
+      ]
+    },
+    asma_observacao_ps: {
+      id: 'asma_observacao_ps',
+      title: 'Resposta Parcial',
+      description: 'Manter broncodilatadores, corticoide e observação.',
+      type: 'result',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p>Continuar broncodilatador e corticoide, repetir reavaliações seriadas e considerar internação conforme evolução.</p>
+        </div>
+      `,
+      options: []
+    },
+    asma_internacao: {
+      id: 'asma_internacao',
+      title: 'Indicação de Internação',
+      description: 'Persistência de gravidade após tratamento inicial.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-600 text-sm">
+          <p>Internar se PFE &lt; 60%, hipoxemia persistente, necessidade repetida de broncodilatador, história de UTI por asma ou resposta insuficiente.</p>
+        </div>
+      `,
+      options: []
+    },
+    asma_uti: {
+      id: 'asma_uti',
+      title: 'UTI – Status Asthmaticus',
+      description: 'Suporte intensivo e terapias avançadas.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p>Monitorização intensiva, broncodilatação contínua, corticoide EV, magnésio e considerar ketamina/heliox conforme refratariedade.</p>
+        </div>
+      `,
+      options: []
+    },
+    asma_intubacao: {
+      id: 'asma_intubacao',
+      title: 'Intubação + Ventilação Mecânica',
+      description: 'Conduta para deterioração crítica.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-100 p-3 rounded border-l-4 border-red-700 text-sm">
+          <p><strong>Via aérea imediata:</strong> IOT + VM protetora (Vt 4–6 ml/kg, FR 8–12, I:E prolongada, hipercapnia permissiva).</p>
+        </div>
+      `,
+      options: []
+    },
+    asma_alta_assistida: {
+      id: 'asma_alta_assistida',
+      title: 'Alta Assistida',
+      description: 'Critérios de estabilidade atingidos.',
+      type: 'result',
+      content: `
+        <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
+          <p>Alta se sintomas leves, PFE &gt; 70%, SatO2 normal e estabilidade após observação.</p>
+          <p>Prescrever broncodilatador de resgate, corticoide oral curto (5–7 dias) e plano de ação para asma.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 // Fluxograma de GECA (Gastroenterite Aguda)
 export const gecaFlowchart: EmergencyFlowchart = {
   id: 'geca',
@@ -2118,6 +2335,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   sepsis: sepsisFlowchart,
   dengue: dengueFlowchart,
   gasometria: gasometryFlowchart,
+  asthma: asthmaFlowchart,
   diarreia: diarreiaFlowchart,
   geca: gecaFlowchart,
   spider_bite: spiderBiteFlowchart,
@@ -2196,7 +2414,7 @@ export const allFlowcharts = [
   { id: 'conjuntivite', name: 'Conjuntivite', category: 'ophthalmological', implemented: false },
 
   // Respiratórios
-  { id: 'crise_asmatica', name: 'Crise asmática/Broncoespasmo', category: 'respiratory', implemented: false },
+  { id: 'asthma', name: 'Crise asmática/Broncoespasmo', category: 'respiratory', implemented: true },
   { id: 'dispneia', name: 'Dispnéia', category: 'respiratory', implemented: false },
   { id: 'dpoc_exacerbado', name: 'DPOC exacerbado', category: 'respiratory', implemented: false },
   { id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', category: 'respiratory', implemented: false },

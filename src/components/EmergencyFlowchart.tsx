@@ -27,6 +27,8 @@ import { clsx } from 'clsx'
 import { EmergencyPatient, EmergencyFlowchart, EmergencyOption, EmergencyStep } from '@/types/emergency'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
+type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
+type AsthmaReevalFieldKey = 'sato2Re' | 'frRe' | 'pfeRe'
 
 const gasometryFieldConfig: Array<{ key: GasometryFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
   { key: 'ph', label: 'pH', unit: '', min: 6.8, max: 7.8, required: true },
@@ -73,6 +75,34 @@ const gasometryFieldInfo: Record<GasometryFieldKey, string[]> = {
     'Correção de Figge: AGcorr = AG + [(4 - albumina)×2,5].',
     'Usar quando albumina estiver reduzida.'
   ]
+}
+
+const asthmaInitialFieldConfig: Array<{ key: AsthmaInitialFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
+  { key: 'sato2', label: 'SatO2', unit: '%', min: 50, max: 100, required: true },
+  { key: 'fr', label: 'FR', unit: 'irpm', min: 8, max: 60, required: true },
+  { key: 'fc', label: 'FC', unit: 'bpm', min: 30, max: 220, required: true },
+  { key: 'pfe', label: 'PFE', unit: '% previsto', min: 5, max: 150, required: true },
+  { key: 'paco2', label: 'PaCO2', unit: 'mmHg', min: 10, max: 120, required: false }
+]
+
+const asthmaReevalFieldConfig: Array<{ key: AsthmaReevalFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
+  { key: 'sato2Re', label: 'SatO2 reavaliação', unit: '%', min: 50, max: 100, required: true },
+  { key: 'frRe', label: 'FR reavaliação', unit: 'irpm', min: 8, max: 60, required: true },
+  { key: 'pfeRe', label: 'PFE reavaliação', unit: '% previsto', min: 5, max: 150, required: true }
+]
+
+const asthmaInitialInfo: Record<AsthmaInitialFieldKey, string[]> = {
+  sato2: ['Se SatO2 < 94%, iniciar O2 suplementar.', 'Meta usual no PS: SatO2 93–95%.'],
+  fr: ['FR > 30 sugere gravidade.', 'FR 25–30 costuma indicar exacerbação moderada.'],
+  fc: ['FC > 120 é marcador de maior gravidade.', 'Interpretar junto de dispneia e esforço respiratório.'],
+  pfe: ['PFE (% do previsto): >70 leve, 40–69 moderada, <40 grave.', 'Usar maior valor de 3 tentativas.'],
+  paco2: ['PaCO2 normal/elevada em crise grave é sinal de fadiga.', 'Hipercapnia progressiva indica risco de falência respiratória.']
+}
+
+const asthmaReevalInfo: Record<AsthmaReevalFieldKey, string[]> = {
+  sato2Re: ['Persistência de hipoxemia após 1h sugere falha terapêutica.', 'Manter alvo de SatO2 93–95%.'],
+  frRe: ['FR mantendo elevada sugere resposta parcial ou ruim.', 'Queda da FR com conforto respiratório sugere melhora.'],
+  pfeRe: ['PFE >70% favorece alta assistida.', 'PFE 40–69%: resposta parcial; <40%: escalonar.']
 }
 
 const tvpClassicSigns = [
@@ -191,6 +221,32 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     albumin: ''
   })
   const [gasometryInfoOpen, setGasometryInfoOpen] = useState<GasometryFieldKey | null>(null)
+  const [asthmaInitialDraft, setAsthmaInitialDraft] = useState<Record<AsthmaInitialFieldKey, string>>({
+    sato2: '',
+    fr: '',
+    fc: '',
+    pfe: '',
+    paco2: ''
+  })
+  const [asthmaReevalDraft, setAsthmaReevalDraft] = useState<Record<AsthmaReevalFieldKey, string>>({
+    sato2Re: '',
+    frRe: '',
+    pfeRe: ''
+  })
+  const [asthmaFlags, setAsthmaFlags] = useState({
+    usoMusculatura: false,
+    incapazFrases: false,
+    falaPalavras: false,
+    cianose: false,
+    confusao: false,
+    exaustao: false,
+    toraxSilente: false,
+    sonolencia: false
+  })
+  const [asthmaReevalFlags, setAsthmaReevalFlags] = useState({
+    melhoraClinica: false,
+    necessidadeBroncoRepetido: false
+  })
 
   // Carregar estado do paciente na inicialização
   useEffect(() => {
@@ -326,6 +382,43 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setHistory([])
     setAnswers({})
     setProgress(0)
+    setGasometryInfoOpen(null)
+    setGasometryDraft({
+      ph: '',
+      pco2: '',
+      hco3: '',
+      be: '',
+      po2: '',
+      sodium: '',
+      chloride: '',
+      albumin: ''
+    })
+    setAsthmaInitialDraft({
+      sato2: '',
+      fr: '',
+      fc: '',
+      pfe: '',
+      paco2: ''
+    })
+    setAsthmaReevalDraft({
+      sato2Re: '',
+      frRe: '',
+      pfeRe: ''
+    })
+    setAsthmaFlags({
+      usoMusculatura: false,
+      incapazFrases: false,
+      falaPalavras: false,
+      cianose: false,
+      confusao: false,
+      exaustao: false,
+      toraxSilente: false,
+      sonolencia: false
+    })
+    setAsthmaReevalFlags({
+      melhoraClinica: false,
+      necessidadeBroncoRepetido: false
+    })
     onUpdate(patient.id, flowchart.initialStep, [], {}, 0)
   }
 
@@ -345,15 +438,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isSectionOpen = (key: string, defaultValue = true) => sectionOpen[key] ?? defaultValue
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
   const isGasometryFlow = flowchart.id === 'gasometria'
+  const isAsthmaFlow = flowchart.id === 'asthma'
 
-  const toNumber = (value: unknown): number | null => {
+  const toNumber = useCallback((value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
     if (typeof value !== 'string') return null
     const normalized = value.replace(',', '.').trim()
     if (!normalized) return null
     const parsed = Number(normalized)
     return Number.isFinite(parsed) ? parsed : null
-  }
+  }, [])
 
   const normalizeGasometryInput = (key: GasometryFieldKey, raw: string, finalize = false) => {
     let normalized = raw.replace(',', '.').replace(/[^\d.-]/g, '')
@@ -372,22 +466,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   const formatGasometryNumber = (value: number | null, digits = 2) => value === null ? '--' : value.toFixed(digits)
 
-  const savedGasometryLabs = useMemo(() => {
-    const raw = answers['coleta_parametros']
-    if (!raw) return null
-    try {
-      const parsed = JSON.parse(raw) as Record<string, number>
-      return parsed
-    } catch {
-      return null
-    }
-  }, [answers])
-
-  const gasometryValidation = useMemo(() => {
-    const parsed = {} as Record<GasometryFieldKey, number | null>
-    const errors = {} as Record<GasometryFieldKey, string | null>
-    gasometryFieldConfig.forEach((field) => {
-      const value = toNumber(gasometryDraft[field.key])
+  const validateNumericDraft = useCallback(<K extends string>(
+    draft: Record<K, string>,
+    config: Array<{ key: K; min: number; max: number; required: boolean; unit: string }>
+  ) => {
+    const parsed = {} as Record<K, number | null>
+    const errors = {} as Record<K, string | null>
+    config.forEach((field) => {
+      const value = toNumber(draft[field.key])
       parsed[field.key] = value
       if (value === null) {
         errors[field.key] = field.required ? 'Obrigatório para o fluxo' : null
@@ -399,14 +485,68 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       }
       errors[field.key] = null
     })
-    const hasHardError = gasometryFieldConfig.some((field) => {
+    const hasHardError = config.some((field) => {
       if (field.required && parsed[field.key] === null) return true
       return !!errors[field.key]
     })
     return { parsed, errors, hasHardError }
-  }, [gasometryDraft])
+  }, [toNumber])
+
+  const savedGasometryLabs = useMemo(() => {
+    const raw = answers['coleta_parametros']
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as Record<string, number>
+      return parsed
+    } catch {
+      return null
+    }
+  }, [answers])
+
+  const gasometryValidation = useMemo(
+    () => validateNumericDraft(gasometryDraft, gasometryFieldConfig),
+    [gasometryDraft, validateNumericDraft]
+  )
+
+  const savedAsthmaInitial = useMemo(() => {
+    const raw = answers['asma_avaliacao_inicial']
+    if (!raw) return null
+    try {
+      return JSON.parse(raw) as {
+        values: Record<string, number>
+        flags: typeof asthmaFlags
+      }
+    } catch {
+      return null
+    }
+  }, [answers])
+
+  const savedAsthmaReeval = useMemo(() => {
+    const raw = answers['asma_reavaliacao_1h']
+    if (!raw) return null
+    try {
+      return JSON.parse(raw) as {
+        values: Record<string, number>
+        flags: typeof asthmaReevalFlags
+      }
+    } catch {
+      return null
+    }
+  }, [answers])
+
+  const asthmaInitialValidation = useMemo(
+    () => validateNumericDraft(asthmaInitialDraft, asthmaInitialFieldConfig),
+    [asthmaInitialDraft, validateNumericDraft]
+  )
+
+  const asthmaReevalValidation = useMemo(
+    () => validateNumericDraft(asthmaReevalDraft, asthmaReevalFieldConfig),
+    [asthmaReevalDraft, validateNumericDraft]
+  )
 
   const requiredGasometryReady = !gasometryValidation.hasHardError
+  const requiredAsthmaInitialReady = !asthmaInitialValidation.hasHardError
+  const requiredAsthmaReevalReady = !asthmaReevalValidation.hasHardError
 
   const getGasometryFieldFeedback = (key: GasometryFieldKey, value: number | null) => {
     if (value === null) return { tone: 'slate', text: 'Aguardando preenchimento' }
@@ -495,6 +635,66 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return null
   }, [isGasometryFlow, currentStepData, savedGasometryLabs, gasometryValidation.parsed])
 
+  const asthmaStepOptions = useMemo(() => {
+    if (!isAsthmaFlow || !currentStepData) return null
+    const pick = (nextStep: string) => currentStepData.options?.find(option => option.nextStep === nextStep)
+    const initial = savedAsthmaInitial?.values || asthmaInitialValidation.parsed
+    const reeval = savedAsthmaReeval?.values || asthmaReevalValidation.parsed
+    const sat = initial.sato2 ?? null
+    const fr = initial.fr ?? null
+    const fc = initial.fc ?? null
+    const pfe = initial.pfe ?? null
+    const paco2 = initial.paco2 ?? null
+    const satRe = reeval.sato2Re ?? null
+    const frRe = reeval.frRe ?? null
+    const pfeRe = reeval.pfeRe ?? null
+    const flags = savedAsthmaInitial?.flags || asthmaFlags
+    const reFlags = savedAsthmaReeval?.flags || asthmaReevalFlags
+
+    if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null && pfe !== null) {
+      const ameacaVida = flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)
+      if (ameacaVida) return [pick('asma_falencia_respiratoria')].filter(Boolean) as EmergencyOption[]
+      const grave = fr > 30 || fc > 120 || sat < 90 || pfe < 40 || flags.falaPalavras
+      if (grave) return [pick('asma_bloco_terapeutico')].filter(Boolean) as EmergencyOption[]
+      const moderada = (fr >= 25 && fr <= 30) || (sat >= 90 && sat < 95) || (pfe >= 40 && pfe <= 69) || flags.incapazFrases || flags.usoMusculatura
+      return [pick(moderada ? 'asma_oxigenio' : 'asma_oxigenio')].filter(Boolean) as EmergencyOption[]
+    }
+
+    if (currentStepData.id === 'asma_oxigenio' && sat !== null) {
+      return [pick(sat < 94 ? 'asma_bloco_terapeutico' : 'asma_bloco_terapeutico')].filter(Boolean) as EmergencyOption[]
+    }
+
+    if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
+      const melhora = pfeRe > 70 && satRe >= 94 && frRe < 25 && reFlags.melhoraClinica
+      if (melhora) return [pick('asma_alta_assistida')].filter(Boolean) as EmergencyOption[]
+      const parcial = (pfeRe >= 40 && pfeRe <= 69) || (satRe >= 90 && satRe < 94) || reFlags.necessidadeBroncoRepetido
+      if (parcial) return [pick('asma_observacao_ps')].filter(Boolean) as EmergencyOption[]
+      return [pick('asma_escalonamento')].filter(Boolean) as EmergencyOption[]
+    }
+
+    if (currentStepData.id === 'asma_escalonamento') {
+      if (flags.exaustao || flags.confusao || flags.toraxSilente || (paco2 !== null && paco2 >= 45)) {
+        return [pick('asma_falencia_respiratoria')].filter(Boolean) as EmergencyOption[]
+      }
+      return [pick('asma_internacao')].filter(Boolean) as EmergencyOption[]
+    }
+
+    if (currentStepData.id === 'asma_falencia_respiratoria') {
+      return [pick('asma_intubacao'), pick('asma_uti')].filter(Boolean) as EmergencyOption[]
+    }
+
+    return null
+  }, [
+    isAsthmaFlow,
+    currentStepData,
+    savedAsthmaInitial,
+    savedAsthmaReeval,
+    asthmaInitialValidation.parsed,
+    asthmaReevalValidation.parsed,
+    asthmaFlags,
+    asthmaReevalFlags
+  ])
+
   const gasometryStepNarrative = useMemo(() => {
     if (!isGasometryFlow || !currentStepData) return null
     const labs = savedGasometryLabs || gasometryValidation.parsed
@@ -564,6 +764,55 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return null
   }, [isGasometryFlow, currentStepData, savedGasometryLabs, gasometryValidation.parsed])
 
+  const asthmaStepNarrative = useMemo(() => {
+    if (!isAsthmaFlow || !currentStepData) return null
+    const initial = savedAsthmaInitial?.values || asthmaInitialValidation.parsed
+    const reeval = savedAsthmaReeval?.values || asthmaReevalValidation.parsed
+    const sat = initial.sato2 ?? null
+    const fr = initial.fr ?? null
+    const fc = initial.fc ?? null
+    const pfe = initial.pfe ?? null
+    const paco2 = initial.paco2 ?? null
+    const satRe = reeval.sato2Re ?? null
+    const frRe = reeval.frRe ?? null
+    const pfeRe = reeval.pfeRe ?? null
+    const flags = savedAsthmaInitial?.flags || asthmaFlags
+
+    if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null && pfe !== null) {
+      if (flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)) {
+        return `Ameaça à vida: sinais críticos e/ou PaCO2 ${paco2 ?? '--'} indicam risco de falência respiratória.`
+      }
+      if (fr > 30 || fc > 120 || sat < 90 || pfe < 40 || flags.falaPalavras) {
+        return `Crise grave: FR ${fr}, FC ${fc}, SatO2 ${sat}% e PFE ${pfe}% sugerem necessidade de manejo agressivo.`
+      }
+      if ((fr >= 25 && fr <= 30) || (sat >= 90 && sat < 95) || (pfe >= 40 && pfe <= 69) || flags.incapazFrases || flags.usoMusculatura) {
+        return `Crise moderada: parâmetros intermediários com necessidade de tratamento intensivo no PS.`
+      }
+      return `Crise leve: parâmetros sem critérios de gravidade imediata.`
+    }
+    if (currentStepData.id === 'asma_oxigenio' && sat !== null) {
+      return sat < 94 ? `SatO2 ${sat}%: indicar oxigênio suplementar com meta 93–95%.` : `SatO2 ${sat}%: sem O2 inicial obrigatório, manter monitorização.`
+    }
+    if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
+      return `Reavaliação 1h: SatO2 ${satRe}%, FR ${frRe}, PFE ${pfeRe}% para decidir alta, observação ou escalonamento.`
+    }
+    if (currentStepData.id === 'asma_escalonamento') {
+      return 'Sem resposta adequada após terapia inicial: avançar para magnésio EV, SABA contínuo e avaliação de internação/UTI.'
+    }
+    if (currentStepData.id === 'asma_falencia_respiratoria') {
+      return 'Sinais de exaustão/hipercapnia/consciência alterada exigem via aérea avançada e suporte intensivo.'
+    }
+    return null
+  }, [
+    isAsthmaFlow,
+    currentStepData,
+    savedAsthmaInitial,
+    savedAsthmaReeval,
+    asthmaInitialValidation.parsed,
+    asthmaReevalValidation.parsed,
+    asthmaFlags
+  ])
+
   useEffect(() => {
     if (!isGasometryFlow || currentStepData?.id !== 'coleta_parametros') return
     if (!savedGasometryLabs) return
@@ -578,6 +827,34 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       albumin: savedGasometryLabs.albumin != null ? String(savedGasometryLabs.albumin) : ''
     })
   }, [isGasometryFlow, currentStepData?.id, savedGasometryLabs])
+
+  useEffect(() => {
+    if (!isAsthmaFlow || currentStepData?.id !== 'asma_avaliacao_inicial') return
+    if (!savedAsthmaInitial) return
+    setAsthmaInitialDraft({
+      sato2: savedAsthmaInitial.values?.sato2 != null ? String(savedAsthmaInitial.values.sato2) : '',
+      fr: savedAsthmaInitial.values?.fr != null ? String(savedAsthmaInitial.values.fr) : '',
+      fc: savedAsthmaInitial.values?.fc != null ? String(savedAsthmaInitial.values.fc) : '',
+      pfe: savedAsthmaInitial.values?.pfe != null ? String(savedAsthmaInitial.values.pfe) : '',
+      paco2: savedAsthmaInitial.values?.paco2 != null ? String(savedAsthmaInitial.values.paco2) : ''
+    })
+    if (savedAsthmaInitial.flags) {
+      setAsthmaFlags(savedAsthmaInitial.flags)
+    }
+  }, [isAsthmaFlow, currentStepData?.id, savedAsthmaInitial])
+
+  useEffect(() => {
+    if (!isAsthmaFlow || currentStepData?.id !== 'asma_reavaliacao_1h') return
+    if (!savedAsthmaReeval) return
+    setAsthmaReevalDraft({
+      sato2Re: savedAsthmaReeval.values?.sato2Re != null ? String(savedAsthmaReeval.values.sato2Re) : '',
+      frRe: savedAsthmaReeval.values?.frRe != null ? String(savedAsthmaReeval.values.frRe) : '',
+      pfeRe: savedAsthmaReeval.values?.pfeRe != null ? String(savedAsthmaReeval.values.pfeRe) : ''
+    })
+    if (savedAsthmaReeval.flags) {
+      setAsthmaReevalFlags(savedAsthmaReeval.flags)
+    }
+  }, [isAsthmaFlow, currentStepData?.id, savedAsthmaReeval])
 
   useEffect(() => {
     if (!isTVPClinicalEvaluation) {
@@ -943,6 +1220,177 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     >
                       Aplicar valores e continuar
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isAsthmaFlow && currentStepData.id === 'asma_avaliacao_inicial' && (
+                <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {asthmaInitialFieldConfig.map((field) => {
+                      const value = asthmaInitialDraft[field.key]
+                      const parsed = asthmaInitialValidation.parsed[field.key]
+                      const error = asthmaInitialValidation.errors[field.key]
+                      const toneClass = error
+                        ? 'border-red-300 bg-red-50 text-red-700'
+                        : parsed === null
+                          ? 'border-slate-300 bg-slate-50 text-slate-600'
+                          : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                      return (
+                        <div key={field.key} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-semibold text-slate-800">
+                              {field.label} {field.unit && <span className="text-slate-500">({field.unit})</span>} {field.required && <span className="text-red-600">*</span>}
+                            </label>
+                            <div className="relative group">
+                              <div className="w-6 h-6 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 inline-flex items-center justify-center">
+                                <Info className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="absolute z-20 right-0 mt-2 w-72 hidden group-hover:block rounded-lg border border-cyan-200 bg-white p-2.5 shadow-xl text-xs text-slate-700 space-y-1">
+                                {asthmaInitialInfo[field.key].map((line) => (
+                                  <p key={line}>{line}</p>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={value}
+                            onChange={(e) => setAsthmaInitialDraft(prev => ({ ...prev, [field.key]: e.target.value.replace(',', '.') }))}
+                            className={clsx('mt-1 w-full rounded-xl border px-3 py-2.5 focus:ring-2 outline-none', toneClass, 'focus:ring-slate-300')}
+                            placeholder={`${field.min} – ${field.max}`}
+                          />
+                          <div className={clsx('mt-2 inline-flex items-center px-2 py-1 rounded-md border text-xs font-semibold', toneClass)}>
+                            {error ? error : parsed === null ? 'Aguardando preenchimento' : 'Valor válido'}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3 mt-3">
+                    {[
+                      { key: 'usoMusculatura', label: 'Uso de musculatura acessória' },
+                      { key: 'incapazFrases', label: 'Incapaz de falar frases completas' },
+                      { key: 'falaPalavras', label: 'Fala apenas palavras' },
+                      { key: 'cianose', label: 'Cianose' },
+                      { key: 'confusao', label: 'Confusão/Agitação' },
+                      { key: 'exaustao', label: 'Exaustão respiratória' },
+                      { key: 'toraxSilente', label: 'Tórax silencioso' },
+                      { key: 'sonolencia', label: 'Sonolência/rebaixamento' }
+                    ].map((flag) => (
+                      <label key={flag.key} className="flex items-center gap-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={asthmaFlags[flag.key as keyof typeof asthmaFlags]}
+                          onChange={(e) => setAsthmaFlags(prev => ({ ...prev, [flag.key]: e.target.checked }))}
+                        />
+                        <span>{flag.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      onClick={() => {
+                        if (!requiredAsthmaInitialReady) return
+                        const values = Object.entries(asthmaInitialValidation.parsed).reduce((acc, [key, value]) => {
+                          if (value !== null) acc[key] = value
+                          return acc
+                        }, {} as Record<string, number>)
+                        handleAnswer('asma_classificacao_gravidade', JSON.stringify({ values, flags: asthmaFlags }))
+                      }}
+                      disabled={!requiredAsthmaInitialReady}
+                      className={clsx(
+                        'px-5 py-2.5 rounded-xl font-semibold transition-all',
+                        requiredAsthmaInitialReady ? 'bg-cyan-600 hover:bg-cyan-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      )}
+                    >
+                      Aplicar avaliação e continuar
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isAsthmaFlow && currentStepData.id === 'asma_reavaliacao_1h' && (
+                <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
+                  <div className="grid md:grid-cols-3 gap-3">
+                    {asthmaReevalFieldConfig.map((field) => {
+                      const value = asthmaReevalDraft[field.key]
+                      const parsed = asthmaReevalValidation.parsed[field.key]
+                      const error = asthmaReevalValidation.errors[field.key]
+                      const toneClass = error
+                        ? 'border-red-300 bg-red-50 text-red-700'
+                        : parsed === null
+                          ? 'border-slate-300 bg-slate-50 text-slate-600'
+                          : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                      return (
+                        <div key={field.key} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-semibold text-slate-800">
+                              {field.label} {field.unit && <span className="text-slate-500">({field.unit})</span>} {field.required && <span className="text-red-600">*</span>}
+                            </label>
+                            <div className="relative group">
+                              <div className="w-6 h-6 rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 inline-flex items-center justify-center">
+                                <Info className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="absolute z-20 right-0 mt-2 w-72 hidden group-hover:block rounded-lg border border-cyan-200 bg-white p-2.5 shadow-xl text-xs text-slate-700 space-y-1">
+                                {asthmaReevalInfo[field.key].map((line) => (
+                                  <p key={line}>{line}</p>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={value}
+                            onChange={(e) => setAsthmaReevalDraft(prev => ({ ...prev, [field.key]: e.target.value.replace(',', '.') }))}
+                            className={clsx('mt-1 w-full rounded-xl border px-3 py-2.5 focus:ring-2 outline-none', toneClass, 'focus:ring-slate-300')}
+                            placeholder={`${field.min} – ${field.max}`}
+                          />
+                          <div className={clsx('mt-2 inline-flex items-center px-2 py-1 rounded-md border text-xs font-semibold', toneClass)}>
+                            {error ? error : parsed === null ? 'Aguardando preenchimento' : 'Valor válido'}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-3 mt-3">
+                    <label className="flex items-center gap-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={asthmaReevalFlags.melhoraClinica}
+                        onChange={(e) => setAsthmaReevalFlags(prev => ({ ...prev, melhoraClinica: e.target.checked }))}
+                      />
+                      <span>Melhora clínica global após 1 hora</span>
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                      <input
+                        type="checkbox"
+                        checked={asthmaReevalFlags.necessidadeBroncoRepetido}
+                        onChange={(e) => setAsthmaReevalFlags(prev => ({ ...prev, necessidadeBroncoRepetido: e.target.checked }))}
+                      />
+                      <span>Necessidade repetida de broncodilatador</span>
+                    </label>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      onClick={() => {
+                        if (!requiredAsthmaReevalReady) return
+                        const values = Object.entries(asthmaReevalValidation.parsed).reduce((acc, [key, value]) => {
+                          if (value !== null) acc[key] = value
+                          return acc
+                        }, {} as Record<string, number>)
+                        handleAnswer('asma_decisao_1h', JSON.stringify({ values, flags: asthmaReevalFlags }))
+                      }}
+                      disabled={!requiredAsthmaReevalReady}
+                      className={clsx(
+                        'px-5 py-2.5 rounded-xl font-semibold transition-all',
+                        requiredAsthmaReevalReady ? 'bg-cyan-600 hover:bg-cyan-700 text-white' : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      )}
+                    >
+                      Aplicar reavaliação e continuar
                     </motion.button>
                   </div>
                 </div>
@@ -1428,9 +1876,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isAsthmaFlow && asthmaStepNarrative && currentStepData.id !== 'asma_avaliacao_inicial' && currentStepData.id !== 'asma_reavaliacao_1h' && (
+                <div className="mb-6 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                  <h4 className="text-sm font-bold text-cyan-800 mb-1">Interpretação automática com os valores já informados</h4>
+                  <p className="text-sm text-cyan-900">{asthmaStepNarrative}</p>
+                </div>
+              )}
+
               {/* Opções */}
               {(() => {
-                const displayedOptions = isGasometryFlow && gasometryStepOptions !== null ? gasometryStepOptions : currentStepData.options
+                const displayedOptions =
+                  isGasometryFlow && gasometryStepOptions !== null
+                    ? gasometryStepOptions
+                    : isAsthmaFlow && asthmaStepOptions !== null
+                      ? asthmaStepOptions
+                      : currentStepData.options
                 if (!(displayedOptions && displayedOptions.length > 0) || isTVPWellsScore || isTVPTreatmentInitial) return null
                 return (
                 <div className="grid gap-4">
@@ -1498,6 +1958,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
               {isGasometryFlow && gasometryStepOptions !== null && gasometryStepOptions.length === 0 && currentStepData.id !== 'coleta_parametros' && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                   Nenhum critério foi atendido com os valores atuais para esta etapa. Revise os parâmetros em Coleta de Parâmetros.
+                </div>
+              )}
+
+              {isAsthmaFlow && asthmaStepOptions !== null && asthmaStepOptions.length === 0 && currentStepData.id !== 'asma_avaliacao_inicial' && currentStepData.id !== 'asma_reavaliacao_1h' && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  Nenhum critério foi atendido com os valores atuais para esta etapa. Revise os parâmetros de avaliação da asma.
                 </div>
               )}
 

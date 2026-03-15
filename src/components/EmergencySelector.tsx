@@ -63,9 +63,19 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
         { id: 'dengue_protocolo', name: 'Dengue (Protocolo Clínico)', category: 'infectious', implemented: false },
     ]
 
+    const normalizeText = (value: string) =>
+        value
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+
     const filteredFlowcharts = allAvailableFlowcharts.filter(flowchart => {
-        const matchesSearch = flowchart.name.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesCategory = selectedCategory === 'all' || flowchart.category === selectedCategory
+        const normalizedSearch = normalizeText(searchTerm.trim())
+        const searchable = `${flowchart.name} ${flowchart.id}`
+        const matchesSearch = normalizeText(searchable).includes(normalizedSearch)
+        const matchesCategory = normalizedSearch
+            ? true
+            : selectedCategory === 'all' || flowchart.category === selectedCategory
         return matchesSearch && matchesCategory
     })
 
