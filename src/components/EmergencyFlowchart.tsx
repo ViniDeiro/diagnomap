@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ChevronRight, 
@@ -24,7 +24,56 @@ import {
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { EmergencyPatient, EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
+import { EmergencyPatient, EmergencyFlowchart, EmergencyOption, EmergencyStep } from '@/types/emergency'
+
+type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
+
+const gasometryFieldConfig: Array<{ key: GasometryFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
+  { key: 'ph', label: 'pH', unit: '', min: 6.8, max: 7.8, required: true },
+  { key: 'pco2', label: 'PaCO2', unit: 'mmHg', min: 10, max: 120, required: true },
+  { key: 'hco3', label: 'HCO3-', unit: 'mEq/L', min: 3, max: 60, required: true },
+  { key: 'be', label: 'BE', unit: 'mEq/L', min: -40, max: 40, required: false },
+  { key: 'po2', label: 'PaO2', unit: 'mmHg', min: 20, max: 600, required: false },
+  { key: 'sodium', label: 'Na+', unit: 'mEq/L', min: 100, max: 180, required: true },
+  { key: 'chloride', label: 'Cl-', unit: 'mEq/L', min: 60, max: 150, required: true },
+  { key: 'albumin', label: 'Albumina', unit: 'g/dL', min: 0.5, max: 6.5, required: false }
+]
+
+const gasometryFieldInfo: Record<GasometryFieldKey, string[]> = {
+  ph: [
+    'Henderson-Hasselbalch: pH = 6,10 + log[HCO3/(0,03×PaCO2)].',
+    'Cortes: <7,35 acidemia | 7,35–7,45 normal | >7,45 alcalemia.'
+  ],
+  pco2: [
+    'PaCO2 define eixo respiratório inicial.',
+    'Cortes: >45 sugere acidose respiratória | <35 sugere alcalose respiratória.'
+  ],
+  hco3: [
+    'Winter na acidose metabólica: PaCO2 esperada = 1,5×HCO3 + 8 ±2.',
+    'Alcalose metabólica: PaCO2 esperada = HCO3 + 15 ±2.',
+    'Delta/Delta usa ΔHCO3 = 24 - HCO3.'
+  ],
+  be: [
+    'BE auxilia leitura metabólica global.',
+    'Referência aproximada: -2 a +2 mEq/L.'
+  ],
+  po2: [
+    'PaO2 avalia oxigenação e gravidade respiratória.',
+    'Hipoxemia relevante quando PaO2 < 60 mmHg.'
+  ],
+  sodium: [
+    'Ânion Gap: AG = Na - (HCO3 + Cl).',
+    'Necessário para diferenciar acidose metabólica hiperclorêmica vs AG elevado.'
+  ],
+  chloride: [
+    'Ânion Gap: AG = Na - (HCO3 + Cl).',
+    'Cloro elevado favorece padrão hiperclorêmico.'
+  ],
+  albumin: [
+    'Correção de Figge: AGcorr = AG + [(4 - albumina)×2,5].',
+    'Usar quando albumina estiver reduzida.'
+  ]
+}
 
 const tvpClassicSigns = [
   'Dor unilateral na perna (panturrilha ou coxa), tipo peso/pressão, que piora ao deambular ou ao ficar em pé',
@@ -114,7 +163,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   onUpdate,
   onBack
 }) => {
-  const [currentStep, setCurrentStep] = useState(patient.emergencyState.currentStep || flowchart.initialStep)
+  const resolveCurrentStep = useCallback((step?: string) => {
+    if (step && flowchart.steps[step]) return step
+    if (flowchart.steps[flowchart.initialStep]) return flowchart.initialStep
+    return Object.keys(flowchart.steps)[0]
+  }, [flowchart.initialStep, flowchart.steps])
+  const [currentStep, setCurrentStep] = useState(resolveCurrentStep(patient.emergencyState.currentStep))
   const [history, setHistory] = useState<string[]>(patient.emergencyState.history || [])
   const [answers, setAnswers] = useState<Record<string, string>>(patient.emergencyState.answers || {})
   const [progress, setProgress] = useState(patient.emergencyState.progress || 0)
@@ -126,17 +180,37 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [selectedDurationPlan, setSelectedDurationPlan] = useState<string>('')
   const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({})
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
+  const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
+    ph: '',
+    pco2: '',
+    hco3: '',
+    be: '',
+    po2: '',
+    sodium: '',
+    chloride: '',
+    albumin: ''
+  })
+  const [gasometryInfoOpen, setGasometryInfoOpen] = useState<GasometryFieldKey | null>(null)
 
   // Carregar estado do paciente na inicialização
   useEffect(() => {
     // Só atualiza se o ID do paciente mudar ou se for inicialização, evitando reset durante a navegação
     if (patient.id) {
-      setCurrentStep(patient.emergencyState.currentStep || flowchart.initialStep)
+      const safeStep = resolveCurrentStep(patient.emergencyState.currentStep)
+      setCurrentStep(safeStep)
       setHistory(patient.emergencyState.history || [])
       setAnswers(patient.emergencyState.answers || {})
       setProgress(patient.emergencyState.progress || 0)
     }
-  }, [patient.id, flowchart.initialStep])
+  }, [
+    patient.id,
+    patient.emergencyState.currentStep,
+    patient.emergencyState.history,
+    patient.emergencyState.answers,
+    patient.emergencyState.progress,
+    flowchart.id,
+    resolveCurrentStep
+  ])
 
   // Função para calcular progresso baseado no fluxograma específico
   const calculateProgress = (currentStep: string, history: string[]): number => {
@@ -270,6 +344,240 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const hasSelectedTherapy = selectedTherapies.length > 0
   const isSectionOpen = (key: string, defaultValue = true) => sectionOpen[key] ?? defaultValue
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
+  const isGasometryFlow = flowchart.id === 'gasometria'
+
+  const toNumber = (value: unknown): number | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value !== 'string') return null
+    const normalized = value.replace(',', '.').trim()
+    if (!normalized) return null
+    const parsed = Number(normalized)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  const normalizeGasometryInput = (key: GasometryFieldKey, raw: string, finalize = false) => {
+    let normalized = raw.replace(',', '.').replace(/[^\d.-]/g, '')
+    const dotIndex = normalized.indexOf('.')
+    if (dotIndex >= 0) {
+      normalized = normalized.slice(0, dotIndex + 1) + normalized.slice(dotIndex + 1).replace(/\./g, '')
+    }
+    if (key === 'ph') {
+      const digitsOnly = normalized.replace(/\D/g, '')
+      if (digitsOnly.length === 2) normalized = `${digitsOnly[0]}.${digitsOnly[1]}`
+      if (digitsOnly.length >= 3) normalized = `${digitsOnly[0]}.${digitsOnly.slice(1, 3)}`
+      if (finalize && /^\d$/.test(digitsOnly)) normalized = `${digitsOnly}.0`
+    }
+    return normalized
+  }
+
+  const formatGasometryNumber = (value: number | null, digits = 2) => value === null ? '--' : value.toFixed(digits)
+
+  const savedGasometryLabs = useMemo(() => {
+    const raw = answers['coleta_parametros']
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw) as Record<string, number>
+      return parsed
+    } catch {
+      return null
+    }
+  }, [answers])
+
+  const gasometryValidation = useMemo(() => {
+    const parsed = {} as Record<GasometryFieldKey, number | null>
+    const errors = {} as Record<GasometryFieldKey, string | null>
+    gasometryFieldConfig.forEach((field) => {
+      const value = toNumber(gasometryDraft[field.key])
+      parsed[field.key] = value
+      if (value === null) {
+        errors[field.key] = field.required ? 'Obrigatório para o fluxo' : null
+        return
+      }
+      if (value < field.min || value > field.max) {
+        errors[field.key] = `Faixa fisiológica: ${field.min} a ${field.max} ${field.unit}`.trim()
+        return
+      }
+      errors[field.key] = null
+    })
+    const hasHardError = gasometryFieldConfig.some((field) => {
+      if (field.required && parsed[field.key] === null) return true
+      return !!errors[field.key]
+    })
+    return { parsed, errors, hasHardError }
+  }, [gasometryDraft])
+
+  const requiredGasometryReady = !gasometryValidation.hasHardError
+
+  const getGasometryFieldFeedback = (key: GasometryFieldKey, value: number | null) => {
+    if (value === null) return { tone: 'slate', text: 'Aguardando preenchimento' }
+    if (key === 'ph') return value < 7.35 ? { tone: 'red', text: 'Acidemia' } : value > 7.45 ? { tone: 'amber', text: 'Alcalemia' } : { tone: 'emerald', text: 'pH normal' }
+    if (key === 'pco2') return value > 45 ? { tone: 'red', text: 'Retenção de CO2 (>45)' } : value < 35 ? { tone: 'amber', text: 'Hipocapnia (<35)' } : { tone: 'emerald', text: 'Faixa normal (35–45)' }
+    if (key === 'hco3') return value < 22 ? { tone: 'red', text: 'Baixo (<22)' } : value > 27 ? { tone: 'amber', text: 'Elevado (>27)' } : { tone: 'emerald', text: 'Faixa normal (22–27)' }
+    if (key === 'be') return value < -2 ? { tone: 'red', text: 'Déficit de base' } : value > 2 ? { tone: 'amber', text: 'Excesso de base' } : { tone: 'emerald', text: 'Próximo do normal' }
+    if (key === 'po2') return value < 60 ? { tone: 'red', text: 'Hipoxemia importante' } : value < 80 ? { tone: 'amber', text: 'Hipoxemia leve' } : { tone: 'emerald', text: 'Oxigenação adequada' }
+    if (key === 'sodium') return value < 135 ? { tone: 'amber', text: 'Hiponatremia' } : value > 145 ? { tone: 'amber', text: 'Hipernatremia' } : { tone: 'emerald', text: 'Faixa usual' }
+    if (key === 'chloride') return value < 98 ? { tone: 'amber', text: 'Hipocloremia' } : value > 107 ? { tone: 'amber', text: 'Hipercloremia' } : { tone: 'emerald', text: 'Faixa usual' }
+    if (key === 'albumin') return value < 3.5 ? { tone: 'amber', text: 'Baixa (corrigir AG)' } : { tone: 'emerald', text: 'Faixa usual' }
+    return { tone: 'slate', text: 'Sem classificação' }
+  }
+
+  const gasometryStepOptions = useMemo(() => {
+    if (!isGasometryFlow || !currentStepData) return null
+    const pick = (nextStep: string) => currentStepData.options?.find(option => option.nextStep === nextStep)
+    const labs = savedGasometryLabs || gasometryValidation.parsed
+    const ph = labs.ph ?? null
+    const pco2 = labs.pco2 ?? null
+    const hco3 = labs.hco3 ?? null
+    const na = labs.sodium ?? null
+    const cl = labs.chloride ?? null
+    const albumin = labs.albumin ?? null
+    if (currentStepData.id === 'avaliar_ph' && ph !== null) {
+      return [pick(ph < 7.35 ? 'acidemia_eixo' : ph <= 7.45 ? 'ph_normal_checar' : 'alcalemia_eixo')].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'acidemia_eixo' && pco2 !== null && hco3 !== null) {
+      const list = []
+      if (pco2 > 45) list.push(pick('acidose_respiratoria_classificar'))
+      if (hco3 < 22) list.push(pick('acidose_metabolica_winter'))
+      return list.filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'ph_normal_checar' && pco2 !== null && hco3 !== null) {
+      const normal = pco2 >= 35 && pco2 <= 45 && hco3 >= 22 && hco3 <= 26
+      return [pick(normal ? 'gasometria_normal' : 'disturbio_misto_ph_normal')].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'acidose_respiratoria_classificar' && pco2 !== null && hco3 !== null) {
+      const delta = (pco2 - 40) / 10
+      const acute = 24 + delta
+      const chronic = 24 + 4 * delta
+      const isAcute = Math.abs(hco3 - acute) <= Math.abs(hco3 - chronic)
+      return [pick(isAcute ? 'acidose_respiratoria_aguda' : 'acidose_respiratoria_cronica')].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'acidose_metabolica_winter' && pco2 !== null && hco3 !== null) {
+      const expected = 1.5 * hco3 + 8
+      const low = expected - 2
+      const high = expected + 2
+      const next = pco2 < low ? 'acidose_metabolica_alcalose_resp' : pco2 > high ? 'acidose_metabolica_acidose_resp' : 'acidose_metabolica_ag'
+      return [pick(next)].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'acidose_metabolica_ag' && na !== null && cl !== null && hco3 !== null) {
+      const ag = na - (hco3 + cl)
+      const agCorr = albumin !== null ? ag + (4 - albumin) * 2.5 : ag
+      return [pick(agCorr <= 12 ? 'acidose_metabolica_hipercloremica' : 'acidose_metabolica_delta_delta')].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'acidose_metabolica_delta_delta' && na !== null && cl !== null && hco3 !== null) {
+      const ag = na - (hco3 + cl)
+      const agCorr = albumin !== null ? ag + (4 - albumin) * 2.5 : ag
+      const deltaHco3 = 24 - hco3
+      if (deltaHco3 <= 0) return [pick('acidose_metabolica_ag_alto')].filter(Boolean) as EmergencyOption[]
+      const ratio = (agCorr - 10) / deltaHco3
+      const next = ratio > 2 ? 'acidose_metabolica_ag_alto_alcalose' : ratio < 1 ? 'acidose_metabolica_ag_alto_acidose_normo_ag' : 'acidose_metabolica_ag_alto'
+      return [pick(next)].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'alcalemia_eixo' && pco2 !== null && hco3 !== null) {
+      const list = []
+      if (hco3 > 27) list.push(pick('alcalose_metabolica_compensacao'))
+      if (pco2 < 35) list.push(pick('alcalose_respiratoria_compensacao'))
+      return list.filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'alcalose_metabolica_compensacao' && pco2 !== null && hco3 !== null) {
+      const expected = hco3 + 15
+      const within = pco2 >= expected - 2 && pco2 <= expected + 2
+      return [pick(within ? 'alcalose_metabolica_compensada' : 'alcalose_metabolica_mista')].filter(Boolean) as EmergencyOption[]
+    }
+    if (currentStepData.id === 'alcalose_respiratoria_compensacao' && pco2 !== null && hco3 !== null) {
+      const delta = (40 - pco2) / 10
+      const acute = 24 - 2 * delta
+      const chronic = 24 - 5 * delta
+      const acuteOk = hco3 >= acute - 2 && hco3 <= acute + 2
+      const chronicOk = hco3 >= chronic - 2 && hco3 <= chronic + 2
+      const next = chronicOk ? 'alcalose_respiratoria_cronica' : acuteOk ? 'alcalose_respiratoria_aguda' : 'alcalose_respiratoria_mista'
+      return [pick(next)].filter(Boolean) as EmergencyOption[]
+    }
+    return null
+  }, [isGasometryFlow, currentStepData, savedGasometryLabs, gasometryValidation.parsed])
+
+  const gasometryStepNarrative = useMemo(() => {
+    if (!isGasometryFlow || !currentStepData) return null
+    const labs = savedGasometryLabs || gasometryValidation.parsed
+    const ph = labs.ph ?? null
+    const pco2 = labs.pco2 ?? null
+    const hco3 = labs.hco3 ?? null
+    const na = labs.sodium ?? null
+    const cl = labs.chloride ?? null
+    const albumin = labs.albumin ?? null
+    if (currentStepData.id === 'avaliar_ph' && ph !== null) {
+      return ph < 7.35
+        ? `Acidemia identificada porque pH=${formatGasometryNumber(ph)} (<7,35).`
+        : ph <= 7.45
+          ? `pH normal identificado porque pH=${formatGasometryNumber(ph)} (7,35–7,45).`
+          : `Alcalemia identificada porque pH=${formatGasometryNumber(ph)} (>7,45).`
+    }
+    if (currentStepData.id === 'acidemia_eixo' && pco2 !== null && hco3 !== null) {
+      const reasons = []
+      if (pco2 > 45) reasons.push(`PaCO2=${formatGasometryNumber(pco2, 1)} >45 sugere acidose respiratória`)
+      if (hco3 < 22) reasons.push(`HCO3=${formatGasometryNumber(hco3, 1)} <22 sugere acidose metabólica`)
+      return reasons.length ? reasons.join(' | ') : 'Valores não atendem critérios clássicos de eixo único.'
+    }
+    if (currentStepData.id === 'ph_normal_checar' && pco2 !== null && hco3 !== null) {
+      const normal = pco2 >= 35 && pco2 <= 45 && hco3 >= 22 && hco3 <= 26
+      return normal
+        ? `pH normal com PaCO2=${formatGasometryNumber(pco2, 1)} e HCO3=${formatGasometryNumber(hco3, 1)} em faixa normal.`
+        : `pH normal, porém PaCO2=${formatGasometryNumber(pco2, 1)} e/ou HCO3=${formatGasometryNumber(hco3, 1)} alterados, sugerindo distúrbio misto.`
+    }
+    if (currentStepData.id === 'acidose_metabolica_winter' && pco2 !== null && hco3 !== null) {
+      const expected = 1.5 * hco3 + 8
+      const low = expected - 2
+      const high = expected + 2
+      return `Winter: PaCO2 esperada ${formatGasometryNumber(low, 1)}–${formatGasometryNumber(high, 1)}. PaCO2 medida=${formatGasometryNumber(pco2, 1)}.`
+    }
+    if (currentStepData.id === 'acidose_metabolica_ag' && na !== null && cl !== null && hco3 !== null) {
+      const ag = na - (hco3 + cl)
+      const agCorr = albumin !== null ? ag + (4 - albumin) * 2.5 : ag
+      return albumin !== null
+        ? `AG=${formatGasometryNumber(ag, 1)} e AG corrigido=${formatGasometryNumber(agCorr, 1)} (albumina ${formatGasometryNumber(albumin, 1)}).`
+        : `AG=${formatGasometryNumber(ag, 1)} sem correção de albumina.`
+    }
+    if (currentStepData.id === 'acidose_metabolica_delta_delta' && na !== null && cl !== null && hco3 !== null) {
+      const ag = na - (hco3 + cl)
+      const agCorr = albumin !== null ? ag + (4 - albumin) * 2.5 : ag
+      const deltaHco3 = 24 - hco3
+      const ratio = deltaHco3 > 0 ? (agCorr - 10) / deltaHco3 : null
+      return ratio === null
+        ? 'Δ/Δ não aplicável pois ΔHCO3 <= 0.'
+        : `ΔAG=${formatGasometryNumber(agCorr - 10, 1)} | ΔHCO3=${formatGasometryNumber(deltaHco3, 1)} | Δ/Δ=${formatGasometryNumber(ratio, 2)}.`
+    }
+    if (currentStepData.id === 'alcalemia_eixo' && pco2 !== null && hco3 !== null) {
+      const reasons = []
+      if (hco3 > 27) reasons.push(`HCO3=${formatGasometryNumber(hco3, 1)} >27 sugere alcalose metabólica`)
+      if (pco2 < 35) reasons.push(`PaCO2=${formatGasometryNumber(pco2, 1)} <35 sugere alcalose respiratória`)
+      return reasons.length ? reasons.join(' | ') : 'Sem critério clássico de eixo único na alcalemia.'
+    }
+    if (currentStepData.id === 'alcalose_metabolica_compensacao' && pco2 !== null && hco3 !== null) {
+      const expected = hco3 + 15
+      return `PaCO2 esperada na alcalose metabólica: ${formatGasometryNumber(expected - 2, 1)}–${formatGasometryNumber(expected + 2, 1)}. Medida=${formatGasometryNumber(pco2, 1)}.`
+    }
+    if (currentStepData.id === 'alcalose_respiratoria_compensacao' && pco2 !== null && hco3 !== null) {
+      const delta = (40 - pco2) / 10
+      const acute = 24 - 2 * delta
+      const chronic = 24 - 5 * delta
+      return `HCO3 esperado agudo ${formatGasometryNumber(acute - 2, 1)}–${formatGasometryNumber(acute + 2, 1)} | crônico ${formatGasometryNumber(chronic - 2, 1)}–${formatGasometryNumber(chronic + 2, 1)}. Medido=${formatGasometryNumber(hco3, 1)}.`
+    }
+    return null
+  }, [isGasometryFlow, currentStepData, savedGasometryLabs, gasometryValidation.parsed])
+
+  useEffect(() => {
+    if (!isGasometryFlow || currentStepData?.id !== 'coleta_parametros') return
+    if (!savedGasometryLabs) return
+    setGasometryDraft({
+      ph: savedGasometryLabs.ph != null ? String(savedGasometryLabs.ph) : '',
+      pco2: savedGasometryLabs.pco2 != null ? String(savedGasometryLabs.pco2) : '',
+      hco3: savedGasometryLabs.hco3 != null ? String(savedGasometryLabs.hco3) : '',
+      be: savedGasometryLabs.be != null ? String(savedGasometryLabs.be) : '',
+      po2: savedGasometryLabs.po2 != null ? String(savedGasometryLabs.po2) : '',
+      sodium: savedGasometryLabs.sodium != null ? String(savedGasometryLabs.sodium) : '',
+      chloride: savedGasometryLabs.chloride != null ? String(savedGasometryLabs.chloride) : '',
+      albumin: savedGasometryLabs.albumin != null ? String(savedGasometryLabs.albumin) : ''
+    })
+  }, [isGasometryFlow, currentStepData?.id, savedGasometryLabs])
 
   useEffect(() => {
     if (!isTVPClinicalEvaluation) {
@@ -557,6 +865,85 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
+                  </div>
+                </div>
+              )}
+
+              {isGasometryFlow && currentStepData.id === 'coleta_parametros' && (
+                <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50/40 p-4">
+                  <div className="grid md:grid-cols-2 gap-3">
+                    {gasometryFieldConfig.map((field) => {
+                      const value = gasometryDraft[field.key]
+                      const parsed = gasometryValidation.parsed[field.key]
+                      const error = gasometryValidation.errors[field.key]
+                      const feedback = getGasometryFieldFeedback(field.key, parsed)
+                      const toneClass = error
+                        ? 'border-red-300 bg-red-50 text-red-700'
+                        : feedback.tone === 'red'
+                          ? 'border-red-300 bg-red-50 text-red-700'
+                          : feedback.tone === 'amber'
+                            ? 'border-amber-300 bg-amber-50 text-amber-700'
+                            : feedback.tone === 'emerald'
+                              ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                              : 'border-slate-300 bg-slate-50 text-slate-600'
+                      return (
+                        <div key={field.key} className="rounded-xl border border-slate-200 bg-white p-3">
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-semibold text-slate-800">
+                              {field.label} {field.unit && <span className="text-slate-500">({field.unit})</span>} {field.required && <span className="text-red-600">*</span>}
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setGasometryInfoOpen(prev => prev === field.key ? null : field.key)}
+                              className="w-6 h-6 rounded-full border border-blue-300 bg-blue-50 text-blue-700 inline-flex items-center justify-center hover:bg-blue-100 transition-colors"
+                              title="Como esse valor é usado no cálculo"
+                            >
+                              <Info className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={value}
+                            onChange={(e) => setGasometryDraft(prev => ({ ...prev, [field.key]: normalizeGasometryInput(field.key, e.target.value) }))}
+                            onBlur={(e) => setGasometryDraft(prev => ({ ...prev, [field.key]: normalizeGasometryInput(field.key, e.target.value, true) }))}
+                            className={clsx('mt-1 w-full rounded-xl border px-3 py-2.5 focus:ring-2 outline-none', toneClass, 'focus:ring-slate-300')}
+                            placeholder={`${field.min} – ${field.max}`}
+                          />
+                          <div className={clsx('mt-2 inline-flex items-center px-2 py-1 rounded-md border text-xs font-semibold', toneClass)}>
+                            {error ? error : feedback.text}
+                          </div>
+                          {gasometryInfoOpen === field.key && (
+                            <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-900 space-y-1">
+                              {gasometryFieldInfo[field.key].map((line) => (
+                                <p key={line}>{line}</p>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      onClick={() => {
+                        if (!requiredGasometryReady) return
+                        const payload = Object.entries(gasometryValidation.parsed).reduce((acc, [key, value]) => {
+                          if (value !== null) acc[key] = value
+                          return acc
+                        }, {} as Record<string, number>)
+                        handleAnswer('avaliar_ph', JSON.stringify(payload))
+                      }}
+                      disabled={!requiredGasometryReady}
+                      className={clsx(
+                        'px-5 py-2.5 rounded-xl font-semibold transition-all',
+                        requiredGasometryReady
+                          ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      )}
+                    >
+                      Aplicar valores e continuar
+                    </motion.button>
                   </div>
                 </div>
               )}
@@ -1034,10 +1421,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isGasometryFlow && gasometryStepNarrative && currentStepData.id !== 'coleta_parametros' && (
+                <div className="mb-6 rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+                  <h4 className="text-sm font-bold text-indigo-800 mb-1">Interpretação automática com os valores já informados</h4>
+                  <p className="text-sm text-indigo-900">{gasometryStepNarrative}</p>
+                </div>
+              )}
+
               {/* Opções */}
-              {currentStepData.options && currentStepData.options.length > 0 && !isTVPWellsScore && !isTVPTreatmentInitial && (
+              {(() => {
+                const displayedOptions = isGasometryFlow && gasometryStepOptions !== null ? gasometryStepOptions : currentStepData.options
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPWellsScore || isTVPTreatmentInitial) return null
+                return (
                 <div className="grid gap-4">
-                  {currentStepData.options.map((option, index) => (
+                  {displayedOptions.map((option, index) => (
                     <motion.button
                       key={index}
                       onClick={() => handleAnswer(option.nextStep, option.value)}
@@ -1095,6 +1492,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     </motion.button>
                   ))}
                 </div>
+                )
+              })()}
+
+              {isGasometryFlow && gasometryStepOptions !== null && gasometryStepOptions.length === 0 && currentStepData.id !== 'coleta_parametros' && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                  Nenhum critério foi atendido com os valores atuais para esta etapa. Revise os parâmetros em Coleta de Parâmetros.
+                </div>
               )}
 
               {/* Step Final */}
@@ -1102,21 +1506,60 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 p-6 bg-green-50 border border-green-200 rounded-2xl"
+                  className={clsx(
+                    "mt-6 p-6 rounded-2xl",
+                    isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                      ? 'bg-amber-50 border border-amber-200'
+                      : 'bg-green-50 border border-green-200'
+                  )}
                 >
                   <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-8 h-8 text-green-600" />
+                    <div className={clsx(
+                      "w-16 h-16 rounded-full flex items-center justify-center",
+                      isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                        ? 'bg-amber-100'
+                        : 'bg-green-100'
+                    )}>
+                      {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? (
+                        <AlertTriangle className="w-8 h-8 text-amber-600" />
+                      ) : (
+                        <CheckCircle className="w-8 h-8 text-green-600" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-green-800">Fluxograma Concluído</h3>
-                      <p className="text-green-700 mt-1">Protocolo finalizado com sucesso. O paciente pode ser liberado ou encaminhado conforme decisão clínica.</p>
+                      <h3 className={clsx(
+                        "text-xl font-bold",
+                        isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'text-amber-800'
+                          : 'text-green-800'
+                      )}>
+                        {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? 'Distúrbio Misto Identificado' : 'Fluxograma Concluído'}
+                      </h3>
+                      <p className={clsx(
+                        "mt-1",
+                        isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'text-amber-700'
+                          : 'text-green-700'
+                      )}>
+                        {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'Este resultado não é benigno por definição: indica combinação de distúrbios ácido-base e requer correlação clínica e conduta direcionada.'
+                          : 'Protocolo finalizado com sucesso. O paciente pode ser liberado ou encaminhado conforme decisão clínica.'}
+                      </p>
                     </div>
                     <button
                       onClick={onComplete}
-                      className="mt-4 px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+                      className={clsx(
+                        "mt-4 px-8 py-3 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2",
+                        isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'bg-amber-600 hover:bg-amber-700'
+                          : 'bg-green-600 hover:bg-green-700'
+                      )}
                     >
-                      <CheckCircle className="w-5 h-5" />
+                      {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? (
+                        <AlertTriangle className="w-5 h-5" />
+                      ) : (
+                        <CheckCircle className="w-5 h-5" />
+                      )}
                       <span>Finalizar Atendimento</span>
                     </button>
                   </div>

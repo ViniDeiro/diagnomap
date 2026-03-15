@@ -13,7 +13,8 @@
     "db:seed:remune:mogi": "node scripts/seed_remune_mogi.js",
     "db:test": "node scripts/dbtest.js",
     "db:clean": "node scripts/clean_patients.js",
-    "test:usability": "node scripts/usability-tests.js"
+    "test:usability": "node scripts/usability-tests.js",
+    "test:gasometry-formulas": "node scripts/gasometry-formula-tests.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",

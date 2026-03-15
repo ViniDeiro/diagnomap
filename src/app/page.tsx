@@ -17,12 +17,11 @@ import { Patient, PatientFormData } from '@/types/patient'
 import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
-import { GasometryFlowchart } from '@/components/GasometryFlowchart'
 import { supabase } from '@/services/supabaseClient'
 import Header from '@/components/Header'
 import ProfileScreen from '@/components/ProfileScreen'
 
-type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'gasometry-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form' | 'profile'
+type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form' | 'profile'
 
 export default function Home() {
   const router = useRouter()
@@ -72,12 +71,6 @@ export default function Home() {
   }
 
   const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
-    // Caso especial: Gasometria abre o componente dedicado
-    if (flowchart.id === 'gasometria') {
-      setAppState('gasometry-flowchart')
-      return
-    }
-
     // Caso especial: Dengue deve usar o fluxo completo dedicado
     if (flowchart.id === 'dengue') {
       const quickPatient = patientService.createPatient({
@@ -98,48 +91,46 @@ export default function Home() {
     // Demais protocolos usam o fluxograma genérico de emergência
     setSelectedFlowchart(flowchart)
 
-    if (!currentEmergencyPatient) {
-      const emergencyPatient: EmergencyPatient = {
-        id: `emergency-${Date.now()}`,
-        name: 'Paciente de Emergência',
-        birthDate: new Date(),
-        age: 0,
-        gender: 'masculino',
-        medicalRecord: `EM-${Date.now()}`,
-        selectedFlowchart: flowchart.id,
-        admission: {
-          date: new Date(),
-          time: new Date().toLocaleTimeString(),
-          symptoms: []
-        },
-        flowchartState: {
-          currentStep: flowchart.initialStep,
-          history: [],
-          answers: {},
-          progress: 0,
-          lastUpdate: new Date()
-        },
-        labResults: {
-          status: 'not_requested'
-        },
-        treatment: {
-          prescriptions: [],
-          observations: []
-        },
-        status: 'active',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        emergencyType: flowchart.id,
-        emergencyState: {
-          currentStep: flowchart.initialStep,
-          history: [],
-          answers: {},
-          progress: 0,
-          lastUpdate: new Date()
-        }
-      } as EmergencyPatient
-      setCurrentEmergencyPatient(emergencyPatient)
-    }
+    const emergencyPatient: EmergencyPatient = {
+      id: `emergency-${Date.now()}`,
+      name: 'Paciente de Emergência',
+      birthDate: new Date(),
+      age: 0,
+      gender: 'masculino',
+      medicalRecord: `EM-${Date.now()}`,
+      selectedFlowchart: flowchart.id,
+      admission: {
+        date: new Date(),
+        time: new Date().toLocaleTimeString(),
+        symptoms: []
+      },
+      flowchartState: {
+        currentStep: flowchart.initialStep,
+        history: [],
+        answers: {},
+        progress: 0,
+        lastUpdate: new Date()
+      },
+      labResults: {
+        status: 'not_requested'
+      },
+      treatment: {
+        prescriptions: [],
+        observations: []
+      },
+      status: 'active',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      emergencyType: flowchart.id,
+      emergencyState: {
+        currentStep: flowchart.initialStep,
+        history: [],
+        answers: {},
+        progress: 0,
+        lastUpdate: new Date()
+      }
+    } as EmergencyPatient
+    setCurrentEmergencyPatient(emergencyPatient)
 
     setAppState('emergency-flowchart')
   }
@@ -334,8 +325,6 @@ export default function Home() {
         <PatientForm
           onSubmit={handlePatientFormSubmit}
           onCancel={handlePatientFormCancel}
-          onEmergencySelector={handleEmergencySelector}
-          onOpenGasometry={() => setAppState('gasometry-flowchart')}
           onSeverityRedirect={handleSeverityRedirect}
         />
       )
@@ -356,8 +345,6 @@ export default function Home() {
         <PatientForm
           onSubmit={handleReturnFormSubmit}
           onCancel={handleReturnCancel}
-          onEmergencySelector={handleEmergencySelector}
-          onOpenGasometry={() => setAppState('gasometry-flowchart')}
           initialStep={4}
           presetFlowchart={'dengue'}
           skipFlowSelection={true}
@@ -401,15 +388,6 @@ export default function Home() {
       ) : null
     }
 
-    if (appState === 'gasometry-flowchart') {
-      return (
-        <GasometryFlowchart
-          onComplete={() => setAppState('dashboard')}
-          onCancel={() => setAppState('emergency-selector')}
-        />
-      )
-    }
-
     if (appState === 'profile') {
       return (
         <ProfileScreen 
@@ -426,7 +404,6 @@ export default function Home() {
         {appState !== 'loading' && 
          appState !== 'flowchart' && 
          appState !== 'emergency-flowchart' && 
-         appState !== 'gasometry-flowchart' && 
          <Header onProfileClick={() => setAppState('profile')} />
         }
 

@@ -858,23 +858,329 @@ export const diarreiaFlowchart: EmergencyFlowchart = {
   }
 }
 
-// Fluxograma de Gasometria (Placeholder para seleção)
+// Fluxograma de Gasometria Arterial (padrão EmergencyFlowchart)
 export const gasometryFlowchart: EmergencyFlowchart = {
   id: 'gasometria',
-  name: 'Gasometria',
-  description: 'Análise e interpretação de gasometria arterial e venosa.',
+  name: 'Gasometria Arterial',
+  description: 'Interpretação estruturada de gasometria arterial com fluxo passo a passo.',
   category: 'respiratory',
-  priority: 'medium',
+  priority: 'high',
   icon: 'activity',
-  color: 'from-blue-500 to-blue-700',
-  initialStep: 'start',
-  finalSteps: [],
+  color: 'from-blue-600 to-slate-700',
+  initialStep: 'tipo_gasometria',
+  finalSteps: [
+    'gasometria_normal',
+    'disturbio_misto_ph_normal',
+    'acidose_respiratoria_aguda',
+    'acidose_respiratoria_cronica',
+    'acidose_metabolica_hipercloremica',
+    'acidose_metabolica_ag_alto',
+    'acidose_metabolica_ag_alto_alcalose',
+    'acidose_metabolica_ag_alto_acidose_normo_ag',
+    'alcalose_metabolica_compensada',
+    'alcalose_metabolica_mista',
+    'alcalose_respiratoria_aguda',
+    'alcalose_respiratoria_cronica',
+    'alcalose_respiratoria_mista'
+  ],
   steps: {
-    start: {
-      id: 'start',
-      title: 'Gasometria',
-      description: 'Selecione o tipo de gasometria',
+    identificacao_paciente: {
+      id: 'identificacao_paciente',
+      title: 'Identificação do Paciente',
+      description: 'Confirmar identificação antes da interpretação.',
       type: 'question',
+      content: `
+        <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
+          <p><strong>Passo 1:</strong> confirmar identificação do paciente no prontuário antes de interpretar a gasometria.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Identificação confirmada', nextStep: 'tipo_gasometria', value: 'ok' }
+      ]
+    },
+    tipo_gasometria: {
+      id: 'tipo_gasometria',
+      title: 'Tipo de Gasometria',
+      description: 'Definir tipo para interpretação.',
+      type: 'question',
+      options: [
+        { text: 'Arterial', nextStep: 'coleta_parametros', value: 'arterial' },
+        { text: 'Venosa central/periférica (em construção)', nextStep: 'venosa_em_construcao', value: 'venosa' }
+      ]
+    },
+    venosa_em_construcao: {
+      id: 'venosa_em_construcao',
+      title: 'Módulo Venoso em Construção',
+      description: 'Fluxo venoso ainda não disponível.',
+      type: 'result',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p>O fluxo completo implementado nesta fase é o da <strong>gasometria arterial</strong>.</p>
+        </div>
+      `,
+      options: []
+    },
+    coleta_parametros: {
+      id: 'coleta_parametros',
+      title: 'Coleta de Parâmetros',
+      description: 'Registrar os valores da gasometria arterial.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>Preencher:</strong> pH, PaCO2, HCO3, Na, Cl e albumina (se disponível).</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Henderson-Hasselbalch: pH = 6,10 + log [HCO3] / (0,03 × PaCO2)</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Parâmetros registrados', nextStep: 'avaliar_ph', value: 'dados_ok' }
+      ]
+    },
+    avaliar_ph: {
+      id: 'avaliar_ph',
+      title: 'Avaliar pH',
+      description: 'Primeira bifurcação do fluxograma.',
+      type: 'question',
+      options: [
+        { text: 'pH < 7,35 (Acidemia)', nextStep: 'acidemia_eixo', value: 'acidemia' },
+        { text: 'pH entre 7,35 e 7,45 (pH normal)', nextStep: 'ph_normal_checar', value: 'ph_normal' },
+        { text: 'pH > 7,45 (Alcalemia)', nextStep: 'alcalemia_eixo', value: 'alcalemia' }
+      ]
+    },
+    ph_normal_checar: {
+      id: 'ph_normal_checar',
+      title: 'pH Normal: checar HCO3 e PaCO2',
+      description: 'Definir ausência de distúrbio ou distúrbio misto.',
+      type: 'question',
+      options: [
+        { text: 'HCO3 e PaCO2 normais', nextStep: 'gasometria_normal', value: 'normal' },
+        { text: 'HCO3 e/ou PaCO2 alterados', nextStep: 'disturbio_misto_ph_normal', value: 'misto' }
+      ]
+    },
+    gasometria_normal: {
+      id: 'gasometria_normal',
+      title: 'Gasometria Normal',
+      description: 'Sem distúrbio ácido-base detectável.',
+      type: 'result',
+      options: []
+    },
+    disturbio_misto_ph_normal: {
+      id: 'disturbio_misto_ph_normal',
+      title: 'Distúrbio Misto com pH Normal',
+      description: 'pH normal com alterações compensadas em sentidos opostos.',
+      type: 'result',
+      options: []
+    },
+    acidemia_eixo: {
+      id: 'acidemia_eixo',
+      title: 'Acidemia: eixo principal',
+      description: 'Definir acidose metabólica ou respiratória.',
+      type: 'question',
+      options: [
+        { text: 'PaCO2 > 45 mmHg', nextStep: 'acidose_respiratoria_classificar', value: 'resp' },
+        { text: 'HCO3 < 22 mEq/L', nextStep: 'acidose_metabolica_winter', value: 'met' }
+      ]
+    },
+    acidose_respiratoria_classificar: {
+      id: 'acidose_respiratoria_classificar',
+      title: 'Acidose Respiratória: aguda ou crônica',
+      description: 'Comparar HCO3 medido com HCO3 esperado.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Aguda:</strong> HCO3 esperado = 24 + [(PaCO2 - 40) / 10] (≈ +1 mEq/L por 10 mmHg).</p>
+          <p><strong>Crônica:</strong> HCO3 esperado = 24 + 4×[(PaCO2 - 40) / 10] (≈ +4 mEq/L por 10 mmHg).</p>
+        </div>
+      `,
+      options: [
+        { text: 'Compatível com padrão agudo', nextStep: 'acidose_respiratoria_aguda', value: 'aguda' },
+        { text: 'Compatível com padrão crônico', nextStep: 'acidose_respiratoria_cronica', value: 'cronica' }
+      ]
+    },
+    acidose_respiratoria_aguda: {
+      id: 'acidose_respiratoria_aguda',
+      title: 'Acidose Respiratória Aguda',
+      description: 'Compensação renal aguda.',
+      type: 'result',
+      options: []
+    },
+    acidose_respiratoria_cronica: {
+      id: 'acidose_respiratoria_cronica',
+      title: 'Acidose Respiratória Crônica',
+      description: 'Compensação renal crônica.',
+      type: 'result',
+      options: []
+    },
+    acidose_metabolica_winter: {
+      id: 'acidose_metabolica_winter',
+      title: 'Acidose Metabólica: Fórmula de Winter',
+      description: 'Avaliar compensação respiratória.',
+      type: 'question',
+      content: `
+        <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
+          <p>PaCO2 esperada = 1,5 × HCO3 + 8 ± 2</p>
+        </div>
+      `,
+      options: [
+        { text: 'PaCO2 abaixo da faixa esperada', nextStep: 'acidose_metabolica_alcalose_resp', value: 'winter_baixo' },
+        { text: 'PaCO2 dentro da faixa esperada', nextStep: 'acidose_metabolica_ag', value: 'winter_ok' },
+        { text: 'PaCO2 acima da faixa esperada', nextStep: 'acidose_metabolica_acidose_resp', value: 'winter_alto' }
+      ]
+    },
+    acidose_metabolica_alcalose_resp: {
+      id: 'acidose_metabolica_alcalose_resp',
+      title: 'Distúrbio Misto',
+      description: 'Acidose metabólica + alcalose respiratória.',
+      type: 'result',
+      options: []
+    },
+    acidose_metabolica_acidose_resp: {
+      id: 'acidose_metabolica_acidose_resp',
+      title: 'Distúrbio Misto',
+      description: 'Acidose metabólica + acidose respiratória.',
+      type: 'result',
+      options: []
+    },
+    acidose_metabolica_ag: {
+      id: 'acidose_metabolica_ag',
+      title: 'Ânion Gap (AG)',
+      description: 'Classificar acidose metabólica por AG.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>AG = Na - (HCO3 + Cl)</p>
+          <p>AG corrigido (Figge) = AG + [(4,0 - albumina) × 2,5]</p>
+        </div>
+      `,
+      options: [
+        { text: 'AG normal (8–12)', nextStep: 'acidose_metabolica_hipercloremica', value: 'ag_normal' },
+        { text: 'AG elevado (>12)', nextStep: 'acidose_metabolica_delta_delta', value: 'ag_alto' }
+      ]
+    },
+    acidose_metabolica_hipercloremica: {
+      id: 'acidose_metabolica_hipercloremica',
+      title: 'Acidose Metabólica Hiperclorêmica',
+      description: 'Acidose metabólica com AG normal.',
+      type: 'result',
+      options: []
+    },
+    acidose_metabolica_delta_delta: {
+      id: 'acidose_metabolica_delta_delta',
+      title: 'Delta/Delta',
+      description: 'Pesquisar distúrbios metabólicos associados.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>ΔAG = AG do paciente - 10</p>
+          <p>ΔHCO3 = 24 - HCO3 do paciente</p>
+          <p>Δ/Δ = ΔAG ÷ ΔHCO3</p>
+        </div>
+      `,
+      options: [
+        { text: 'Δ/Δ entre 1 e 2', nextStep: 'acidose_metabolica_ag_alto', value: 'delta_1_2' },
+        { text: 'Δ/Δ > 2', nextStep: 'acidose_metabolica_ag_alto_alcalose', value: 'delta_maior_2' },
+        { text: 'Δ/Δ < 1', nextStep: 'acidose_metabolica_ag_alto_acidose_normo_ag', value: 'delta_menor_1' }
+      ]
+    },
+    acidose_metabolica_ag_alto: {
+      id: 'acidose_metabolica_ag_alto',
+      title: 'Acidose Metabólica com AG Aumentado',
+      description: 'Distúrbio isolado principal.',
+      type: 'result',
+      options: []
+    },
+    acidose_metabolica_ag_alto_alcalose: {
+      id: 'acidose_metabolica_ag_alto_alcalose',
+      title: 'Distúrbio Misto',
+      description: 'Acidose metabólica com AG aumentado + alcalose metabólica.',
+      type: 'result',
+      options: []
+    },
+    acidose_metabolica_ag_alto_acidose_normo_ag: {
+      id: 'acidose_metabolica_ag_alto_acidose_normo_ag',
+      title: 'Distúrbio Misto',
+      description: 'Acidose metabólica com AG aumentado + acidose metabólica com AG normal.',
+      type: 'result',
+      options: []
+    },
+    alcalemia_eixo: {
+      id: 'alcalemia_eixo',
+      title: 'Alcalemia: eixo principal',
+      description: 'Definir alcalose metabólica ou respiratória.',
+      type: 'question',
+      options: [
+        { text: 'HCO3 > 27 mEq/L', nextStep: 'alcalose_metabolica_compensacao', value: 'met' },
+        { text: 'PaCO2 < 35 mmHg', nextStep: 'alcalose_respiratoria_compensacao', value: 'resp' }
+      ]
+    },
+    alcalose_metabolica_compensacao: {
+      id: 'alcalose_metabolica_compensacao',
+      title: 'Alcalose Metabólica: compensação',
+      description: 'Avaliar PaCO2 esperada.',
+      type: 'question',
+      content: `
+        <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
+          <p>PaCO2 esperada = HCO3 + 15 ± 2</p>
+        </div>
+      `,
+      options: [
+        { text: 'PaCO2 dentro da faixa esperada', nextStep: 'alcalose_metabolica_compensada', value: 'compensada' },
+        { text: 'PaCO2 fora da faixa esperada', nextStep: 'alcalose_metabolica_mista', value: 'mista' }
+      ]
+    },
+    alcalose_metabolica_compensada: {
+      id: 'alcalose_metabolica_compensada',
+      title: 'Alcalose Metabólica Compensada',
+      description: 'Compensação respiratória apropriada.',
+      type: 'result',
+      options: []
+    },
+    alcalose_metabolica_mista: {
+      id: 'alcalose_metabolica_mista',
+      title: 'Distúrbio Misto',
+      description: 'Alcalose metabólica com compensação não esperada.',
+      type: 'result',
+      options: []
+    },
+    alcalose_respiratoria_compensacao: {
+      id: 'alcalose_respiratoria_compensacao',
+      title: 'Alcalose Respiratória: compensação renal',
+      description: 'Comparar padrões agudo e crônico.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Aguda:</strong> HCO3 esperado = 24 - 2×[(40 - PaCO2)/10]</p>
+          <p><strong>Crônica:</strong> HCO3 esperado = 24 - 5×[(40 - PaCO2)/10] (±2)</p>
+        </div>
+      `,
+      options: [
+        { text: 'Compatível com padrão crônico', nextStep: 'alcalose_respiratoria_cronica', value: 'cronica' },
+        { text: 'Compatível com padrão agudo', nextStep: 'alcalose_respiratoria_aguda', value: 'aguda' },
+        { text: 'Fora dos padrões esperados', nextStep: 'alcalose_respiratoria_mista', value: 'mista' }
+      ]
+    },
+    alcalose_respiratoria_aguda: {
+      id: 'alcalose_respiratoria_aguda',
+      title: 'Alcalose Respiratória Aguda',
+      description: 'Compensação renal aguda.',
+      type: 'result',
+      options: []
+    },
+    alcalose_respiratoria_cronica: {
+      id: 'alcalose_respiratoria_cronica',
+      title: 'Alcalose Respiratória Crônica',
+      description: 'Compensação renal crônica.',
+      type: 'result',
+      options: []
+    },
+    alcalose_respiratoria_mista: {
+      id: 'alcalose_respiratoria_mista',
+      title: 'Distúrbio Misto',
+      description: 'Alcalose respiratória com resposta metabólica não esperada.',
+      type: 'result',
       options: []
     }
   }

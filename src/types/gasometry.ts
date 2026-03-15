@@ -7,6 +7,9 @@ export interface GasometryData {
     hco3: number
     be: number
     sato2: number
+    sodium: number
+    chloride: number
+    albumin: number
 }
 
 export interface GasometryResult {

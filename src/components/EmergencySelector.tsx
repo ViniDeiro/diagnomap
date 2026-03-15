@@ -37,14 +37,11 @@ import UnderDevelopmentModal from './UnderDevelopmentModal'
 interface EmergencySelectorProps {
     onSelectFlowchart: (flowchart: EmergencyFlowchart) => void
     selectedFlowchart?: string
-    // Quando presente, clicar em Gasometria abre o fluxo dedicado
-    onOpenGasometry?: () => void
 }
 
 const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     onSelectFlowchart,
-    selectedFlowchart,
-    onOpenGasometry
+    selectedFlowchart
 }) => {
     const router = useRouter()
     const [searchTerm, setSearchTerm] = useState('')
@@ -318,11 +315,6 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                 whileHover={{ y: -4 }}
                                 onClick={() => {
                                     if (flowchart.implemented) {
-                                        // Caso especial: abrir Gasometria no componente dedicado quando solicitado
-                                        if (flowchart.id === 'gasometria' && onOpenGasometry) {
-                                            onOpenGasometry()
-                                            return
-                                        }
                                         // Caso especial: Hiponatremia tem rota dedicada
                                         if (flowchart.id === 'dhel_hiponatremia') {
                                             router.push('/hyponatremia')

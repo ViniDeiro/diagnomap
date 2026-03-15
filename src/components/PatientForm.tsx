@@ -31,9 +31,6 @@ import { supabase } from '@/services/supabaseClient'
 interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
   onCancel: () => void
-  onEmergencySelector: () => void
-  // Caso especial para abrir o fluxo dedicado de Gasometria
-  onOpenGasometry?: () => void
   // Opções para cenários específicos (ex.: Retorno)
   initialStep?: number // passo inicial do wizard (1–4)
   presetFlowchart?: 'dengue' | 'zika' | 'chikungunya' // define o fluxograma inicialmente
@@ -47,7 +44,7 @@ interface PatientFormProps {
   onlyPersonalData?: boolean
 }
 
-const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergencySelector, onOpenGasometry, onSeverityRedirect, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new', onlyPersonalData = false }) => {
+const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverityRedirect, initialStep, presetFlowchart, skipFlowSelection, initialData, mode = 'new', onlyPersonalData = false }) => {
   // Função para gerar ID automático
   const generatePatientId = (): string => {
     const random = Math.random().toString(36).substring(2, 5).toUpperCase()
@@ -796,16 +793,10 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onEmergen
                   <EmergencySelector
                     selectedFlowchart={formData.selectedFlowchart}
                     onSelectFlowchart={(flowchart) => {
-                      if (flowchart.id === 'gasometria') {
-                        // Abrir o fluxo dedicado de gasometria, se disponível
-                        onOpenGasometry?.()
-                        return
-                      }
                       setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id }))
                       setHasSelectedFlow(true)
                       setCurrentStep(2)
                     }}
-                    onOpenGasometry={onOpenGasometry}
                   />
                   {!hasSelectedFlow && (
                     <p className="text-sm text-red-600 mt-2">Selecione um fluxograma para continuar.</p>
