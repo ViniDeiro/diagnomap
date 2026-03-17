@@ -36,8 +36,8 @@ const gasometryFieldConfig: Array<{ key: GasometryFieldKey; label: string; unit:
   { key: 'hco3', label: 'HCO3-', unit: 'mEq/L', min: 3, max: 60, required: true },
   { key: 'be', label: 'BE', unit: 'mEq/L', min: -40, max: 40, required: false },
   { key: 'po2', label: 'PaO2', unit: 'mmHg', min: 20, max: 600, required: false },
-  { key: 'sodium', label: 'Na+', unit: 'mEq/L', min: 100, max: 180, required: true },
-  { key: 'chloride', label: 'Cl-', unit: 'mEq/L', min: 60, max: 150, required: true },
+  { key: 'sodium', label: 'Na+', unit: 'mEq/L', min: 100, max: 180, required: false },
+  { key: 'chloride', label: 'Cl-', unit: 'mEq/L', min: 60, max: 150, required: false },
   { key: 'albumin', label: 'Albumina', unit: 'g/dL', min: 0.5, max: 6.5, required: false }
 ]
 
@@ -554,7 +554,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (key === 'pco2') return value > 45 ? { tone: 'red', text: 'Retenção de CO2 (>45)' } : value < 35 ? { tone: 'amber', text: 'Hipocapnia (<35)' } : { tone: 'emerald', text: 'Faixa normal (35–45)' }
     if (key === 'hco3') return value < 22 ? { tone: 'red', text: 'Baixo (<22)' } : value > 27 ? { tone: 'amber', text: 'Elevado (>27)' } : { tone: 'emerald', text: 'Faixa normal (22–27)' }
     if (key === 'be') return value < -2 ? { tone: 'red', text: 'Déficit de base' } : value > 2 ? { tone: 'amber', text: 'Excesso de base' } : { tone: 'emerald', text: 'Próximo do normal' }
-    if (key === 'po2') return value < 60 ? { tone: 'red', text: 'Hipoxemia importante' } : value < 80 ? { tone: 'amber', text: 'Hipoxemia leve' } : { tone: 'emerald', text: 'Oxigenação adequada' }
+    if (key === 'po2') return value < 40 ? { tone: 'red', text: 'Hipoxemia grave (<40)' } : value < 60 ? { tone: 'red', text: 'Hipoxemia moderada (40–59)' } : value < 80 ? { tone: 'amber', text: 'Hipoxemia leve (60–79)' } : { tone: 'emerald', text: 'Oxigenação adequada (≥80)' }
     if (key === 'sodium') return value < 135 ? { tone: 'amber', text: 'Hiponatremia' } : value > 145 ? { tone: 'amber', text: 'Hipernatremia' } : { tone: 'emerald', text: 'Faixa usual' }
     if (key === 'chloride') return value < 98 ? { tone: 'amber', text: 'Hipocloremia' } : value > 107 ? { tone: 'amber', text: 'Hipercloremia' } : { tone: 'emerald', text: 'Faixa usual' }
     if (key === 'albumin') return value < 3.5 ? { tone: 'amber', text: 'Baixa (corrigir AG)' } : { tone: 'emerald', text: 'Faixa usual' }
@@ -581,8 +581,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       return list.filter(Boolean) as EmergencyOption[]
     }
     if (currentStepData.id === 'ph_normal_checar' && pco2 !== null && hco3 !== null) {
-      const normal = pco2 >= 35 && pco2 <= 45 && hco3 >= 22 && hco3 <= 26
-      return [pick(normal ? 'gasometria_normal' : 'disturbio_misto_ph_normal')].filter(Boolean) as EmergencyOption[]
+      const normalAcidBase = pco2 >= 35 && pco2 <= 45 && hco3 >= 22 && hco3 <= 26
+      const po2 = labs.po2 ?? null
+      
+      if (normalAcidBase) {
+        if (po2 !== null) {
+           if (po2 < 40) return [pick('equilibrio_acido_base_com_hipoxemia_grave')].filter(Boolean) as EmergencyOption[]
+           if (po2 < 60) return [pick('equilibrio_acido_base_com_hipoxemia_moderada')].filter(Boolean) as EmergencyOption[]
+           if (po2 < 80) return [pick('equilibrio_acido_base_com_hipoxemia_leve')].filter(Boolean) as EmergencyOption[]
+        }
+        return [pick('gasometria_normal')].filter(Boolean) as EmergencyOption[]
+      }
+      
+      return [pick('disturbio_misto_ph_normal')].filter(Boolean) as EmergencyOption[]
     }
     if (currentStepData.id === 'acidose_respiratoria_classificar' && pco2 !== null && hco3 !== null) {
       const delta = (pco2 - 40) / 10
@@ -720,8 +731,30 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (currentStepData.id === 'ph_normal_checar' && pco2 !== null && hco3 !== null) {
       const normal = pco2 >= 35 && pco2 <= 45 && hco3 >= 22 && hco3 <= 26
       return normal
-        ? `pH normal com PaCO2=${formatGasometryNumber(pco2, 1)} e HCO3=${formatGasometryNumber(hco3, 1)} em faixa normal.`
+        ? `pH normal com PaCO2=${formatGasometryNumber(pco2, 1)} e HCO3=${formatGasometryNumber(hco3, 1)} em faixa normal. Verificando oxigenação...`
         : `pH normal, porém PaCO2=${formatGasometryNumber(pco2, 1)} e/ou HCO3=${formatGasometryNumber(hco3, 1)} alterados, sugerindo distúrbio misto.`
+    }
+    if (currentStepData.id === 'gasometria_normal') {
+      const labs = savedGasometryLabs || gasometryValidation.parsed
+      const po2 = labs.po2 ?? null
+      return po2 !== null 
+        ? `Gasometria normal: Equilíbrio ácido-base preservado e PaO2=${formatGasometryNumber(po2, 1)} (Adequada).`
+        : `Gasometria normal: Equilíbrio ácido-base preservado (PaO2 não informada).`
+    }
+    if (currentStepData.id === 'equilibrio_acido_base_com_hipoxemia_leve') {
+       const labs = savedGasometryLabs || gasometryValidation.parsed
+       const po2 = labs.po2 ?? 0
+       return `Hipoxemia Leve: PaO2=${formatGasometryNumber(po2, 1)} (60-79 mmHg).`
+    }
+    if (currentStepData.id === 'equilibrio_acido_base_com_hipoxemia_moderada') {
+       const labs = savedGasometryLabs || gasometryValidation.parsed
+       const po2 = labs.po2 ?? 0
+       return `Hipoxemia Moderada: PaO2=${formatGasometryNumber(po2, 1)} (40-59 mmHg).`
+    }
+    if (currentStepData.id === 'equilibrio_acido_base_com_hipoxemia_grave') {
+       const labs = savedGasometryLabs || gasometryValidation.parsed
+       const po2 = labs.po2 ?? 0
+       return `Hipoxemia Grave: PaO2=${formatGasometryNumber(po2, 1)} (<40 mmHg).`
     }
     if (currentStepData.id === 'acidose_metabolica_winter' && pco2 !== null && hco3 !== null) {
       const expected = 1.5 * hco3 + 8

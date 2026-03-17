@@ -870,6 +870,9 @@ export const gasometryFlowchart: EmergencyFlowchart = {
   initialStep: 'tipo_gasometria',
   finalSteps: [
     'gasometria_normal',
+    'equilibrio_acido_base_com_hipoxemia_leve',
+    'equilibrio_acido_base_com_hipoxemia_moderada',
+    'equilibrio_acido_base_com_hipoxemia_grave',
     'disturbio_misto_ph_normal',
     'acidose_respiratoria_aguda',
     'acidose_respiratoria_cronica',
@@ -928,7 +931,8 @@ export const gasometryFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-            <p><strong>Preencher:</strong> pH, PaCO2, HCO3, Na, Cl e albumina (se disponível).</p>
+            <p><strong>Obrigatórios:</strong> pH, PaCO2 e HCO3.</p>
+            <p><strong>Se disponíveis:</strong> PaO2, Na, Cl e albumina (úteis para oxigenação e AG).</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p>Henderson-Hasselbalch: pH = 6,10 + log [HCO3] / (0,03 × PaCO2)</p>
@@ -952,19 +956,73 @@ export const gasometryFlowchart: EmergencyFlowchart = {
     },
     ph_normal_checar: {
       id: 'ph_normal_checar',
-      title: 'pH Normal: checar HCO3 e PaCO2',
-      description: 'Definir ausência de distúrbio ou distúrbio misto.',
+      title: 'pH Normal: checar HCO3, PaCO2 e oxigenação',
+      description: 'Definir equilíbrio ácido-base e classificar hipoxemia quando presente.',
       type: 'question',
       options: [
-        { text: 'HCO3 e PaCO2 normais', nextStep: 'gasometria_normal', value: 'normal' },
-        { text: 'HCO3 e/ou PaCO2 alterados', nextStep: 'disturbio_misto_ph_normal', value: 'misto' }
+        { text: 'HCO3 e PaCO2 normais (sem hipoxemia)', nextStep: 'gasometria_normal', value: 'normal' },
+        { text: 'HCO3 e/ou PaCO2 alterados', nextStep: 'disturbio_misto_ph_normal', value: 'misto' },
+        { text: 'Hipoxemia Leve (PaO2 60-79)', nextStep: 'equilibrio_acido_base_com_hipoxemia_leve', value: 'hipox_leve' },
+        { text: 'Hipoxemia Moderada (PaO2 40-59)', nextStep: 'equilibrio_acido_base_com_hipoxemia_moderada', value: 'hipox_mod' },
+        { text: 'Hipoxemia Grave (PaO2 < 40)', nextStep: 'equilibrio_acido_base_com_hipoxemia_grave', value: 'hipox_grave' }
       ]
     },
     gasometria_normal: {
       id: 'gasometria_normal',
       title: 'Gasometria Normal',
-      description: 'Sem distúrbio ácido-base detectável.',
+      description: 'Equilíbrio ácido-base preservado e oxigenação adequada.',
       type: 'result',
+      content: `
+        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
+          <h4 class="font-bold text-green-800">Gasometria Normal</h4>
+          <p class="text-green-700">pH, PaCO2 e HCO3 dentro dos limites fisiológicos.</p>
+          <p class="text-green-700">PaO2 adequada (sem hipoxemia).</p>
+        </div>
+      `,
+      options: []
+    },
+    equilibrio_acido_base_com_hipoxemia_leve: {
+      id: 'equilibrio_acido_base_com_hipoxemia_leve',
+      title: 'Equilíbrio Ácido-Base com Hipoxemia Leve',
+      description: 'PaO2 entre 60 e 79 mmHg, apesar de eixo ácido-base normal.',
+      type: 'result',
+      content: `
+        <div class="bg-yellow-50 p-4 rounded border-l-4 border-yellow-500">
+          <h4 class="font-bold text-yellow-800">Hipoxemia Leve</h4>
+          <p class="text-yellow-700">Equilíbrio ácido-base preservado.</p>
+          <p class="text-yellow-700"><strong>Atenção:</strong> PaO2 entre 60-79 mmHg indica troca gasosa prejudicada leve.</p>
+        </div>
+      `,
+      options: []
+    },
+    equilibrio_acido_base_com_hipoxemia_moderada: {
+      id: 'equilibrio_acido_base_com_hipoxemia_moderada',
+      title: 'Equilíbrio Ácido-Base com Hipoxemia Moderada',
+      description: 'PaO2 entre 40 e 59 mmHg, com comprometimento importante de oxigenação.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-orange-50 p-4 rounded border-l-4 border-orange-500">
+          <h4 class="font-bold text-orange-800">Hipoxemia Moderada</h4>
+          <p class="text-orange-700">Equilíbrio ácido-base preservado.</p>
+          <p class="text-orange-700"><strong>Alerta:</strong> PaO2 entre 40-59 mmHg. Necessário oxigenoterapia e monitorização.</p>
+        </div>
+      `,
+      options: []
+    },
+    equilibrio_acido_base_com_hipoxemia_grave: {
+      id: 'equilibrio_acido_base_com_hipoxemia_grave',
+      title: 'Equilíbrio Ácido-Base com Hipoxemia Grave',
+      description: 'PaO2 abaixo de 40 mmHg, situação crítica de oxigenação.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-500">
+          <h4 class="font-bold text-red-800">Hipoxemia Grave</h4>
+          <p class="text-red-700">Equilíbrio ácido-base preservado.</p>
+          <p class="text-red-700"><strong>CRÍTICO:</strong> PaO2 < 40 mmHg. Risco iminente de hipóxia tecidual.</p>
+        </div>
+      `,
       options: []
     },
     disturbio_misto_ph_normal: {
