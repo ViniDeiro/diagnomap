@@ -887,20 +887,6 @@ export const gasometryFlowchart: EmergencyFlowchart = {
     'alcalose_respiratoria_mista'
   ],
   steps: {
-    identificacao_paciente: {
-      id: 'identificacao_paciente',
-      title: 'Identificação do Paciente',
-      description: 'Confirmar identificação antes da interpretação.',
-      type: 'question',
-      content: `
-        <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
-          <p><strong>Passo 1:</strong> confirmar identificação do paciente no prontuário antes de interpretar a gasometria.</p>
-        </div>
-      `,
-      options: [
-        { text: 'Identificação confirmada', nextStep: 'tipo_gasometria', value: 'ok' }
-      ]
-    },
     tipo_gasometria: {
       id: 'tipo_gasometria',
       title: 'Tipo de Gasometria',
@@ -1075,7 +1061,7 @@ export const gasometryFlowchart: EmergencyFlowchart = {
     acidose_metabolica_winter: {
       id: 'acidose_metabolica_winter',
       title: 'Acidose Metabólica: Fórmula de Winter',
-      description: 'Avaliar compensação respiratória.',
+      description: 'Avaliar compensação respiratória e prosseguir para cálculo do Ânion Gap.',
       type: 'question',
       content: `
         <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
@@ -1083,9 +1069,9 @@ export const gasometryFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'PaCO2 abaixo da faixa esperada', nextStep: 'acidose_metabolica_alcalose_resp', value: 'winter_baixo' },
+        { text: 'PaCO2 abaixo da faixa esperada (sugere alcalose respiratória associada)', nextStep: 'acidose_metabolica_ag', value: 'winter_baixo' },
         { text: 'PaCO2 dentro da faixa esperada', nextStep: 'acidose_metabolica_ag', value: 'winter_ok' },
-        { text: 'PaCO2 acima da faixa esperada', nextStep: 'acidose_metabolica_acidose_resp', value: 'winter_alto' }
+        { text: 'PaCO2 acima da faixa esperada (sugere acidose respiratória associada)', nextStep: 'acidose_metabolica_ag', value: 'winter_alto' }
       ]
     },
     acidose_metabolica_alcalose_resp: {
@@ -1105,7 +1091,7 @@ export const gasometryFlowchart: EmergencyFlowchart = {
     acidose_metabolica_ag: {
       id: 'acidose_metabolica_ag',
       title: 'Ânion Gap (AG)',
-      description: 'Classificar acidose metabólica por AG.',
+      description: 'Classificar acidose metabólica por AG em normal ou elevado.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
@@ -1123,6 +1109,23 @@ export const gasometryFlowchart: EmergencyFlowchart = {
       title: 'Acidose Metabólica Hiperclorêmica',
       description: 'Acidose metabólica com AG normal.',
       type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Classificação:</strong> Acidose metabólica com <strong>Ânion Gap normal</strong> (hiperclorêmica).</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Causas frequentes:</strong></p>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Perda gastrointestinal de bicarbonato (diarreia, fístulas intestinais)</li>
+              <li>Acidose tubular renal (tipos 1, 2 e 4)</li>
+              <li>Infusão excessiva de solução salina 0,9%</li>
+              <li>Uso de inibidor de anidrase carbônica (ex.: acetazolamida)</li>
+              <li>Derivações urinárias intestinais (ex.: ureterossigmoidostomia)</li>
+            </ul>
+          </div>
+        </div>
+      `,
       options: []
     },
     acidose_metabolica_delta_delta: {
@@ -1148,6 +1151,26 @@ export const gasometryFlowchart: EmergencyFlowchart = {
       title: 'Acidose Metabólica com AG Aumentado',
       description: 'Distúrbio isolado principal.',
       type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <p><strong>Classificação:</strong> Acidose metabólica com <strong>Ânion Gap alto</strong>.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Causas frequentes (GOLD MARK):</strong></p>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Glicóis (etilenoglicol, propilenoglicol)</li>
+              <li>Oxoprolina (uso crônico de paracetamol)</li>
+              <li>L-lactato (acidose láctica)</li>
+              <li>D-lactato</li>
+              <li>Metanol</li>
+              <li>AAS (salicilatos)</li>
+              <li>Insuficiência renal (uremia)</li>
+              <li>Cetoacidose (diabética, alcoólica ou jejum)</li>
+            </ul>
+          </div>
+        </div>
+      `,
       options: []
     },
     acidose_metabolica_ag_alto_alcalose: {
@@ -1155,6 +1178,16 @@ export const gasometryFlowchart: EmergencyFlowchart = {
       title: 'Distúrbio Misto',
       description: 'Acidose metabólica com AG aumentado + alcalose metabólica.',
       type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+            <p><strong>Classificação:</strong> Acidose metabólica com <strong>Ânion Gap alto</strong> associada à alcalose metabólica.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Investigar simultaneamente causas de AG alto e fatores de alcalose (vômitos, diuréticos, depleção de volume).</p>
+          </div>
+        </div>
+      `,
       options: []
     },
     acidose_metabolica_ag_alto_acidose_normo_ag: {
@@ -1162,6 +1195,16 @@ export const gasometryFlowchart: EmergencyFlowchart = {
       title: 'Distúrbio Misto',
       description: 'Acidose metabólica com AG aumentado + acidose metabólica com AG normal.',
       type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Classificação:</strong> Distúrbio misto com componente de <strong>AG alto</strong> e componente <strong>AG normal</strong>.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Esse padrão sugere sobreposição de causas, como acidose láctica/cetoacidose junto de perdas de bicarbonato ou acidose tubular renal.</p>
+          </div>
+        </div>
+      `,
       options: []
     },
     alcalemia_eixo: {

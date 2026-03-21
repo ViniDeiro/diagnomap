@@ -603,11 +603,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       return [pick(isAcute ? 'acidose_respiratoria_aguda' : 'acidose_respiratoria_cronica')].filter(Boolean) as EmergencyOption[]
     }
     if (currentStepData.id === 'acidose_metabolica_winter' && pco2 !== null && hco3 !== null) {
-      const expected = 1.5 * hco3 + 8
-      const low = expected - 2
-      const high = expected + 2
-      const next = pco2 < low ? 'acidose_metabolica_alcalose_resp' : pco2 > high ? 'acidose_metabolica_acidose_resp' : 'acidose_metabolica_ag'
-      return [pick(next)].filter(Boolean) as EmergencyOption[]
+      return [pick('acidose_metabolica_ag')].filter(Boolean) as EmergencyOption[]
     }
     if (currentStepData.id === 'acidose_metabolica_ag' && na !== null && cl !== null && hco3 !== null) {
       const ag = na - (hco3 + cl)
@@ -760,7 +756,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       const expected = 1.5 * hco3 + 8
       const low = expected - 2
       const high = expected + 2
-      return `Winter: PaCO2 esperada ${formatGasometryNumber(low, 1)}–${formatGasometryNumber(high, 1)}. PaCO2 medida=${formatGasometryNumber(pco2, 1)}.`
+      const compensation =
+        pco2 < low
+          ? 'PaCO2 abaixo do esperado, sugerindo alcalose respiratória associada.'
+          : pco2 > high
+            ? 'PaCO2 acima do esperado, sugerindo acidose respiratória associada.'
+            : 'PaCO2 dentro da faixa esperada para compensação.'
+      return `Winter: PaCO2 esperada ${formatGasometryNumber(low, 1)}–${formatGasometryNumber(high, 1)}. PaCO2 medida=${formatGasometryNumber(pco2, 1)}. ${compensation} Prosseguindo para cálculo do Ânion Gap.`
     }
     if (currentStepData.id === 'acidose_metabolica_ag' && na !== null && cl !== null && hco3 !== null) {
       const ag = na - (hco3 + cl)
