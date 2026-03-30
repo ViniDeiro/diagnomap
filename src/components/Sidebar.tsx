@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   X, 
@@ -13,7 +13,8 @@ import {
   AlertTriangle, 
   Settings, 
   ChevronRight,
-  User
+  User,
+  Calculator
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -34,6 +35,13 @@ const Sidebar: React.FC<SidebarProps> = ({
   userEmail,
   onProfileClick
 }) => {
+  const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
+    calculadoras: true
+  })
+
+  const toggleSubmenu = (id: string) => {
+    setOpenSubmenus(prev => ({ ...prev, [id]: !prev[id] }))
+  }
   
   const menuGroups = [
     {
@@ -56,6 +64,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       items: [
         { icon: BookOpen, label: 'Protocolos', href: '#' },
         { icon: AlertTriangle, label: 'Classificação de risco', href: '#' },
+        {
+          icon: Calculator,
+          label: 'Calculadoras',
+          submenuId: 'calculadoras',
+          children: [
+            { label: 'Wells TVP', href: '/calculadoras/wells' }
+          ]
+        }
       ]
     }
   ]
@@ -114,16 +130,49 @@ const Sidebar: React.FC<SidebarProps> = ({
                     )}
                     <div className="space-y-1">
                       {group.items.map((item, itemIndex) => (
-                        <Link 
-                          key={itemIndex} 
-                          href={item.href}
-                          className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group"
-                        >
-                          <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
-                            <item.icon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                        item.children ? (
+                          <div key={itemIndex} className="rounded-xl overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => toggleSubmenu(item.submenuId)}
+                              className="w-full flex items-center justify-between gap-3 px-3 py-3 text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                                  <item.icon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                                </div>
+                                <span className="font-medium text-sm">{item.label}</span>
+                              </div>
+                              <ChevronRight className={`w-4 h-4 transition-transform ${openSubmenus[item.submenuId] ? 'rotate-90 text-blue-500' : 'text-slate-400'}`} />
+                            </button>
+                            {openSubmenus[item.submenuId] && (
+                              <div className="ml-5 mr-2 mt-1 mb-2 border-l border-slate-200 pl-3 space-y-1">
+                                {item.children.map((child, childIndex) => (
+                                  <Link
+                                    key={childIndex}
+                                    href={child.href}
+                                    onClick={onClose}
+                                    className="block px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+                                  >
+                                    {child.label}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          <span className="font-medium text-sm">{item.label}</span>
-                        </Link>
+                        ) : (
+                          <Link 
+                            key={itemIndex} 
+                            href={item.href}
+                            onClick={onClose}
+                            className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group"
+                          >
+                            <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">
+                              <item.icon className="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" />
+                            </div>
+                            <span className="font-medium text-sm">{item.label}</span>
+                          </Link>
+                        )
                       ))}
                     </div>
                   </div>

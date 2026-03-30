@@ -210,6 +210,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [selectedDurationPlan, setSelectedDurationPlan] = useState<string>('')
   const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({})
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
+  const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
     pco2: '',
@@ -383,6 +384,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setAnswers({})
     setProgress(0)
     setGasometryInfoOpen(null)
+    setCincinnatiInfoOpen(false)
     setGasometryDraft({
       ph: '',
       pco2: '',
@@ -426,6 +428,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
+  const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
     const criterion = tvpWellsCriteria.find(item => item.id === criterionId)
     return acc + (criterion?.score || 0)
@@ -964,6 +967,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [isTVPTreatmentInitial, answers, currentStep])
 
   useEffect(() => {
+    if (!isAVCCincinnatiStep) {
+      setCincinnatiInfoOpen(false)
+    }
+  }, [isAVCCincinnatiStep])
+
+  useEffect(() => {
     if (isTVPClinicalEvaluation) {
       setSectionOpen({
         tvp_clinical_0: true,
@@ -1173,10 +1182,36 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
             {/* Conteúdo do Step */}
             <div className="p-6">
-              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPTreatmentInitial && (
+              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPTreatmentInitial && !isAVCCincinnatiStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
+                  </div>
+                </div>
+              )}
+
+              {isAVCCincinnatiStep && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                  <div className="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-semibold text-blue-900 flex items-center gap-2">
+                        <span>Como fazer o Cincinnati</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setCincinnatiInfoOpen(true)}
+                        className="w-7 h-7 rounded-full border border-blue-300 bg-white text-blue-700 inline-flex items-center justify-center hover:bg-blue-100 transition-colors"
+                        title="Abrir explicação e vídeo"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <ul className="list-disc pl-5 mt-2 space-y-1 text-sm">
+                      <li><strong>Face:</strong> pedir para sorrir e observar assimetria</li>
+                      <li><strong>Braço:</strong> elevar ambos por 10 segundos e avaliar queda unilateral</li>
+                      <li><strong>Fala:</strong> repetir frase simples e avaliar disartria/afasia</li>
+                      <li><strong>Tempo:</strong> registrar última vez visto bem</li>
+                    </ul>
                   </div>
                 </div>
               )}
@@ -1683,6 +1718,46 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         <li>Reavalie se surgir diagnóstico alternativo plausível (p. ex., ruptura de cisto de Baker, celulite).</li>
                         <li>Documente a pontuação e a via diagnóstica escolhida no prontuário.</li>
                       </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isAVCCincinnatiStep && cincinnatiInfoOpen && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-indigo-700 text-white">
+                      <h4 className="font-bold">Como fazer Cincinnati (FAST)</h4>
+                      <button
+                        type="button"
+                        onClick={() => setCincinnatiInfoOpen(false)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5 grid md:grid-cols-2 gap-5">
+                      <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                        <ul className="list-disc pl-5 space-y-2">
+                          <li><strong>Face:</strong> peça para sorrir e observe assimetria de rima labial.</li>
+                          <li><strong>Braço:</strong> peça para elevar os dois braços por 10 segundos e observe queda unilateral.</li>
+                          <li><strong>Fala:</strong> peça para repetir frase simples e avalie disartria ou afasia.</li>
+                          <li><strong>Tempo:</strong> registre a última vez visto bem e acione protocolo imediatamente.</li>
+                        </ul>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-2">
+                        <video
+                          controls
+                          autoPlay
+                          muted
+                          playsInline
+                          className="w-full rounded-lg border border-slate-200 bg-black"
+                        >
+                          <source src="/videos/Vídeo_Simulando_AVC_com_Legenda.mp4" type="video/mp4" />
+                          Seu navegador não suporta vídeo HTML5.
+                        </video>
+                      </div>
                     </div>
                   </div>
                 </div>

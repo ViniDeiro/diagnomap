@@ -124,105 +124,233 @@ export const iamFlowchart: EmergencyFlowchart = {
 export const avcFlowchart: EmergencyFlowchart = {
   id: 'avc',
   name: 'Acidente Vascular Cerebral (AVC)',
-  description: 'Protocolo de manejo do AVC isquêmico agudo',
+  description: 'Fluxograma de AVC agudo espelhado no protocolo de admissão, neuroimagem e reperfusão',
   category: 'neurological',
   priority: 'high',
   icon: 'brain',
   color: 'from-purple-600 to-purple-800',
-  initialStep: 'start',
-  finalSteps: ['discharge', 'transfer'],
+  initialStep: 'avaliacao_multiprofissional_sala_vermelha',
+  finalSteps: ['tratamento_conservador_antiregante', 'trombolise_iv_alteplase', 'trombectomia'],
   steps: {
-    start: {
-      id: 'start',
-      title: 'Avaliação Inicial - AVC',
-      description: 'Paciente com sintomas neurológicos agudos',
+    avaliacao_multiprofissional_sala_vermelha: {
+      id: 'avaliacao_multiprofissional_sala_vermelha',
+      title: 'AVALIAÇÃO MULTIPROFISSIONAL NA SALA VERMELHA',
+      description: 'Avaliação inicial com equipe multiprofissional',
       type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Enfermeiro</li>
+            <li>Médico emergencista</li>
+            <li>Médico neurologista</li>
+          </ul>
+        </div>
+      `,
       options: [
-        { text: 'Sintomas típicos de AVC', nextStep: 'fast_assessment', value: 'typical' },
-        { text: 'Sintomas atípicos', nextStep: 'differential_diagnosis', value: 'atypical' }
+        { text: 'Aplicar Cincinnati', nextStep: 'avaliacao_cincinnati_fast', value: 'seguir' }
       ]
     },
-    fast_assessment: {
-      id: 'fast_assessment',
-      title: 'Avaliação FAST',
-      description: 'Face, Arms, Speech, Time',
+    avaliacao_cincinnati_fast: {
+      id: 'avaliacao_cincinnati_fast',
+      title: 'AVALIAÇÃO CINCINNATI (FAST)',
+      description: 'Triagem clínica rápida antes da aquisição de neuroimagem',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p class="font-semibold text-blue-900">ⓘ Como fazer o Cincinnati</p>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li><strong>Face:</strong> pedir para sorrir e observar assimetria</li>
+              <li><strong>Braço:</strong> elevar ambos por 10 segundos e avaliar queda unilateral</li>
+              <li><strong>Fala:</strong> repetir frase simples e avaliar disartria/afasia</li>
+              <li><strong>Tempo:</strong> registrar última vez visto bem</li>
+            </ul>
+          </div>
+          <details class="bg-white border border-slate-200 rounded p-3">
+            <summary class="cursor-pointer font-medium text-slate-700">ⓘ Ver demonstração em vídeo (Veo 3)</summary>
+            <div class="mt-3">
+              <video controls preload="metadata" class="w-full rounded-lg border border-slate-200">
+                <source src="/videos/Vídeo_Simulando_AVC_com_Legenda.mp4" type="video/mp4" />
+                Seu navegador não suporta vídeo HTML5.
+              </video>
+              <p class="text-xs text-slate-500 mt-2">Arquivo esperado: <strong>/public/videos/Vídeo_Simulando_AVC_com_Legenda.mp4</strong></p>
+            </div>
+          </details>
+        </div>
+      `,
+      options: [
+        { text: 'Cincinnati compatível com AVC', nextStep: 'aquisicao_neuroimagem', value: 'positivo', critical: true },
+        { text: 'Cincinnati não sugestivo', nextStep: 'tratamento_conservador_antiregante', value: 'negativo' }
+      ]
+    },
+    aquisicao_neuroimagem: {
+      id: 'aquisicao_neuroimagem',
+      title: 'AQUISIÇÃO DE NEUROIMAGEM',
+      description: 'Definir estratégia conforme recurso do centro e tempo de sintomas',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="grid md:grid-cols-2 gap-3">
+            <div class="bg-slate-50 p-3 rounded border border-slate-200">
+              <strong>Centros apenas com trombólise</strong>
+              <ul class="list-disc pl-5 mt-1 space-y-1">
+                <li>Tempo de sintomas menor que 4,5 horas</li>
+                <li>TC de crânio sem contraste</li>
+              </ul>
+            </div>
+            <div class="bg-slate-50 p-3 rounded border border-slate-200">
+              <strong>Centros com trombólise e trombectomia</strong>
+              <ul class="list-disc pl-5 mt-1 space-y-1">
+                <li>Tempo menor que 8 horas: TC sem contraste + Angio TC vasos intra e extracranianos</li>
+                <li>Tempo entre 8 e 24 horas: Angio TC vasos intra e extracranianos + TC perfusão (se disponível) ou RM + APM</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir', nextStep: 'avaliar_tc_cranio_sem_contraste', value: 'seguir' }
+      ]
+    },
+    avaliar_tc_cranio_sem_contraste: {
+      id: 'avaliar_tc_cranio_sem_contraste',
+      title: 'Avaliar TC de crânio sem contraste',
+      description: 'Avaliar extensão de hipodensidade e déficit neurológico',
       type: 'question',
       critical: true,
       options: [
-        { text: 'FAST Positivo', nextStep: 'time_window', value: 'positive', critical: true },
-        { text: 'FAST Negativo', nextStep: 'imaging', value: 'negative' }
+        {
+          text: 'Hipodensidade menor que 1/3 território da ACM e déficit neurológico com prejuízo na função',
+          nextStep: 'tempo_sintomas_menor_45h',
+          value: 'criterios_tc_ok',
+          critical: true
+        },
+        {
+          text: 'Não atende critérios',
+          nextStep: 'tratamento_conservador_antiregante',
+          value: 'criterios_tc_nao'
+        }
       ]
     },
-    time_window: {
-      id: 'time_window',
-      title: 'Janela Terapêutica',
-      description: 'Verificar tempo desde início dos sintomas',
+    tempo_sintomas_menor_45h: {
+      id: 'tempo_sintomas_menor_45h',
+      title: 'Tempo de sintomas menor que 4,5 horas?',
+      description: 'Definir elegibilidade para trombólise IV imediata',
       type: 'question',
       critical: true,
       timeSensitive: true,
       options: [
-        { text: '< 4,5 horas', nextStep: 'tpa_candidate', value: 'early', critical: true },
-        { text: '4,5-6 horas', nextStep: 'thrombectomy_candidate', value: 'intermediate' },
-        { text: '> 6 horas', nextStep: 'supportive_care', value: 'late' }
+        { text: 'Sim', nextStep: 'trombolise_iv_alteplase', value: 'sim', critical: true },
+        { text: 'Não', nextStep: 'avaliar_angiotc_vasos', value: 'nao' }
       ]
     },
-    tpa_candidate: {
-      id: 'tpa_candidate',
-      title: 'Candidato a TPA',
-      description: 'Avaliar critérios para trombólise',
-      type: 'action',
-      critical: true,
-      content: `
-        <div class="space-y-3">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
-            <strong>Critérios para TPA:</strong>
-          </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Idade ≥ 18 anos</li>
-            <li>PA < 185/110 mmHg</li>
-            <li>Glicemia > 50 mg/dL</li>
-            <li>Sem hemorragia ativa</li>
-            <li>Sem cirurgia recente</li>
-          </ul>
-        </div>
-      `,
-      options: [
-        { text: 'Critérios Atendidos', nextStep: 'tpa_administration', value: 'eligible', critical: true },
-        { text: 'Critérios Não Atendidos', nextStep: 'supportive_care', value: 'ineligible' }
-      ]
-    },
-    tpa_administration: {
-      id: 'tpa_administration',
-      title: 'Administração de TPA',
-      description: 'Trombólise com alteplase',
+    trombolise_iv_alteplase: {
+      id: 'trombolise_iv_alteplase',
+      title: 'TROMBÓLISE IV COM ALTEPLASE',
+      description: 'Realizar trombólise intravenosa',
       type: 'medication',
       critical: true,
       content: `
-        <div class="space-y-3">
-          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-            <strong>Dosagem TPA:</strong>
-          </div>
+        <div class="space-y-2 text-sm">
           <ul class="list-disc pl-5 space-y-1">
-            <li><strong>Dose:</strong> 0,9 mg/kg (máx 90mg)</li>
-            <li><strong>Bolus:</strong> 10% em 1 minuto</li>
-            <li><strong>Infusão:</strong> 90% em 60 minutos</li>
-            <li><strong>Monitorização:</strong> 24h após TPA</li>
+            <li>Iniciar conforme protocolo institucional</li>
+            <li>Monitorização clínica e neurológica contínua</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    avaliar_angiotc_vasos: {
+      id: 'avaliar_angiotc_vasos',
+      title: 'Avaliar Angio TC de vasos intra e extracranianos',
+      description: 'Pesquisar oclusão de grande vaso',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Prosseguir para decisão de oclusão', nextStep: 'oclusao_grande_vaso', value: 'seguir' }
+      ]
+    },
+    oclusao_grande_vaso: {
+      id: 'oclusao_grande_vaso',
+      title: 'Oclusão de Grande Vaso?',
+      description: 'Definir tratamento endovascular ou conservador',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Sim', nextStep: 'tempo_sintomas_menor_8h', value: 'sim', critical: true },
+        { text: 'Não', nextStep: 'tratamento_conservador_antiregante', value: 'nao' }
+      ]
+    },
+    tempo_sintomas_menor_8h: {
+      id: 'tempo_sintomas_menor_8h',
+      title: 'Tempo de sintomas menor que 8 horas?',
+      description: 'Definir trombectomia imediata ou avaliação por perfusão/RM',
+      type: 'question',
+      critical: true,
+      timeSensitive: true,
+      options: [
+        { text: 'Sim', nextStep: 'trombectomia', value: 'sim', critical: true },
+        { text: 'Não', nextStep: 'avaliar_tc_perfusao_ou_rm', value: 'nao' }
+      ]
+    },
+    avaliar_tc_perfusao_ou_rm: {
+      id: 'avaliar_tc_perfusao_ou_rm',
+      title: 'Avaliar TC Perfusão ou RM',
+      description: 'Avaliar viabilidade de trombectomia na janela estendida',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Prosseguir para critérios', nextStep: 'criterios_trombectomia_janela_estendida', value: 'seguir' }
+      ]
+    },
+    criterios_trombectomia_janela_estendida: {
+      id: 'criterios_trombectomia_janela_estendida',
+      title: 'TROMBECTOMIA SE:',
+      description: 'Aplicar critérios de indicação em janela estendida',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Tempo de sintomas menor que 24 horas</li>
+            <li>Volume de core menor que 70 ml</li>
+            <li>Razão mismatch maior que 1,8</li>
+            <li>Seguir RM via protocolo</li>
           </ul>
         </div>
       `,
       options: [
-        { text: 'Transferir para UTI', nextStep: 'transfer', value: 'transfer' }
+        { text: 'Critérios atendidos', nextStep: 'trombectomia', value: 'sim', critical: true },
+        { text: 'Critérios não atendidos', nextStep: 'tratamento_conservador_antiregante', value: 'nao' }
       ]
     },
-    transfer: {
-      id: 'transfer',
-      title: 'Transferência Realizada',
-      description: 'Paciente encaminhado para unidade especializada',
+    trombectomia: {
+      id: 'trombectomia',
+      title: 'TROMBECTOMIA',
+      description: 'Encaminhar imediatamente para trombectomia mecânica',
+      type: 'procedure',
+      critical: true,
+      requiresSpecialist: true,
+      timeSensitive: true,
+      content: `
+        <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500 text-sm">
+          <p>Acionar equipe neurointervencionista e centro de referência sem atraso.</p>
+        </div>
+      `,
+      options: []
+    },
+    tratamento_conservador_antiregante: {
+      id: 'tratamento_conservador_antiregante',
+      title: 'TRATAMENTO CONSERVADOR (ANTIAGREGANTE)',
+      description: 'Conduta clínica conservadora quando sem indicação de reperfusão',
       type: 'result',
       content: `
-        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
-          <h4 class="font-bold text-green-800">Protocolo AVC Concluído</h4>
-          <p class="text-green-700">Paciente transferido para unidade de AVC</p>
+        <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-500">
+          <h4 class="font-bold text-gray-800">Conduta Conservadora</h4>
+          <p class="text-gray-700">Seguir protocolo clínico institucional para antiagregação e suporte.</p>
         </div>
       `,
       options: []
@@ -2475,6 +2603,7 @@ export const allFlowcharts = [
   { id: 'mialgia', name: 'Mialgia', category: 'musculoskeletal', implemented: false },
 
   // Neurológicos
+  { id: 'avc', name: 'AVC (Agudo)', category: 'neurological', implemented: true },
   { id: 'avc_hemorragico', name: 'AVC hemorrágico', category: 'neurological', implemented: false },
   { id: 'avci', name: 'AVCi', category: 'neurological', implemented: false },
   { id: 'cefaleia', name: 'Cefaléia', category: 'neurological', implemented: false },
