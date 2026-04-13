@@ -2353,7 +2353,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
       description: 'Estratégia inicial com D-dímero de alta sensibilidade.',
       type: 'question',
       content: `
-        <div class="bg-green-50 p-3 rounded border-l-4 border-green-500 text-sm">
+        <div class="bg-green-100 p-3 rounded border-l-4 border-green-700 text-sm text-green-950 leading-relaxed">
           <p><strong>Conduta:</strong> Solicitar D-dímero de alta sensibilidade.</p>
           <p>Se negativo, TVP pode ser excluída em paciente de baixa probabilidade.</p>
           <p>Se positivo, prosseguir para ultrassonografia venosa compressiva.</p>

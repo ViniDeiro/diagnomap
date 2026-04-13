@@ -202,8 +202,8 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
   <img
     src={
       side === 'left'
-        ? '/Trombose venosa profunda membro inferior esquerdo .png'
-        : '/Trombose Venosa em membro inferior direito .png'
+        ? '/Trombose Venosa em membro inferior direito .png'
+        : '/Trombose venosa profunda membro inferior esquerdo .png'
     }
     alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
     className={clsx(
@@ -425,6 +425,58 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const buildTVPPrescriptionPreview = useCallback((therapyId: string): TVPPrescriptionPreview => {
     const hasValidWeight = typeof patient.weight === 'number' && patient.weight > 0
     const patientWeight = hasValidWeight ? patient.weight as number : null
+
+    if (therapyId === 'rivaroxabana') {
+      return {
+        therapyId,
+        title: 'Prescrição - Rivaroxabana',
+        content: [
+          'Fase inicial: 15 mg VO a cada 12h por 21 dias.',
+          'Fase de manutenção: 20 mg VO 1x/dia após o 21º dia.',
+          'Prevenção estendida (quando indicada): 10 mg VO 1x/dia.',
+          'Administrar com alimento e reavaliar risco de sangramento periodicamente.'
+        ]
+      }
+    }
+
+    if (therapyId === 'apixabana') {
+      return {
+        therapyId,
+        title: 'Prescrição - Apixabana',
+        content: [
+          'Fase inicial: 10 mg VO a cada 12h por 7 dias.',
+          'Fase de manutenção: 5 mg VO a cada 12h a partir do 8º dia.',
+          'Prevenção estendida (quando indicada): 2,5 mg VO a cada 12h.',
+          'Avaliar função renal/hepática e interações medicamentosas.'
+        ]
+      }
+    }
+
+    if (therapyId === 'dabigatrana') {
+      return {
+        therapyId,
+        title: 'Prescrição - Dabigatrana',
+        content: [
+          'Requer anticoagulação parenteral prévia por 5 a 10 dias.',
+          'Após fase parenteral: 150 mg VO a cada 12h.',
+          'Manter acompanhamento clínico para sangramento e função renal.',
+          'Evitar abrir/triturar cápsulas.'
+        ]
+      }
+    }
+
+    if (therapyId === 'edoxabana') {
+      return {
+        therapyId,
+        title: 'Prescrição - Edoxabana',
+        content: [
+          'Requer anticoagulação parenteral prévia por 5 a 10 dias.',
+          'Dose padrão: 60 mg VO 1x/dia.',
+          'Reduzir para 30 mg VO 1x/dia se ClCr 15-50 mL/min ou peso <= 60 kg.',
+          'Monitorar risco de sangramento e função renal durante seguimento.'
+        ]
+      }
+    }
 
     if (therapyId === 'enoxaparina') {
       if (!patientWeight) {
@@ -2120,7 +2172,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <div className="space-y-2">
                         {tvpTherapeuticOptions.map((item) => {
                           const checked = selectedTherapies.includes(item.id)
-                          const canGeneratePrescription = item.id === 'enoxaparina' || item.id === 'hnf' || item.id === 'varfarina'
+                          const canGeneratePrescription = [
+                            'rivaroxabana',
+                            'apixabana',
+                            'dabigatrana',
+                            'edoxabana',
+                            'enoxaparina',
+                            'hnf',
+                            'varfarina'
+                          ].includes(item.id)
                           return (
                             <label
                               key={item.id}
