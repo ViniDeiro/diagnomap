@@ -3,7 +3,7 @@ import { Bell, Search, Menu, User } from 'lucide-react'
 import { AnimatedLogo } from './AnimatedLogo'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { supabase } from '@/services/supabaseClient'
+import { isSupabaseConfigured, supabase } from '@/services/supabaseClient'
 import Sidebar from './Sidebar'
 
 interface HeaderProps {
@@ -18,20 +18,24 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
 
   useEffect(() => {
     const loadUserData = async () => {
-      const { data: userRes } = await supabase.auth.getUser()
-      const user = userRes?.user
-      if (!user) return
+      if (!isSupabaseConfigured) return
+      try {
+        const { data: userRes } = await supabase.auth.getUser()
+        const user = userRes?.user
+        if (!user) return
 
-      // Avatar
-      const metaAvatar = (user.user_metadata as any)?.avatar_url || ''
-      if (metaAvatar) setAvatarUrl(metaAvatar)
+        const metaAvatar = (user.user_metadata as any)?.avatar_url || ''
+        if (metaAvatar) setAvatarUrl(metaAvatar)
 
-      // Nome
-      const metaName = (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || 'Médico(a)'
-      setUserName(metaName)
+        const metaName = (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || 'Médico(a)'
+        setUserName(metaName)
 
-      // Email
-      setUserEmail(user.email || '')
+        setUserEmail(user.email || '')
+      } catch {
+        setAvatarUrl('')
+        setUserName('')
+        setUserEmail('')
+      }
     }
     loadUserData()
   }, [])

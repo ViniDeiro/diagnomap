@@ -24,11 +24,17 @@ import {
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import { EmergencyPatient, EmergencyFlowchart, EmergencyOption, EmergencyStep } from '@/types/emergency'
+import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, EmergencyOption, EmergencyStep } from '@/types/emergency'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
 type AsthmaReevalFieldKey = 'sato2Re' | 'frRe' | 'pfeRe'
+type TVPLegSide = 'left' | 'right'
+type TVPPrescriptionPreview = {
+  therapyId: string
+  title: string
+  content: string[]
+}
 
 const gasometryFieldConfig: Array<{ key: GasometryFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
   { key: 'ph', label: 'pH', unit: '', min: 6.8, max: 7.8, required: true },
@@ -107,13 +113,14 @@ const asthmaReevalInfo: Record<AsthmaReevalFieldKey, string[]> = {
 
 const tvpClassicSigns = [
   'Dor unilateral na perna (panturrilha ou coxa), tipo peso/pressão, que piora ao deambular ou ao ficar em pé',
-  'Edema unilateral, de início insidioso ou súbito',
+  'Edema unilateral',
   'Sensação de calor, rubor ou mudança de coloração (eritema ou cianose leve) no membro afetado',
   'Rigidez ou sensação de tensão na panturrilha',
-  'Sensibilidade à palpação em trajeto venoso profundo (especialmente panturrilha)',
+  'Sensibilidade à palpação em trajeto venoso profundo',
   'Aumento de circunferência da panturrilha ou coxa comparado ao lado contralateral',
   'Dor à compressão da panturrilha ou ao espremer o gastrocnêmio',
-  'Febre baixa inespecífica e taquicardia podem ocorrer'
+  'Febre baixa inespecífica',
+  'Taquicardia'
 ]
 
 const tvpPhysicalExamFindings = [
@@ -122,9 +129,11 @@ const tvpPhysicalExamFindings = [
   'Calor local e rubor; pele brilhante e tensa',
   'Veias superficiais colaterais dilatadas (circulação de derivação)',
   'Dor à palpação profunda da panturrilha ou do trajeto venoso',
-  'Sinais cutâneos: leve cianose distal em casos extensos',
-  'Pulsos arteriais geralmente preservados',
-  'Sinal de Homans (dor à dorsiflexão do pé) não é confiável e não deve ser usado isoladamente'
+  'Eritema (vermelhidão na região)',
+  'Cianose (coloração azulada ou arroxeada na região)',
+  'Palidez cutânea',
+  'Pulsos arteriais preservados: femoral, poplíteo, tibial posterior e pedioso palpáveis e simétricos',
+  'Sinal de Homans positivo (dor à dorsiflexão do pé)'
 ]
 
 const tvpAlertSigns = [
@@ -178,9 +187,36 @@ const tvpTreatmentDurations = [
   { id: 'duracao_gravidez', text: 'Gravidez: LMWH até 6 semanas pós-parto (mínimo 3 meses); evitar varfarina e DOACs na gestação' }
 ]
 
+const parseTVPSelectedLeg = (raw?: string): TVPLegSide | '' => {
+  if (!raw) return ''
+  if (raw === 'left' || raw === 'right') return raw
+  try {
+    const parsed = JSON.parse(raw)
+    return parsed?.selectedLeg === 'left' || parsed?.selectedLeg === 'right' ? parsed.selectedLeg : ''
+  } catch {
+    return ''
+  }
+}
+
+const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({ side, selected }) => (
+  <img
+    src={
+      side === 'left'
+        ? '/Trombose venosa profunda membro inferior esquerdo .png'
+        : '/Trombose Venosa em membro inferior direito .png'
+    }
+    alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
+    className={clsx(
+      'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
+      selected ? 'brightness-105 saturate-110' : 'opacity-95 group-hover:opacity-100'
+    )}
+    loading="lazy"
+  />
+)
+
 interface EmergencyFlowchartProps {
   patient: EmergencyPatient
-  flowchart: EmergencyFlowchart
+  flowchart: EmergencyFlowchartType
   onComplete: () => void
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => void
   onBack?: () => void
@@ -204,12 +240,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [progress, setProgress] = useState(patient.emergencyState.progress || 0)
   const [selectedClinicalFindings, setSelectedClinicalFindings] = useState<string[]>([])
   const [otherClinicalFinding, setOtherClinicalFinding] = useState('')
+  const [selectedTVPLeg, setSelectedTVPLeg] = useState<TVPLegSide | ''>('')
   const [selectedWellsCriteria, setSelectedWellsCriteria] = useState<string[]>([])
   const [selectedContraindications, setSelectedContraindications] = useState<string[]>([])
   const [selectedTherapies, setSelectedTherapies] = useState<string[]>([])
   const [selectedDurationPlan, setSelectedDurationPlan] = useState<string>('')
   const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({})
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
+  const [tvpWellsIntroOpen, setTVPWellsIntroOpen] = useState(false)
+  const [pendingTVPWellsOption, setPendingTVPWellsOption] = useState<{ nextStep: string; value?: string } | null>(null)
+  const [tvpPrescriptionPreview, setTVPPrescriptionPreview] = useState<TVPPrescriptionPreview | null>(null)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
@@ -314,9 +354,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   const handleAnswer = (nextStep: string, value?: string) => {
     const newHistory = [...history, currentStep]
+    const isTVPLegSelection = flowchart.id === 'tvp' && currentStep === 'start'
     const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStep === 'avaliacao_clinica'
     const isTVPWellsScore = flowchart.id === 'tvp' && currentStep === 'wells_score'
     const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStep === 'tratamento_inicial'
+    const legSelectionAnswer = JSON.stringify({
+      decision: value || nextStep,
+      selectedLeg: selectedTVPLeg,
+      selectedLegLabel: selectedTVPLeg === 'left' ? 'Perna Esquerda' : selectedTVPLeg === 'right' ? 'Perna Direita' : ''
+    })
     const clinicalEvaluationAnswer = JSON.stringify({
       decision: value || nextStep,
       sinaisEAchados: selectedClinicalFindings,
@@ -338,13 +384,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     const newAnswers = {
       ...answers,
-      [currentStep]: isTVPClinicalEvaluation
-        ? clinicalEvaluationAnswer
-        : isTVPWellsScore
-          ? wellsScoreAnswer
-          : isTVPTreatmentInitial
-            ? treatmentAnswer
-            : value || nextStep
+      [currentStep]: isTVPLegSelection
+        ? legSelectionAnswer
+        : isTVPClinicalEvaluation
+          ? clinicalEvaluationAnswer
+          : isTVPWellsScore
+            ? wellsScoreAnswer
+            : isTVPTreatmentInitial
+              ? treatmentAnswer
+              : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -363,6 +411,92 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       // No automatic completion
     }
   }
+
+  const handleOptionSelect = (option: EmergencyOption) => {
+    const requiresTVPWellsIntro = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica' && option.nextStep === 'wells_score'
+    if (requiresTVPWellsIntro) {
+      setPendingTVPWellsOption({ nextStep: option.nextStep, value: option.value })
+      setTVPWellsIntroOpen(true)
+      return
+    }
+    handleAnswer(option.nextStep, option.value)
+  }
+
+  const buildTVPPrescriptionPreview = useCallback((therapyId: string): TVPPrescriptionPreview => {
+    const hasValidWeight = typeof patient.weight === 'number' && patient.weight > 0
+    const patientWeight = hasValidWeight ? patient.weight as number : null
+
+    if (therapyId === 'enoxaparina') {
+      if (!patientWeight) {
+        return {
+          therapyId,
+          title: 'Prescrição - Enoxaparina',
+          content: [
+            'Peso não informado no cadastro. Para cálculo individualizado, preencha o peso do paciente.',
+            'Esquema terapêutico padrão: 1 mg/kg SC a cada 12h, ou 1,5 mg/kg SC 1x/dia.',
+            'Se ClCr < 30 mL/min: preferir 1 mg/kg SC 1x/dia.',
+            'Monitorar sangramento, função renal e contagem plaquetária.'
+          ]
+        }
+      }
+
+      const dose12h = Math.round(patientWeight * 1)
+      const dose24h = Math.round(patientWeight * 1.5)
+      return {
+        therapyId,
+        title: 'Prescrição - Enoxaparina',
+        content: [
+          `Peso: ${patientWeight.toFixed(1)} kg.`,
+          `Dose terapêutica sugerida: Enoxaparina ${dose12h} mg SC a cada 12h.`,
+          `Alternativa: Enoxaparina ${dose24h} mg SC 1x/dia.`,
+          `Se ClCr < 30 mL/min: Enoxaparina ${dose12h} mg SC 1x/dia.`,
+          'Reavaliar função renal e risco de sangramento diariamente.'
+        ]
+      }
+    }
+
+    if (therapyId === 'hnf') {
+      if (!patientWeight) {
+        return {
+          therapyId,
+          title: 'Prescrição - Heparina não fracionada (HNF)',
+          content: [
+            'Peso não informado no cadastro. Para cálculo individualizado, preencha o peso do paciente.',
+            'Esquema padrão: bolus EV 80 U/kg (ou 5.000 U) seguido de infusão contínua 18 U/kg/h.',
+            'Ajustar infusão para TTPa alvo de 1,5 a 2,5 vezes o basal.',
+            'Repetir TTPa 6 horas após início e após cada ajuste de dose.'
+          ]
+        }
+      }
+
+      const bolusUnits = Math.round(patientWeight * 80)
+      const infusionUnitsHour = Math.round(patientWeight * 18)
+      const infusionMlHour = (infusionUnitsHour / 100).toFixed(1)
+      return {
+        therapyId,
+        title: 'Prescrição - Heparina não fracionada (HNF)',
+        content: [
+          `Peso: ${patientWeight.toFixed(1)} kg.`,
+          `Bolus inicial: ${bolusUnits} U EV (considerar teto de 5.000 U conforme protocolo institucional).`,
+          `Infusão contínua inicial: ${infusionUnitsHour} U/h EV.`,
+          `Se diluição padrão 25.000 U em 250 mL (100 U/mL): iniciar em ${infusionMlHour} mL/h.`,
+          'Ajustar conforme TTPa (alvo 1,5 a 2,5 vezes o basal) com coleta em 6/6h após ajustes.'
+        ]
+      }
+    }
+
+    return {
+      therapyId,
+      title: 'Prescrição - Varfarina (orientação prática)',
+      content: [
+        'Iniciar varfarina VO 1x/dia no mesmo dia da heparina (ponte obrigatória).',
+        'Manter sobreposição com heparina por pelo menos 5 dias.',
+        'Suspender heparina apenas após INR entre 2,0 e 3,0 por no mínimo 24 horas.',
+        'Recomendar controle seriado de INR e ajuste progressivo da dose de varfarina.',
+        'Orientar risco de interação medicamentosa/alimentar e sinais de sangramento.'
+      ]
+    }
+  }, [patient.weight])
 
   const goBack = () => {
     if (history.length > 0) {
@@ -385,6 +519,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setProgress(0)
     setGasometryInfoOpen(null)
     setCincinnatiInfoOpen(false)
+    setTVPWellsIntroOpen(false)
+    setPendingTVPWellsOption(null)
+    setTVPPrescriptionPreview(null)
     setGasometryDraft({
       ph: '',
       pco2: '',
@@ -425,6 +562,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  const tvpSelectedLegFromAnswers = useMemo(() => parseTVPSelectedLeg(answers.start), [answers])
+  const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : ''
+  const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
@@ -893,6 +1033,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setAsthmaReevalFlags(savedAsthmaReeval.flags)
     }
   }, [isAsthmaFlow, currentStepData?.id, savedAsthmaReeval])
+
+  useEffect(() => {
+    if (!isTVPLegSelection) {
+      setSelectedTVPLeg('')
+      return
+    }
+    setSelectedTVPLeg(parseTVPSelectedLeg(answers[currentStep]))
+  }, [isTVPLegSelection, answers, currentStep])
 
   useEffect(() => {
     if (!isTVPClinicalEvaluation) {
@@ -1468,6 +1616,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
               {isTVPClinicalEvaluation && (
                 <div className="mb-6 p-4 bg-white rounded-2xl border border-slate-200">
+                  {tvpSelectedLegLabel && (
+                    <div className="mb-4 inline-flex items-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-800">
+                      Membro selecionado: {tvpSelectedLegLabel}
+                    </div>
+                  )}
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
                       Checklist Clínico Inicial
@@ -1543,6 +1696,95 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         />
                       )}
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {isTVPLegSelection && (
+                <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50/50 p-5">
+                  <div className="max-w-3xl space-y-5">
+                    <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
+                      Trombose Venosa
+                      <br />
+                      Profunda
+                    </h3>
+                    <div className="space-y-4 text-slate-800">
+                      <p className="text-xl sm:text-2xl font-bold leading-tight">
+                        Sinais e sintomas comuns: dor, edema unilateral, alterações da coloração da pele e endurecimento do trajeto venoso.
+                      </p>
+                      <p className="text-xl sm:text-2xl font-bold leading-tight">
+                        A TVP pode ser oligossintomática ou assintomática em parcela significativa dos casos.
+                      </p>
+                    </div>
+                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                      Definir lado da trombose suspeita
+                    </h4>
+                  </div>
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                      { side: 'left' as TVPLegSide, label: 'Perna Esquerda' },
+                      { side: 'right' as TVPLegSide, label: 'Perna Direita' }
+                    ].map((item) => {
+                      const selected = selectedTVPLeg === item.side
+                      return (
+                        <motion.button
+                          key={item.side}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() => setSelectedTVPLeg(item.side)}
+                          className={clsx(
+                            'group relative overflow-hidden rounded-2xl border-2 bg-white p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
+                            selected
+                              ? 'border-cyan-500 shadow-xl shadow-cyan-200/70'
+                              : 'border-slate-200 hover:border-cyan-300 hover:shadow-lg'
+                          )}
+                          whileHover={{ y: -2 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          <div className={clsx(
+                            'absolute inset-0 transition-opacity',
+                            selected ? 'opacity-100 bg-gradient-to-b from-cyan-100/70 to-transparent' : 'opacity-0 group-hover:opacity-100 bg-gradient-to-b from-slate-100/70 to-transparent'
+                          )} />
+                          <div className="relative">
+                            <TVPLegIllustration side={item.side} selected={selected} />
+                            <div className="mt-3 text-center">
+                              <div className={clsx(
+                                'text-sm font-bold uppercase tracking-wide',
+                                selected ? 'text-cyan-800' : 'text-slate-700'
+                              )}>
+                                {item.label}
+                              </div>
+                            </div>
+                          </div>
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <span className={clsx(
+                      'text-sm font-medium',
+                      selectedTVPLeg ? 'text-emerald-700' : 'text-amber-700'
+                    )}>
+                      {selectedTVPLeg ? `Selecionado: ${selectedTVPLeg === 'left' ? 'Perna Esquerda' : 'Perna Direita'}` : 'Selecione uma perna para avançar'}
+                    </span>
+                    <motion.button
+                      type="button"
+                      onClick={() => {
+                        if (!selectedTVPLeg) return
+                        handleAnswer('avaliacao_clinica', selectedTVPLeg)
+                      }}
+                      disabled={!selectedTVPLeg}
+                      className={clsx(
+                        'px-5 py-2.5 rounded-xl font-semibold transition-all',
+                        selectedTVPLeg
+                          ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      )}
+                      whileHover={selectedTVPLeg ? { scale: 1.01 } : {}}
+                      whileTap={selectedTVPLeg ? { scale: 0.99 } : {}}
+                    >
+                      Confirmar seleção e iniciar avaliação
+                    </motion.button>
                   </div>
                 </div>
               )}
@@ -1723,6 +1965,64 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {tvpWellsIntroOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0 bg-slate-900/45"
+                    onClick={() => {
+                      setTVPWellsIntroOpen(false)
+                      setPendingTVPWellsOption(null)
+                    }}
+                  />
+                  <div className="relative w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTVPWellsIntroOpen(false)
+                        setPendingTVPWellsOption(null)
+                      }}
+                      className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                      aria-label="Fechar explicação do Escore de Wells"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 mb-3">
+                      Por que aplicar o Escore de Wells para TVP?
+                    </h4>
+                    <p className="text-sm sm:text-base text-slate-800 leading-relaxed">
+                      O Escore de Wells para TVP e uma ferramenta clinica essencial para estratificar a probabilidade pre-teste de trombose venosa profunda em pacientes com dor ou edema de membros inferiores. Ele organiza achados clinicos em um sistema de pontuacao simples para classificar o paciente em baixa, moderada ou alta probabilidade.
+                    </p>
+                    <p className="text-sm sm:text-base text-slate-800 leading-relaxed mt-3">
+                      Aplicar o escore de forma sistematica orienta a sequencia diagnostica: em baixa probabilidade, um D-dimero negativo pode afastar TVP; em probabilidades mais elevadas, prioriza-se ultrassom Doppler de membros inferiores. Isso melhora a acuracia diagnostica, reduz custos e ajuda a evitar atraso no diagnostico de uma condicao potencialmente grave.
+                    </p>
+                    <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTVPWellsIntroOpen(false)
+                          setPendingTVPWellsOption(null)
+                        }}
+                        className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!pendingTVPWellsOption) return
+                          setTVPWellsIntroOpen(false)
+                          handleAnswer(pendingTVPWellsOption.nextStep, pendingTVPWellsOption.value)
+                          setPendingTVPWellsOption(null)
+                        }}
+                        className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold transition-colors"
+                      >
+                        Aplicar Escore de Wells para TVP
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isAVCCincinnatiStep && cincinnatiInfoOpen && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
@@ -1763,6 +2063,42 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {tvpPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-cyan-700 text-white">
+                      <h4 className="font-bold">{tvpPrescriptionPreview.title}</h4>
+                      <button
+                        type="button"
+                        onClick={() => setTVPPrescriptionPreview(null)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {tvpPrescriptionPreview.content.map((line) => (
+                          <p key={line} className="text-sm text-slate-800 leading-relaxed">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setTVPPrescriptionPreview(null)}
+                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+                        >
+                          Fechar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isTVPTreatmentInitial && (
                 <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-200">
                   <div className="space-y-5">
@@ -1784,6 +2120,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <div className="space-y-2">
                         {tvpTherapeuticOptions.map((item) => {
                           const checked = selectedTherapies.includes(item.id)
+                          const canGeneratePrescription = item.id === 'enoxaparina' || item.id === 'hnf' || item.id === 'varfarina'
                           return (
                             <label
                               key={item.id}
@@ -1805,9 +2142,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                 }}
                               />
                               <div className="flex-1">
-                                <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 mb-1">
-                                  {item.group}
-                                </span>
+                                <div className="mb-1 flex items-center justify-between gap-2">
+                                  <span className="inline-block text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                    {item.group}
+                                  </span>
+                                  {canGeneratePrescription && (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        setTVPPrescriptionPreview(buildTVPPrescriptionPreview(item.id))
+                                      }}
+                                      className="inline-flex items-center rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 text-[11px] font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                                    >
+                                      Gerar prescrição
+                                    </button>
+                                  )}
+                                </div>
                                 <p className="text-sm text-slate-700 leading-snug">{item.text}</p>
                               </div>
                             </label>
@@ -2001,13 +2353,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
                       : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPWellsScore || isTVPTreatmentInitial) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPTreatmentInitial) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
                     <motion.button
                       key={index}
-                      onClick={() => handleAnswer(option.nextStep, option.value)}
+                      onClick={() => handleOptionSelect(option)}
                       className={clsx(
                         "w-full p-6 text-left rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group",
                         option.critical 

@@ -2381,13 +2381,13 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     us_compressiva: {
       id: 'us_compressiva',
-      title: 'US Venosa Compressiva de MMII',
+      title: 'Ultrassonografia Doppler venosa de membro inferior',
       description: 'Interpretar resultado e definir próximo passo.',
       type: 'question',
       critical: true,
       options: [
-        { text: 'US positiva para trombose', nextStep: 'tratamento_inicial', value: 'us_positive', critical: true },
-        { text: 'US negativa', nextStep: 'us_negativa_conduta', value: 'us_negative' }
+        { text: 'USG positiva para trombose', nextStep: 'tratamento_inicial', value: 'us_positive', critical: true },
+        { text: 'USG negativa para trombose', nextStep: 'us_negativa_conduta', value: 'us_negative' }
       ]
     },
     us_negativa_conduta: {

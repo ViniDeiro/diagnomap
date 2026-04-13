@@ -11,6 +11,7 @@ const RAW_URL = process.env.NEXT_PUBLIC_SUPABASE_URL as string | undefined
 const RAW_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string | undefined
 const url = sanitize(RAW_URL);
 const anonKey = sanitize(RAW_KEY);
+export const isSupabaseConfigured = Boolean(url && anonKey)
 
 const safeUrl = url ?? 'https://example.supabase.co';
 const safeKey = anonKey ?? 'invalid';

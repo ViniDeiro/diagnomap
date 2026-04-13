@@ -17,7 +17,7 @@ import { Patient, PatientFormData } from '@/types/patient'
 import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
-import { supabase } from '@/services/supabaseClient'
+import { isSupabaseConfigured, supabase } from '@/services/supabaseClient'
 import Header from '@/components/Header'
 import ProfileScreen from '@/components/ProfileScreen'
 
@@ -36,27 +36,49 @@ export default function Home() {
   useEffect(() => {
     let active = true
     async function ensureAuth() {
-      const { data: userRes } = await supabase.auth.getUser()
-      const user = userRes?.user
-      if (!user) {
+      if (!isSupabaseConfigured) {
         setTimeout(() => {
           if (!active) return
           setIsFading(true)
           setTimeout(() => {
             if (!active) return
-            router.replace('/login')
+            setAppState('dashboard')
           }, 500)
-        }, 4000)
+        }, 1200)
         return
       }
-      setTimeout(() => {
-        if (!active) return
-        setIsFading(true)
+      try {
+        const { data: userRes } = await supabase.auth.getUser()
+        const user = userRes?.user
+        if (!user) {
+          setTimeout(() => {
+            if (!active) return
+            setIsFading(true)
+            setTimeout(() => {
+              if (!active) return
+              router.replace('/login')
+            }, 500)
+          }, 4000)
+          return
+        }
         setTimeout(() => {
           if (!active) return
-          setAppState('dashboard')
-        }, 500)
-      }, 2500)
+          setIsFading(true)
+          setTimeout(() => {
+            if (!active) return
+            setAppState('dashboard')
+          }, 500)
+        }, 2500)
+      } catch {
+        setTimeout(() => {
+          if (!active) return
+          setIsFading(true)
+          setTimeout(() => {
+            if (!active) return
+            setAppState('dashboard')
+          }, 500)
+        }, 1200)
+      }
     }
     ensureAuth()
     return () => { active = false }

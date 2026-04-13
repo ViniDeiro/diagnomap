@@ -106,6 +106,7 @@ export interface EmergencyStep {
 
 export interface EmergencyOption {
   text: string
+  description?: string
   nextStep: string
   value?: string
   critical?: boolean
