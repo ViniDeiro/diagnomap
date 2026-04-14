@@ -159,15 +159,15 @@ const tvpWellsCriteria = [
 ]
 
 const tvpAnticoagContraindications = [
-  { id: 'abs_sangramento_ativo', text: 'Sangramento ativo maior', severity: 'absoluta' },
-  { id: 'abs_avc_hemorragico', text: 'AVC hemorrágico recente', severity: 'absoluta' },
-  { id: 'abs_neurocirurgia_trauma', text: 'Neurocirurgia ou trauma maior recente', severity: 'absoluta' },
-  { id: 'abs_trombocitopenia_grave', text: 'Trombocitopenia grave', severity: 'absoluta' },
-  { id: 'abs_hipertensao_grave', text: 'Hipertensão grave não controlada', severity: 'absoluta' },
-  { id: 'rel_ulcera_ativa', text: 'Úlcera ativa', severity: 'relativa' },
-  { id: 'rel_disfuncao_renal_hepatica', text: 'Insuficiência renal ou hepática grave', severity: 'relativa' },
-  { id: 'rel_quedas', text: 'Alto risco de queda', severity: 'relativa' },
-  { id: 'rel_antiagregantes', text: 'Uso concomitante de antiagregantes', severity: 'relativa' }
+  { id: 'abs_sangramento_ativo', text: 'Sangramento ativo maior (GI, intracraniano ou hemoptise significativa)', severity: 'absoluta' },
+  { id: 'abs_intracraniano_recente', text: 'Sangramento intracraniano recente', severity: 'absoluta' },
+  { id: 'abs_neuro_ocular_recente', text: 'Cirurgia neuro/ocular recente', severity: 'absoluta' },
+  { id: 'abs_trombocitopenia_grave', text: 'Plaquetas muito baixas (ex.: < 50 mil)', severity: 'absoluta' },
+  { id: 'abs_risco_critico', text: 'Risco hemorrágico crítico não corrigível', severity: 'absoluta' },
+  { id: 'rel_trombocitopenia_moderada', text: 'Plaquetopenia moderada', severity: 'relativa' },
+  { id: 'rel_hipertensao_nao_controlada', text: 'HAS importante não controlada (ex.: PAS >= 180 ou PAD >= 110)', severity: 'relativa' },
+  { id: 'rel_disfuncao_renal_hepatica', text: 'Disfunção renal/hepática moderada', severity: 'relativa' },
+  { id: 'rel_sangramento_gi_recente', text: 'Sangramento gastrointestinal recente (ex.: < 4 semanas)', severity: 'relativa' }
 ]
 
 const tvpTherapeuticOptions = [
@@ -187,6 +187,39 @@ const tvpTreatmentDurations = [
   { id: 'duracao_gravidez', text: 'Gravidez: LMWH até 6 semanas pós-parto (mínimo 3 meses); evitar varfarina e DOACs na gestação' }
 ]
 
+const tvpAnticoagulationConsiderations = [
+  {
+    id: 'consideracoes_tratamento_tvp',
+    title: 'Considerações Essenciais sobre tratamento da TVP',
+    paragraphs: [
+      'A anticoagulação na TVP deve começar com anticoagulante parenteral, podendo ser utilizada HBPM (enoxaparina) ou HNF (heparina não fracionada).',
+      'No mesmo dia, inicia-se a varfarina, que deve ser administrada simultaneamente à heparina, pois não é segura como monoterapia inicial.',
+      'Essa combinação deve ser mantida por pelo menos cinco dias, com monitorização diária do INR até faixa terapêutica entre 2,0 e 3,0.',
+      'A heparina só deve ser suspensa quando o INR permanecer nessa faixa por 48 horas consecutivas.'
+    ]
+  },
+  {
+    id: 'consideracoes_duracao_tvp',
+    title: 'Considerações Essenciais sobre a duração do tratamento da TVP',
+    paragraphs: [
+      'A duração da anticoagulação depende do contexto clínico e do risco de recorrência; em geral, manter por no mínimo 3 meses.',
+      'TVP provocada por fator transitório (como cirurgia ou imobilização) costuma exigir apenas 3 meses.',
+      'TVP não provocada, recorrente ou associada a trombofilias pode demandar anticoagulação prolongada ou indefinida.',
+      'Em pacientes com câncer ativo, manter enquanto houver atividade tumoral ou tratamento oncológico em curso.'
+    ]
+  },
+  {
+    id: 'consideracoes_noac_tvp',
+    title: 'Considerações Essenciais sobre os NOACs (novos anticoagulantes orais)',
+    paragraphs: [
+      'NOACs como rivaroxabana, apixabana, dabigatrana e edoxabana são alternativas práticas aos anticoagulantes tradicionais.',
+      'Têm início de ação rápido e geralmente não exigem monitorização rotineira de INR.',
+      'Não são adequados para todos: evitar em prótese valvar mecânica, algumas trombofilias de alto risco e insuficiência renal avançada.',
+      'A escolha entre NOACs e varfarina deve considerar perfil clínico, comorbidades, risco de sangramento e adesão.'
+    ]
+  }
+]
+
 const parseTVPSelectedLeg = (raw?: string): TVPLegSide | '' => {
   if (!raw) return ''
   if (raw === 'left' || raw === 'right') return raw
@@ -202,8 +235,8 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
   <img
     src={
       side === 'left'
-        ? '/Trombose Venosa em membro inferior direito .png'
-        : '/Trombose venosa profunda membro inferior esquerdo .png'
+        ? '/Trombose venosa profunda membro inferior esquerdo .png'
+        : '/Trombose Venosa em membro inferior direito .png'
     }
     alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
     className={clsx(
@@ -250,6 +283,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpWellsIntroOpen, setTVPWellsIntroOpen] = useState(false)
   const [pendingTVPWellsOption, setPendingTVPWellsOption] = useState<{ nextStep: string; value?: string } | null>(null)
   const [tvpPrescriptionPreview, setTVPPrescriptionPreview] = useState<TVPPrescriptionPreview | null>(null)
+  const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
@@ -515,8 +549,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           content: [
             'Peso não informado no cadastro. Para cálculo individualizado, preencha o peso do paciente.',
             'Esquema padrão: bolus EV 80 U/kg (ou 5.000 U) seguido de infusão contínua 18 U/kg/h.',
-            'Ajustar infusão para TTPa alvo de 1,5 a 2,5 vezes o basal.',
-            'Repetir TTPa 6 horas após início e após cada ajuste de dose.'
+            'Preparação da solução: heparina 5.000 U/mL, diluir 5 mL em 245 mL de SF 0,9% (concentração final 100 U/mL).',
+            'Ajustar infusão para TTPa alvo de 1,5 a 2,5 vezes o basal, com coleta 6 horas após bolus e após cada ajuste.'
           ]
         }
       }
@@ -532,20 +566,27 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           `Bolus inicial: ${bolusUnits} U EV (considerar teto de 5.000 U conforme protocolo institucional).`,
           `Infusão contínua inicial: ${infusionUnitsHour} U/h EV.`,
           `Se diluição padrão 25.000 U em 250 mL (100 U/mL): iniciar em ${infusionMlHour} mL/h.`,
-          'Ajustar conforme TTPa (alvo 1,5 a 2,5 vezes o basal) com coleta em 6/6h após ajustes.'
+          'Preparação da solução: heparina 5.000 U/mL, diluir 5 mL em 245 mL de SF 0,9% (concentração final 100 U/mL).',
+          'Ajustes pelo TTPa (protocolo prático):',
+          'TTPa < 35: bolus 80 U/kg e aumentar infusão em 4 U/kg/h.',
+          'TTPa 35-45: bolus 40 U/kg e aumentar infusão em 2 U/kg/h.',
+          'TTPa 46-60: manter esquema atual (faixa terapêutica local).',
+          'TTPa 61-80: reduzir infusão em 2 U/kg/h.',
+          'TTPa > 110: pausar infusão por 60 min e reiniciar reduzindo 4 U/kg/h.'
         ]
       }
     }
 
     return {
       therapyId,
-      title: 'Prescrição - Varfarina (orientação prática)',
+      title: 'Como prescrever varfarina',
       content: [
-        'Iniciar varfarina VO 1x/dia no mesmo dia da heparina (ponte obrigatória).',
-        'Manter sobreposição com heparina por pelo menos 5 dias.',
-        'Suspender heparina apenas após INR entre 2,0 e 3,0 por no mínimo 24 horas.',
-        'Recomendar controle seriado de INR e ajuste progressivo da dose de varfarina.',
-        'Orientar risco de interação medicamentosa/alimentar e sinais de sangramento.'
+        'Início concomitante com heparina: iniciar varfarina no mesmo dia da HNF/HBPM.',
+        'Dose inicial usual: 5 mg/dia (considerar 10 mg apenas em perfil jovem, baixo risco de sangramento e sem comorbidades relevantes).',
+        'Monitorar INR diariamente nos primeiros dias.',
+        'Ajuste por INR (resumo prático): INR < 1,5 aumentar dose; INR 2,0-3,0 manter; INR > 3,5 reduzir/omitir e reavaliar risco de sangramento.',
+        'Suspender HNF/HBPM somente após pelo menos 5 dias de sobreposição e INR entre 2,0 e 3,0 por 48 horas consecutivas.',
+        'Cuidados essenciais: revisar interações medicamentosas/alimentares, orientar sinais de sangramento e adesão.'
       ]
     }
   }, [patient.weight])
@@ -574,6 +615,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setTVPWellsIntroOpen(false)
     setPendingTVPWellsOption(null)
     setTVPPrescriptionPreview(null)
+    setTVPRiskBenefitGuideOpen(false)
     setGasometryDraft({
       ph: '',
       pco2: '',
@@ -629,6 +671,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const wellsNextStep = wellsScoreTotal <= 0 ? 'baixa_probabilidade' : 'moderada_probabilidade'
   const wellsDecisionValue = wellsScoreTotal <= 0 ? 'low' : wellsScoreTotal <= 2 ? 'moderate' : 'high'
   const hasAbsoluteContraindication = selectedContraindications.some(item => item.startsWith('abs_'))
+  const hasRelativeContraindication = selectedContraindications.some(item => item.startsWith('rel_'))
   const hasSelectedTherapy = selectedTherapies.length > 0
   const isSectionOpen = (key: string, defaultValue = true) => sectionOpen[key] ?? defaultValue
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
@@ -1191,6 +1234,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
     if (isTVPTreatmentInitial) {
       setSectionOpen({
+        tvp_treatment_considerations: true,
         tvp_treatment_therapies: true,
         tvp_treatment_duration: false,
         tvp_treatment_contra: true,
@@ -2151,9 +2195,102 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isTVPTreatmentInitial && tvpRiskBenefitGuideOpen && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white">
+                      <h4 className="font-bold">Como avaliar o risco benefício: Anticoagular ou Não?</h4>
+                      <button
+                        type="button"
+                        onClick={() => setTVPRiskBenefitGuideOpen(false)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5 space-y-4 text-sm text-slate-800">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                        <p className="font-bold text-emerald-900">1) PERGUNTE: "EMBOLIZA?"</p>
+                        <p className="mt-1 font-semibold">Avalie risco tromboembólico:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1 text-emerald-900">
+                          <li>TVP proximal (femoral/iliaca/poplitea).</li>
+                          <li>Sintomas importantes (dor/edema extensos, dor toracica, dispneia).</li>
+                          <li>Cancer ativo, imobilizacao recente, trombofilia conhecida.</li>
+                          <li>Trombo em localizacao de alto risco (ex.: trombo flutuante).</li>
+                        </ul>
+                        <p className="mt-2"><strong>Conclusao:</strong> se SIM, tende a anticoagular. Se NAO ou incerto, siga para etapa 2.</p>
+                      </div>
+
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                        <p className="font-bold text-amber-900">2) PERGUNTE: "SANGRA?"</p>
+                        <p className="mt-1 font-semibold">Avalie risco hemorrágico:</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1 text-amber-900">
+                          <li>Sangramento ativo (GI, intracraniano, hemoptise significativa).</li>
+                          <li>Plaquetas baixas (ex.: &lt; 50 mil).</li>
+                          <li>Funcao renal/hepatica ruim (ClCr muito reduzido, INR elevado sem ACO).</li>
+                          <li>HAS grave nao controlada (ex.: PAS &gt;= 180 ou PAD &gt;= 110).</li>
+                          <li>Sangramento GI recente (ex.: &lt; 4 semanas).</li>
+                        </ul>
+                        <p className="mt-2"><strong>Classificacao:</strong> absoluta (hemorragia ativa maior, sangramento intracraniano recente, cirurgia neuro/ocular recente, plaquetas muito baixas, risco crítico nao corrigível) e relativa (plaquetopenia moderada, HAS elevada, disfuncao renal/hepatica moderada, sangramento GI remoto).</p>
+                        <p className="mt-1"><strong>Conclusao:</strong> se SIM, classificar relativo x absoluto. Se NAO, risco hemorrágico baixo/manejável.</p>
+                      </div>
+
+                      <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                        <p className="font-bold text-cyan-900">3) COMPARE: "O QUE PESA MAIS?"</p>
+                        <ul className="list-disc pl-5 mt-1 space-y-1 text-cyan-900">
+                          <li>Emboliza &gt; sangra: anticoagular.</li>
+                          <li>Sangra &gt; emboliza: corrigir fator e reavaliar (controlar HAS, otimizar funcao renal, tratar fonte de sangramento, transfusao/plaquetas).</li>
+                          <li>Sangramento absoluto: nao anticoagular.</li>
+                        </ul>
+                      </div>
+
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setTVPRiskBenefitGuideOpen(false)}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors"
+                        >
+                          Entendi, voltar para decisão
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isTVPTreatmentInitial && (
                 <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-200">
                   <div className="space-y-5">
+                    <div className="bg-white rounded-2xl border border-emerald-200 p-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleSection('tvp_treatment_considerations')}
+                        className="w-full flex items-center justify-between text-left mb-3"
+                      >
+                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                          Considerações essenciais da anticoagulação
+                        </h4>
+                        <ChevronRight className={clsx('w-4 h-4 text-emerald-700 transition-transform', isSectionOpen('tvp_treatment_considerations', true) ? 'rotate-90' : '')} />
+                      </button>
+                      {isSectionOpen('tvp_treatment_considerations', true) && (
+                      <div className="grid gap-3">
+                        {tvpAnticoagulationConsiderations.map((section) => (
+                          <div key={section.id} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                            <h5 className="text-sm font-bold text-emerald-900 mb-2">{section.title}</h5>
+                            <div className="space-y-2">
+                              {section.paragraphs.map((paragraph) => (
+                                <p key={paragraph} className="text-sm text-emerald-950 leading-relaxed">
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      )}
+                    </div>
+
                     <div className="bg-white rounded-2xl border border-slate-200 p-4">
                       <button
                         type="button"
@@ -2161,7 +2298,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         className="w-full flex items-center justify-between text-left mb-3"
                       >
                         <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                          Prescrição: opções terapêuticas e doses
+                          Opções terapêuticas, doses e sugestão de prescrições
                         </h4>
                         <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 inline-flex items-center gap-2">
                           {selectedTherapies.length} opção(ões)
@@ -2271,7 +2408,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       className="w-full flex items-center justify-between text-left mb-3"
                     >
                       <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                        Antes da anticoagulação: checklist de contraindicações
+                        Checar contraindicações à anticoagulação
                       </h4>
                       <ChevronRight className={clsx('w-4 h-4 text-red-700 transition-transform', isSectionOpen('tvp_treatment_contra', true) ? 'rotate-90' : '')} />
                     </button>
@@ -2321,15 +2458,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       'rounded-xl p-3 border text-sm',
                       hasAbsoluteContraindication
                         ? 'bg-red-100 border-red-300 text-red-800'
-                        : selectedContraindications.length > 0
+                        : hasRelativeContraindication
                           ? 'bg-amber-100 border-amber-300 text-amber-800'
                           : 'bg-emerald-100 border-emerald-300 text-emerald-800'
                     )}>
                       {hasAbsoluteContraindication
-                        ? 'Há contraindicação absoluta marcada: priorizar encaminhamento urgente e reavaliar estratégia.'
-                        : selectedContraindications.length > 0
-                          ? 'Há contraindicações relativas: individualizar risco/benefício e monitorar sangramento.'
-                          : 'Sem contraindicações marcadas: apto para anticoagulação conforme protocolo.'}
+                        ? 'Existe contraindicação absoluta à anticoagulação: não anticoagular e solicitar avaliação da Cirurgia Vascular.'
+                        : hasRelativeContraindication
+                          ? 'Existe contraindicação relativa: avaliar risco-benefício do tratamento antes de decidir.'
+                          : 'Sem contraindicações selecionadas: seguir para anticoagulação.'}
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -2356,37 +2493,84 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     )}
                     </div>
 
-                    <div className="grid md:grid-cols-2 gap-3">
+                    {hasAbsoluteContraindication && (
                       <motion.button
-                        onClick={() => handleAnswer('anticoagulacao_iniciada', 'anticoag_vascular')}
-                        disabled={hasAbsoluteContraindication || !hasSelectedTherapy}
-                        className={clsx(
-                          'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
-                          hasAbsoluteContraindication || !hasSelectedTherapy
-                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
-                        )}
-                        whileHover={!hasAbsoluteContraindication && hasSelectedTherapy ? { scale: 1.01 } : {}}
-                        whileTap={!hasAbsoluteContraindication && hasSelectedTherapy ? { scale: 0.99 } : {}}
-                      >
-                        <span className="font-semibold text-slate-800">
-                          Iniciar anticoagulação + solicitar cirurgião vascular
-                        </span>
-                        <ChevronRight className="w-5 h-5 text-slate-500" />
-                      </motion.button>
-
-                      <motion.button
-                        onClick={() => handleAnswer('encaminhamento_urgente', 'contraindicacao_ou_gravidade')}
-                        className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-red-50 border-red-200 hover:border-red-400"
+                        onClick={() => handleAnswer('encaminhamento_urgente', 'contraindicacao_absoluta')}
+                        className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-red-50 border-red-300 hover:border-red-500"
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
                       >
                         <span className="font-semibold text-slate-800">
-                          Encaminhar urgente por contraindicação/gravidade
+                          Existe contraindicação absoluta: solicitar avaliação da Cirurgia Vascular
                         </span>
                         <ChevronRight className="w-5 h-5 text-slate-500" />
                       </motion.button>
-                    </div>
+                    )}
+
+                    {!hasAbsoluteContraindication && hasRelativeContraindication && (
+                      <div className="space-y-3">
+                        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-emerald-900">Avaliar risco-benefício do tratamento</p>
+                            <button
+                              type="button"
+                              onClick={() => setTVPRiskBenefitGuideOpen(true)}
+                              className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-white text-emerald-800 text-sm font-semibold hover:bg-emerald-100 transition-colors"
+                            >
+                              Como avaliar o risco benefício?
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-3">
+                          <motion.button
+                            onClick={() => handleAnswer('anticoagulacao_iniciada', 'beneficio_supera_risco')}
+                            disabled={!hasSelectedTherapy}
+                            className={clsx(
+                              'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
+                              !hasSelectedTherapy
+                                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
+                            )}
+                            whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
+                            whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
+                          >
+                            <span className="font-semibold text-slate-800">Paciente anticoagulado e fluxo finalizado</span>
+                            <ChevronRight className="w-5 h-5 text-slate-500" />
+                          </motion.button>
+
+                          <motion.button
+                            onClick={() => handleAnswer('encaminhamento_urgente', 'risco_supera_beneficio')}
+                            className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-amber-50 border-amber-300 hover:border-amber-500"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className="font-semibold text-slate-800">Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular</span>
+                            <ChevronRight className="w-5 h-5 text-slate-500" />
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!hasAbsoluteContraindication && !hasRelativeContraindication && (
+                      <motion.button
+                        onClick={() => handleAnswer('anticoagulacao_iniciada', 'sem_contraindicacao_anticoagular')}
+                        disabled={!hasSelectedTherapy}
+                        className={clsx(
+                          'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
+                          !hasSelectedTherapy
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
+                        )}
+                        whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
+                        whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
+                      >
+                        <span className="font-semibold text-slate-800">
+                          Paciente anticoagulado e fluxo finalizado
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                      </motion.button>
+                    )}
                   </div>
                 </div>
               )}

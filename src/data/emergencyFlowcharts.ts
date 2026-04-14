@@ -2456,8 +2456,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Iniciar anticoagulação e solicitar avaliação vascular', nextStep: 'anticoagulacao_iniciada', value: 'outpatient' },
-        { text: 'Contraindicação relevante ou gravidade clínica', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
+        { text: 'Sem contraindicação relevante: anticoagular', nextStep: 'anticoagulacao_iniciada', value: 'outpatient' },
+        { text: 'Solicitar avaliação da Cirurgia Vascular', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
       ]
     },
     conduta_gestante: {
@@ -2507,8 +2507,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     anticoagulacao_iniciada: {
       id: 'anticoagulacao_iniciada',
-      title: 'Anticoagulação Iniciada',
-      description: 'Tratamento instituído com plano de seguimento.',
+      title: 'Paciente anticoagulado e fluxo finalizado',
+      description: 'Anticoagulação instituída com plano de seguimento.',
       type: 'result',
       content: `
         <div class="space-y-3">
@@ -2539,17 +2539,17 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     encaminhamento_urgente: {
       id: 'encaminhamento_urgente',
-      title: 'Encaminhamento Urgente',
-      description: 'Situação de maior gravidade ou necessidade de cuidado hospitalar.',
+      title: 'Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular',
+      description: 'Encaminhar para avaliação especializada após decisão clínica.',
       type: 'result',
       critical: true,
       content: `
         <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
-          <h4 class="font-bold text-red-800">Prioridade Máxima</h4>
+          <h4 class="font-bold text-red-800">Avaliação vascular prioritária</h4>
           <ul class="list-disc pl-5 text-red-700 text-sm mt-1">
-            <li>Suspeita de TEP associada à TVP.</li>
-            <li>Flegmasia (dor intensa, edema importante, cianose).</li>
-            <li>Alto risco de sangramento, comorbidades descompensadas ou necessidade de HNF.</li>
+            <li>Encaminhar após início da anticoagulação quando houver necessidade de avaliação cirúrgica especializada.</li>
+            <li>Em cenário de risco hemorrágico elevado, individualizar conduta e discutir estratégia com equipe de referência.</li>
+            <li>Sinais de gravidade (flegmasia, dor intensa progressiva, suspeita de TEP associada) exigem prioridade máxima.</li>
           </ul>
         </div>
       `,
