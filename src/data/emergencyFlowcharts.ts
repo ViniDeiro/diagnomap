@@ -2386,7 +2386,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
       type: 'question',
       critical: true,
       options: [
-        { text: 'USG positiva para trombose', nextStep: 'tratamento_inicial', value: 'us_positive', critical: true },
+        { text: 'USG positiva para trombose', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
         { text: 'USG negativa para trombose', nextStep: 'us_negativa_conduta', value: 'us_negative' }
       ]
     },
@@ -2412,21 +2412,34 @@ export const tvpFlowchart: EmergencyFlowchart = {
       description: 'Repetição do exame por persistência de suspeita clínica.',
       type: 'question',
       options: [
-        { text: 'Com trombose', nextStep: 'tratamento_inicial', value: 'repeat_positive', critical: true },
+        { text: 'Com trombose', nextStep: 'checar_contra_anticoagulacao', value: 'repeat_positive', critical: true },
         { text: 'Sem trombose', nextStep: 'seguimento_ambulatorial', value: 'repeat_negative' }
+      ]
+    },
+    checar_contra_anticoagulacao: {
+      id: 'checar_contra_anticoagulacao',
+      title: 'Checar contraindicações à anticoagulação',
+      description: 'Classificar contraindicações absolutas/relativas e decidir conduta inicial.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Mini fluxograma:</strong> avaliar contraindicações absolutas/relativas antes de iniciar a anticoagulação.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sem contraindicação relevante: seguir para anticoagulação', nextStep: 'tratamento_inicial', value: 'proceed_anticoag' },
+        { text: 'Solicitar avaliação da Cirurgia Vascular', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
       ]
     },
     tratamento_inicial: {
       id: 'tratamento_inicial',
-      title: 'TVP Confirmada - Iniciar Anticoagulação',
-      description: 'Escolher estratégia inicial conforme cenário clínico.',
+      title: 'Anticoagulação',
+      description: 'Escolher esquema terapêutico, duração e prescrição.',
       type: 'question',
       critical: true,
       content: `
         <div class="space-y-3 text-sm">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
-            <strong>Antes de anticoagular:</strong> verificar contraindicações absolutas/relativas e risco de sangramento.
-          </div>
           <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
             <strong>Solicitar avaliação do Cirurgião Vascular</strong> após confirmação de TVP, especialmente em casos extensos, iliofemorais ou com sinais de gravidade.
           </div>
@@ -2456,8 +2469,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Sem contraindicação relevante: anticoagular', nextStep: 'anticoagulacao_iniciada', value: 'outpatient' },
-        { text: 'Solicitar avaliação da Cirurgia Vascular', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
+        { text: 'Paciente anticoagulado e fluxo finalizado', nextStep: 'anticoagulacao_iniciada', value: 'outpatient' },
+        { text: 'Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
       ]
     },
     conduta_gestante: {

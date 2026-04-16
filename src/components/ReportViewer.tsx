@@ -213,7 +213,7 @@ ${formatDate(new Date())}`
         hnf: 'Heparina não fracionada',
         varfarina: 'Varfarina'
       }
-      const timeline = stepSequence.map((stepId, index) => {
+      const timeline = stepSequence.map((stepId) => {
         const step = flowchart?.steps?.[stepId]
         const rawAnswer = answers[stepId]
         const parsed = safeParse(rawAnswer)
@@ -231,7 +231,7 @@ ${formatDate(new Date())}`
           const selectedOption = step.options.find(opt => opt.value === rawAnswer || opt.nextStep === rawAnswer || opt.text === rawAnswer)
           decision = selectedOption ? selectedOption.text : rawAnswer
         }
-        return `${index + 1}. ${step?.title || stepId}${decision ? ` — ${decision}` : ''}`
+        return `${step?.title || stepId}${decision ? ` — ${decision}` : ''}`
       })
       const dynamicMedsFromAnswers = Object.values(answers)
         .map(value => safeParse(value))
@@ -250,33 +250,68 @@ ${formatDate(new Date())}`
       const possibleDiagnosis = flowchart?.name || patient.selectedFlowchart.toUpperCase()
       const vital = patient.admission?.vitalSigns || {}
       const vitalSummary = [
-        vital.temperature != null ? `T ${vital.temperature}°C` : null,
-        vital.heartRate != null ? `FC ${vital.heartRate} bpm` : null,
-        vital.respiratoryRate != null ? `FR ${vital.respiratoryRate} irpm` : null,
-        vital.bloodPressure ? `PA ${vital.bloodPressure}` : null,
+        vital.temperature != null ? `temperatura ${vital.temperature}°C` : null,
+        vital.heartRate != null ? `frequência cardíaca ${vital.heartRate} bpm` : null,
+        vital.respiratoryRate != null ? `frequência respiratória ${vital.respiratoryRate} irpm` : null,
+        vital.bloodPressure ? `pressão arterial ${vital.bloodPressure}` : null,
         vital.oxygenSaturation != null ? `SpO₂ ${vital.oxygenSaturation}%` : null
       ].filter(Boolean).join(', ')
-      const chronologyText = timeline.length > 0 ? `Evolução cronológica: ${timeline.join(' | ')}.` : ''
+      const chronologyText = timeline.length > 0
+        ? `Na sequência da investigação, foram registradas as seguintes etapas: ${timeline.join('; ')}.`
+        : ''
+      const selectedLegData = safeParse(answers.start)
+      const selectedLegLabel = (() => {
+        if (typeof selectedLegData?.selectedLegLabel === 'string' && selectedLegData.selectedLegLabel) {
+          return selectedLegData.selectedLegLabel.toLowerCase()
+        }
+        if (selectedLegData?.selectedLeg === 'left') return 'perna esquerda'
+        if (selectedLegData?.selectedLeg === 'right') return 'perna direita'
+        return ''
+      })()
+      const wellsData = safeParse(answers.wells_score)
+      const contraData = safeParse(answers.checar_contra_anticoagulacao)
+      const treatmentData = safeParse(answers.tratamento_inicial)
+      const weightText = typeof patient.weight === 'number' ? `${patient.weight} kg` : 'peso não informado'
+      const symptomsText = patient.admission.symptoms.length > 0
+        ? patient.admission.symptoms.join(', ')
+        : 'sem sintomas estruturados registrados'
+      const contraindicationNarrative = contraData?.possuiContraindicacaoAbsoluta
+        ? 'Durante a avaliação de segurança, foram identificadas contraindicações absolutas à anticoagulação.'
+        : contraData?.possuiContraindicacaoRelativa
+          ? 'Durante a avaliação de segurança, foram identificadas contraindicações relativas, com necessidade de análise de risco-benefício antes da decisão terapêutica.'
+          : 'Durante a avaliação de segurança, não foram identificadas contraindicações relevantes para anticoagulação.'
+      const selectedTherapies = Array.isArray(treatmentData?.opcoesTerapeuticasSelecionadas)
+        ? treatmentData.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
+        : []
+      const therapiesNarrative = selectedTherapies.length > 0
+        ? `Foram selecionadas as seguintes estratégias terapêuticas: ${selectedTherapies.join(', ')}.`
+        : ''
       return {
-        introduction: `Paciente ${patient.name}, ${patient.age} anos, atendido em ${formatDate(patient.admission.date)} para protocolo ${possibleDiagnosis}.`,
-        complaints: patient.admission.symptoms.length > 0
-          ? `Sintomas apresentados: ${patient.admission.symptoms.join(', ')}.`
-          : 'Sem sintomas estruturados registrados no formulário.',
+        introduction: patient.selectedFlowchart === 'tvp'
+          ? `Paciente ${patient.name}, ${patient.age} anos, sexo ${patient.gender}, com ${weightText}, deu entrada em ${formatDate(patient.admission.date)} com suspeita clínica de trombose venosa profunda${selectedLegLabel ? ` em ${selectedLegLabel}` : ''}.`
+          : `Paciente ${patient.name}, ${patient.age} anos, sexo ${patient.gender}, com ${weightText}, atendido em ${formatDate(patient.admission.date)} para investigação no protocolo ${possibleDiagnosis}.`,
+        complaints: `Na admissão, apresentava ${symptomsText}.`,
         physicalExam: vitalSummary
-          ? `Dados clínicos iniciais: ${vitalSummary}.`
+          ? `Ao exame inicial, observou-se ${vitalSummary}.`
           : 'Sinais vitais não registrados de forma estruturada.',
         laboratoryResults: examEvents.length > 0
-          ? `Exames solicitados e decisões diagnósticas: ${examEvents.join(' | ')}.`
+          ? `No eixo diagnóstico, os principais exames e decisões registrados foram: ${examEvents.join('; ')}.`
           : 'Exames complementares não registrados no fluxo.',
-        classification: `Diagnósticos considerados: ${possibleDiagnosis}.`,
-        treatment: chronologyText || 'Tratamento definido conforme decisões registradas no fluxograma clínico.',
+        classification: patient.selectedFlowchart === 'tvp' && wellsData?.score != null
+          ? `A estratificação clínica pelo escore de Wells resultou em ${wellsData.score} ponto(s), com classificação ${String(wellsData.classificacao || '').toLowerCase()}.`
+          : `Diagnóstico sindrômico e protocolo conduzidos como ${possibleDiagnosis}.`,
+        treatment: patient.selectedFlowchart === 'tvp'
+          ? `${contraindicationNarrative} ${therapiesNarrative} ${chronologyText}`.trim()
+          : chronologyText || 'Tratamento definido conforme decisões registradas no fluxograma clínico.',
         prescriptions: prescribedMeds.length > 0
-          ? `Medicamentos prescritos: ${prescribedMeds.join(', ')}.`
+          ? `Ao final, foram prescritos: ${prescribedMeds.join(', ')}.`
           : 'Nenhum medicamento estruturado foi registrado.',
         shockManagement: '',
         observations: patient.generalObservations ? `Observações do atendimento: ${patient.generalObservations}.` : '',
-        followUp: 'Orientações fornecidas: manter seguimento clínico, vigilância de sinais de alarme e retorno imediato em piora.',
-        conclusion: 'Relatório cronológico concluído com base nas interações e decisões médicas registradas durante o atendimento.'
+        followUp: 'Foi orientado seguimento clínico, com vigilância de sinais de alarme e retorno imediato ao serviço em caso de piora.',
+        conclusion: patient.selectedFlowchart === 'tvp'
+          ? 'Em síntese, o caso foi conduzido de forma protocolar, com progressão lógica entre suspeita clínica, confirmação diagnóstica, avaliação de segurança para anticoagulação e definição terapêutica.'
+          : 'Relatório cronológico concluído com base nas interações e decisões médicas registradas durante o atendimento.'
       }
     }
 
@@ -411,7 +446,7 @@ ${formatDate(new Date())}`
 
       // Glicemia capilar (mg/dL)
       if (vs.glucose) {
-        const gStr = vs.glucose.trim().toUpperCase()
+        const gStr = String(vs.glucose).trim().toUpperCase()
         if (gStr === 'HI') {
           vitals.push('hiperglicemia extrema (HI)')
         } else if (gStr === 'LO') {

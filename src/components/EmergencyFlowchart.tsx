@@ -282,6 +282,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
   const [tvpWellsIntroOpen, setTVPWellsIntroOpen] = useState(false)
   const [pendingTVPWellsOption, setPendingTVPWellsOption] = useState<{ nextStep: string; value?: string } | null>(null)
+  const [tvpAnticoagConsiderationsOpen, setTVPAnticoagConsiderationsOpen] = useState(false)
   const [tvpPrescriptionPreview, setTVPPrescriptionPreview] = useState<TVPPrescriptionPreview | null>(null)
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
@@ -391,6 +392,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isTVPLegSelection = flowchart.id === 'tvp' && currentStep === 'start'
     const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStep === 'avaliacao_clinica'
     const isTVPWellsScore = flowchart.id === 'tvp' && currentStep === 'wells_score'
+    const isTVPContraCheck = flowchart.id === 'tvp' && currentStep === 'checar_contra_anticoagulacao'
     const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStep === 'tratamento_inicial'
     const legSelectionAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -408,12 +410,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       classificacao: wellsRisk,
       criteriosSelecionados: selectedWellsCriteria
     })
+    const contraCheckAnswer = JSON.stringify({
+      decision: value || nextStep,
+      contraindicacoesSelecionadas: selectedContraindications,
+      possuiContraindicacaoAbsoluta: hasAbsoluteContraindication,
+      possuiContraindicacaoRelativa: hasRelativeContraindication,
+      solicitarAvaliacaoCirurgiaoVascular: hasAbsoluteContraindication || (hasRelativeContraindication && nextStep === 'encaminhamento_urgente')
+    })
     const treatmentAnswer = JSON.stringify({
       decision: value || nextStep,
       opcoesTerapeuticasSelecionadas: selectedTherapies,
       planoDuracaoSelecionado: selectedDurationPlan,
-      contraindicacoesSelecionadas: selectedContraindications,
-      possuiContraindicacaoAbsoluta: hasAbsoluteContraindication,
       solicitarAvaliacaoCirurgiaoVascular: true
     })
     const newAnswers = {
@@ -424,6 +431,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           ? clinicalEvaluationAnswer
           : isTVPWellsScore
             ? wellsScoreAnswer
+            : isTVPContraCheck
+              ? contraCheckAnswer
             : isTVPTreatmentInitial
               ? treatmentAnswer
               : value || nextStep
@@ -614,6 +623,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setCincinnatiInfoOpen(false)
     setTVPWellsIntroOpen(false)
     setPendingTVPWellsOption(null)
+    setTVPAnticoagConsiderationsOpen(false)
     setTVPPrescriptionPreview(null)
     setTVPRiskBenefitGuideOpen(false)
     setGasometryDraft({
@@ -661,6 +671,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
+  const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
   const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
@@ -1181,29 +1192,43 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [isTVPWellsScore, answers, currentStep])
 
   useEffect(() => {
-    if (!isTVPTreatmentInitial) {
+    if (!isTVPContraCheck) {
       setSelectedContraindications([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setSelectedContraindications([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const items = Array.isArray(parsed?.contraindicacoesSelecionadas) ? parsed.contraindicacoesSelecionadas : []
+      setSelectedContraindications(items)
+    } catch {
+      setSelectedContraindications([])
+    }
+  }, [isTVPContraCheck, answers, currentStep])
+
+  useEffect(() => {
+    if (!isTVPTreatmentInitial) {
       setSelectedTherapies([])
       setSelectedDurationPlan('')
       return
     }
     const saved = answers[currentStep]
     if (!saved) {
-      setSelectedContraindications([])
       setSelectedTherapies([])
       setSelectedDurationPlan('')
       return
     }
     try {
       const parsed = JSON.parse(saved)
-      const items = Array.isArray(parsed?.contraindicacoesSelecionadas) ? parsed.contraindicacoesSelecionadas : []
       const therapies = Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) ? parsed.opcoesTerapeuticasSelecionadas : []
       const duration = typeof parsed?.planoDuracaoSelecionado === 'string' ? parsed.planoDuracaoSelecionado : ''
-      setSelectedContraindications(items)
       setSelectedTherapies(therapies)
       setSelectedDurationPlan(duration)
     } catch {
-      setSelectedContraindications([])
       setSelectedTherapies([])
       setSelectedDurationPlan('')
     }
@@ -1232,16 +1257,28 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       })
       return
     }
+    if (isTVPContraCheck) {
+      setSectionOpen({
+        tvp_treatment_contra: true
+      })
+      return
+    }
     if (isTVPTreatmentInitial) {
       setSectionOpen({
-        tvp_treatment_considerations: true,
         tvp_treatment_therapies: true,
         tvp_treatment_duration: false,
-        tvp_treatment_contra: true,
         tvp_treatment_guidance: false
       })
     }
-  }, [currentStep, isTVPClinicalEvaluation, isTVPWellsScore, isTVPTreatmentInitial])
+  }, [currentStep, isTVPClinicalEvaluation, isTVPWellsScore, isTVPContraCheck, isTVPTreatmentInitial])
+
+  useEffect(() => {
+    if (isTVPTreatmentInitial) {
+      setTVPAnticoagConsiderationsOpen(true)
+      return
+    }
+    setTVPAnticoagConsiderationsOpen(false)
+  }, [isTVPTreatmentInitial])
 
   if (!currentStepData) {
     return (
@@ -1426,7 +1463,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
             {/* Conteúdo do Step */}
             <div className="p-6">
-              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPTreatmentInitial && !isAVCCincinnatiStep && (
+              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
@@ -2119,6 +2156,54 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isTVPTreatmentInitial && tvpAnticoagConsiderationsOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0 bg-slate-900/45"
+                    onClick={() => setTVPAnticoagConsiderationsOpen(false)}
+                  />
+                  <div className="relative w-full max-w-4xl rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={() => setTVPAnticoagConsiderationsOpen(false)}
+                      className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-amber-100"
+                      aria-label="Fechar considerações da anticoagulação"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 mb-1">
+                      Considerações Essenciais da Anticoagulação
+                    </h4>
+                    <p className="text-sm text-slate-700 mb-4">
+                      Resumo prático para orientar escolha terapêutica, duração e perfil dos anticoagulantes na TVP.
+                    </p>
+                    <div className="grid gap-3">
+                      {tvpAnticoagulationConsiderations.map((section) => (
+                        <div key={section.id} className="rounded-xl border border-amber-200 bg-amber-100/70 p-4">
+                          <h5 className="text-sm font-bold text-amber-950 mb-2">{section.title}</h5>
+                          <div className="space-y-2">
+                            {section.paragraphs.map((paragraph) => (
+                              <p key={paragraph} className="text-sm text-amber-950 leading-relaxed">
+                                {paragraph}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-5 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setTVPAnticoagConsiderationsOpen(false)}
+                        className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors"
+                      >
+                        Entendi
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isAVCCincinnatiStep && cincinnatiInfoOpen && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
@@ -2195,7 +2280,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
-              {isTVPTreatmentInitial && tvpRiskBenefitGuideOpen && (
+              {isTVPContraCheck && tvpRiskBenefitGuideOpen && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-4xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white">
@@ -2259,36 +2344,168 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
-              {isTVPTreatmentInitial && (
+              {isTVPContraCheck && (
                 <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-200">
                   <div className="space-y-5">
-                    <div className="bg-white rounded-2xl border border-emerald-200 p-4">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
                       <button
                         type="button"
-                        onClick={() => toggleSection('tvp_treatment_considerations')}
+                        onClick={() => toggleSection('tvp_treatment_contra')}
                         className="w-full flex items-center justify-between text-left mb-3"
                       >
                         <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                          Considerações essenciais da anticoagulação
+                          Checar contraindicações à anticoagulação
                         </h4>
-                        <ChevronRight className={clsx('w-4 h-4 text-emerald-700 transition-transform', isSectionOpen('tvp_treatment_considerations', true) ? 'rotate-90' : '')} />
+                        <ChevronRight className={clsx('w-4 h-4 text-red-700 transition-transform', isSectionOpen('tvp_treatment_contra', true) ? 'rotate-90' : '')} />
                       </button>
-                      {isSectionOpen('tvp_treatment_considerations', true) && (
-                      <div className="grid gap-3">
-                        {tvpAnticoagulationConsiderations.map((section) => (
-                          <div key={section.id} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                            <h5 className="text-sm font-bold text-emerald-900 mb-2">{section.title}</h5>
-                            <div className="space-y-2">
-                              {section.paragraphs.map((paragraph) => (
-                                <p key={paragraph} className="text-sm text-emerald-950 leading-relaxed">
-                                  {paragraph}
-                                </p>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
+                      {isSectionOpen('tvp_treatment_contra', true) && (
+                      <div className="space-y-2">
+                        {tvpAnticoagContraindications.map((item) => {
+                          const checked = selectedContraindications.includes(item.id)
+                          return (
+                            <label
+                              key={item.id}
+                              className={clsx(
+                                'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
+                                checked ? 'bg-white border-red-300' : 'bg-white/70 border-slate-200 hover:border-slate-300'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
+                                checked={checked}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSelectedContraindications(prev => [...prev, item.id])
+                                  } else {
+                                    setSelectedContraindications(prev => prev.filter(entry => entry !== item.id))
+                                  }
+                                }}
+                              />
+                              <div className="flex-1">
+                                <span className="text-sm text-slate-700 leading-relaxed">{item.text}</span>
+                                <span className={clsx(
+                                  'ml-2 inline-block text-xs font-bold px-2 py-0.5 rounded-md border',
+                                  item.severity === 'absoluta'
+                                    ? 'text-red-700 border-red-200 bg-red-50'
+                                    : 'text-amber-700 border-amber-200 bg-amber-50'
+                                )}>
+                                  {item.severity === 'absoluta' ? 'Absoluta' : 'Relativa'}
+                                </span>
+                              </div>
+                            </label>
+                          )
+                        })}
                       </div>
                       )}
+                    </div>
+
+                    <div className={clsx(
+                      'rounded-xl p-3 border text-sm',
+                      hasAbsoluteContraindication
+                        ? 'bg-red-100 border-red-300 text-red-800'
+                        : hasRelativeContraindication
+                          ? 'bg-amber-100 border-amber-300 text-amber-800'
+                          : 'bg-emerald-100 border-emerald-300 text-emerald-800'
+                    )}>
+                      {hasAbsoluteContraindication
+                        ? 'Existe contraindicação absoluta à anticoagulação: não anticoagular e solicitar avaliação da Cirurgia Vascular.'
+                        : hasRelativeContraindication
+                          ? 'Existe contraindicação relativa: avaliar risco-benefício do tratamento antes de decidir.'
+                          : 'Sem contraindicações selecionadas: seguir para anticoagulação.'}
+                    </div>
+
+                    {hasAbsoluteContraindication && (
+                      <motion.button
+                        onClick={() => handleAnswer('encaminhamento_urgente', 'contraindicacao_absoluta')}
+                        className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-red-50 border-red-300 hover:border-red-500"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <span className="font-semibold text-slate-800">
+                          Existe contraindicação absoluta: solicitar avaliação da Cirurgia Vascular
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                      </motion.button>
+                    )}
+
+                    {!hasAbsoluteContraindication && hasRelativeContraindication && (
+                      <div className="space-y-3">
+                        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <p className="text-sm font-semibold text-emerald-900">Avaliar risco-benefício do tratamento</p>
+                            <button
+                              type="button"
+                              onClick={() => setTVPRiskBenefitGuideOpen(true)}
+                              className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-white text-emerald-800 text-sm font-semibold hover:bg-emerald-100 transition-colors"
+                            >
+                              Como avaliar o risco benefício?
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-3">
+                          <motion.button
+                            onClick={() => handleAnswer('tratamento_inicial', 'beneficio_supera_risco')}
+                            className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-emerald-50 border-emerald-200 hover:border-emerald-400"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className="font-semibold text-slate-800">Benefício supera o risco: seguir para anticoagulação</span>
+                            <ChevronRight className="w-5 h-5 text-slate-500" />
+                          </motion.button>
+
+                          <motion.button
+                            onClick={() => handleAnswer('encaminhamento_urgente', 'risco_supera_beneficio')}
+                            className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-amber-50 border-amber-300 hover:border-amber-500"
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className="font-semibold text-slate-800">Risco supera o benefício: solicitar avaliação da Cirurgia Vascular</span>
+                            <ChevronRight className="w-5 h-5 text-slate-500" />
+                          </motion.button>
+                        </div>
+                      </div>
+                    )}
+
+                    {!hasAbsoluteContraindication && !hasRelativeContraindication && (
+                      <motion.button
+                        onClick={() => handleAnswer('tratamento_inicial', 'sem_contraindicacao_anticoagular')}
+                        className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-emerald-50 border-emerald-200 hover:border-emerald-400"
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <span className="font-semibold text-slate-800">
+                          Sem contraindicação relevante: seguir para anticoagulação
+                        </span>
+                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                      </motion.button>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isTVPTreatmentInitial && (
+                <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-200">
+                  <div className="space-y-5">
+                    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-bold text-amber-900 uppercase tracking-wide">
+                            Considerações essenciais da anticoagulação
+                          </p>
+                          <p className="text-sm text-amber-800 mt-1">
+                            Abra o resumo em pop-up para revisar os pontos-chave antes da decisão final.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setTVPAnticoagConsiderationsOpen(true)}
+                          className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
+                        >
+                          Ver considerações
+                        </button>
+                      </div>
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-200 p-4">
@@ -2402,74 +2619,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                    <button
-                      type="button"
-                      onClick={() => toggleSection('tvp_treatment_contra')}
-                      className="w-full flex items-center justify-between text-left mb-3"
-                    >
-                      <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                        Checar contraindicações à anticoagulação
-                      </h4>
-                      <ChevronRight className={clsx('w-4 h-4 text-red-700 transition-transform', isSectionOpen('tvp_treatment_contra', true) ? 'rotate-90' : '')} />
-                    </button>
-                    {isSectionOpen('tvp_treatment_contra', true) && (
-                    <div className="space-y-2">
-                      {tvpAnticoagContraindications.map((item) => {
-                        const checked = selectedContraindications.includes(item.id)
-                        return (
-                          <label
-                            key={item.id}
-                            className={clsx(
-                              'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
-                              checked ? 'bg-white border-red-300' : 'bg-white/70 border-slate-200 hover:border-slate-300'
-                            )}
-                          >
-                            <input
-                              type="checkbox"
-                              className="mt-1 h-4 w-4 text-red-600 rounded border-slate-300 focus:ring-red-500"
-                              checked={checked}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedContraindications(prev => [...prev, item.id])
-                                } else {
-                                  setSelectedContraindications(prev => prev.filter(entry => entry !== item.id))
-                                }
-                              }}
-                            />
-                            <div className="flex-1">
-                              <span className="text-sm text-slate-700 leading-relaxed">{item.text}</span>
-                              <span className={clsx(
-                                'ml-2 inline-block text-xs font-bold px-2 py-0.5 rounded-md border',
-                                item.severity === 'absoluta'
-                                  ? 'text-red-700 border-red-200 bg-red-50'
-                                  : 'text-amber-700 border-amber-200 bg-amber-50'
-                              )}>
-                                {item.severity === 'absoluta' ? 'Absoluta' : 'Relativa'}
-                              </span>
-                            </div>
-                          </label>
-                        )
-                      })}
-                    </div>
-                    )}
-                    </div>
-
-                    <div className={clsx(
-                      'rounded-xl p-3 border text-sm',
-                      hasAbsoluteContraindication
-                        ? 'bg-red-100 border-red-300 text-red-800'
-                        : hasRelativeContraindication
-                          ? 'bg-amber-100 border-amber-300 text-amber-800'
-                          : 'bg-emerald-100 border-emerald-300 text-emerald-800'
-                    )}>
-                      {hasAbsoluteContraindication
-                        ? 'Existe contraindicação absoluta à anticoagulação: não anticoagular e solicitar avaliação da Cirurgia Vascular.'
-                        : hasRelativeContraindication
-                          ? 'Existe contraindicação relativa: avaliar risco-benefício do tratamento antes de decidir.'
-                          : 'Sem contraindicações selecionadas: seguir para anticoagulação.'}
-                    </div>
-
-                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
                       <button
                         type="button"
                         onClick={() => toggleSection('tvp_treatment_guidance')}
@@ -2493,68 +2642,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     )}
                     </div>
 
-                    {hasAbsoluteContraindication && (
+                    <div className="grid md:grid-cols-2 gap-3">
                       <motion.button
-                        onClick={() => handleAnswer('encaminhamento_urgente', 'contraindicacao_absoluta')}
-                        className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-red-50 border-red-300 hover:border-red-500"
-                        whileHover={{ scale: 1.01 }}
-                        whileTap={{ scale: 0.99 }}
-                      >
-                        <span className="font-semibold text-slate-800">
-                          Existe contraindicação absoluta: solicitar avaliação da Cirurgia Vascular
-                        </span>
-                        <ChevronRight className="w-5 h-5 text-slate-500" />
-                      </motion.button>
-                    )}
-
-                    {!hasAbsoluteContraindication && hasRelativeContraindication && (
-                      <div className="space-y-3">
-                        <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-sm font-semibold text-emerald-900">Avaliar risco-benefício do tratamento</p>
-                            <button
-                              type="button"
-                              onClick={() => setTVPRiskBenefitGuideOpen(true)}
-                              className="px-3 py-1.5 rounded-lg border border-emerald-300 bg-white text-emerald-800 text-sm font-semibold hover:bg-emerald-100 transition-colors"
-                            >
-                              Como avaliar o risco benefício?
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="grid md:grid-cols-2 gap-3">
-                          <motion.button
-                            onClick={() => handleAnswer('anticoagulacao_iniciada', 'beneficio_supera_risco')}
-                            disabled={!hasSelectedTherapy}
-                            className={clsx(
-                              'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
-                              !hasSelectedTherapy
-                                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                                : 'bg-emerald-50 border-emerald-200 hover:border-emerald-400'
-                            )}
-                            whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
-                            whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
-                          >
-                            <span className="font-semibold text-slate-800">Paciente anticoagulado e fluxo finalizado</span>
-                            <ChevronRight className="w-5 h-5 text-slate-500" />
-                          </motion.button>
-
-                          <motion.button
-                            onClick={() => handleAnswer('encaminhamento_urgente', 'risco_supera_beneficio')}
-                            className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-amber-50 border-amber-300 hover:border-amber-500"
-                            whileHover={{ scale: 1.01 }}
-                            whileTap={{ scale: 0.99 }}
-                          >
-                            <span className="font-semibold text-slate-800">Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular</span>
-                            <ChevronRight className="w-5 h-5 text-slate-500" />
-                          </motion.button>
-                        </div>
-                      </div>
-                    )}
-
-                    {!hasAbsoluteContraindication && !hasRelativeContraindication && (
-                      <motion.button
-                        onClick={() => handleAnswer('anticoagulacao_iniciada', 'sem_contraindicacao_anticoagular')}
+                        onClick={() => handleAnswer('anticoagulacao_iniciada', 'anticoagulacao_iniciada')}
                         disabled={!hasSelectedTherapy}
                         className={clsx(
                           'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
@@ -2565,12 +2655,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
                         whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
                       >
-                        <span className="font-semibold text-slate-800">
-                          Paciente anticoagulado e fluxo finalizado
-                        </span>
+                        <span className="font-semibold text-slate-800">Paciente anticoagulado e fluxo finalizado</span>
                         <ChevronRight className="w-5 h-5 text-slate-500" />
                       </motion.button>
-                    )}
+
+                      <motion.button
+                        onClick={() => handleAnswer('encaminhamento_urgente', 'anticoagulado_encaminhado_vascular')}
+                        disabled={!hasSelectedTherapy}
+                        className={clsx(
+                          'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
+                          !hasSelectedTherapy
+                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-amber-50 border-amber-300 hover:border-amber-500'
+                        )}
+                        whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
+                        whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
+                      >
+                        <span className="font-semibold text-slate-800">Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular</span>
+                        <ChevronRight className="w-5 h-5 text-slate-500" />
+                      </motion.button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -2597,7 +2701,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
                       : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPTreatmentInitial) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
