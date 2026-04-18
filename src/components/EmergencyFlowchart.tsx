@@ -282,6 +282,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
   const [tvpWellsIntroOpen, setTVPWellsIntroOpen] = useState(false)
   const [pendingTVPWellsOption, setPendingTVPWellsOption] = useState<{ nextStep: string; value?: string } | null>(null)
+  const [tvpConfirmadaOpen, setTVPConfirmadaOpen] = useState(false)
+  const [pendingTVPConfirmadaOption, setPendingTVPConfirmadaOption] = useState<{ nextStep: string; value?: string } | null>(null)
   const [tvpAnticoagConsiderationsOpen, setTVPAnticoagConsiderationsOpen] = useState(false)
   const [tvpPrescriptionPreview, setTVPPrescriptionPreview] = useState<TVPPrescriptionPreview | null>(null)
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
@@ -457,11 +459,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   const handleOptionSelect = (option: EmergencyOption) => {
     const requiresTVPWellsIntro = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica' && option.nextStep === 'wells_score'
+    const requiresTVPConfirmada = flowchart.id === 'tvp' && option.nextStep === 'checar_contra_anticoagulacao'
+    
     if (requiresTVPWellsIntro) {
       setPendingTVPWellsOption({ nextStep: option.nextStep, value: option.value })
       setTVPWellsIntroOpen(true)
       return
     }
+
+    if (requiresTVPConfirmada) {
+      setPendingTVPConfirmadaOption({ nextStep: option.nextStep, value: option.value })
+      setTVPConfirmadaOpen(true)
+      return
+    }
+
     handleAnswer(option.nextStep, option.value)
   }
 
@@ -623,6 +634,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setCincinnatiInfoOpen(false)
     setTVPWellsIntroOpen(false)
     setPendingTVPWellsOption(null)
+    setTVPConfirmadaOpen(false)
+    setPendingTVPConfirmadaOption(null)
     setTVPAnticoagConsiderationsOpen(false)
     setTVPPrescriptionPreview(null)
     setTVPRiskBenefitGuideOpen(false)
@@ -909,30 +922,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
     if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null && pfe !== null) {
       const ameacaVida = flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)
-      if (ameacaVida) return [pick('asma_falencia_respiratoria')].filter(Boolean) as EmergencyOption[]
+      if (ameacaVida) return [pick('asma_tratamento_1h_grave_vida')].filter(Boolean) as EmergencyOption[]
       const grave = fr > 30 || fc > 120 || sat < 90 || pfe < 40 || flags.falaPalavras
-      if (grave) return [pick('asma_bloco_terapeutico')].filter(Boolean) as EmergencyOption[]
+      if (grave) return [pick('asma_tratamento_1h_grave_vida')].filter(Boolean) as EmergencyOption[]
       const moderada = (fr >= 25 && fr <= 30) || (sat >= 90 && sat < 95) || (pfe >= 40 && pfe <= 69) || flags.incapazFrases || flags.usoMusculatura
-      return [pick(moderada ? 'asma_oxigenio' : 'asma_oxigenio')].filter(Boolean) as EmergencyOption[]
-    }
-
-    if (currentStepData.id === 'asma_oxigenio' && sat !== null) {
-      return [pick(sat < 94 ? 'asma_bloco_terapeutico' : 'asma_bloco_terapeutico')].filter(Boolean) as EmergencyOption[]
+      return [pick(moderada ? 'asma_tratamento_1h_leve_moderada' : 'asma_tratamento_1h_leve_moderada')].filter(Boolean) as EmergencyOption[]
     }
 
     if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
       const melhora = pfeRe > 70 && satRe >= 94 && frRe < 25 && reFlags.melhoraClinica
-      if (melhora) return [pick('asma_alta_assistida')].filter(Boolean) as EmergencyOption[]
+      if (melhora) return [pick('asma_resposta_boa')].filter(Boolean) as EmergencyOption[]
       const parcial = (pfeRe >= 40 && pfeRe <= 69) || (satRe >= 90 && satRe < 94) || reFlags.necessidadeBroncoRepetido
-      if (parcial) return [pick('asma_observacao_ps')].filter(Boolean) as EmergencyOption[]
-      return [pick('asma_escalonamento')].filter(Boolean) as EmergencyOption[]
+      if (parcial) return [pick('asma_resposta_incompleta')].filter(Boolean) as EmergencyOption[]
+      return [pick('asma_resposta_ma')].filter(Boolean) as EmergencyOption[]
     }
 
     if (currentStepData.id === 'asma_escalonamento') {
       if (flags.exaustao || flags.confusao || flags.toraxSilente || (paco2 !== null && paco2 >= 45)) {
         return [pick('asma_falencia_respiratoria')].filter(Boolean) as EmergencyOption[]
       }
-      return [pick('asma_internacao')].filter(Boolean) as EmergencyOption[]
+      return [pick('asma_resgate_magnesio')].filter(Boolean) as EmergencyOption[]
     }
 
     if (currentStepData.id === 'asma_falencia_respiratoria') {
@@ -1074,14 +1083,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       }
       return `Crise leve: parâmetros sem critérios de gravidade imediata.`
     }
-    if (currentStepData.id === 'asma_oxigenio' && sat !== null) {
-      return sat < 94 ? `SatO2 ${sat}%: indicar oxigênio suplementar com meta 93–95%.` : `SatO2 ${sat}%: sem O2 inicial obrigatório, manter monitorização.`
+    if (currentStepData.id === 'asma_tratamento_1h_grave_vida') {
+      return 'Crise grave/risco de vida: iniciar oxigênio, broncodilatação combinada e corticoide IV de forma imediata.'
+    }
+    if (currentStepData.id === 'asma_o2_leve_moderada' && sat !== null) {
+      return sat < 94 ? `SatO2 ${sat}%: indicar oxigênio suplementar com meta 93–95%.` : `SatO2 ${sat}%: manter monitorização e suporte conforme resposta.`
     }
     if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
       return `Reavaliação 1h: SatO2 ${satRe}%, FR ${frRe}, PFE ${pfeRe}% para decidir alta, observação ou escalonamento.`
     }
     if (currentStepData.id === 'asma_escalonamento') {
-      return 'Sem resposta adequada após terapia inicial: avançar para magnésio EV, SABA contínuo e avaliação de internação/UTI.'
+      return 'Sem resposta adequada após terapia inicial: iniciar sequência de terapias de resgate e reavaliar necessidade de UTI.'
     }
     if (currentStepData.id === 'asma_falencia_respiratoria') {
       return 'Sinais de exaustão/hipercapnia/consciência alterada exigem via aérea avançada e suporte intensivo.'
@@ -2156,6 +2168,64 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {tvpConfirmadaOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0 bg-slate-900/45"
+                    onClick={() => {
+                      setTVPConfirmadaOpen(false)
+                      setPendingTVPConfirmadaOption(null)
+                    }}
+                  />
+                  <div className="relative w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTVPConfirmadaOpen(false)
+                        setPendingTVPConfirmadaOption(null)
+                      }}
+                      className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                      aria-label="Fechar confirmação"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 mb-3 uppercase">
+                      Trombose Confirmada
+                    </h4>
+                    <p className="text-sm sm:text-base text-slate-800 leading-relaxed font-medium">
+                      Anticoagulação indicada.
+                    </p>
+                    <p className="text-sm sm:text-base text-slate-800 leading-relaxed mt-3">
+                      Antes de avançar, vamos checar possíveis contraindicações.
+                    </p>
+                    <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTVPConfirmadaOpen(false)
+                          setPendingTVPConfirmadaOption(null)
+                        }}
+                        className="px-4 py-2 rounded-xl border border-slate-300 bg-white text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!pendingTVPConfirmadaOption) return
+                          setTVPConfirmadaOpen(false)
+                          handleAnswer(pendingTVPConfirmadaOption.nextStep, pendingTVPConfirmadaOption.value)
+                          setPendingTVPConfirmadaOption(null)
+                        }}
+                        className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white font-semibold transition-colors"
+                      >
+                        Avançar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isTVPTreatmentInitial && tvpAnticoagConsiderationsOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                   <div
@@ -2583,64 +2653,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('tvp_treatment_duration')}
-                        className="w-full flex items-center justify-between text-left mb-3"
-                      >
-                        <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                          Duração do tratamento
-                        </h4>
-                        <ChevronRight className={clsx('w-4 h-4 text-emerald-700 transition-transform', isSectionOpen('tvp_treatment_duration', false) ? 'rotate-90' : '')} />
-                      </button>
-                      {isSectionOpen('tvp_treatment_duration', false) && (
-                      <div className="space-y-2">
-                        {tvpTreatmentDurations.map((item) => (
-                          <label
-                            key={item.id}
-                            className={clsx(
-                              'flex items-start gap-3 p-3 rounded-xl border transition-colors cursor-pointer',
-                              selectedDurationPlan === item.id ? 'bg-emerald-50 border-emerald-300' : 'bg-white border-slate-200 hover:border-slate-300'
-                            )}
-                          >
-                            <input
-                              type="radio"
-                              name="tvp_duration_plan"
-                              className="mt-1 h-4 w-4 text-emerald-600 border-slate-300 focus:ring-emerald-500"
-                              checked={selectedDurationPlan === item.id}
-                              onChange={() => setSelectedDurationPlan(item.id)}
-                            />
-                            <p className="text-sm text-slate-700 leading-snug">{item.text}</p>
-                          </label>
-                        ))}
-                      </div>
-                      )}
-                    </div>
 
-                    <div className="bg-white rounded-2xl border border-slate-200 p-4">
-                      <button
-                        type="button"
-                        onClick={() => toggleSection('tvp_treatment_guidance')}
-                        className="w-full flex items-center justify-between text-left mb-3"
-                      >
-                        <span className="text-sm font-bold text-slate-800 uppercase tracking-wide">Complicações, internação e seguimento</span>
-                        <ChevronRight className={clsx('w-4 h-4 text-slate-700 transition-transform', isSectionOpen('tvp_treatment_guidance', false) ? 'rotate-90' : '')} />
-                      </button>
-                    {isSectionOpen('tvp_treatment_guidance', false) && (
-                    <div className="rounded-xl p-3 bg-white border border-slate-200 text-sm text-slate-700">
-                      <ul className="list-disc pl-5 space-y-1">
-                        <li>Sempre solicitar avaliação do cirurgião vascular após confirmação de TVP.</li>
-                        <li>Se suspeita de TEP, dor intensa com cianose ou flegmasia, escalar urgência imediatamente.</li>
-                        <li>Documentar contraindicações, decisão terapêutica e plano de seguimento no prontuário.</li>
-                        <li>Sangramento: considerar protamina (HNF/LMWH), idarucizumabe (dabigatrana), andexanet alfa ou PCC (apixabana/rivaroxabana).</li>
-                        <li>HIT: suspender heparina e iniciar anticoagulante não-heparínico.</li>
-                        <li>Ambulatorial se estável e baixo risco; internar se flegmasia, dor incapacitante, necessidade de HNF ou comorbidades descompensadas.</li>
-                        <li>Seguimento: deambulação precoce, reavaliação em 1–2 semanas e em 3 meses, monitorar sangramento e adesão.</li>
-                      </ul>
-                    </div>
-                    )}
-                    </div>
 
                     <div className="grid md:grid-cols-2 gap-3">
                       <motion.button
