@@ -1418,15 +1418,15 @@ export const gasometryFlowchart: EmergencyFlowchart = {
 // Fluxograma de Crise Aguda de Asma (adulto)
 export const asthmaFlowchart: EmergencyFlowchart = {
   id: 'asthma',
-  name: 'Crise Aguda de Asma',
-  description: 'Manejo da exacerbação de asma no PS/Sala Vermelha com reavaliação em 1 hora.',
+  name: 'Crise Asmática no PS',
+  description: 'Fluxo prático por gravidade: classificação inicial, tratamento na 1ª hora, reavaliação e destino.',
   category: 'respiratory',
   priority: 'high',
   icon: 'activity',
   color: 'from-cyan-600 to-blue-700',
   initialStep: 'asma_tipo',
   finalSteps: [
-    'asma_alta_assistida',
+    'asma_alta_final',
     'asma_observacao_ps',
     'asma_internacao',
     'asma_uti',
@@ -1435,85 +1435,227 @@ export const asthmaFlowchart: EmergencyFlowchart = {
   steps: {
     asma_tipo: {
       id: 'asma_tipo',
-      title: 'Suspeita de Crise de Asma',
-      description: 'Confirmar cenário clínico inicial.',
+      title: 'Início - Suspeita de Asma Aguda no PS',
+      description: 'Dispneia, tosse, sibilância e progressão rápida exigem avaliação sistemática.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
-          <p><strong>Quadro típico:</strong> dispneia, sibilância, tosse, aperto torácico e redução do fluxo aéreo.</p>
-          <p>O fluxo abaixo segue o modelo prático de emergência (GINA + SBPT).</p>
+          <p><strong>Quadro típico:</strong> dispneia, tosse, sibilância e opressão torácica.</p>
+          <p>Avaliar precocemente para prevenir deterioração clínica e insuficiência respiratória.</p>
         </div>
       `,
       options: [
-        { text: 'Iniciar fluxo de crise asmática', nextStep: 'asma_avaliacao_inicial', value: 'asma' }
+        { text: 'Iniciar avaliação clínica imediata', nextStep: 'asma_avaliacao_inicial', value: 'asma' }
       ]
     },
     asma_avaliacao_inicial: {
       id: 'asma_avaliacao_inicial',
-      title: 'Avaliação Inicial Imediata',
-      description: 'Preencher parâmetros para classificação automática da gravidade.',
+      title: 'Avaliação Inicial (Minuto 0)',
+      description: 'Sinais vitais, exame respiratório e PFE para classificar gravidade.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
-          <p><strong>Preencher:</strong> SatO2, FR, FC, PFE (%) e achados clínicos de gravidade.</p>
-          <p>Se crise grave/ameaça à vida: monitorização imediata + tratamento agressivo.</p>
+          <p><strong>Registrar:</strong> SatO2, FR, FC, PA, nível de consciência, uso de musculatura acessória, ausculta pulmonar e PFE (se possível).</p>
+          <p>Considerar gasometria se hipoxemia importante, fadiga, rebaixamento de consciência ou piora progressiva.</p>
         </div>
       `,
       options: [
-        { text: 'Aplicar avaliação', nextStep: 'asma_classificacao_gravidade', value: 'avaliacao_ok' }
+        { text: 'Classificar gravidade', nextStep: 'asma_classificacao_gravidade', value: 'avaliacao_ok' }
       ]
     },
     asma_classificacao_gravidade: {
       id: 'asma_classificacao_gravidade',
       title: 'Classificação de Gravidade',
-      description: 'Leve, moderada, grave ou ameaça à vida.',
-      type: 'question',
-      options: [
-        { text: 'Leve', nextStep: 'asma_oxigenio', value: 'leve' },
-        { text: 'Moderada', nextStep: 'asma_oxigenio', value: 'moderada' },
-        { text: 'Grave', nextStep: 'asma_bloco_terapeutico', value: 'grave', critical: true },
-        { text: 'Ameaça à vida', nextStep: 'asma_falencia_respiratoria', value: 'ameaca_vida', critical: true, requiresImmediateAction: true }
-      ]
-    },
-    asma_oxigenio: {
-      id: 'asma_oxigenio',
-      title: 'Oxigenoterapia',
-      description: 'Aplicar O2 quando indicado.',
+      description: 'Leve, moderada, grave ou risco de vida.',
       type: 'question',
       content: `
-        <div class="bg-blue-50 p-3 rounded border border-blue-200 text-sm">
-          <p><strong>Regra:</strong> se SatO2 &lt; 94%, iniciar O2 suplementar (meta 93–95%).</p>
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Leve:</strong> fala frases, FR &lt; 20, FC &lt; 100, PFE &gt; 80%, SatO2 &gt; 95%.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Moderada:</strong> fala frases curtas, FR 20-30, FC 100-120, PFE 50-80%, SatO2 90-95%.</p>
+          </div>
+          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+            <p><strong>Grave:</strong> fala palavras, FR &gt; 30, FC &gt; 120, PFE &lt; 50%, SatO2 &lt; 90%.</p>
+          </div>
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Risco de vida:</strong> exaustão, confusão/sonolência, hipotensão, bradipneia, cianose, tórax silencioso.</p>
+          </div>
         </div>
       `,
       options: [
-        { text: 'SatO2 < 94%: iniciar O2 suplementar', nextStep: 'asma_bloco_terapeutico', value: 'o2_sim' },
-        { text: 'SatO2 ≥ 94%: seguir sem O2 inicial', nextStep: 'asma_bloco_terapeutico', value: 'o2_nao' }
+        { text: 'Leve', nextStep: 'asma_tratamento_1h_leve_moderada', value: 'leve' },
+        { text: 'Moderada', nextStep: 'asma_tratamento_1h_leve_moderada', value: 'moderada' },
+        { text: 'Grave', nextStep: 'asma_tratamento_1h_grave_vida', value: 'grave', critical: true },
+        { text: 'Risco de vida', nextStep: 'asma_tratamento_1h_grave_vida', value: 'risco_vida', critical: true }
       ]
     },
-    asma_bloco_terapeutico: {
-      id: 'asma_bloco_terapeutico',
-      title: 'Primeiro Bloco Terapêutico (0–60 min)',
-      description: 'SABA + ipratrópio + corticoide sistêmico precoce.',
+    asma_tratamento_1h_leve_moderada: {
+      id: 'asma_tratamento_1h_leve_moderada',
+      title: 'Tratamento 1h Leve/Moderada',
+      description: 'Conduta inicial para exacerbação leve ou moderada.',
+      type: 'question',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p>Iniciar SABA imediatamente como base do tratamento da exacerbação aguda.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Broncodilatar com SABA', nextStep: 'asma_saba_leve_moderada', value: 'saba_lm' }
+      ]
+    },
+    asma_saba_leve_moderada: {
+      id: 'asma_saba_leve_moderada',
+      title: 'SABA Leve/Moderada',
+      description: 'Broncodilatação inicial com salbutamol.',
+      type: 'question',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p><strong>Salbutamol:</strong> 400-800 mcg (4-8 jatos) com espaçador OU nebulização 2,5-5 mg em 4 ml SF, repetir a cada 20 min até 3 doses.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para suporte com O2', nextStep: 'asma_o2_leve_moderada', value: 'saba_ok' }
+      ]
+    },
+    asma_o2_leve_moderada: {
+      id: 'asma_o2_leve_moderada',
+      title: 'O2 de Suporte',
+      description: 'Oxigênio quando houver dessaturação.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
-          <p><strong>Salbutamol:</strong> 2,5–5 mg nebulização a cada 20 min (3 doses) OU MDI 4–8 jatos.</p>
-          <p><strong>Ipratrópio:</strong> 0,5 mg nebulização associado nas crises moderadas/graves.</p>
-          <p><strong>Corticoide precoce (1ª hora):</strong> Prednisona 40–60 mg VO ou Metilprednisolona 60–125 mg EV.</p>
+          <div class="bg-blue-50 p-3 rounded border border-blue-200">
+            <p><strong>O2 se SatO2 &lt; 94%.</strong> Alvo 93-95%.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Oxigenoterapia suplementar: cateter 1-5 L/min, máscara simples 5-10 L/min ou reservatório 10-15 L/min, com monitorização contínua.</p>
+          </div>
         </div>
       `,
       options: [
-        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'reavaliar_1h' }
+        { text: 'Fazer corticoide sistêmico', nextStep: 'asma_corticoide_leve_moderada', value: 'o2_lm_ok' }
+      ]
+    },
+    asma_corticoide_leve_moderada: {
+      id: 'asma_corticoide_leve_moderada',
+      title: 'Corticoide Leve/Moderada',
+      description: 'Corticoide sistêmico precoce na 1ª hora.',
+      type: 'question',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p><strong>Corticoide sistêmico:</strong> Prednisona/Prednisolona 40-50 mg VO ou Metilpred 40-80 mg IV quando VO não for possível.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'lm_1h' }
+      ]
+    },
+    asma_tratamento_1h_grave_vida: {
+      id: 'asma_tratamento_1h_grave_vida',
+      title: 'Tratamento 1h Grave/Risco de Vida',
+      description: 'Conduta intensiva imediata.',
+      type: 'question',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p>Crise grave ou risco de vida: iniciar protocolo intensivo na primeira hora sem atraso.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Oxigenar imediatamente', nextStep: 'asma_o2_grave_vida', value: 'grave_o2', critical: true }
+      ]
+    },
+    asma_o2_grave_vida: {
+      id: 'asma_o2_grave_vida',
+      title: 'O2 Imediato',
+      description: 'Suporte ventilatório inicial.',
+      type: 'question',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>O2 imediato</strong> com alvo de SatO2 93-95%.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Nebulizar com SABA + Ipratrópio', nextStep: 'asma_nebulizacao_grave_vida', value: 'o2_grave_ok', critical: true }
+      ]
+    },
+    asma_nebulizacao_grave_vida: {
+      id: 'asma_nebulizacao_grave_vida',
+      title: 'Nebulização Grave/Risco',
+      description: 'Broncodilatação combinada intensiva.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Salbutamol 5 mg + Ipratrópio 0,5 mg</strong> em 4 ml SF, repetir a cada 20 minutos.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Adicionar brometo de ipratrópio em exacerbações moderadas/graves reduz hospitalização quando associado ao SABA.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar corticoide IV', nextStep: 'asma_corticoide_grave_vida', value: 'neb_grave_ok', critical: true }
+      ]
+    },
+    asma_corticoide_grave_vida: {
+      id: 'asma_corticoide_grave_vida',
+      title: 'Corticoide IV Grave/Risco',
+      description: 'Corticoide sistêmico precoce na primeira hora.',
+      type: 'question',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Corticoide IV:</strong> Metilpred 60-125 mg IV ou Hidrocortisona 200 mg IV.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Fazer magnésio EV', nextStep: 'asma_magnesio_grave_vida', value: 'cort_grave_ok', critical: true }
+      ]
+    },
+    asma_magnesio_grave_vida: {
+      id: 'asma_magnesio_grave_vida',
+      title: 'Magnésio EV',
+      description: 'Adjuvante na crise grave.',
+      type: 'question',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Sulfato de Magnésio:</strong> 2 g IV em 20 min (dose única).</p>
+        </div>
+      `,
+      options: [
+        { text: 'Considerar beta-agonista SC', nextStep: 'asma_considerar_sc_grave_vida', value: 'mg_grave_ok', critical: true }
+      ]
+    },
+    asma_considerar_sc_grave_vida: {
+      id: 'asma_considerar_sc_grave_vida',
+      title: 'Considerar Beta-Agonista SC',
+      description: 'Resgate adicional se nebulização for insuficiente.',
+      type: 'question',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p>Considerar Terbutalina SC 0,25-0,5 mg em casos selecionados.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'grave_1h', critical: true }
       ]
     },
     asma_reavaliacao_1h: {
       id: 'asma_reavaliacao_1h',
       title: 'Reavaliação Após 1 Hora',
-      description: 'Preencher novos parâmetros para decidir evolução.',
+      description: 'Reclassificar resposta após broncodilatação e corticoide inicial.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
-          <p>Reavaliar: sintomas, FR, SatO2, PFE e resposta clínica global.</p>
+          <p><strong>Reavaliar:</strong> sintomas, fala, SatO2, FR, FC, PFE (%) e impressao clinica global.</p>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Classificacao apos broncodilatador inicial:</strong></p>
+            <p><strong>Boa:</strong> SatO2 &gt; 95%, FR &lt; 25, FC &lt; 110, fala em frases, PFE &gt; 70%.</p>
+            <p><strong>Incompleta:</strong> SatO2 90-95%, FR 25-30, FC 110-125, fala em frases/palavras, PFE 40-69%.</p>
+            <p><strong>Ma resposta/deterioracao:</strong> PFE &lt; 50%, piora clinica.</p>
+            <p><strong>Ameaca a vida:</strong> SatO2 &lt; 90% com O2, bradicardia, hipotensao, confusao, torax silencioso, cianose.</p>
+          </div>
         </div>
       `,
       options: [
@@ -1526,79 +1668,276 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Definir melhora, resposta parcial ou falha.',
       type: 'question',
       options: [
-        { text: 'Melhora (PFE > 70%)', nextStep: 'asma_alta_assistida', value: 'melhora' },
-        { text: 'Resposta parcial (PFE 40–69%)', nextStep: 'asma_observacao_ps', value: 'parcial' },
-        { text: 'Sem resposta / grave', nextStep: 'asma_escalonamento', value: 'sem_resposta', critical: true, requiresImmediateAction: true }
+        { text: 'Boa resposta (PFE > 70% e melhora clínica)', nextStep: 'asma_resposta_boa', value: 'melhora' },
+        { text: 'Resposta incompleta (PFE 50-70% / sintomas persistentes)', nextStep: 'asma_resposta_incompleta', value: 'parcial' },
+        { text: 'Má resposta ou deterioração (PFE < 50%)', nextStep: 'asma_resposta_ma', value: 'sem_resposta', critical: true, requiresImmediateAction: true }
       ]
     },
-    asma_escalonamento: {
-      id: 'asma_escalonamento',
-      title: 'Escalonamento Terapêutico',
-      description: 'Magnésio, SABA contínuo e terapias adjuvantes.',
+    asma_resposta_boa: {
+      id: 'asma_resposta_boa',
+      title: 'Boa Resposta',
+      description: 'Resposta adequada após tratamento inicial.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <p><strong>Magnésio EV:</strong> 2 g em 20 min.</p>
-          <p><strong>SABA contínuo:</strong> salbutamol 10–15 mg/h.</p>
-          <p><strong>Selecionados:</strong> terbutalina SC 0,25 mg; adrenalina IM 0,3–0,5 mg (anafilaxia/broncoespasmo refratário).</p>
+        <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
+          <p><strong>Boa resposta:</strong> PFE &gt; 70%, SatO2 &gt; 94% e melhora clínica.</p>
         </div>
       `,
       options: [
-        { text: 'Mantém hipoxemia/necessidade repetida de broncodilatador', nextStep: 'asma_internacao', value: 'internar' },
-        { text: 'Evolui para fadiga/hipercapnia/consciência alterada', nextStep: 'asma_falencia_respiratoria', value: 'falencia', critical: true, requiresImmediateAction: true }
+        { text: 'Seguir para alta do PS', nextStep: 'asma_alta_assistida', value: 'boa_alta' }
       ]
     },
-    asma_falencia_respiratoria: {
-      id: 'asma_falencia_respiratoria',
-      title: 'Falência Respiratória / Status Asthmaticus',
-      description: 'Via aérea avançada e terapia intensiva.',
+    asma_resposta_incompleta: {
+      id: 'asma_resposta_incompleta',
+      title: 'Resposta Incompleta',
+      description: 'Melhora parcial com sintomas persistentes.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Resposta incompleta:</strong> PFE 50-70% e sintomas persistentes.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar observação no PS', nextStep: 'asma_observacao_ps', value: 'obs_ps' }
+      ]
+    },
+    asma_resposta_ma: {
+      id: 'asma_resposta_ma',
+      title: 'Má Resposta / Deterioração',
+      description: 'Piora clínica ou falha de resposta ao tratamento inicial.',
       type: 'question',
       critical: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>Critérios críticos:</strong> hipercapnia progressiva, exaustão respiratória, alteração de consciência, tórax silencioso.</p>
-          <p>Indicar IOT + ventilação mecânica protetora e suporte de UTI.</p>
+          <p><strong>Má resposta/deterioração:</strong> PFE &lt; 50% e/ou piora clínica.</p>
         </div>
       `,
       options: [
-        { text: 'Indicar intubação orotraqueal imediata', nextStep: 'asma_intubacao', value: 'iot', critical: true, requiresImmediateAction: true },
-        { text: 'UTI com broncodilatação intensiva sem IOT imediata', nextStep: 'asma_uti', value: 'uti' }
+        { text: 'Escalonar para terapias de resgate', nextStep: 'asma_escalonamento', value: 'escalonar_resgate', critical: true }
+      ]
+    },
+    asma_escalonamento: {
+      id: 'asma_escalonamento',
+      title: 'Terapias de Resgate',
+      description: 'Para má resposta após 1ª hora de tratamento.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+            <p><strong>Crise grave/refratária:</strong> iniciar terapias adjuvantes de 2a linha, transferir para UTI, monitorização cardíaca contínua, acesso venoso calibroso e gasometria arterial.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Adjuvantes intensivos no fluxo:</strong> magnésio IV, salbutamol IV, aminofilina, heliox (se disponível) e VNI/BIPAP em selecionados.</p>
+            <p>Reavaliar frequentemente para necessidade de UTI e intubação.</p>
+            <p><em>Referências:</em> ERS 2013, SBPT 2012, ATS, OpenEvidence.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar terapias adjuvantes de 2ª linha', nextStep: 'asma_resgate_magnesio', value: 'resgate' },
+        { text: 'Fadiga, hipercapnia, alteração de consciência ou piora rápida', nextStep: 'asma_falencia_respiratoria', value: 'falencia', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    asma_resgate_magnesio: {
+      id: 'asma_resgate_magnesio',
+      title: 'Magnésio 2 g IV se não feito',
+      description: 'Primeira terapia adjuvante em crise refratária.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Sulfato de Magnesio IV:</strong> 2 g EV em 15-20 min (dose unica) se ainda nao realizado.</p>
+          <p>Monitorar FC, PA e reflexos; efeitos adversos: rubor, hipotensao leve e bradicardia.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para próxima terapia de resgate', nextStep: 'asma_resgate_beta_iv', value: 'magnesio_ok' }
+      ]
+    },
+    asma_resgate_beta_iv: {
+      id: 'asma_resgate_beta_iv',
+      title: 'Salbutamol IV',
+      description: 'Considerar quando broncodilatação inalatória é insuficiente.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Salbutamol IV:</strong> bolus 0,1-0,2 mcg/kg + infusão 0,1-0,2 mcg/kg/min (conforme protocolo institucional).</p>
+          <p>Requer monitorizacao cardiaca continua e vigilancia de lactato/potassio.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para próxima terapia de resgate', nextStep: 'asma_resgate_aminofilina', value: 'beta_iv_ok' }
+      ]
+    },
+    asma_resgate_aminofilina: {
+      id: 'asma_resgate_aminofilina',
+      title: 'Aminofilina',
+      description: 'Opção de resgate em centros com experiência e monitorização.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Aminofilina:</strong> ataque 5-6 mg/kg IV em 20-30 min, seguido de manutenção 0,5-0,7 mg/kg/h.</p>
+          <p>Evitar em arritmias e monitorar níveis séricos/efeitos adversos.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para próxima terapia de resgate', nextStep: 'asma_resgate_heliox', value: 'aminofilina_ok' }
+      ]
+    },
+    asma_resgate_heliox: {
+      id: 'asma_resgate_heliox',
+      title: 'Heliox se disponível',
+      description: 'Adjuvante para reduzir trabalho respiratório em refratários.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p>Considerar <strong>heliox</strong> em pacientes com broncoespasmo grave refratário, conforme disponibilidade local.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para suporte ventilatório não invasivo', nextStep: 'asma_resgate_vni', value: 'heliox_ok' }
+      ]
+    },
+    asma_resgate_vni: {
+      id: 'asma_resgate_vni',
+      title: 'Considerar VNI',
+      description: 'Tentativa criteriosa em pacientes selecionados.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p>VNI/BIPAP pode ser tentativa temporária em paciente cooperativo, hemodinamicamente estável e sem contraindicação.</p>
+          <p>Não atrasar intubação se houver piora clínica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar necessidade de UTI', nextStep: 'asma_decisao_uti', value: 'vni_reavaliar' }
+      ]
+    },
+    asma_decisao_uti: {
+      id: 'asma_decisao_uti',
+      title: 'Precisa de UTI?',
+      description: 'Decisão após terapias de resgate e reavaliação clínica.',
+      type: 'question',
+      options: [
+        { text: 'Não, sem critérios de UTI no momento', nextStep: 'asma_criterios_internacao_enfermaria', value: 'sem_uti' },
+        { text: 'Sim, há critérios para UTI', nextStep: 'asma_criterios_uti', value: 'com_uti', critical: true }
+      ]
+    },
+    asma_criterios_internacao_enfermaria: {
+      id: 'asma_criterios_internacao_enfermaria',
+      title: 'Critérios de Internação em Enfermaria',
+      description: 'Persistência de sintomas sem necessidade imediata de UTI.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+            <p><strong>Internar em enfermaria se:</strong> sem retorno à linha de base após 4h, SpO2&lt;92% após 1h, PFE&lt;40% após tratamento, fadiga muscular, alteração de consciência, impossibilidade de tratamento ambulatorial ou fatores de risco para asma fatal.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Admitir em enfermaria', nextStep: 'asma_internacao', value: 'internacao_enfermaria', critical: true }
+      ]
+    },
+    asma_criterios_uti: {
+      id: 'asma_criterios_uti',
+      title: 'Critérios de UTI',
+      description: 'Falência respiratória iminente ou necessidade de suporte avançado.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Critérios UTI:</strong> PaO2&lt;60, PaCO2&gt;45, consciência alterada, exaustão, necessidade de ventilação mecânica e ausência de resposta ao tratamento inicial.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Admitir em UTI', nextStep: 'asma_uti', value: 'admitir_uti', critical: true }
+      ]
+    },
+    asma_falencia_respiratoria: {
+      id: 'asma_falencia_respiratoria',
+      title: 'Grave com Risco de Vida',
+      description: 'Conduta intensiva imediata e avaliação para via aérea avançada.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Sinais críticos:</strong> exaustão, hipercapnia progressiva, confusão/rebaixamento, tórax silencioso, cianose ou instabilidade hemodinâmica.</p>
+          <p>Acionar suporte avançado, manter broncodilatação intensiva e preparar UTI/IOT conforme evolução.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Necessita intubação orotraqueal imediata', nextStep: 'asma_intubacao', value: 'iot', critical: true, requiresImmediateAction: true },
+        { text: 'UTI com suporte intensivo e vigilância contínua', nextStep: 'asma_uti', value: 'uti' }
       ]
     },
     asma_observacao_ps: {
       id: 'asma_observacao_ps',
-      title: 'Resposta Parcial',
-      description: 'Manter broncodilatadores, corticoide e observação.',
-      type: 'result',
+      title: 'Resposta Incompleta - Observação no PS',
+      description: 'Observar por 2-4 horas com tratamento seriado.',
+      type: 'question',
       content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p>Continuar broncodilatador e corticoide, repetir reavaliações seriadas e considerar internação conforme evolução.</p>
+        <div class="space-y-2 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p>Continuar broncodilatadores (salbutamol ± ipratrópio), manter corticoide e monitorar resposta clínica.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Observação por 2-4 horas e manutenção do tratamento.</p>
+          </div>
         </div>
       `,
-      options: []
+      options: [
+        { text: 'Manter observação por 2-4h', nextStep: 'asma_repetir_nebulizacao', value: 'observar_repetir' }
+      ]
+    },
+    asma_repetir_nebulizacao: {
+      id: 'asma_repetir_nebulizacao',
+      title: 'Repetir Nebulizações',
+      description: 'Broncodilatação seriada durante observação.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p>Repetir nebulizações a cada 1-2 horas, com reavaliação clínica seriada.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar novamente', nextStep: 'asma_reavaliar_novamente', value: 'reavaliar_pos_obs' }
+      ]
+    },
+    asma_reavaliar_novamente: {
+      id: 'asma_reavaliar_novamente',
+      title: 'Reavaliar Novamente',
+      description: 'Nova decisão após período de observação.',
+      type: 'question',
+      options: [
+        { text: 'Melhora clínica progressiva', nextStep: 'asma_criterios_alta', value: 'melhora_obs' },
+        { text: 'Sem melhora relevante', nextStep: 'asma_internacao', value: 'sem_melhora', critical: true },
+        { text: 'Piora clínica', nextStep: 'asma_falencia_respiratoria', value: 'piora', critical: true, requiresImmediateAction: true }
+      ]
     },
     asma_internacao: {
       id: 'asma_internacao',
-      title: 'Indicação de Internação',
-      description: 'Persistência de gravidade após tratamento inicial.',
+      title: 'Internação hospitalar',
+      description: 'Persistência de gravidade ou resposta insuficiente ao tratamento no PS.',
       type: 'result',
       critical: true,
       content: `
         <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-600 text-sm">
-          <p>Internar se PFE &lt; 60%, hipoxemia persistente, necessidade repetida de broncodilatador, história de UTI por asma ou resposta insuficiente.</p>
+          <p>Internar se PFE &lt; 60%, hipoxemia persistente, necessidade frequente de broncodilatador, piora clínica ou risco social.</p>
         </div>
       `,
       options: []
     },
     asma_uti: {
       id: 'asma_uti',
-      title: 'UTI – Status Asthmaticus',
-      description: 'Suporte intensivo e terapias avançadas.',
+      title: 'Internação em UTI',
+      description: 'Suporte intensivo com broncodilatação contínua e vigilância de falência ventilatória.',
       type: 'result',
       critical: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p>Monitorização intensiva, broncodilatação contínua, corticoide EV, magnésio e considerar ketamina/heliox conforme refratariedade.</p>
+          <p>Monitorização intensiva, broncodilatação contínua, corticoide EV, magnésio e estratégias avançadas conforme refratariedade.</p>
         </div>
       `,
       options: []
@@ -1611,20 +1950,65 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       critical: true,
       content: `
         <div class="bg-red-100 p-3 rounded border-l-4 border-red-700 text-sm">
-          <p><strong>Via aérea imediata:</strong> IOT + VM protetora (Vt 4–6 ml/kg, FR 8–12, I:E prolongada, hipercapnia permissiva).</p>
+          <p><strong>Via aérea avançada:</strong> IOT + ventilação mecânica protetora (Vt 4-6 ml/kg, FR baixa, tempo expiratório prolongado e hipercapnia permissiva quando aplicável).</p>
         </div>
       `,
       options: []
     },
     asma_alta_assistida: {
       id: 'asma_alta_assistida',
-      title: 'Alta Assistida',
-      description: 'Critérios de estabilidade atingidos.',
-      type: 'result',
+      title: 'Alta do PS',
+      description: 'Paciente com boa resposta após reavaliação.',
+      type: 'question',
       content: `
         <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
-          <p>Alta se sintomas leves, PFE &gt; 70%, SatO2 normal e estabilidade após observação.</p>
-          <p>Prescrever broncodilatador de resgate, corticoide oral curto (5–7 dias) e plano de ação para asma.</p>
+          <p><strong>Prescrever na alta:</strong> beta-2 inalatório, corticoide VO por 5-7 dias, orientações e retorno.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Checar critérios de alta', nextStep: 'asma_criterios_alta', value: 'checar_alta' }
+      ]
+    },
+    asma_criterios_alta: {
+      id: 'asma_criterios_alta',
+      title: 'Critérios de Alta Atendidos?',
+      description: 'Confirmação final de segurança para alta.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <div class="bg-green-50 p-3 rounded border border-green-200">
+            <p><strong>Critérios de alta:</strong> PFE &gt; 70%, SatO2 &gt; 94% em ar ambiente, sintomas mínimos, intervalo do beta-2 &lt; 4/4h e prescrição adequada.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sim, critérios atendidos', nextStep: 'asma_alta_final', value: 'alta_ok' },
+        { text: 'Não, manter em ambiente hospitalar', nextStep: 'asma_internacao', value: 'alta_negada', critical: true }
+      ]
+    },
+    asma_alta_final: {
+      id: 'asma_alta_final',
+      title: 'Alta do PS',
+      description: 'Alta com plano terapêutico e retorno orientado.',
+      type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-green-50 p-3 rounded border-l-4 border-green-600">
+            <p><strong>ALTA com plano terapêutico:</strong> 1) corticoide oral 5-7 dias; 2) ICS-formoterol como reliever (ou ICS regular + SABA resgate); 3) plano de ação escrito personalizado; 4) retorno em 24-48h; 5) revisão de técnica inalatória, adesão e gatilhos.</p>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded border border-emerald-200">
+            <p><strong>Plano de ação escrito:</strong> reconhecer piora, aumentar medicação, quando procurar emergência e contatos úteis.</p>
+          </div>
+          <div class="bg-cyan-50 p-3 rounded border border-cyan-200">
+            <p><strong>Prevenção pós-crise:</strong> otimizar manutenção, avaliar adesão/técnica, reduzir exposição a alérgenos/irritantes e tratar comorbidades (rinite, DRGE, obesidade).</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Track 1 (preferencial):</strong> ICS-formoterol em todas as etapas; resgate 1-2 inalações conforme sintomas.</p>
+            <p><strong>Track 2 (alternativa):</strong> ICS regular + SABA resgate; escalonar ICS/LABA e considerar tiotrópio/biológico conforme fenótipo.</p>
+            <p><strong>Zonas do plano:</strong> verde (PFE&gt;80%), amarela (PFE 50-80%), vermelha (PFE&lt;50% com procura imediata de emergência).</p>
+            <p><strong>Acompanhamento:</strong> retorno em 24-48h e revisão seriada ambulatorial.</p>
+            <p><em>Referências:</em> GINA 2024, SBPT 2012, ATS, O'Byrne 2018, Bateman 2018.</p>
+          </div>
         </div>
       `,
       options: []
@@ -2571,6 +2955,497 @@ export const tvpFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de DPOC
+export const dpocFlowchart: EmergencyFlowchart = {
+  id: 'dpoc_exacerbado',
+  name: 'DPOC Exacerbado',
+  description: 'Manejo e conduta na exacerbação da Doença Pulmonar Obstrutiva Crônica (DPOC)',
+  category: 'respiratory',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-blue-600 to-blue-800',
+  initialStep: 'start',
+  finalSteps: ['alta_ambulatorial', 'encaminhar_hospital', 'alta_hospitalar', 'manter_internacao'],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Avaliação Inicial (DPOC)',
+      description: 'Paciente com suspeita de exacerbação de DPOC',
+      type: 'question',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500 text-sm">
+            <strong>Diagnóstico de DPOC:</strong>
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Sintomas respiratórios crônicos: Dispneia progressiva (principal), Tosse crônica, Expectoração.</li>
+              <li>Associado a fator de risco: Tabagismo (principal), Exposição ocupacional / biomassa, Poluição.</li>
+            </ul>
+            <p class="mt-2">O diagnóstico só é confirmado com espirometria (Relação VEF1/CVF &lt; 0,7 pós-broncodilatador), o que define obstrução persistente ao fluxo aéreo.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+            <strong>Nota: Definição de exacerbação aguda de DPOC</strong>
+            <p>Piora aguda dos sintomas respiratórios (dispneia, tosse, volume e/ou purulência do escarro) que requer mudança terapêutica, duração &lt;14 dias.</p>
+            <p class="mt-1"><strong>Desencadeantes:</strong> Infecção bacteriana (50-70%), viral, poluição ambiental, baixa aderência.</p>
+            <p class="mt-1"><strong>Critérios de Anthonisen:</strong> aumento da dispneia, aumento do volume do escarro, aumento da purulência do escarro.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar paciente', nextStep: 'avaliacao_inicial', value: 'avaliar' }
+      ]
+    },
+    avaliacao_inicial: {
+      id: 'avaliacao_inicial',
+      title: 'Avaliação Clínica e Sinais Vitais',
+      description: 'Avaliar: Saturação de O2, Frequência respiratória, Uso de musculatura acessória, Nível de consciência, Sinais de instabilidade',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Avaliação inicial obrigatória:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Anamnese detalhada (tempo de sintomas, gravidade basal, medicações em uso).</li>
+              <li>Sinais vitais completos: PA, FC, FR, Temperatura e SpO2.</li>
+              <li>Exame físico: Ausculta pulmonar (sibilos, roncos, MV diminuído), uso de musculatura acessória, cianose, edema MMII, turgência jugular.</li>
+              <li>Estado mental: Confusão, agitação, sonolência. Capacidade de falar frases completas.</li>
+              <li>Solicitar exames: RX tórax, ECG, hemograma, PCR, ureia, creatinina, eletrólitos. Gasometria se SpO2 &lt;92% ou sinais de gravidade.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Checar Sinais de Gravidade', nextStep: 'sinais_gravidade', value: 'checar_gravidade' }
+      ]
+    },
+    sinais_gravidade: {
+      id: 'sinais_gravidade',
+      title: 'Sinais de Gravidade',
+      description: 'Há sinais de gravidade?',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <strong>Sinais de gravidade:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>SatO₂ &lt; 88% ou SpO₂ &lt; 90% em ar ambiente</li>
+              <li>FR ≥ 25 a 30 irpm</li>
+              <li>FC ≥ 110 bpm</li>
+              <li>Rebaixamento de consciência / Alteração do estado mental</li>
+              <li>Uso de musculatura acessória / Acidose (pH &lt;7,35)</li>
+              <li>Instabilidade hemodinâmica / Comorbidades descompensadas</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sim, há sinais de gravidade', nextStep: 'medidas_iniciais_graves', value: 'grave', critical: true },
+        { text: 'Não, quadro leve/moderado', nextStep: 'tratamento_inicial_leve', value: 'leve' }
+      ]
+    },
+    tratamento_inicial_leve: {
+      id: 'tratamento_inicial_leve',
+      title: 'Iniciar Tratamento Ambulatorial',
+      description: 'Iniciar broncodilatadores (SABA ± SAMA) + Corticoide sistêmico',
+      type: 'action',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Broncodilatadores de curta ação:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li><strong>SABA (Salbutamol):</strong> Spray 100-200 mcg (1-2 jatos) a cada 4-6h com espaçador, OU Nebulização 2,5-5mg diluído em 3-4 mL SF a cada 4-6h.</li>
+              <li><strong>SAMA (Ipratrópio):</strong> Spray 40-80 mcg (2-4 jatos) a cada 6-8h, OU Nebulização 0,5mg (20 gotas) em SF a cada 6-8h.</li>
+              <li><strong>Combinação (Preferencial - Berodual):</strong> Spray 2-4 jatos a cada 6h com espaçador, OU Nebulização 20-40 gotas em 3mL de SF a cada 6h.</li>
+            </ul>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Corticoide Sistêmico:</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Prednisona VO 40 mg/dia OU Prednisolona 30-40mg VO 1x/dia por 5–7 dias.</li>
+              <li>Sem necessidade de desmame se ≤14 dias. Reduz tempo de recuperação e recaída.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Checar indicação de antibiótico', nextStep: 'indicacao_atb', value: 'atb_check' }
+      ]
+    },
+    medidas_iniciais_graves: {
+      id: 'medidas_iniciais_graves',
+      title: 'Medidas Iniciais (Graves)',
+      description: 'Oxigenoterapia controlada, Monitorização contínua, Acesso venoso',
+      type: 'action',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Oxigenoterapia controlada:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li><strong>Meta de SpO2: 88-92%</strong> (evitar hiperóxia que pode piorar hipercapnia).</li>
+              <li>Hospitalar: Preferir máscara de Venturi com FiO2 inicial 24-28% e fluxo de 4 L/min. Evitar alto fluxo não controlado.</li>
+              <li>Monitorar gasometria arterial entre 30-60 min após início/ajuste de oxigênio.</li>
+            </ul>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Broncodilatadores e Corticoides na Urgência:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>SABA + SAMA: Repetir a cada 20 min na 1ª hora se necessário. Preferir combinação.</li>
+              <li>Corticosteroide Endovenoso (se incapaz VO): Metilprednisolona 40-125mg EV 6/6h OU Hidrocortisona 100-200mg EV 6-8h. (Duração 5-7 dias total).</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar insuficiência respiratória', nextStep: 'insuficiencia_respiratoria', value: 'insuf' }
+      ]
+    },
+    insuficiencia_respiratoria: {
+      id: 'insuficiencia_respiratoria',
+      title: 'Insuficiência Respiratória',
+      description: 'Há insuficiência respiratória manifesta / Risco elevado?',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Sim', nextStep: 'avaliar_gasometria', value: 'sim', critical: true },
+        { text: 'Não', nextStep: 'investigacao_causa', value: 'nao' }
+      ]
+    },
+    investigacao_causa: {
+      id: 'investigacao_causa',
+      title: 'Investigação de Causa Base',
+      description: 'Infecção respiratória, Pneumonia, Embolia pulmonar, Insuficiência cardíaca, Outras causas',
+      type: 'action',
+      content: `
+        <div class="space-y-3 text-sm">
+          <ul class="list-disc pl-5 space-y-2">
+            <li><strong>Infecção (70-80%):</strong> História clínica, mudança de escarro. Solicitar Hemograma, PCR, Rx/TC tórax.</li>
+            <li><strong>Cardíaca:</strong> ECG, troponina, BNP, Ecocardiograma.</li>
+            <li><strong>TEP:</strong> Considerar embolia pulmonar (Escore de Wells). Se alta probabilidade: Angio-TC direto. Se baixa/interm: D-dímero.</li>
+            <li><strong>Complementar:</strong> Doppler MMII se suspeita clínica.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir', nextStep: 'tratamento_intensivo', value: 'prosseguir' }
+      ]
+    },
+    avaliar_gasometria: {
+      id: 'avaliar_gasometria',
+      title: 'Avaliar Gasometria Arterial',
+      description: 'Avaliar pH e PaCO2',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Acidose respiratória (pH < 7,35 e PaCO2 > 45)', nextStep: 'acidose_respiratoria', value: 'acidose', critical: true },
+        { text: 'Sem acidose respiratória (pH ≥ 7,35)', nextStep: 'manter_o2_tratamento', value: 'normal' }
+      ]
+    },
+    acidose_respiratoria: {
+      id: 'acidose_respiratoria',
+      title: 'Acidose Respiratória (pH < 7,35)?',
+      description: 'Definir necessidade de Ventilação Não Invasiva',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Sim', nextStep: 'iniciar_vni', value: 'sim', critical: true },
+        { text: 'Não', nextStep: 'manter_o2_tratamento', value: 'nao' }
+      ]
+    },
+    manter_o2_tratamento: {
+      id: 'manter_o2_tratamento',
+      title: 'Manter O2 e Tratamento Clínico',
+      description: 'Continuar tratamento medicamentoso e oxigênio',
+      type: 'action',
+      options: [
+        { text: 'Prosseguir', nextStep: 'tratamento_intensivo', value: 'prosseguir' }
+      ]
+    },
+    iniciar_vni: {
+      id: 'iniciar_vni',
+      title: 'Iniciar VNI (Ventilação Não Invasiva)',
+      description: 'Parâmetros iniciais e cuidados',
+      type: 'action',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Indicações e Contraindicações:</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li><strong>Indicações:</strong> Acidose respiratória (pH 7,25-7,35 e PaCO2 >45 mmHg), FR >25 irpm com fadiga.</li>
+              <li><strong>Contraindicações:</strong> Parada respiratória, instabilidade cardiovascular, incapacidade de proteção de via aérea, agitação grave.</li>
+            </ul>
+          </div>
+          <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
+            <strong>Parâmetros Iniciais (BiPAP):</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>IPAP: 10-12 cmH2O (ajustar progressivamente até 15-20 visando VC de 6-8 mL/kg).</li>
+              <li>EPAP: 4-5 cmH2O.</li>
+              <li>FiO2 titulada para SpO2 entre 88-92%.</li>
+              <li>Reavaliação: Gasometria em 1-2 horas.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar resposta', nextStep: 'respondeu_vni', value: 'avaliar' }
+      ]
+    },
+    respondeu_vni: {
+      id: 'respondeu_vni',
+      title: 'Respondeu à VNI?',
+      description: 'Critérios de sucesso: melhora clínica, redução da FR, melhora do pH/PaCO2 em 1-2h',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'Sim', nextStep: 'manter_vni', value: 'sim' },
+        { text: 'Não (Falha na VNI)', nextStep: 'intubacao', value: 'nao', critical: true }
+      ]
+    },
+    manter_vni: {
+      id: 'manter_vni',
+      title: 'Manter VNI + Tratamento Clínico',
+      description: 'Continuar VNI e tratamento',
+      type: 'action',
+      options: [
+        { text: 'Prosseguir', nextStep: 'tratamento_intensivo', value: 'prosseguir' }
+      ]
+    },
+    intubacao: {
+      id: 'intubacao',
+      title: 'Intubação e Ventilação Invasiva',
+      description: 'Estratégia ventilatória protetora',
+      type: 'procedure',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <strong>Estratégia Ventilatória:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Modo VCV ou PCV. Volume Corrente 6-8 mL/kg peso predito.</li>
+              <li>FR inicial: 8-14 irpm.</li>
+              <li>PEEP: 5-8 cmH2O (evitar auto-PEEP). PPlatô &lt;30 e Driving Pressure &lt;15.</li>
+              <li>Tempo expiratório prolongado (I:E 1:3 a 1:5) para evitar aprisionamento aéreo. Fluxo inspiratório alto (60-100 L/min).</li>
+              <li>Aceitar hipercapnia permissiva (pH > 7.20-7.25).</li>
+              <li>Monitorar pressões e auto-PEEP.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Encaminhar para UTI', nextStep: 'manter_internacao', value: 'uti', critical: true }
+      ]
+    },
+    tratamento_intensivo: {
+      id: 'tratamento_intensivo',
+      title: 'Manter Tratamento Clínico Intensivo',
+      description: 'Monitoramento contínuo em internação',
+      type: 'action',
+      options: [
+        { text: 'Checar indicação de antibiótico', nextStep: 'indicacao_atb_hospitalar', value: 'atb_check' }
+      ]
+    },
+    indicacao_atb: {
+      id: 'indicacao_atb',
+      title: 'Indicação de Antibiótico? (Ambulatorial)',
+      description: 'Critérios de Anthonisen e Antibioticoterapia',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Critérios de Anthonisen:</strong>
+            <ol class="list-decimal pl-5 mt-1 space-y-1">
+              <li>Aumento da dispneia</li>
+              <li>Aumento do volume do escarro</li>
+              <li>Escarro purulento</li>
+            </ol>
+            <p class="mt-2"><strong>Tipo I (Grave):</strong> 3 critérios. Indicação clara de ATB.</p>
+            <p><strong>Tipo II (Moderado):</strong> 2 critérios (um DEVE ser purulência). Indicação de ATB.</p>
+            <p><strong>Tipo III (Leve):</strong> 1 critério. Geralmente NÃO precisa de ATB.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sim (Tipo I ou II)', nextStep: 'iniciar_atb', value: 'sim' },
+        { text: 'Não', nextStep: 'houve_melhora_clinica', value: 'nao' }
+      ]
+    },
+    iniciar_atb: {
+      id: 'iniciar_atb',
+      title: 'Iniciar Antibiótico',
+      description: 'Esquemas Ambulatoriais',
+      type: 'medication',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Esquemas Ambulatoriais:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li><strong>1ª Escolha:</strong> Amoxicilina-clavulanato 875/125mg VO 12/12h por 5-7 dias (ou Amoxicilina 500mg 8/8h).</li>
+              <li><strong>Alternativas (alergia):</strong> Azitromicina 500mg VO 1x/dia por 3 dias OU Claritromicina 500mg VO 12/12h por 5-7 dias.</li>
+              <li><strong>Fluoroquinolonas (risco Pseudomonas / uso ATB prévio):</strong> Levofloxacino 500mg VO 1x/dia por 5-7 dias.</li>
+              <li><strong>Pseudomonas:</strong> Ciprofloxacino 500-750mg VO 12/12h por 7-10 dias.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir', nextStep: 'houve_melhora_clinica', value: 'prosseguir' }
+      ]
+    },
+    indicacao_atb_hospitalar: {
+      id: 'indicacao_atb_hospitalar',
+      title: 'Indicação de Antibiótico? (Hospitalar)',
+      description: 'Critérios de Anthonisen para pacientes internados',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <strong>Indicações:</strong>
+            <p>Presença dos 3 critérios de Anthonisen ou 2 critérios (sendo um purulência), OU necessidade de VNI / VMI.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'iniciar_atb_hospitalar', value: 'sim' },
+        { text: 'Não', nextStep: 'paciente_estabilizado', value: 'nao' }
+      ]
+    },
+    iniciar_atb_hospitalar: {
+      id: 'iniciar_atb_hospitalar',
+      title: 'Iniciar Antibiótico Hospitalar',
+      description: 'Esquemas Endovenosos / Hospitalares',
+      type: 'medication',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Sem Risco para Pseudomonas:</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Amoxicilina-clavulanato 1-2g EV 8/8h OU Ceftriaxona 1-2g EV 1x/dia OU Levofloxacino 750mg EV 1x/dia.</li>
+            </ul>
+          </div>
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <strong>Com Risco para Pseudomonas:</strong>
+            <p class="text-xs mb-1">(VEF1 &lt;30%, uso recente de ATB, >4 exacerbações/ano, bronquiectasias)</p>
+            <ul class="list-disc pl-5">
+              <li>Piperacilina-tazobactam 4,5g EV 6/6h OU Cefepime 2g EV 8/8h OU Meropenem 1g EV 8/8h.</li>
+              <li>Considerar associação com Ciprofloxacino 400mg EV 12/12h.</li>
+            </ul>
+            <p class="mt-1">Duração habitual: 5-7 dias (ajustar por culturas).</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir', nextStep: 'paciente_estabilizado', value: 'prosseguir' }
+      ]
+    },
+    houve_melhora_clinica: {
+      id: 'houve_melhora_clinica',
+      title: 'Houve Melhora Clínica?',
+      description: 'Avaliar resposta ao tratamento inicial',
+      type: 'question',
+      options: [
+        { text: 'Sim', nextStep: 'alta_ambulatorial', value: 'sim' },
+        { text: 'Não', nextStep: 'encaminhar_hospital', value: 'nao' }
+      ]
+    },
+    paciente_estabilizado: {
+      id: 'paciente_estabilizado',
+      title: 'Paciente Estabilizado?',
+      description: 'Avaliar critérios de estabilidade para alta',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+            <strong>Critérios de Alta:</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Broncodilatador ≥ intervalo 4h com boa resposta.</li>
+              <li>Capacidade de deambular pelo quarto e alimentar-se.</li>
+              <li>Estabilidade clínica por 12-24h (sinais vitais, gasometria).</li>
+              <li>SpO2 >90% ou retorno ao basal.</li>
+              <li>Compreensão do plano terapêutico e técnica inalatória adequada.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'alta_hospitalar', value: 'sim' },
+        { text: 'Não', nextStep: 'manter_internacao', value: 'nao' }
+      ]
+    },
+    alta_ambulatorial: {
+      id: 'alta_ambulatorial',
+      title: 'Alta com Orientação e Seguimento',
+      description: 'Plano terapêutico para casa',
+      type: 'result',
+      content: `
+        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500 text-sm">
+          <h4 class="font-bold text-green-800">Alta Ambulatorial</h4>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li>Revisar técnica inalatória.</li>
+            <li>Consulta precoce em 7-14 dias e 4-6 semanas.</li>
+            <li>Ajustar terapia de manutenção e reforçar cessação tabágica.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    alta_hospitalar: {
+      id: 'alta_hospitalar',
+      title: 'Alta Hospitalar com Plano Terapêutico e Prevenção',
+      description: 'Orientações pós-internação',
+      type: 'result',
+      content: `
+        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500 text-sm">
+          <h4 class="font-bold text-green-800">Alta Hospitalar Segura</h4>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li>Agendar consulta de revisão (7-14 dias).</li>
+            <li>Otimizar manutenção (LABA + LAMA para todos).</li>
+            <li>Encaminhar para reabilitação pulmonar.</li>
+            <li>Atualizar vacinas (influenza, pneumocócica, COVID-19).</li>
+            <li>Fornecer plano de ação escrito para o paciente.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    encaminhar_hospital: {
+      id: 'encaminhar_hospital',
+      title: 'Encaminhar para Avaliação Hospitalar',
+      description: 'Paciente sem resposta ao manejo ambulatorial',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-500 text-sm">
+          <h4 class="font-bold text-red-800">Transferência/Internação</h4>
+          <p>Devido à ausência de melhora, o paciente requer avaliação e suporte hospitalar.</p>
+        </div>
+      `,
+      options: []
+    },
+    manter_internacao: {
+      id: 'manter_internacao',
+      title: 'Manter Internação / UTI',
+      description: 'Paciente grave ou ainda não estabilizado',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-500 text-sm">
+          <h4 class="font-bold text-red-800">Critérios para UTI:</h4>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li>Dispneia grave refratária</li>
+            <li>Alteração grave do nível de consciência</li>
+            <li>Instabilidade hemodinâmica / Choque</li>
+            <li>Necessidade de VNI ou VMI</li>
+            <li>Acidose respiratória grave (pH &lt; 7,25)</li>
+            <li>Hipoxemia grave refratária</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -2582,6 +3457,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   geca: gecaFlowchart,
   spider_bite: spiderBiteFlowchart,
   tvp: tvpFlowchart,
+  dpoc_exacerbado: dpocFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -2659,7 +3535,7 @@ export const allFlowcharts = [
   // Respiratórios
   { id: 'asthma', name: 'Crise asmática/Broncoespasmo', category: 'respiratory', implemented: true },
   { id: 'dispneia', name: 'Dispnéia', category: 'respiratory', implemented: false },
-  { id: 'dpoc_exacerbado', name: 'DPOC exacerbado', category: 'respiratory', implemented: false },
+  { id: 'dpoc_exacerbado', name: 'DPOC exacerbado', category: 'respiratory', implemented: true },
   { id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', category: 'respiratory', implemented: false },
   { id: 'tep', name: 'TEP', category: 'respiratory', implemented: false },
   { id: 'tosse', name: 'Tosse', category: 'respiratory', implemented: false },

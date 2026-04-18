@@ -145,6 +145,21 @@ const tvpAlertSigns = [
   'Sintomas respiratórios concomitantes (dispneia súbita, dor torácica pleurítica, hemoptise, síncope): suspeitar embolia pulmonar'
 ]
 
+const dpocSinaisGravidadeItems = [
+  'SatO₂ < 88% ou SpO₂ < 90% em ar ambiente',
+  'FR ≥ 25 a 30 irpm',
+  'FC ≥ 110 bpm',
+  'Rebaixamento de consciência / Alteração do estado mental',
+  'Uso de musculatura acessória / Acidose (pH < 7,35)',
+  'Instabilidade hemodinâmica / Comorbidades descompensadas'
+]
+
+const dpocAnthonisenItems = [
+  'Aumento da dispneia',
+  'Aumento do volume do escarro',
+  'Escarro purulento'
+]
+
 const tvpWellsCriteria = [
   { id: 'cancer_ativo', text: 'Câncer ativo (tratamento nos últimos 6 meses ou paliativo)', score: 1 },
   { id: 'paresia_imobilizacao', text: 'Paralisia/paresia ou imobilização com gesso em membro inferior', score: 1 },
@@ -325,6 +340,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     melhoraClinica: false,
     necessidadeBroncoRepetido: false
   })
+
+  // DPOC States
+  const [dpocSinaisGravidade, setDpocSinaisGravidade] = useState<string[]>([])
+  const [dpocAnthonisen, setDpocAnthonisen] = useState<string[]>([])
 
   // Carregar estado do paciente na inicialização
   useEffect(() => {
@@ -675,6 +694,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       melhoraClinica: false,
       necessidadeBroncoRepetido: false
     })
+    setDpocSinaisGravidade([])
+    setDpocAnthonisen([])
     onUpdate(patient.id, flowchart.initialStep, [], {}, 0)
   }
 
@@ -701,6 +722,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
   const isGasometryFlow = flowchart.id === 'gasometria'
   const isAsthmaFlow = flowchart.id === 'asthma'
+
+  const isDpocSinaisGravidade = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'sinais_gravidade'
+  const isDpocAnthonisenAmbulatorial = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb'
+  const isDpocAnthonisenHospitalar = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb_hospitalar'
+  const isDpocAnthonisen = isDpocAnthonisenAmbulatorial || isDpocAnthonisenHospitalar
+
+  const toggleSelection = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+    setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
+  }
 
   const toNumber = useCallback((value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -1475,7 +1505,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
             {/* Conteúdo do Step */}
             <div className="p-6">
-              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && (
+              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
@@ -1756,6 +1786,140 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       Aplicar reavaliação e continuar
                     </motion.button>
                   </div>
+                </div>
+              )}
+
+              {isDpocSinaisGravidade && (
+                <div className="mb-6 p-4 bg-white rounded-2xl border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                      Checklist: Sinais de Gravidade
+                    </h4>
+                    <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                      {dpocSinaisGravidade.length} sinal(is)
+                    </span>
+                  </div>
+                  <div className="bg-gradient-to-r from-red-50 to-orange-50 p-4 rounded-xl border border-red-200 mb-6">
+                    <p className="text-xs text-red-800 font-semibold mb-3">Marque as opções caso o paciente apresente:</p>
+                    <div className="space-y-1.5">
+                      {dpocSinaisGravidadeItems.map((item) => {
+                        const checked = dpocSinaisGravidade.includes(item)
+                        return (
+                          <label
+                            key={item}
+                            className={clsx(
+                              'flex items-start gap-2 p-2 rounded-lg transition-colors cursor-pointer',
+                              checked ? 'bg-white shadow-sm ring-1 ring-red-300' : 'hover:bg-red-100/50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleSelection(setDpocSinaisGravidade, item)}
+                              className="mt-1 flex-shrink-0 w-4 h-4 text-red-600 rounded border-red-300 focus:ring-red-500"
+                            />
+                            <span className={clsx('text-sm', checked ? 'font-medium text-red-900' : 'text-slate-700')}>
+                              {item}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end border-t border-slate-100 pt-4">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        const hasSeverity = dpocSinaisGravidade.length > 0
+                        const nextStep = hasSeverity ? 'medidas_iniciais_graves' : 'tratamento_inicial_leve'
+                        handleOptionSelect({ text: hasSeverity ? 'Prosseguir (Quadro Grave)' : 'Prosseguir (Leve/Moderado)', nextStep: nextStep, value: hasSeverity ? 'grave' : 'leve' })
+                      }}
+                      className={clsx(
+                        'px-5 py-2.5 rounded-xl font-semibold transition-all text-white',
+                        dpocSinaisGravidade.length > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'
+                      )}
+                    >
+                      {dpocSinaisGravidade.length > 0 ? 'Prosseguir (Quadro Grave)' : 'Prosseguir (Leve/Moderado)'}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isDpocAnthonisen && (
+                <div className="mb-6 p-4 bg-white rounded-2xl border border-slate-200">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
+                      Critérios de Anthonisen
+                    </h4>
+                    <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-700">
+                      {dpocAnthonisen.length} critério(s)
+                    </span>
+                  </div>
+                  <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-4 rounded-xl border border-amber-200 mb-4">
+                    <div className="space-y-1.5">
+                      {dpocAnthonisenItems.map((item) => {
+                        const checked = dpocAnthonisen.includes(item)
+                        return (
+                          <label
+                            key={item}
+                            className={clsx(
+                              'flex items-start gap-2 p-2 rounded-lg transition-colors cursor-pointer',
+                              checked ? 'bg-white shadow-sm ring-1 ring-amber-300' : 'hover:bg-amber-100/50'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleSelection(setDpocAnthonisen, item)}
+                              className="mt-1 flex-shrink-0 w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500"
+                            />
+                            <span className={clsx('text-sm', checked ? 'font-medium text-amber-900' : 'text-slate-700')}>
+                              {item}
+                            </span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  
+                  {(() => {
+                    const count = dpocAnthonisen.length
+                    const type = count === 3 ? 'Tipo I (Grave)' : count === 2 ? 'Tipo II (Moderado)' : count === 1 ? 'Tipo III (Leve)' : 'Nenhum'
+                    const hasPurulence = dpocAnthonisen.includes('Escarro purulento')
+                    const requiresAtb = count === 3 || (count === 2 && hasPurulence)
+                    
+                    return (
+                      <div className="space-y-4">
+                        <div className={clsx(
+                          'p-3 rounded-lg border-l-4 text-sm',
+                          requiresAtb ? 'bg-red-50 border-red-500 text-red-800' : 'bg-blue-50 border-blue-500 text-blue-800'
+                        )}>
+                          <strong>Classificação:</strong> {type}.<br/>
+                          {requiresAtb ? 'Indicação clara de Antibioticoterapia.' : 'Sem indicação formal de Antibiótico pelos critérios.'}
+                        </div>
+                        
+                        <div className="flex justify-end border-t border-slate-100 pt-4">
+                          <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              const nextAtb = isDpocAnthonisenAmbulatorial ? 'iniciar_atb' : 'iniciar_atb_hospitalar'
+                              const nextNoAtb = isDpocAnthonisenAmbulatorial ? 'houve_melhora_clinica' : 'paciente_estabilizado'
+                              handleOptionSelect({ text: requiresAtb ? 'Iniciar Antibioticoterapia' : 'Não iniciar ATB / Prosseguir', nextStep: requiresAtb ? nextAtb : nextNoAtb, value: requiresAtb ? 'sim' : 'nao' })
+                            }}
+                            className={clsx(
+                              'px-5 py-2.5 rounded-xl font-semibold transition-all text-white',
+                              requiresAtb ? 'bg-amber-600 hover:bg-amber-700' : 'bg-slate-600 hover:bg-slate-700'
+                            )}
+                          >
+                            {requiresAtb ? 'Iniciar Antibioticoterapia' : 'Não iniciar ATB / Prosseguir'}
+                          </motion.button>
+                        </div>
+                      </div>
+                    )
+                  })()}
                 </div>
               )}
 
@@ -2714,7 +2878,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
                       : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

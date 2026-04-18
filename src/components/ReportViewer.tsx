@@ -212,7 +212,7 @@ ${formatDate(new Date())}`
         enoxaparina: 'Enoxaparina',
         hnf: 'Heparina não fracionada',
         varfarina: 'Varfarina'
-      }
+        }
       const timeline = stepSequence.map((stepId) => {
         const step = flowchart?.steps?.[stepId]
         const rawAnswer = answers[stepId]
