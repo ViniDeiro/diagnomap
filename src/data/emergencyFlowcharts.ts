@@ -2663,7 +2663,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
   icon: 'activity',
   color: 'from-indigo-600 to-blue-800',
   initialStep: 'start',
-  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente'],
+  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_imediata'],
   steps: {
     start: {
       id: 'start',
@@ -2948,6 +2948,30 @@ export const tvpFlowchart: EmergencyFlowchart = {
             <li>Em cenário de risco hemorrágico elevado, individualizar conduta e discutir estratégia com equipe de referência.</li>
             <li>Sinais de gravidade (flegmasia, dor intensa progressiva, suspeita de TEP associada) exigem prioridade máxima.</li>
           </ul>
+        </div>
+      `,
+      options: []
+    },
+    tvp_urgencia_vascular_imediata: {
+      id: 'tvp_urgencia_vascular_imediata',
+      title: 'URGÊNCIA VASCULAR + INTERNAÇÃO IMEDIATA',
+      description: 'Presença de sinal de alerta de maior gravidade para TVP.',
+      type: 'result',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3">
+          <div class="bg-red-100 p-4 rounded border-l-4 border-red-700 text-red-950">
+            <h4 class="font-bold text-red-900">Interromper fluxo ambulatorial</h4>
+            <p class="text-sm mt-1">Qualquer item da caixa de <strong>sinais de alerta</strong> exige <strong>internação hospitalar mandatória</strong> e <strong>acionamento urgente da Cirurgia Vascular</strong>.</p>
+          </div>
+          <div class="bg-red-50 p-4 rounded border border-red-300 text-sm text-red-900">
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Suspeitar flegmasia cerulea dolens/TVP iliofemoral em edema súbito importante, dor intensa e cianose.</li>
+              <li>Acionar avaliação vascular imediata e priorizar leito hospitalar.</li>
+              <li>Se houver dispneia súbita, dor torácica pleurítica, hemoptise ou síncope, tratar como possível TEP associado.</li>
+            </ul>
+          </div>
         </div>
       `,
       options: []

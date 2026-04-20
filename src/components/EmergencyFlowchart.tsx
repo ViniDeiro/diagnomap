@@ -29,7 +29,7 @@ import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, Em
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
 type AsthmaReevalFieldKey = 'sato2Re' | 'frRe' | 'pfeRe'
-type TVPLegSide = 'left' | 'right'
+type TVPLegSide = 'left' | 'right' | 'other'
 type TVPPrescriptionPreview = {
   therapyId: string
   title: string
@@ -230,37 +230,55 @@ const tvpAnticoagulationConsiderations = [
       'NOACs como rivaroxabana, apixabana, dabigatrana e edoxabana são alternativas práticas aos anticoagulantes tradicionais.',
       'Têm início de ação rápido e geralmente não exigem monitorização rotineira de INR.',
       'Não são adequados para todos: evitar em prótese valvar mecânica, algumas trombofilias de alto risco e insuficiência renal avançada.',
-      'A escolha entre NOACs e varfarina deve considerar perfil clínico, comorbidades, risco de sangramento e adesão.'
+      'A escolha entre NOACs e varfarina deve considerar perfil clínico, comorbidades, risco de sangramento e adesão.',
+      'Ajustes na Insuficiência Renal (ClCr):',
+      '• Dabigatrana: Contraindicada se ClCr ≤ 15 mL/min ou diálise. Reduzir dose para 75 mg 12/12h se ClCr 15-30 mL/min.',
+      '• Edoxabana: Contraindicada se ClCr ≤ 15 mL/min ou diálise. Reduzir para 30 mg 1x/dia se ClCr 15-50 mL/min.',
+      '• Apixabana: Sem contraindicação absoluta pelo FDA (pode ser usada em doença renal terminal e hemodiálise). Dose reduzida para 2,5 mg 12/12h se houver ≥2 critérios: Creatinina ≥ 1,5 mg/dL, Idade ≥ 80 anos ou Peso ≤ 60 kg. Caso contrário, 5 mg 12/12h.',
+      '• Rivaroxabana: Evitar se ClCr ≤ 15 mL/min (dados limitados). Reduzir dose para 15 mg 1x/dia se ClCr 15-50 mL/min.'
     ]
   }
 ]
 
 const parseTVPSelectedLeg = (raw?: string): TVPLegSide | '' => {
   if (!raw) return ''
-  if (raw === 'left' || raw === 'right') return raw
+  if (raw === 'left' || raw === 'right' || raw === 'other') return raw
   try {
     const parsed = JSON.parse(raw)
-    return parsed?.selectedLeg === 'left' || parsed?.selectedLeg === 'right' ? parsed.selectedLeg : ''
+    return parsed?.selectedLeg === 'left' || parsed?.selectedLeg === 'right' || parsed?.selectedLeg === 'other' ? parsed.selectedLeg : ''
   } catch {
     return ''
   }
 }
 
-const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({ side, selected }) => (
-  <img
-    src={
-      side === 'left'
-        ? '/Trombose venosa profunda membro inferior esquerdo .png'
-        : '/Trombose Venosa em membro inferior direito .png'
-    }
-    alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
-    className={clsx(
-      'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
-      selected ? 'brightness-105 saturate-110' : 'opacity-95 group-hover:opacity-100'
-    )}
-    loading="lazy"
-  />
-)
+const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({ side, selected }) => {
+  if (side === 'other') {
+    return (
+      <div className={clsx(
+        'w-full aspect-square md:aspect-video rounded-xl border border-slate-200 flex items-center justify-center transition-all bg-gradient-to-br',
+        selected ? 'from-cyan-100 to-blue-50 border-cyan-400' : 'from-slate-50 to-slate-100'
+      )}>
+        <Activity className={clsx('w-16 h-16', selected ? 'text-cyan-600' : 'text-slate-400')} />
+      </div>
+    )
+  }
+
+  return (
+    <img
+      src={
+        side === 'left'
+          ? '/Trombose venosa profunda membro inferior esquerdo .png'
+          : '/Trombose Venosa em membro inferior direito .png'
+      }
+      alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
+      className={clsx(
+        'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
+        selected ? 'brightness-105 saturate-110' : 'opacity-95 group-hover:opacity-100'
+      )}
+      loading="lazy"
+    />
+  )
+}
 
 interface EmergencyFlowchartProps {
   patient: EmergencyPatient
@@ -701,12 +719,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   const currentStepData = flowchart.steps[currentStep]
   const tvpSelectedLegFromAnswers = useMemo(() => parseTVPSelectedLeg(answers.start), [answers])
-  const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : ''
+  const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : tvpSelectedLegFromAnswers === 'other' ? 'Outras Localizações' : ''
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
+  const hasTVPAlertSignSelected = useMemo(
+    () => selectedClinicalFindings.some((item) => tvpAlertSigns.includes(item)),
+    [selectedClinicalFindings]
+  )
   const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
     const criterion = tvpWellsCriteria.find(item => item.id === criterionId)
@@ -1335,10 +1357,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pb-12">
+    <div className="min-h-screen pb-12">
       {/* Premium Medical Header */}
-      <div className="relative bg-white shadow-xl border-b border-slate-200/50 sticky top-0 z-50 mb-8">
-        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
+      <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/5 via-slate-50/5 to-indigo-600/5"></div>
 
         <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-6">
           <motion.div
@@ -1420,7 +1442,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-6 mb-8"
+          className="flowchart-card p-6 mb-8"
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-4">
             <div className="flex items-center space-x-3">
@@ -1465,7 +1487,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden"
+            className="flowchart-card overflow-hidden"
           >
             {/* Header do Step */}
             <div className={clsx(
@@ -1930,6 +1952,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       Membro selecionado: {tvpSelectedLegLabel}
                     </div>
                   )}
+
+                  <div className="mb-6 p-4 rounded-xl border-l-4 border-l-red-600 bg-gradient-to-r from-red-50 to-white border border-red-100 shadow-sm">
+                    <h5 className="text-sm font-extrabold text-red-800 uppercase tracking-wide flex items-center gap-2 mb-2">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                      Emergência Vascular: Flegmasia Cerulea Dolens (FCD)
+                    </h5>
+                    <p className="text-xs text-red-900 leading-relaxed font-medium">
+                      É uma forma rara e gravíssima de trombose venosa profunda (TVP) ileofemoral, caracterizada por obstrução maciça do retorno venoso, resultando em edema intenso, dor extrema e cianose (coloração azulada) do membro, com alto risco de gangrena venosa, amputação e óbito (25% a 40%). É uma emergência vascular imediata.
+                    </p>
+                  </div>
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
                       Checklist Clínico Inicial
@@ -2006,6 +2038,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     </div>
                   </div>
+                  {hasTVPAlertSignSelected && (
+                    <div className="mt-4 rounded-xl border-l-4 border-l-red-700 border border-red-200 bg-red-50 p-4">
+                      <h5 className="text-sm font-extrabold text-red-800 uppercase tracking-wide flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        Sinal de alerta detectado
+                      </h5>
+                      <p className="mt-1 text-sm text-red-900">
+                        Fluxograma deve ser interrompido: acionar <strong>Cirurgia Vascular em urgência</strong> e indicar
+                        <strong> internação hospitalar mandatória</strong>.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2029,10 +2073,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       Definir lado da trombose suspeita
                     </h4>
                   </div>
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
                       { side: 'left' as TVPLegSide, label: 'Perna Esquerda' },
-                      { side: 'right' as TVPLegSide, label: 'Perna Direita' }
+                      { side: 'right' as TVPLegSide, label: 'Perna Direita' },
+                      { side: 'other' as TVPLegSide, label: 'Outras localizações' }
                     ].map((item) => {
                       const selected = selectedTVPLeg === item.side
                       return (
@@ -2069,7 +2114,33 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )
                     })}
                   </div>
-                  <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+
+                  <div className="mt-6 bg-white/70 backdrop-blur-sm rounded-xl border border-cyan-100 p-4 shadow-sm">
+                    <h5 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+                      <Info className="w-4 h-4 text-cyan-600" /> Principais Localizações
+                    </h5>
+                    <div className="grid md:grid-cols-2 gap-x-6 gap-y-3 text-xs text-slate-700">
+                      <div>
+                        <strong className="text-cyan-800 block mb-1">Membros Inferiores (Pernas e Coxas):</strong>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li><span className="font-semibold text-slate-900">Panturrilha:</span> Local mais comum de início.</li>
+                          <li><span className="font-semibold text-slate-900">Veia Poplítea (Atrás do joelho):</span> Localização frequente.</li>
+                          <li><span className="font-semibold text-slate-900">Veia Femoral (Coxa):</span> Uma das principais veias acometidas.</li>
+                          <li><span className="font-semibold text-slate-900">Veias Ilíacas (Pelve/Quadril):</span> TVP na região pélvica.</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <strong className="text-cyan-800 block mb-1">Outras Localizações:</strong>
+                        <ul className="list-disc pl-4 space-y-1">
+                          <li><span className="font-semibold text-slate-900">Membros Superiores (Braços):</span> Menos comum.</li>
+                          <li><span className="font-semibold text-slate-900">Veias Cerebrais (Rara):</span> Trombose venosa cerebral.</li>
+                          <li><span className="font-semibold text-slate-900">Região Abdominal (Rara):</span> Veias do intestino, fígado ou rins.</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <span className={clsx(
                       'text-sm font-medium',
                       selectedTVPLeg ? 'text-emerald-700' : 'text-amber-700'
@@ -2877,6 +2948,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     ? gasometryStepOptions
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
+                      : isTVPClinicalEvaluation && hasTVPAlertSignSelected
+                        ? [
+                            {
+                              text: 'Interromper fluxo: urgência vascular + internação imediata',
+                              nextStep: 'tvp_urgencia_vascular_imediata',
+                              value: 'tvp_alerta_urgencia',
+                              critical: true,
+                              requiresImmediateAction: true
+                            }
+                          ]
                       : currentStepData.options
                 if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen) return null
                 return (
@@ -2886,12 +2967,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       key={index}
                       onClick={() => handleOptionSelect(option)}
                       className={clsx(
-                        "w-full p-6 text-left rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group",
+                        "w-full p-6 text-left rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group backdrop-blur-sm",
                         option.critical 
-                          ? "bg-red-50 border-red-200 hover:border-red-400 hover:bg-red-100 shadow-sm"
+                          ? "bg-red-50/90 border-red-200/50 hover:border-red-400 hover:bg-red-100/90 shadow-sm"
                           : option.requiresImmediateAction
-                          ? "bg-orange-50 border-orange-200 hover:border-orange-400 hover:bg-orange-100 shadow-sm"
-                          : "bg-white border-slate-100 hover:border-blue-300 hover:shadow-xl hover:bg-slate-50"
+                          ? "bg-orange-50/90 border-orange-200/50 hover:border-orange-400 hover:bg-orange-100/90 shadow-sm"
+                          : "bg-white/70 dark:bg-slate-800/70 border-white/40 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-glass-hover hover:bg-white/90 dark:hover:bg-slate-800/90"
                       )}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}

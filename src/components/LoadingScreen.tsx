@@ -15,10 +15,10 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
 }) => {
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen bg-transparent flex items-center justify-center relative overflow-hidden">
 
       {/* Background pattern igual ao site */}
-      <div className="absolute inset-0 bg-gradient-to-r from-blue-600/3 via-slate-50 to-blue-600/3"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/5 via-slate-50/5 to-indigo-600/5"></div>
 
       {/* Padrão geométrico sutil */}
       <div className="absolute inset-0 opacity-[0.015]" style={{
@@ -46,7 +46,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
             }}
           >
             {/* Glow igual ao site */}
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-2xl blur-xl opacity-20 scale-110"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-teal-500 rounded-2xl blur-xl opacity-30 scale-110"></div>
 
             {/* Container do logo */}
             <div className="relative flex items-center justify-center">
@@ -102,7 +102,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
 
         {/* Loading card com estilo do site */}
         <motion.div
-          className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 max-w-md mx-auto"
+          className="flowchart-card p-8 max-w-md mx-auto relative z-10"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 2, duration: 1.2 }}
@@ -113,8 +113,8 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
               animate={{ rotate: 360 }}
               transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-full blur opacity-20"></div>
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-slate-700 rounded-full flex items-center justify-center">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-teal-500 rounded-full blur opacity-30"></div>
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-teal-500 rounded-full flex items-center justify-center shadow-glow-primary">
                 <Loader2 className="w-4 h-4 text-white" />
               </div>
             </motion.div>
@@ -136,7 +136,7 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           {/* Barra de progresso com cores do site */}
           <div className="relative w-full h-2 bg-slate-200 rounded-full overflow-hidden">
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-blue-600 to-slate-700 rounded-full"
+              className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-teal-500 rounded-full"
               initial={{ x: "-100%" }}
               animate={{ x: "100%" }}
               transition={{
