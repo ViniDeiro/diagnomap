@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { Moon, Sun } from 'lucide-react'
 import LoadingScreen from '@/components/LoadingScreen'
 import DengueFlowchartComplete from '@/components/DengueFlowchartComplete'
 import EmergencyFlowchart from '@/components/EmergencyFlowchart'
@@ -33,18 +32,6 @@ export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [previousState, setPreviousState] = useState<AppState>('dashboard')
   const [isFading, setIsFading] = useState(false)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
-
-  useEffect(() => {
-    const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('theme') : null
-    const nextTheme = savedTheme === 'dark' ? 'dark' : 'light'
-    setTheme(nextTheme)
-    if (nextTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-  }, [])
 
   useEffect(() => {
     let active = true
@@ -96,17 +83,6 @@ export default function Home() {
     ensureAuth()
     return () => { active = false }
   }, [])
-
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark'
-    setTheme(nextTheme)
-    if (nextTheme === 'dark') {
-      document.documentElement.classList.add('dark')
-    } else {
-      document.documentElement.classList.remove('dark')
-    }
-    localStorage.setItem('theme', nextTheme)
-  }
 
   const handleNewPatient = () => {
     setAppState('new-patient')
@@ -347,8 +323,6 @@ export default function Home() {
   }
 
   const isDashboardActive = ['dashboard', 'prescriptions', 'report', 'medical-prescription'].includes(appState)
-  const showThemeToggle = appState === 'dashboard'
-
   const renderContent = () => {
     if (appState === 'loading') {
       return (
@@ -447,19 +421,6 @@ export default function Home() {
     // Dashboard and Overlays
     return (
       <>
-        {showThemeToggle && (
-          <button
-            type="button"
-            onClick={toggleTheme}
-            className="fixed top-4 right-4 z-[70] inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-sm font-semibold text-slate-700 shadow-md backdrop-blur hover:bg-white dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-900"
-            aria-label={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-            title={theme === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'}
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            {theme === 'dark' ? 'Claro' : 'Escuro'}
-          </button>
-        )}
-
         {/* Renderizar Header apenas se não estiver em loading, login ou em fluxogramas */}
         {appState !== 'flowchart' && 
          <Header onProfileClick={() => setAppState('profile')} />
