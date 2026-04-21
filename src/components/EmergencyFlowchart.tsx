@@ -145,6 +145,12 @@ const tvpAlertSigns = [
   'Sintomas respiratórios concomitantes (dispneia súbita, dor torácica pleurítica, hemoptise, síncope): suspeitar embolia pulmonar'
 ]
 
+const flegmasiaReferenceImages = [
+  '/flegmasia 1.jpg',
+  '/flegmasia 3.jpeg',
+  '/flegmasia 4.jpg'
+]
+
 const dpocSinaisGravidadeItems = [
   'SatO₂ < 88% ou SpO₂ < 90% em ar ambiente',
   'FR ≥ 25 a 30 irpm',
@@ -208,7 +214,8 @@ const tvpAnticoagulationConsiderations = [
     title: 'Considerações Essenciais sobre tratamento da TVP',
     paragraphs: [
       'A anticoagulação na TVP deve começar com anticoagulante parenteral, podendo ser utilizada HBPM (enoxaparina) ou HNF (heparina não fracionada).',
-      'No mesmo dia, inicia-se a varfarina, que deve ser administrada simultaneamente à heparina, pois não é segura como monoterapia inicial.',
+      'No mesmo dia, inicia-se a varfarina e mantém-se anticoagulação concomitante com heparina.',
+      'Essa sobreposição é necessária porque, nos primeiros dias, a varfarina pode gerar efeito pró-coagulante paradoxal e transitório, pela redução mais rápida da proteína C (e também da proteína S) em relação aos fatores pró-coagulantes vitamina K-dependentes (II, VII, IX e X).',
       'Essa combinação deve ser mantida por pelo menos cinco dias, com monitorização diária do INR até faixa terapêutica entre 2,0 e 3,0.',
       'A heparina só deve ser suspensa quando o INR permanecer nessa faixa por 48 horas consecutivas.'
     ]
@@ -320,6 +327,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpAnticoagConsiderationsOpen, setTVPAnticoagConsiderationsOpen] = useState(false)
   const [tvpPrescriptionPreview, setTVPPrescriptionPreview] = useState<TVPPrescriptionPreview | null>(null)
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
+  const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
@@ -749,6 +757,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isDpocAnthonisenAmbulatorial = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb'
   const isDpocAnthonisenHospitalar = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb_hospitalar'
   const isDpocAnthonisen = isDpocAnthonisenAmbulatorial || isDpocAnthonisenHospitalar
+  const stepMentionsFlegmasia = (
+    currentStepData?.title?.toLowerCase().includes('flegmasia') ||
+    currentStepData?.description?.toLowerCase().includes('flegmasia') ||
+    currentStepData?.content?.toLowerCase().includes('flegmasia')
+  ) ?? false
 
   const toggleSelection = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
@@ -1529,6 +1542,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             <div className="p-6">
               {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                  {stepMentionsFlegmasia && (
+                    <div className="mb-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setFlegmasiaGalleryOpen(true)}
+                        className="inline-flex items-center gap-1 rounded-full border border-blue-300 bg-white px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50 transition-colors"
+                        title="Ver imagens de referência da flegmasia"
+                      >
+                        <Info className="w-3.5 h-3.5" />
+                        Ver imagens
+                      </button>
+                    </div>
+                  )}
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
@@ -1954,10 +1980,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   )}
 
                   <div className="mb-6 p-4 rounded-xl border-l-4 border-l-red-600 bg-gradient-to-r from-red-50 to-white border border-red-100 shadow-sm">
-                    <h5 className="text-sm font-extrabold text-red-800 uppercase tracking-wide flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                      Emergência Vascular: Flegmasia Cerulea Dolens (FCD)
-                    </h5>
+                    <div className="flex items-start justify-between gap-3 mb-2">
+                      <h5 className="text-sm font-extrabold text-red-800 uppercase tracking-wide flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-red-600" />
+                        Emergência Vascular: Flegmasia Cerulea Dolens (FCD)
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => setFlegmasiaGalleryOpen(true)}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-red-300 bg-white text-red-700 hover:bg-red-100 transition-colors"
+                        title="Ver imagens de referência"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
+                    </div>
                     <p className="text-xs text-red-900 leading-relaxed font-medium">
                       É uma forma rara e gravíssima de trombose venosa profunda (TVP) ileofemoral, caracterizada por obstrução maciça do retorno venoso, resultando em edema intenso, dor extrema e cianose (coloração azulada) do membro, com alto risco de gangrena venosa, amputação e óbito (25% a 40%). É uma emergência vascular imediata.
                     </p>
@@ -2009,7 +2045,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                     }
                                   }}
                                 />
-                                <span className="text-sm text-slate-700 leading-snug">{item}</span>
+                                <span className="text-sm text-slate-700 leading-snug flex-1">{item}</span>
+                                {item.toLowerCase().includes('flegmasia') && (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault()
+                                      event.stopPropagation()
+                                      setFlegmasiaGalleryOpen(true)
+                                    }}
+                                    className="inline-flex items-center justify-center w-6 h-6 rounded-full border border-blue-300 bg-white text-blue-700 hover:bg-blue-100 transition-colors"
+                                    title="Ver imagens de referência da flegmasia"
+                                  >
+                                    <Info className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </label>
                             )
                           })}
@@ -2345,6 +2395,48 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {flegmasiaGalleryOpen && (
+                <div className="fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-indigo-700 text-white">
+                      <h4 className="font-bold">Flegmasia Cerulea Dolens - Imagens de Referência</h4>
+                      <button
+                        type="button"
+                        onClick={() => setFlegmasiaGalleryOpen(false)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5">
+                      <p className="text-sm text-slate-700 mb-4">
+                        Achados visuais típicos: edema importante, cianose e diferença marcante entre os membros.
+                      </p>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        {flegmasiaReferenceImages.map((imageSrc, index) => (
+                          <a
+                            key={imageSrc}
+                            href={imageSrc}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="group block rounded-xl border border-slate-200 overflow-hidden bg-slate-50"
+                            title="Abrir imagem em tamanho original"
+                          >
+                            <img
+                              src={imageSrc}
+                              alt={`Imagem de referência de flegmasia ${index + 1}`}
+                              className="w-full h-44 object-cover group-hover:scale-[1.02] transition-transform"
+                              loading="lazy"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {tvpWellsIntroOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                   <div
@@ -2370,10 +2462,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       Por que aplicar o Escore de Wells para TVP?
                     </h4>
                     <p className="text-sm sm:text-base text-slate-800 leading-relaxed">
-                      O Escore de Wells para TVP e uma ferramenta clinica essencial para estratificar a probabilidade pre-teste de trombose venosa profunda em pacientes com dor ou edema de membros inferiores. Ele organiza achados clinicos em um sistema de pontuacao simples para classificar o paciente em baixa, moderada ou alta probabilidade.
+                      O Escore de Wells para TVP é uma ferramenta clínica essencial para estratificar a
+                      probabilidade pré-teste de trombose venosa profunda em pacientes com dor ou edema
+                      de membros inferiores. Ele organiza achados clínicos em um sistema de pontuação
+                      simples para classificar o paciente em baixa, moderada ou alta probabilidade.
                     </p>
                     <p className="text-sm sm:text-base text-slate-800 leading-relaxed mt-3">
-                      Aplicar o escore de forma sistematica orienta a sequencia diagnostica: em baixa probabilidade, um D-dimero negativo pode afastar TVP; em probabilidades mais elevadas, prioriza-se ultrassom Doppler de membros inferiores. Isso melhora a acuracia diagnostica, reduz custos e ajuda a evitar atraso no diagnostico de uma condicao potencialmente grave.
+                      Aplicar o escore de forma sistemática orienta a sequência diagnóstica: em baixa
+                      probabilidade, um D-dímero negativo pode afastar TVP; em probabilidades mais
+                      elevadas, prioriza-se ultrassom Doppler de membros inferiores. Isso melhora a
+                      acurácia diagnóstica, reduz custos e ajuda a evitar atraso no diagnóstico de uma
+                      condição potencialmente grave.
                     </p>
                     <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
                       <button

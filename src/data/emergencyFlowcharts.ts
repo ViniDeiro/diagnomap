@@ -2019,342 +2019,498 @@ export const asthmaFlowchart: EmergencyFlowchart = {
 // Fluxograma de GECA (Gastroenterite Aguda)
 export const gecaFlowchart: EmergencyFlowchart = {
   id: 'geca',
-  name: 'GECA - Gastroenterite Aguda',
-  description: 'Protocolo de manejo da gastroenterite aguda em adultos e crianças.',
+  name: 'Gastroenterite Aguda',
+  description: 'Fluxo completo de avaliação, estratificação de gravidade, suporte e desfecho na gastroenterite aguda.',
   category: 'gastrointestinal',
   priority: 'medium',
   icon: 'activity',
   color: 'from-amber-500 to-orange-600',
   initialStep: 'start',
-  finalSteps: ['outcome', 'not_geca', 'chronic_flow', 'emergency_transfer'],
+  finalSteps: ['not_geca', 'alta_orientacoes_final', 'internacao_hospitalar', 'emergency_transfer'],
   steps: {
     start: {
       id: 'start',
-      title: 'Triagem: Compatibilidade com GECA',
-      description: 'Verificar se o quadro é compatível',
+      title: 'Início',
+      description: 'Paciente com suspeita de gastroenterocolite aguda.',
       type: 'question',
       content: `
         <div class="space-y-3">
-          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-            <strong>Definição:</strong>
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <strong>Suspeita clínica:</strong> diarreia e/ou vômitos de início agudo.
           </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Diarreia OU Vômitos</li>
-            <li>Início agudo</li>
-          </ul>
         </div>
       `,
       options: [
-        { text: 'Suspeita de GECA', nextStep: 'emergency_exclusion', value: 'yes' },
-        { text: 'Não compatível', nextStep: 'not_geca', value: 'no' }
+        { text: 'Seguir admissão', nextStep: 'admissao_avaliacao_inicial', value: 'seguir' },
+        { text: 'Quadro não compatível', nextStep: 'not_geca', value: 'nao_compat' }
       ]
     },
     not_geca: {
       id: 'not_geca',
       title: 'Não é GECA',
-      description: 'Quadro não compatível.',
+      description: 'Caso não compatível com gastroenterite aguda.',
       type: 'result',
       content: `
         <div class="bg-gray-50 p-4 rounded border-l-4 border-gray-500">
           <h4 class="font-bold text-gray-800">Encerrar Fluxo</h4>
-          <p class="text-gray-700">Considerar outros diagnósticos diferenciais.</p>
+          <p class="text-gray-700">Investigar diagnósticos diferenciais (abdominais, infecciosos e não infecciosos).</p>
         </div>
       `,
       options: []
     },
-    emergency_exclusion: {
-      id: 'emergency_exclusion',
-      title: 'Exclusão Rápida de Emergência',
-      description: 'Verificar sinais de gravidade imediata',
-      type: 'question',
-      critical: true,
+    admissao_avaliacao_inicial: {
+      id: 'admissao_avaliacao_inicial',
+      title: 'Admissão e Avaliação Inicial',
+      description: 'Anamnese e exame físico direcionados.',
+      type: 'action',
       content: `
-        <div class="space-y-3">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
-            <strong>Sinais de Emergência (Qualquer um):</strong>
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>História clínica completa:</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>Início dos sintomas, duração, número de evacuações e aspecto das fezes.</li>
+              <li>Sangue/muco, vômitos, febre, dor abdominal e desidratação percebida.</li>
+              <li>História epidemiológica: viagens, creche, surtos, uso recente de antibióticos e comorbidades.</li>
+            </ul>
           </div>
-          <ul class="list-disc pl-5 space-y-1 text-sm">
-            <li>Rebaixamento de consciência / confusão importante</li>
-            <li>Sinais de choque (PA baixa, extremidades frias, pulso fraco)</li>
-            <li>Dor abdominal intensa contínua / abdome agudo</li>
-            <li>Vômitos incoercíveis</li>
-            <li>Sangue vivo em grande quantidade / melena</li>
-            <li>Convulsão</li>
-            <li>Criança com prostração importante / letargia</li>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <strong>Exame físico:</strong> estado geral, mucosas, turgor, pulso, PA, enchimento capilar, diurese e dor abdominal.
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Estratificar gravidade', nextStep: 'classificar_gravidade_geca', value: 'estratificar' }
+      ]
+    },
+    classificar_gravidade_geca: {
+      id: 'classificar_gravidade_geca',
+      title: 'Classificar Gravidade',
+      description: 'Definir abordagem inicial por gravidade.',
+      type: 'question',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+            <strong>LEVE</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Menos de 3 evacuações/dia.</li>
+              <li>Sem sangue nas fezes e sem febre alta.</li>
+              <li>Sem desidratação importante.</li>
+            </ul>
+          </div>
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <strong>MODERADA</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>3 a 6 evacuações/dia e/ou febre baixa.</li>
+              <li>Sinais de desidratação leve/moderada.</li>
+              <li>Pode necessitar observação, TRO supervisionada e exames básicos.</li>
+            </ul>
+          </div>
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <strong>GRAVE</strong>
+            <ul class="list-disc pl-5 mt-1">
+              <li>Maior ou igual a 6 evacuações/dia, sangue vivo ou melena.</li>
+              <li>Febre alta, vômitos incoercíveis ou desidratação grave.</li>
+              <li>Instabilidade hemodinâmica ou dor abdominal intensa.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Leve', nextStep: 'tro_oral_protocolo', value: 'leve' },
+        { text: 'Moderada', nextStep: 'tro_oral_protocolo', value: 'moderada' },
+        { text: 'Grave', nextStep: 'grave_manejo_inicial_geca', value: 'grave', critical: true }
+      ]
+    },
+    tro_oral_protocolo: {
+      id: 'tro_oral_protocolo',
+      title: 'TRO (Hidratação Oral)',
+      description: 'Reposição oral e dieta conforme tolerância.',
+      type: 'action',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <strong>Hidratação oral (TRO):</strong>
+            <ul class="list-disc pl-5 mt-1 space-y-1">
+              <li>SRO em pequenos volumes, fracionado e frequente.</li>
+              <li>Reposição após perdas (evacuações e vômitos).</li>
+              <li>Manter alimentação habitual conforme tolerância.</li>
+              <li>Evitar excesso de açúcares simples e bebidas irritativas.</li>
+            </ul>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <strong>Técnica:</strong> pausar 5-10 min após vômito e reiniciar lentamente.
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Adicionar sintomáticos', nextStep: 'sintomaticos_geca', value: 'sintomaticos' }
+      ]
+    },
+    sintomaticos_geca: {
+      id: 'sintomaticos_geca',
+      title: 'Sintomáticos',
+      description: 'Controle de náuseas, vômitos e dor.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <strong>Opções usuais:</strong>
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li>Antiemético para permitir TRO (ex.: ondansetrona em dose ajustada).</li>
+            <li>Analgésico/antitérmico conforme perfil clínico.</li>
+            <li>Evitar antidiarreico em suspeita de disenteria.</li>
           </ul>
         </div>
       `,
       options: [
-        { text: 'Sim (Emergência)', nextStep: 'emergency_protocol', value: 'yes', critical: true },
-        { text: 'Não (Seguir fluxo)', nextStep: 'duration_check', value: 'no' }
+        { text: 'Reavaliar', nextStep: 'tro_support_response_geca', value: 'reavaliar' }
       ]
     },
-    emergency_protocol: {
-      id: 'emergency_protocol',
-      title: 'Emergência - Plano C',
-      description: 'Encaminhamento urgente necessário',
+    tro_support_response_geca: {
+      id: 'tro_support_response_geca',
+      title: 'Melhorou com TRO e Suporte?',
+      description: 'Reavaliação clínica após hidratação e suporte inicial.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>Houve melhora clínica sustentada após TRO e medidas de suporte?</p>
+          <ul class="list-disc pl-5">
+            <li>Menor frequência de evacuações/vômitos.</li>
+            <li>Melhor aceitação de líquidos/alimentos.</li>
+            <li>Sinais de hidratação mais adequados.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'alta_orientacoes_final', value: 'sim' },
+        { text: 'Não', nextStep: 'exames_basicos_laboratoriais_geca', value: 'nao' }
+      ]
+    },
+    grave_manejo_inicial_geca: {
+      id: 'grave_manejo_inicial_geca',
+      title: 'Grave - Manejo Inicial',
+      description: 'Estabilização imediata e início de suporte intensivo.',
       type: 'action',
       critical: true,
       timeSensitive: true,
       content: `
         <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
-          <h4 class="font-bold text-red-800">URGÊNCIA MÉDICA</h4>
-          <p class="text-red-700 mb-2">Iniciar Plano C imediatamente e solicitar avaliação médica de urgência.</p>
-          <ul class="list-disc pl-5 text-red-700 text-sm">
-            <li>Acesso venoso imediato</li>
-            <li>Monitorização contínua</li>
-            <li>Preparar encaminhamento</li>
+          <h4 class="font-bold text-red-800">Prioridade Máxima</h4>
+          <ul class="list-disc pl-5 mt-2 text-sm text-red-800">
+            <li>Monitorização contínua e avaliação frequente.</li>
+            <li>Correção volêmica imediata e controle de eletrólitos.</li>
+            <li>Considerar internação/transferência conforme estabilidade.</li>
           </ul>
         </div>
       `,
       options: [
-        { text: 'Encaminhar (Finalizar)', nextStep: 'emergency_transfer', value: 'transfer', critical: true }
+        { text: 'Solicitar exames e suporte', nextStep: 'exames_basicos_laboratoriais_geca', value: 'exames_suporte', critical: true }
       ]
+    },
+    exames_basicos_laboratoriais_geca: {
+      id: 'exames_basicos_laboratoriais_geca',
+      title: 'Exames Básicos Laboratoriais',
+      description: 'Avaliação inicial laboratorial para casos sem resposta ou graves.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <strong>Solicitar:</strong>
+          <ul class="list-disc pl-5 mt-1 space-y-1">
+            <li>Hemograma e marcadores inflamatórios.</li>
+            <li>Função renal (ureia/creatinina) e eletrólitos (Na, K, Cl).</li>
+            <li>Gasometria venosa se acidose/sinais de gravidade.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar fezes', nextStep: 'exames_fezes_indicados_geca', value: 'fezes' }
+      ]
+    },
+    exames_fezes_indicados_geca: {
+      id: 'exames_fezes_indicados_geca',
+      title: 'Exames de Fezes Indicados?',
+      description: 'Definir necessidade de investigação etiológica específica.',
+      type: 'question',
+      content: `
+        <div class="text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Diarreia com sangue/febre alta.</li>
+            <li>Imunossuprimido, HIV, viagem recente ou creche/surto.</li>
+            <li>Sintomas persistentes ou recorrentes.</li>
+            <li>Suspeita de C. difficile (uso recente de antibiótico/internação).</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'exames_fezes_detalhados_geca', value: 'sim' },
+        { text: 'Não', nextStep: 'exames_imagem_necessarios_geca', value: 'nao' }
+      ]
+    },
+    exames_fezes_detalhados_geca: {
+      id: 'exames_fezes_detalhados_geca',
+      title: 'Exames de Fezes',
+      description: 'Painel orientado por contexto clínico e epidemiológico.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Coprocultura em casos graves/sangue nas fezes/surto.</li>
+            <li>Parasitológico de fezes em persistência, viagem, HIV ou imunossupressão.</li>
+            <li>Pesquisa de toxina/PCR para C. difficile quando indicado.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar necessidade de imagem', nextStep: 'exames_imagem_necessarios_geca', value: 'avaliar_imagem' }
+      ]
+    },
+    exames_imagem_necessarios_geca: {
+      id: 'exames_imagem_necessarios_geca',
+      title: 'Exames de Imagem Necessários?',
+      description: 'Avaliar dor intensa, complicação abdominal ou diagnóstico alternativo.',
+      type: 'question',
+      content: `
+        <div class="text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Suspeita de abdome agudo, isquemia ou megacólon tóxico.</li>
+            <li>Piora sem explicação após medidas iniciais.</li>
+            <li>Sinais peritoneais, distensão importante ou dor desproporcional.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'imagem_endoscopia_geca', value: 'sim' },
+        { text: 'Não', nextStep: 'decidir_suporte_geca', value: 'nao' }
+      ]
+    },
+    imagem_endoscopia_geca: {
+      id: 'imagem_endoscopia_geca',
+      title: 'Imagem e Endoscopia',
+      description: 'Exames direcionados em casos selecionados.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Radiografia simples para avaliar distensão/perfuração.</li>
+            <li>Tomografia com contraste se suspeita de complicação abdominal.</li>
+            <li>Colonoscopia em cenário selecionado (suspeita inflamatória/pseudomembranosa).</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Decidir suporte clínico', nextStep: 'decidir_suporte_geca', value: 'suporte' }
+      ]
+    },
+    decidir_suporte_geca: {
+      id: 'decidir_suporte_geca',
+      title: 'Hidratação Venosa / Internação?',
+      description: 'Definir se há necessidade de suporte hospitalar.',
+      type: 'question',
+      content: `
+        <div class="text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Persistência de intolerância oral.</li>
+            <li>Distúrbio hidroeletrolítico importante.</li>
+            <li>Instabilidade clínica ou impossibilidade de seguimento seguro.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'hidratacao_venosa_protocolo_geca', value: 'sim' },
+        { text: 'Não', nextStep: 'criterios_internacao_geca', value: 'nao' }
+      ]
+    },
+    hidratacao_venosa_protocolo_geca: {
+      id: 'hidratacao_venosa_protocolo_geca',
+      title: 'Hidratação Venosa',
+      description: 'Protocolo completo de reposição venosa.',
+      type: 'action',
+      timeSensitive: true,
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Iniciar cristaloide isotônico e ajustar por peso/perdas.</li>
+            <li>Repor eletrólitos conforme monitorização seriada.</li>
+            <li>Reintroduzir VO assim que houver melhora clínica.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar critérios de internação', nextStep: 'criterios_internacao_geca', value: 'criterios' }
+      ]
+    },
+    criterios_internacao_geca: {
+      id: 'criterios_internacao_geca',
+      title: 'Critérios de Internação',
+      description: 'Definir necessidade de manutenção em ambiente hospitalar.',
+      type: 'question',
+      content: `
+        <div class="text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Instabilidade hemodinâmica ou desidratação grave persistente.</li>
+            <li>Alterações laboratoriais importantes (Na, K, função renal, acidose).</li>
+            <li>Incapacidade de manter VO, comorbidades relevantes ou alto risco social.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Internar', nextStep: 'internacao_hospitalar', value: 'internar', critical: true },
+        { text: 'Sem necessidade de internação', nextStep: 'indicacao_antibiotico_empirico_geca', value: 'sem_internacao' }
+      ]
+    },
+    indicacao_antibiotico_empirico_geca: {
+      id: 'indicacao_antibiotico_empirico_geca',
+      title: 'Indicação de Antibiótico Empírico?',
+      description: 'Antibiótico não é rotina; usar apenas em cenários selecionados.',
+      type: 'question',
+      content: `
+        <div class="text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Disenteria febril com toxemia/queda do estado geral.</li>
+            <li>Suspeita de cólera grave.</li>
+            <li>Imunossupressão grave ou sepse.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim', nextStep: 'antibiotico_empirico_esquemas_geca', value: 'sim' },
+        { text: 'Não', nextStep: 'suspeita_c_difficile_geca', value: 'nao' }
+      ]
+    },
+    antibiotico_empirico_esquemas_geca: {
+      id: 'antibiotico_empirico_esquemas_geca',
+      title: 'Antibiótico Empírico - Esquemas',
+      description: 'Escolha orientada por perfil clínico e epidemiológico.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Disenteria grave: opções como azitromicina/ciprofloxacino conforme resistência local.</li>
+            <li>Cólera: considerar doxiciclina/azitromicina.</li>
+            <li>Imunossuprimidos: ajustar conforme risco e gravidade.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar C. difficile', nextStep: 'suspeita_c_difficile_geca', value: 'avaliar_cdif' }
+      ]
+    },
+    suspeita_c_difficile_geca: {
+      id: 'suspeita_c_difficile_geca',
+      title: 'Suspeita Diagnóstica de C. difficile?',
+      description: 'Diarreia associada a antibiótico/internação recente.',
+      type: 'question',
+      options: [
+        { text: 'Sim', nextStep: 'tratamento_c_difficile_geca', value: 'sim' },
+        { text: 'Não', nextStep: 'parasitoses_identificadas_geca', value: 'nao' }
+      ]
+    },
+    tratamento_c_difficile_geca: {
+      id: 'tratamento_c_difficile_geca',
+      title: 'Clostridioides difficile - Tratamento',
+      description: 'Manejo conforme gravidade e protocolo local.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Suspender antibiótico precipitante quando possível.</li>
+            <li>Preferir vancomicina VO/fidaxomicina conforme disponibilidade e gravidade.</li>
+            <li>Monitorar sinais de colite grave/megacólon tóxico.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar parasitoses', nextStep: 'parasitoses_identificadas_geca', value: 'avaliar_parasitoses' }
+      ]
+    },
+    parasitoses_identificadas_geca: {
+      id: 'parasitoses_identificadas_geca',
+      title: 'Parasitoses Identificadas?',
+      description: 'Decisão baseada em exames de fezes e contexto clínico.',
+      type: 'question',
+      options: [
+        { text: 'Sim', nextStep: 'tratamento_parasitoses_geca', value: 'sim' },
+        { text: 'Não', nextStep: 'reavaliacao_clinica_integrada_geca', value: 'nao' }
+      ]
+    },
+    tratamento_parasitoses_geca: {
+      id: 'tratamento_parasitoses_geca',
+      title: 'Tratamento de Parasitoses',
+      description: 'Terapia específica conforme agente etiológico.',
+      type: 'action',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Giardíase/Amebíase: metronidazol/tinidazol conforme protocolo.</li>
+            <li>Criptosporidiose e outros agentes: tratar conforme etiologia e imunidade.</li>
+            <li>Orientar higiene, água segura e prevenção de reinfecção.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar', nextStep: 'reavaliacao_clinica_integrada_geca', value: 'reavaliar' }
+      ]
+    },
+    reavaliacao_clinica_integrada_geca: {
+      id: 'reavaliacao_clinica_integrada_geca',
+      title: 'Reavaliação Clínica Integrada',
+      description: 'Síntese clínica para definir alta/seguimento.',
+      type: 'question',
+      content: `
+        <div class="text-sm">
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Checar hidratação, sintomas, sinais vitais e exames.</li>
+            <li>Definir necessidade de ajuste terapêutico e seguimento.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Estável para alta/seguimento', nextStep: 'alta_orientacoes_final', value: 'alta' },
+        { text: 'Sem estabilidade clínica', nextStep: 'internacao_hospitalar', value: 'internar', critical: true }
+      ]
+    },
+    alta_orientacoes_final: {
+      id: 'alta_orientacoes_final',
+      title: 'Alta com Orientações',
+      description: 'Desfecho com orientações de segurança e retorno.',
+      type: 'result',
+      content: `
+        <div class="space-y-3">
+          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
+            <h4 class="font-bold text-green-800">Alta com orientações</h4>
+            <ul class="list-disc pl-5 mt-2 text-sm text-green-900 space-y-1">
+              <li>Manter hidratação, alimentação habitual e reposição após perdas.</li>
+              <li>Retornar se febre alta, sangue nas fezes, oligúria, letargia, piora da dor, persistência &gt; 7 dias ou intolerância oral.</li>
+              <li>Programar reavaliação se idosos, crianças, imunossuprimidos ou comorbidades.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    internacao_hospitalar: {
+      id: 'internacao_hospitalar',
+      title: 'Internação Hospitalar',
+      description: 'Paciente sem critérios de segurança para manejo ambulatorial.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
+          <h4 class="font-bold text-red-800">Manter em ambiente hospitalar</h4>
+          <p class="text-red-700 text-sm mt-1">Seguir suporte clínico, monitorização e terapêutica direcionada conforme evolução.</p>
+        </div>
+      `,
+      options: []
     },
     emergency_transfer: {
       id: 'emergency_transfer',
       title: 'Transferência para Emergência',
-      description: 'Paciente encaminhado ao setor de emergência',
+      description: 'Encaminhamento imediato para unidade de maior complexidade.',
       type: 'result',
+      critical: true,
       content: `
         <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
           <h4 class="font-bold text-red-800">Transferência Realizada</h4>
-          <p class="text-red-700">Paciente encaminhado para sala de emergência/UTI.</p>
-        </div>
-      `,
-      options: []
-    },
-    duration_check: {
-      id: 'duration_check',
-      title: 'Classificação por Duração',
-      description: 'Tempo de evolução dos sintomas',
-      type: 'question',
-      options: [
-        { text: 'Menor ou igual a 14 dias (Aguda)', nextStep: 'hydration_assessment_geca', value: 'acute' },
-        { text: 'Maior que 14 dias (Persistente/Não Típica)', nextStep: 'investigate_geca', value: 'persistent' }
-      ]
-    },
-    investigate_geca: {
-      id: 'investigate_geca',
-      title: 'Investigação Necessária',
-      description: 'Diarreia persistente ou não típica',
-      type: 'action',
-      content: `
-        <div class="bg-amber-50 p-4 rounded border-l-4 border-amber-500">
-          <h4 class="font-bold text-amber-800">Investigar</h4>
-          <p class="text-amber-700">Solicitar exames (hemograma, eletrólitos, parasitológico, pesquisa de outras causas).</p>
-        </div>
-      `,
-      options: [
-        { text: 'Prosseguir para Hidratação', nextStep: 'hydration_assessment_geca', value: 'next' }
-      ]
-    },
-    hydration_assessment_geca: {
-      id: 'hydration_assessment_geca',
-      title: 'Avaliação de Hidratação',
-      description: 'Decisão Central',
-      type: 'question',
-      content: `
-        <div class="space-y-4 text-sm">
-          <div class="border p-3 rounded bg-green-50">
-            <strong>A) SEM DESIDRATAÇÃO</strong>
-            <ul class="list-disc pl-5 mt-1">
-              <li>Estado geral bom</li>
-              <li>Mucosas úmidas</li>
-              <li>Diurese preservada</li>
-              <li>Sem taquicardia/hipotensão relevante</li>
-            </ul>
-          </div>
-          <div class="border p-3 rounded bg-yellow-50">
-            <strong>B) DESIDRATAÇÃO LEVE/MODERADA</strong> (Sinais presentes)
-            <ul class="list-disc pl-5 mt-1">
-              <li>Sede aumentada</li>
-              <li>Mucosa seca, olhos fundos</li>
-              <li>Redução de diurese</li>
-              <li>Irritabilidade/hipoatividade (criança)</li>
-            </ul>
-          </div>
-          <div class="border p-3 rounded bg-red-50">
-            <strong>C) DESIDRATAÇÃO GRAVE</strong> (Qualquer um)
-            <ul class="list-disc pl-5 mt-1">
-              <li>Incapaz de beber</li>
-              <li>Letargia/coma</li>
-              <li>Pulso radial ausente ou muito fraco</li>
-              <li>Choque/hipotensão importante</li>
-            </ul>
-          </div>
-        </div>
-      `,
-      options: [
-        { text: 'Quadro A (Sem Desidratação)', nextStep: 'plan_a_geca', value: 'A' },
-        { text: 'Quadro B (Leve/Moderada)', nextStep: 'plan_b_geca', value: 'B' },
-        { text: 'Quadro C (Grave)', nextStep: 'plan_c_geca', value: 'C', critical: true }
-      ]
-    },
-    plan_a_geca: {
-      id: 'plan_a_geca',
-      title: 'PLANO A (Domicílio)',
-      description: 'Baixo Risco',
-      type: 'action',
-      content: `
-        <div class="space-y-3">
-          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
-            <strong>Conduta:</strong>
-            <ul class="list-disc pl-5 mt-1">
-              <li>Orientar SRO após cada evacuação/vômito</li>
-              <li>Aumentar líquidos (evitar muito açúcar)</li>
-              <li>Manter alimentação habitual</li>
-              <li>Se criança: Zinco por 10-14 dias</li>
-            </ul>
-          </div>
-        </div>
-      `,
-      options: [
-        { text: 'Avaliar Inflamação/Disenteria', nextStep: 'inflammation_check', value: 'next' }
-      ]
-    },
-    plan_b_geca: {
-      id: 'plan_b_geca',
-      title: 'PLANO B (Observação)',
-      description: 'Unidade de Saúde',
-      type: 'action',
-      timeSensitive: true,
-      content: `
-        <div class="space-y-3">
-          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
-            <strong>Conduta:</strong>
-            <ul class="list-disc pl-5 mt-1">
-              <li>Iniciar SRO fracionado (pequenos volumes)</li>
-              <li>Observar e reavaliar repetidamente</li>
-              <li>Se vômitos: considerar antiemético (objetivo: permitir SRO)</li>
-            </ul>
-          </div>
-        </div>
-      `,
-      options: [
-        { text: 'Melhora (Migrar para Plano A)', nextStep: 'plan_a_geca', value: 'improved' },
-        { text: 'Piora/Não tolera VO (Migrar para Plano C)', nextStep: 'plan_c_geca', value: 'worsened', critical: true }
-      ]
-    },
-    plan_c_geca: {
-      id: 'plan_c_geca',
-      title: 'PLANO C (Grave)',
-      description: 'Hidratação Venosa',
-      type: 'action',
-      critical: true,
-      timeSensitive: true,
-      content: `
-        <div class="space-y-3">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
-            <strong>Conduta:</strong>
-            <ul class="list-disc pl-5 mt-1">
-              <li>Iniciar hidratação EV imediata</li>
-              <li>Encaminhar para hospital</li>
-              <li>Associar SRO via oral assim que possível</li>
-              <li>Reavaliar em curto intervalo (1-2h)</li>
-            </ul>
-          </div>
-        </div>
-      `,
-      options: [
-        { text: 'Avaliar Inflamação/Disenteria', nextStep: 'inflammation_check', value: 'next' }
-      ]
-    },
-    inflammation_check: {
-      id: 'inflammation_check',
-      title: 'Sinais de Inflamação / Disenteria',
-      description: 'Avaliar necessidade de conduta específica',
-      type: 'question',
-      content: `
-        <p class="mb-2">O paciente apresenta:</p>
-        <ul class="list-disc pl-5 space-y-1 text-sm">
-          <li>Fezes com sangue ou muco/pus?</li>
-          <li>Febre alta com sangue nas fezes?</li>
-        </ul>
-      `,
-      options: [
-        { text: 'Sim (Disenteria/Inflamatória)', nextStep: 'dysentery_action', value: 'yes' },
-        { text: 'Não', nextStep: 'exams_indication_geca', value: 'no' }
-      ]
-    },
-    dysentery_action: {
-      id: 'dysentery_action',
-      title: 'Conduta na Disenteria',
-      description: 'Suspeita de diarreia inflamatória',
-      type: 'action',
-      content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-          <strong>Atenção:</strong>
-          <ul class="list-disc pl-5 mt-1">
-            <li>Evitar antidiarreicos (ex: loperamida)</li>
-            <li>Considerar antibiótico se toxemia/gravidade</li>
-            <li>Aumentar prioridade de investigação</li>
-          </ul>
-        </div>
-      `,
-      options: [
-        { text: 'Prosseguir', nextStep: 'exams_indication_geca', value: 'next' }
-      ]
-    },
-    exams_indication_geca: {
-      id: 'exams_indication_geca',
-      title: 'Indicação de Exames',
-      description: 'Quando solicitar exames laboratoriais ou de fezes',
-      type: 'question',
-      content: `
-        <div class="space-y-3 text-sm">
-          <div>
-            <strong>Laboratoriais (Sangue):</strong>
-            <p>Se desidratação moderada/grave, idoso, comorbidades, imunossuprimido.</p>
-          </div>
-          <div>
-            <strong>Fezes (Coprocultura/Parasitológico/C. difficile):</strong>
-            <p>Se grave/sanguinolenta, imunossupressão, persistente, uso recente de ATB, viagem/HIV.</p>
-          </div>
-        </div>
-      `,
-      options: [
-        { text: 'Solicitar Exames', nextStep: 'antibiotic_check_geca', value: 'request' },
-        { text: 'Não solicitar', nextStep: 'antibiotic_check_geca', value: 'skip' }
-      ]
-    },
-    antibiotic_check_geca: {
-      id: 'antibiotic_check_geca',
-      title: 'Avaliação de Antibiótico',
-      description: 'Regra do "Não Rotina"',
-      type: 'question',
-      content: `
-        <p class="mb-2">Indicação precisa para ATB?</p>
-        <ul class="list-disc pl-5 space-y-1 text-sm">
-          <li>Disenteria com queda do estado geral</li>
-          <li>Suspeita de Cólera grave</li>
-          <li>Imunossuprimido grave</li>
-          <li>Sepse/sinais sistêmicos</li>
-        </ul>
-        <p class="mt-2 text-xs text-gray-500">GECA aquosa leve/moderada sem invasão: NÃO usar antibiótico.</p>
-      `,
-      options: [
-        { text: 'Sim (Considerar ATB)', nextStep: 'outcome_geca', value: 'yes' },
-        { text: 'Não (Sem ATB)', nextStep: 'outcome_geca', value: 'no' }
-      ]
-    },
-    outcome_geca: {
-      id: 'outcome_geca',
-      title: 'Critérios de Retorno e Desfecho',
-      description: 'Orientações finais para alta',
-      type: 'result',
-      content: `
-        <div class="space-y-3">
-          <div class="bg-green-50 p-3 rounded border-l-4 border-green-500">
-            <strong>Critérios de Retorno (Reavaliar se):</strong>
-            <ul class="list-disc pl-5 mt-1 text-sm">
-              <li>Piora da diarreia ou vômitos repetidos</li>
-              <li>Muita sede / redução da urina</li>
-              <li>Sangue nas fezes</li>
-              <li>Febre persistente</li>
-              <li>Não melhora em 48h (24h se criança/idoso)</li>
-            </ul>
-          </div>
+          <p class="text-red-700">Paciente transferido para suporte avançado e monitorização intensiva.</p>
         </div>
       `,
       options: []
