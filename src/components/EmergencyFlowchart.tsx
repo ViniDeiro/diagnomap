@@ -247,6 +247,139 @@ const tvpAnticoagulationConsiderations = [
   }
 ]
 
+const tvpNoacHighRiskNotes = [
+  {
+    id: 'saf_triplo',
+    title: 'SAF (síndrome antifosfolípide), especialmente triplo positivo',
+    summary: 'Evitar NOAC; preferir varfarina.',
+    details: [
+      'Maior risco de recorrência trombótica com NOAC em SAF de alto risco (triplo positivo).',
+      'Risco é particularmente relevante para eventos arteriais.',
+      'Conduta usual: varfarina com alvo de INR individualizado conforme perfil clínico.'
+    ]
+  },
+  {
+    id: 'def_antitrombina_grave',
+    title: 'Deficiência grave de antitrombina',
+    summary: 'Evitar NOAC como primeira escolha; considerar varfarina.',
+    details: [
+      'Condição de alto risco trombótico, muitas vezes com evidência limitada para NOAC.',
+      'Em casos graves/hereditários severos, especialistas frequentemente preferem varfarina.',
+      'Heparina também pode ter resposta reduzida, pois depende da antitrombina.'
+    ]
+  },
+  {
+    id: 'trombofilia_combinada',
+    title: 'Trombofilias combinadas (múltiplos defeitos)',
+    summary: 'Risco cumulativo elevado; tendência a preferir varfarina.',
+    details: [
+      'Exemplos: Fator V Leiden + mutação da protrombina, ou associação com SAF.',
+      'Quanto maior o risco trombótico combinado, menor a segurança de extrapolar evidência de NOAC.',
+      'Decisão deve ser individualizada, com tendência prática a varfarina em cenários de alto risco.'
+    ]
+  },
+  {
+    id: 'arterial_associada',
+    title: 'História de trombose arterial associada à trombofilia',
+    summary: 'Evitar NOAC; considerar varfarina.',
+    details: [
+      'NOAC tem validação mais robusta para trombose venosa e fibrilação atrial.',
+      'Quando há componente arterial importante, costuma-se priorizar varfarina.',
+      'Revisar evento prévio, perfil de risco e acompanhamento especializado.'
+    ]
+  }
+]
+
+const varfarinaDietGuidanceSections = [
+  {
+    id: 'principio',
+    title: 'Princípio fundamental',
+    bullets: [
+      'Não é proibir vitamina K, e sim manter consistência alimentar.',
+      'Evite grandes variações de um dia para o outro.'
+    ]
+  },
+  {
+    id: 'vitamina_k',
+    title: 'Alimentos ricos em vitamina K (atenção maior)',
+    bullets: [
+      'Folhas verde-escuras: couve, espinafre, brócolis, rúcula, agrião e alface escura/romana.',
+      'Outros: repolho, couve-de-bruxelas, salsinha e chá verde.',
+      'Pode consumir, mas sem mudanças bruscas na quantidade habitual.'
+    ]
+  },
+  {
+    id: 'interferencias',
+    title: 'Produtos que interferem no INR',
+    bullets: [
+      'Álcool: uso agudo pode elevar INR; uso crônico pode reduzir INR.',
+      'Fitoterápicos/chás: ginkgo biloba, ginseng, erva de São João e alho em altas doses podem alterar efeito.',
+      'Outros: fígado, abacate, soja/derivados e óleos vegetais (canola/soja) podem gerar variação.'
+    ]
+  },
+  {
+    id: 'orientacao_pratica',
+    title: 'Orientação prática ao paciente',
+    bullets: [
+      'Pode comer de tudo, mantendo padrão semelhante diariamente.',
+      'Evitar mudanças súbitas de dieta (ex.: detox rica em folhas verdes).',
+      'Avisar a equipe antes de iniciar suplementos, chás ou fitoterápicos.'
+    ]
+  },
+  {
+    id: 'dica',
+    title: 'Dica de ambulatório',
+    bullets: [
+      'INR descontrolado sem causa aparente: investigar mudança alimentar, dieta nova, chás/suplementos e episódio de álcool.'
+    ]
+  }
+]
+
+const varfarinaDrugInteractionSections = [
+  {
+    id: 'mecanismo',
+    title: 'Por que a varfarina interage tanto?',
+    bullets: [
+      'Metabolismo hepático (principalmente CYP2C9 e CYP3A4), flora intestinal e ligação proteica influenciam diretamente o INR.',
+      'Inibidor enzimático tende a elevar INR; indutor enzimático tende a reduzir INR.'
+    ]
+  },
+  {
+    id: 'aumentam_inr',
+    title: 'Medicamentos que aumentam INR (risco de sangramento)',
+    bullets: [
+      'Antibióticos: metronidazol, sulfametoxazol-trimetoprima, ciprofloxacino, claritromicina e eritromicina.',
+      'Antifúngicos: fluconazol, itraconazol e voriconazol.',
+      'Cardiovasculares: amiodarona e propafenona.',
+      'Outros: omeprazol (leve/moderado), paracetamol em uso prolongado e sertralina.'
+    ]
+  },
+  {
+    id: 'diminuem_inr',
+    title: 'Medicamentos que diminuem INR (reduzem efeito)',
+    bullets: [
+      'Indutores enzimáticos: rifampicina, carbamazepina, fenitoína e fenobarbital.',
+      'Fitoterápico clássico: erva de São João (hipericão).'
+    ]
+  },
+  {
+    id: 'sangramento_sem_inr',
+    title: 'Perigoso mesmo com INR “normal”',
+    bullets: [
+      'AINEs (ex.: ibuprofeno, diclofenaco), AAS, clopidogrel e ISRS podem aumentar sangramento sem alterar muito o INR.',
+      'Se possível, evitar associação sem avaliação do risco-benefício.'
+    ]
+  },
+  {
+    id: 'top5',
+    title: 'Top 5 que mais desorganizam INR',
+    bullets: [
+      'Sulfametoxazol-trimetoprima, metronidazol, amiodarona, fluconazol e rifampicina (esta tende a reduzir INR).',
+      'Ao iniciar, suspender ou trocar medicação, repetir INR em 3 a 5 dias.'
+    ]
+  }
+]
+
 const parseTVPSelectedLeg = (raw?: string): TVPLegSide | '' => {
   if (!raw) return ''
   if (raw === 'left' || raw === 'right' || raw === 'other') return raw
@@ -261,12 +394,15 @@ const parseTVPSelectedLeg = (raw?: string): TVPLegSide | '' => {
 const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({ side, selected }) => {
   if (side === 'other') {
     return (
-      <div className={clsx(
-        'w-full aspect-square md:aspect-video rounded-xl border border-slate-200 flex items-center justify-center transition-all bg-gradient-to-br',
-        selected ? 'from-cyan-100 to-blue-50 border-cyan-400' : 'from-slate-50 to-slate-100'
-      )}>
-        <Activity className={clsx('w-16 h-16', selected ? 'text-cyan-600' : 'text-slate-400')} />
-      </div>
+      <img
+        src="/WhatsApp Image 2026-04-21 at 18.38.32.jpeg"
+        alt="Trombose em outras localidades além de membros inferiores"
+        className={clsx(
+          'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
+          selected ? 'brightness-105 saturate-110' : 'opacity-95 group-hover:opacity-100'
+        )}
+        loading="lazy"
+      />
     )
   }
 
@@ -327,6 +463,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpAnticoagConsiderationsOpen, setTVPAnticoagConsiderationsOpen] = useState(false)
   const [tvpPrescriptionPreview, setTVPPrescriptionPreview] = useState<TVPPrescriptionPreview | null>(null)
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
+  const [tvpNoacInfoOpen, setTVPNoacInfoOpen] = useState<string | null>(null)
+  const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -684,6 +822,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setTVPAnticoagConsiderationsOpen(false)
     setTVPPrescriptionPreview(null)
     setTVPRiskBenefitGuideOpen(false)
+    setTVPNoacInfoOpen(null)
+    setVarfarinaDietInfoOpen(false)
     setGasometryDraft({
       ph: '',
       pco2: '',
@@ -2564,12 +2704,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
                   <div
                     className="absolute inset-0 bg-slate-900/45"
-                    onClick={() => setTVPAnticoagConsiderationsOpen(false)}
+                    onClick={() => {
+                      setTVPAnticoagConsiderationsOpen(false)
+                      setTVPNoacInfoOpen(null)
+                    }}
                   />
                   <div className="relative w-full max-w-4xl rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-2xl">
                     <button
                       type="button"
-                      onClick={() => setTVPAnticoagConsiderationsOpen(false)}
+                      onClick={() => {
+                        setTVPAnticoagConsiderationsOpen(false)
+                        setTVPNoacInfoOpen(null)
+                      }}
                       className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-amber-100"
                       aria-label="Fechar considerações da anticoagulação"
                     >
@@ -2592,17 +2738,75 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                               </p>
                             ))}
                           </div>
+                          {section.id === 'consideracoes_noac_tvp' && (
+                            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                              <h6 className="text-sm font-extrabold text-red-900 mb-1">
+                                NOACs não são para todos
+                              </h6>
+                              <p className="text-xs text-red-800 mb-3">
+                                Em cenários de trombofilia de alto risco, evitar NOAC e considerar varfarina.
+                              </p>
+                              <div className="space-y-2">
+                                {tvpNoacHighRiskNotes.map((item) => (
+                                  <div key={item.id} className="flex items-start gap-2 rounded-lg border border-red-100 bg-white p-2.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => setTVPNoacInfoOpen(item.id)}
+                                      className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border border-red-300 text-red-700 hover:bg-red-100 transition-colors"
+                                      title="Ver explicação"
+                                    >
+                                      <Info className="w-3.5 h-3.5" />
+                                    </button>
+                                    <div>
+                                      <p className="text-sm font-semibold text-red-900 leading-snug">{item.title}</p>
+                                      <p className="text-xs text-red-800 mt-0.5">{item.summary}</p>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                     <div className="mt-5 flex justify-end">
                       <button
                         type="button"
-                        onClick={() => setTVPAnticoagConsiderationsOpen(false)}
+                        onClick={() => {
+                          setTVPAnticoagConsiderationsOpen(false)
+                          setTVPNoacInfoOpen(null)
+                        }}
                         className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold transition-colors"
                       >
                         Entendi
                       </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isTVPTreatmentInitial && tvpAnticoagConsiderationsOpen && tvpNoacInfoOpen && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-2xl rounded-2xl border border-red-200 bg-white shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-red-700 to-rose-700 text-white">
+                      <h4 className="font-bold">
+                        {tvpNoacHighRiskNotes.find((item) => item.id === tvpNoacInfoOpen)?.title}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => setTVPNoacInfoOpen(null)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5">
+                      <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
+                        {(tvpNoacHighRiskNotes.find((item) => item.id === tvpNoacInfoOpen)?.details ?? []).map((detail) => (
+                          <li key={detail}>{detail}</li>
+                        ))}
+                      </ul>
                     </div>
                   </div>
                 </div>
@@ -2652,10 +2856,25 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-cyan-700 text-white">
-                      <h4 className="font-bold">{tvpPrescriptionPreview.title}</h4>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-bold">{tvpPrescriptionPreview.title}</h4>
+                        {tvpPrescriptionPreview.therapyId === 'varfarina' && (
+                          <button
+                            type="button"
+                            onClick={() => setVarfarinaDietInfoOpen(true)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-white/60 bg-white/20 hover:bg-white/30 transition-colors"
+                            title="Ver orientações alimentares na varfarina"
+                          >
+                            <Info className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                       <button
                         type="button"
-                        onClick={() => setTVPPrescriptionPreview(null)}
+                        onClick={() => {
+                          setTVPPrescriptionPreview(null)
+                          setVarfarinaDietInfoOpen(false)
+                        }}
                         className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
                         title="Fechar"
                       >
@@ -2673,12 +2892,63 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <div className="mt-4 flex justify-end">
                         <button
                           type="button"
-                          onClick={() => setTVPPrescriptionPreview(null)}
+                          onClick={() => {
+                            setTVPPrescriptionPreview(null)
+                            setVarfarinaDietInfoOpen(false)
+                          }}
                           className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
                         >
                           Fechar
                         </button>
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tvpPrescriptionPreview?.therapyId === 'varfarina' && varfarinaDietInfoOpen && (
+                <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-4xl rounded-2xl border border-emerald-200 bg-white shadow-2xl overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white">
+                      <h4 className="font-bold">Varfarina e alimentação: orientações essenciais</h4>
+                      <button
+                        type="button"
+                        onClick={() => setVarfarinaDietInfoOpen(false)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="p-5 grid gap-3">
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                        <h5 className="text-sm font-extrabold text-red-900 mb-2">
+                          Interações medicamentosas da varfarina (alto impacto clínico)
+                        </h5>
+                        <p className="text-xs text-red-800">
+                          Esta é uma área crítica: mesmo com INR aparentemente controlado, algumas combinações aumentam sangramento.
+                        </p>
+                      </div>
+                      {varfarinaDrugInteractionSections.map((section) => (
+                        <div key={section.id} className="rounded-xl border border-red-200 bg-red-50 p-4">
+                          <h5 className="text-sm font-bold text-red-900 mb-2">{section.title}</h5>
+                          <ul className="list-disc pl-5 space-y-1 text-sm text-red-900">
+                            {section.bullets.map((bullet) => (
+                              <li key={bullet}>{bullet}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                      {varfarinaDietGuidanceSections.map((section) => (
+                        <div key={section.id} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                          <h5 className="text-sm font-bold text-emerald-900 mb-2">{section.title}</h5>
+                          <ul className="list-disc pl-5 space-y-1 text-sm text-emerald-900">
+                            {section.bullets.map((bullet) => (
+                              <li key={bullet}>{bullet}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

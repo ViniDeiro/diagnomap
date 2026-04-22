@@ -2531,7 +2531,15 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             {(() => {
               const hb = labsB?.hb
               const ht = labsB?.ht
+              const plt = labsB?.plt
+              const alb = labsB?.alb
               const ratio = hb != null && ht != null ? ht / hb : undefined
+              const shouldUpgrade = (
+                (plt !== undefined && plt < 100000) ||
+                (ht !== undefined && ht >= 45) ||
+                (hb !== undefined && hb >= 16) ||
+                (alb !== undefined && alb < 3.5)
+              )
 
               let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
               let highlightClass = 'text-slate-700'
@@ -2540,6 +2548,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                 const ratioStr = `${ratio.toFixed(2)}x`
                 if (ratio >= 3.6) {
                   previewText = `Classificado para o Grupo C — hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                  highlightClass = 'text-amber-800'
+                } else if (shouldUpgrade) {
+                  previewText = `Classificado para o Grupo C — alteração laboratorial relevante (Razão Ht/Hb ${ratioStr})`
                   highlightClass = 'text-amber-800'
                 } else {
                   previewText = `Classificado para o Grupo B — sem hemoconcentração (Razão Ht/Hb ${ratioStr})`
@@ -2577,14 +2588,22 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         (() => {
           const hb = labsB?.hb
           const ht = labsB?.ht
+          const plt = labsB?.plt
+          const alb = labsB?.alb
           const ratio = hb != null && ht != null ? ht / hb : undefined
+          const shouldUpgrade = (
+            (plt !== undefined && plt < 100000) ||
+            (ht !== undefined && ht >= 45) ||
+            (hb !== undefined && hb >= 16) ||
+            (alb !== undefined && alb < 3.5)
+          )
 
           // Texto e próximo passo dinâmicos com base no Ht/Hb (ou apenas Ht se Hb ausente)
           let text = 'Classificar automaticamente (Ht/Hb)'
           let nextStep: 'group_c' | 'end_group_b' | 'auto_classify_labs_b' = 'auto_classify_labs_b'
 
           if (ratio !== undefined) {
-            if (ratio >= 3.6) {
+            if (ratio >= 3.6 || shouldUpgrade) {
               text = 'Classificado para o Grupo C'
               nextStep = 'group_c'
             } else {
@@ -3114,20 +3133,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         { 
           text: 'A cada 15 min (8 reavaliações)', 
           nextStep: 'reevaluation_d', 
-          value: '15min',
-          action: () => localStorage.setItem(`d_interval_choice_${patient.id}`, '15min')
+          value: '15min'
         },
         { 
           text: 'A cada 20 min (6 reavaliações)', 
           nextStep: 'reevaluation_d', 
-          value: '20min',
-          action: () => localStorage.setItem(`d_interval_choice_${patient.id}`, '20min')
+          value: '20min'
         },
         { 
           text: 'A cada 30 min (4 reavaliações)', 
           nextStep: 'reevaluation_d', 
-          value: '30min',
-          action: () => localStorage.setItem(`d_interval_choice_${patient.id}`, '30min')
+          value: '30min'
         }
       ]
     },
@@ -4174,7 +4190,37 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Ir para critérios de alta', nextStep: 'end_group_c', value: 'finalize' }
+        { text: 'Finalizar período de internação mínima (48h)', nextStep: 'minimum_hospitalization_c', value: 'finalize_48h' }
+      ]
+    },
+
+    minimum_hospitalization_c: {
+      id: 'minimum_hospitalization_c',
+      title: 'Internação Mínima — 48 horas (Grupo C)',
+      description: 'Conclusão do período mínimo de observação hospitalar',
+      type: 'action',
+      icon: <Clock className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-4">
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Período mínimo concluído:</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Internação mínima de 48 horas finalizada</li>
+              <li>• Monitorização clínica contínua realizada</li>
+              <li>• Monitorização de diurese realizada</li>
+              <li>• Paciente apto para avaliação formal de alta</li>
+            </ul>
+          </div>
+          <div className="p-3 bg-white border border-yellow-200 rounded-lg">
+            <p className="text-sm text-slate-700">
+              Próximo passo: aplicar critérios de alta e definir antitérmico de prescrição.
+            </p>
+          </div>
+        </div>
+      ),
+      options: [
+        { text: 'Ir para critérios de alta e antitérmico', nextStep: 'end_group_c', value: 'to_discharge_criteria' }
       ]
     },
 
