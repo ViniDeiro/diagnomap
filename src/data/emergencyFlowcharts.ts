@@ -3092,15 +3092,16 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     encaminhamento_urgente: {
       id: 'encaminhamento_urgente',
-      title: 'Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular',
-      description: 'Encaminhar para avaliação especializada após decisão clínica.',
+      title: 'Encaminhamento para avaliação da Cirurgia Vascular',
+      description: 'Encaminhar para avaliação especializada conforme cenário clínico.',
       type: 'result',
       critical: true,
       content: `
         <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
           <h4 class="font-bold text-red-800">Avaliação vascular prioritária</h4>
           <ul class="list-disc pl-5 text-red-700 text-sm mt-1">
-            <li>Encaminhar após início da anticoagulação quando houver necessidade de avaliação cirúrgica especializada.</li>
+            <li>Encaminhar para avaliação cirúrgica especializada com prioridade.</li>
+            <li>Se anticoagulação já tiver sido iniciada, manter conduta até definição da equipe vascular.</li>
             <li>Em cenário de risco hemorrágico elevado, individualizar conduta e discutir estratégia com equipe de referência.</li>
             <li>Sinais de gravidade (flegmasia, dor intensa progressiva, suspeita de TEP associada) exigem prioridade máxima.</li>
           </ul>

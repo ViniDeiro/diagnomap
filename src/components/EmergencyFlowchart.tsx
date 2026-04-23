@@ -2265,8 +2265,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   </div>
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                     {[
-                      { side: 'left' as TVPLegSide, label: 'Perna Esquerda' },
                       { side: 'right' as TVPLegSide, label: 'Perna Direita' },
+                      { side: 'left' as TVPLegSide, label: 'Perna Esquerda' },
                       { side: 'other' as TVPLegSide, label: 'Outras localizações' }
                     ].map((item) => {
                       const selected = selectedTVPLeg === item.side
@@ -2335,7 +2335,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       'text-sm font-medium',
                       selectedTVPLeg ? 'text-emerald-700' : 'text-amber-700'
                     )}>
-                      {selectedTVPLeg ? `Selecionado: ${selectedTVPLeg === 'left' ? 'Perna Esquerda' : 'Perna Direita'}` : 'Selecione uma perna para avançar'}
+                      {selectedTVPLeg
+                        ? `Selecionado: ${
+                            selectedTVPLeg === 'left'
+                              ? 'Perna Esquerda'
+                              : selectedTVPLeg === 'right'
+                                ? 'Perna Direita'
+                                : 'Outras localizações'
+                          }`
+                        : 'Selecione uma perna para avançar'}
                     </span>
                     <motion.button
                       type="button"
@@ -2709,7 +2717,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       setTVPNoacInfoOpen(null)
                     }}
                   />
-                  <div className="relative w-full max-w-4xl rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-2xl">
+                  <div className="relative w-full max-w-4xl max-h-[90vh] rounded-2xl border border-amber-200 bg-amber-50 shadow-2xl overflow-hidden flex flex-col">
                     <button
                       type="button"
                       onClick={() => {
@@ -2721,55 +2729,59 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <h4 className="text-base sm:text-lg font-extrabold text-slate-900 mb-1">
-                      Considerações Essenciais da Anticoagulação
-                    </h4>
-                    <p className="text-sm text-slate-700 mb-4">
-                      Resumo prático para orientar escolha terapêutica, duração e perfil dos anticoagulantes na TVP.
-                    </p>
-                    <div className="grid gap-3">
-                      {tvpAnticoagulationConsiderations.map((section) => (
-                        <div key={section.id} className="rounded-xl border border-amber-200 bg-amber-100/70 p-4">
-                          <h5 className="text-sm font-bold text-amber-950 mb-2">{section.title}</h5>
-                          <div className="space-y-2">
-                            {section.paragraphs.map((paragraph) => (
-                              <p key={paragraph} className="text-sm text-amber-950 leading-relaxed">
-                                {paragraph}
-                              </p>
-                            ))}
-                          </div>
-                          {section.id === 'consideracoes_noac_tvp' && (
-                            <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
-                              <h6 className="text-sm font-extrabold text-red-900 mb-1">
-                                NOACs não são para todos
-                              </h6>
-                              <p className="text-xs text-red-800 mb-3">
-                                Em cenários de trombofilia de alto risco, evitar NOAC e considerar varfarina.
-                              </p>
-                              <div className="space-y-2">
-                                {tvpNoacHighRiskNotes.map((item) => (
-                                  <div key={item.id} className="flex items-start gap-2 rounded-lg border border-red-100 bg-white p-2.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => setTVPNoacInfoOpen(item.id)}
-                                      className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border border-red-300 text-red-700 hover:bg-red-100 transition-colors"
-                                      title="Ver explicação"
-                                    >
-                                      <Info className="w-3.5 h-3.5" />
-                                    </button>
-                                    <div>
-                                      <p className="text-sm font-semibold text-red-900 leading-snug">{item.title}</p>
-                                      <p className="text-xs text-red-800 mt-0.5">{item.summary}</p>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                    <div className="p-6 pb-4">
+                      <h4 className="text-base sm:text-lg font-extrabold text-slate-900 mb-1">
+                        Considerações Essenciais da Anticoagulação
+                      </h4>
+                      <p className="text-sm text-slate-700">
+                        Resumo prático para orientar escolha terapêutica, duração e perfil dos anticoagulantes na TVP.
+                      </p>
                     </div>
-                    <div className="mt-5 flex justify-end">
+                    <div className="px-6 overflow-y-auto pb-4">
+                      <div className="grid gap-3">
+                        {tvpAnticoagulationConsiderations.map((section) => (
+                          <div key={section.id} className="rounded-xl border border-amber-200 bg-amber-100/70 p-4">
+                            <h5 className="text-sm font-bold text-amber-950 mb-2">{section.title}</h5>
+                            <div className="space-y-2">
+                              {section.paragraphs.map((paragraph) => (
+                                <p key={paragraph} className="text-sm text-amber-950 leading-relaxed">
+                                  {paragraph}
+                                </p>
+                              ))}
+                            </div>
+                            {section.id === 'consideracoes_noac_tvp' && (
+                              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3">
+                                <h6 className="text-sm font-extrabold text-red-900 mb-1">
+                                  NOACs não são para todos
+                                </h6>
+                                <p className="text-xs text-red-800 mb-3">
+                                  Em cenários de trombofilia de alto risco, evitar NOAC e considerar varfarina.
+                                </p>
+                                <div className="space-y-2">
+                                  {tvpNoacHighRiskNotes.map((item) => (
+                                    <div key={item.id} className="flex items-start gap-2 rounded-lg border border-red-100 bg-white p-2.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => setTVPNoacInfoOpen(item.id)}
+                                        className="mt-0.5 inline-flex items-center justify-center w-6 h-6 rounded-full border border-red-300 text-red-700 hover:bg-red-100 transition-colors"
+                                        title="Ver explicação"
+                                      >
+                                        <Info className="w-3.5 h-3.5" />
+                                      </button>
+                                      <div>
+                                        <p className="text-sm font-semibold text-red-900 leading-snug">{item.title}</p>
+                                        <p className="text-xs text-red-800 mt-0.5">{item.summary}</p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-6 pt-4 border-t border-amber-200/80 bg-amber-50/95 flex justify-end">
                       <button
                         type="button"
                         onClick={() => {
