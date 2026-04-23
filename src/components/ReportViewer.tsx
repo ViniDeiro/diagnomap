@@ -263,9 +263,15 @@ ${formatDate(new Date())}`
       return `${index + 1}. ${stepTitle}${decision ? ` — ${decision}` : ''}`
     })
 
+    const protocolLabels: Record<string, string> = {
+      tvp: 'trombose venosa profunda (TVP)',
+      dengue: 'dengue'
+    }
+    const protocolLabel = protocolLabels[flowId] || (flowchart?.name ? `${flowchart.name}` : flowId.toUpperCase())
+
     const symptomsText = patient.admission.symptoms.length > 0
       ? patient.admission.symptoms.join(', ')
-      : 'não informados'
+      : ''
 
     const vs = patient.admission.vitalSigns || {}
     const vitalSummary = [
@@ -301,13 +307,9 @@ ${formatDate(new Date())}`
 
     const groupInfo = getGroupInfo(patient.flowchartState.group)
     const wellsData = safeParse(answers.wells_score)
-    const classificationSummary = [
-      groupInfo ? groupInfo.name : null,
-      groupInfo ? groupInfo.description : null,
-      wellsData?.score != null
-        ? `Escore de Wells: ${wellsData.score}${wellsData?.classificacao ? ` (${String(wellsData.classificacao).toLowerCase()})` : ''}`
-        : null
-    ].filter(Boolean).join(' | ') || 'Classificação não registrada no momento.'
+    const wellsProbability = wellsData?.classificacao
+      ? String(wellsData.classificacao).toLowerCase()
+      : ''
 
     const prescriptions = patient.treatment.prescriptions.map((item) => {
       const parts = [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean)
@@ -320,31 +322,66 @@ ${formatDate(new Date())}`
       .map((id) => tvpPrescriptionMap[id] || id)
     const allMeds = Array.from(new Set([...prescriptions, ...dynamicMedsFromAnswers]))
 
-    const observations = [
+    const observationsList = [
       patient.generalObservations?.trim() || '',
       ...(patient.treatment.observations || []).map((item) => item?.trim()).filter(Boolean)
     ].filter(Boolean)
 
-    const followUp = patient.treatment.nextEvaluation
-      ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.`
-      : 'Sem data de reavaliação registrada.'
-
     const chronologyText = timeline.length > 0
-      ? `Passagem no fluxograma: ${timeline.join(' | ')}`
-      : 'Passagem no fluxograma não registrada.'
+      ? `As etapas registradas no sistema durante a condução do caso foram: ${timeline.join('; ')}.`
+      : ''
+
+    const identificationText = `Paciente do sexo ${patient.gender}, ${patient.age} anos, prontuário nº ${patient.medicalRecord || 'não informado'}, atendido em ${formatDate(patient.admission.date)}, em avaliação conforme protocolo institucional para investigação de ${protocolLabel}.`
+
+    const complaintsText = symptomsText
+      ? `No momento do atendimento, há registro estruturado de sintomas iniciais (${symptomsText}), conforme dados inseridos no sistema.`
+      : 'No momento do atendimento, não há registro estruturado da queixa principal, tampouco descrição detalhada da história da doença atual ou de fatores de risco associados.'
+
+    const examText = vitalSummary
+      ? `Ao exame inicial, foram registrados os seguintes dados clínicos e sinais vitais: ${vitalSummary}.`
+      : 'Não foram registrados, no sistema, dados de exame físico ou sinais vitais no momento da avaliação.'
+
+    const labsText = labFindings.length > 0
+      ? `Foram documentados os seguintes resultados de exames complementares: ${labFindings.join('; ')}.`
+      : 'Da mesma forma, não há resultados de exames laboratoriais ou de imagem disponíveis até o presente momento.'
+
+    const classificationText = flowId === 'tvp' && wellsData?.score != null
+      ? `Foi aplicado o escore de Wells para TVP, com pontuação total de ${wellsData.score} ponto${wellsData.score === 1 ? '' : 's'}, classificando o paciente como de probabilidade clínica ${wellsProbability || 'indeterminada'} para trombose venosa profunda.`
+      : groupInfo
+        ? `A estratificação clínica pelo protocolo institucional classificou o paciente como ${groupInfo.name.toLowerCase()}, compatível com ${groupInfo.description.toLowerCase()}.`
+        : 'Até o momento, não há classificação clínica final estruturada no sistema.'
+
+    const prescriptionsText = allMeds.length > 0
+      ? `Foram registradas prescrições médicas no sistema: ${allMeds.join('; ')}.`
+      : 'Até o momento, não há prescrições médicas formalmente registradas.'
+
+    const conductText = `A conduta seguiu o protocolo clínico institucional, com registro da evolução conforme as etapas preconizadas pelo sistema. ${prescriptionsText}`
+
+    const followUpText = patient.treatment.nextEvaluation
+      ? `Paciente orientado quanto à necessidade de acompanhamento clínico e reavaliação, com retorno programado para ${formatDateOnly(patient.treatment.nextEvaluation)}. Foram fornecidas orientações para procura imediata de atendimento em caso de sinais de alarme.`
+      : `Paciente orientado quanto à necessidade de acompanhamento clínico e reavaliação conforme evolução do quadro, embora não haja data de retorno agendada no sistema. Foram fornecidas orientações para procura imediata de atendimento em caso de sinais de alarme${flowId === 'tvp' ? ', como piora da dor, aumento de edema em membro, dispneia ou dor torácica' : ''}.`
+
+    const conclusionText = flowId === 'tvp' && wellsData?.score != null
+      ? `Conclui-se que o paciente encontra-se em investigação para TVP, com probabilidade clínica ${wellsProbability || 'indeterminada'} segundo escore de Wells, aguardando complementação de dados clínicos e realização de exames para definição diagnóstica e conduta terapêutica.`
+      : `Conclui-se que o paciente encontra-se em investigação conforme protocolo institucional de ${protocolLabel}, aguardando complementação de dados clínicos e evolução para definição diagnóstica e terapêutica.`
+
+    const mergedObservations = [
+      chronologyText,
+      observationsList.length > 0 ? `Observações adicionais registradas: ${observationsList.join('; ')}.` : ''
+    ].filter(Boolean).join(' ')
 
     return {
-      introduction: `Identificação: ${patient.name}, ${patient.age} anos, sexo ${patient.gender}, prontuário ${patient.medicalRecord || 'não informado'}. Atendimento em ${formatDate(patient.admission.date)} (hora informada: ${patient.admission.time || 'não informada'}). Protocolo selecionado: ${(patient.selectedFlowchart || 'dengue').toUpperCase()}.`,
-      complaints: `Queixa e história inicial: sintomas relatados na admissão: ${symptomsText}.`,
-      physicalExam: `Exame inicial / sinais vitais: ${vitalSummary || 'não registrados de forma estruturada.'}`,
-      laboratoryResults: `Exames laboratoriais: ${labFindings.length > 0 ? labFindings.join(' | ') : 'sem resultados laboratoriais estruturados.'}`,
-      classification: `Classificação clínica: ${classificationSummary}`,
-      treatment: `Conduta e evolução: progresso do caso conforme protocolo, com registro de decisões em cada etapa.`,
-      prescriptions: `Prescrições registradas: ${allMeds.length > 0 ? allMeds.join(' | ') : 'nenhuma prescrição estruturada.'}`,
-      shockManagement: chronologyText,
-      observations: `Observações adicionais: ${observations.length > 0 ? observations.join(' | ') : 'não registradas.'}`,
-      followUp: `Plano de seguimento: ${followUp} Orientado retorno imediato se sinais de alarme.`,
-      conclusion: 'Conclusão: relatório padronizado com texto fixo e preenchimento automático dos campos variáveis do paciente.'
+      introduction: identificationText,
+      complaints: complaintsText,
+      physicalExam: examText,
+      laboratoryResults: labsText,
+      classification: classificationText,
+      treatment: conductText,
+      prescriptions: '',
+      shockManagement: '',
+      observations: mergedObservations,
+      followUp: followUpText,
+      conclusion: conclusionText
     }
   }
 
