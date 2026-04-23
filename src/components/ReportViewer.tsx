@@ -190,541 +190,161 @@ ${formatDate(new Date())}`
   }
 
   const generateNarrativeReport = () => {
-    if (patient.selectedFlowchart && patient.selectedFlowchart !== 'dengue') {
-      const flowchart = getFlowchartById(patient.selectedFlowchart)
-      const currentStep = patient.flowchartState?.currentStep
-      const history = patient.flowchartState?.history || []
-      const stepSequence = Array.from(new Set([...history, currentStep].filter(Boolean))) as string[]
-      const answers = patient.flowchartState?.answers || {}
-      const safeParse = (value?: string) => {
-        if (!value) return null
-        try {
-          return JSON.parse(value)
-        } catch {
-          return null
-        }
-      }
-      const tvpPrescriptionMap: Record<string, string> = {
-        rivaroxabana: 'Rivaroxabana',
-        apixabana: 'Apixabana',
-        dabigatrana: 'Dabigatrana',
-        edoxabana: 'Edoxabana',
-        enoxaparina: 'Enoxaparina',
-        hnf: 'Heparina não fracionada',
-        varfarina: 'Varfarina'
-        }
-      const timeline = stepSequence.map((stepId) => {
-        const step = flowchart?.steps?.[stepId]
-        const rawAnswer = answers[stepId]
-        const parsed = safeParse(rawAnswer)
-        let decision = ''
-        if (parsed?.score != null) {
-          decision = `Escore ${parsed.score} (${(parsed.classificacao || '').toUpperCase()})`
-        } else if (Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) && parsed.opcoesTerapeuticasSelecionadas.length > 0) {
-          const meds = parsed.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
-          decision = `Prescrições selecionadas: ${meds.join(', ')}`
-        } else if (Array.isArray(parsed?.sinaisEAchados)) {
-          decision = `${parsed.sinaisEAchados.length} sinais/achados marcados`
-        } else if (typeof parsed?.decision === 'string') {
-          decision = `Decisão: ${parsed.decision}`
-        } else if (step?.options && rawAnswer) {
-          const selectedOption = step.options.find(opt => opt.value === rawAnswer || opt.nextStep === rawAnswer || opt.text === rawAnswer)
-          decision = selectedOption ? selectedOption.text : rawAnswer
-        }
-        return `${step?.title || stepId}${decision ? ` — ${decision}` : ''}`
-      })
-      const dynamicMedsFromAnswers = Object.values(answers)
-        .map(value => safeParse(value))
-        .filter(entry => Array.isArray(entry?.opcoesTerapeuticasSelecionadas))
-        .flatMap(entry => entry.opcoesTerapeuticasSelecionadas as string[])
-        .map(id => tvpPrescriptionMap[id] || id)
-      const prescribedMeds = Array.from(new Set([
-        ...patient.treatment.prescriptions.map(p => p.medication),
-        ...dynamicMedsFromAnswers
-      ]))
-      const examEvents = timeline.filter(line =>
-        line.toLowerCase().includes('d-dímero') ||
-        line.toLowerCase().includes('doppler') ||
-        line.toLowerCase().includes('us')
-      )
-      const possibleDiagnosis = flowchart?.name || patient.selectedFlowchart.toUpperCase()
-      const vital = patient.admission?.vitalSigns || {}
-      const vitalSummary = [
-        vital.temperature != null ? `temperatura ${vital.temperature}°C` : null,
-        vital.heartRate != null ? `frequência cardíaca ${vital.heartRate} bpm` : null,
-        vital.respiratoryRate != null ? `frequência respiratória ${vital.respiratoryRate} irpm` : null,
-        vital.bloodPressure ? `pressão arterial ${vital.bloodPressure}` : null,
-        vital.oxygenSaturation != null ? `SpO₂ ${vital.oxygenSaturation}%` : null
-      ].filter(Boolean).join(', ')
-      const chronologyText = timeline.length > 0
-        ? `Na sequência da investigação, foram registradas as seguintes etapas: ${timeline.join('; ')}.`
-        : ''
-      const selectedLegData = safeParse(answers.start)
-      const selectedLegLabel = (() => {
-        if (typeof selectedLegData?.selectedLegLabel === 'string' && selectedLegData.selectedLegLabel) {
-          return selectedLegData.selectedLegLabel.toLowerCase()
-        }
-        if (selectedLegData?.selectedLeg === 'left') return 'perna esquerda'
-        if (selectedLegData?.selectedLeg === 'right') return 'perna direita'
-        return ''
-      })()
-      const wellsData = safeParse(answers.wells_score)
-      const contraData = safeParse(answers.checar_contra_anticoagulacao)
-      const treatmentData = safeParse(answers.tratamento_inicial)
-      const weightText = typeof patient.weight === 'number' ? `${patient.weight} kg` : 'peso não informado'
-      const symptomsText = patient.admission.symptoms.length > 0
-        ? patient.admission.symptoms.join(', ')
-        : 'sem sintomas estruturados registrados'
-      const contraindicationNarrative = contraData?.possuiContraindicacaoAbsoluta
-        ? 'Durante a avaliação de segurança, foram identificadas contraindicações absolutas à anticoagulação.'
-        : contraData?.possuiContraindicacaoRelativa
-          ? 'Durante a avaliação de segurança, foram identificadas contraindicações relativas, com necessidade de análise de risco-benefício antes da decisão terapêutica.'
-          : 'Durante a avaliação de segurança, não foram identificadas contraindicações relevantes para anticoagulação.'
-      const selectedTherapies = Array.isArray(treatmentData?.opcoesTerapeuticasSelecionadas)
-        ? treatmentData.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
-        : []
-      const therapiesNarrative = selectedTherapies.length > 0
-        ? `Foram selecionadas as seguintes estratégias terapêuticas: ${selectedTherapies.join(', ')}.`
-        : ''
-      return {
-        introduction: patient.selectedFlowchart === 'tvp'
-          ? `Paciente ${patient.name}, ${patient.age} anos, sexo ${patient.gender}, com ${weightText}, deu entrada em ${formatDate(patient.admission.date)} com suspeita clínica de trombose venosa profunda${selectedLegLabel ? ` em ${selectedLegLabel}` : ''}.`
-          : `Paciente ${patient.name}, ${patient.age} anos, sexo ${patient.gender}, com ${weightText}, atendido em ${formatDate(patient.admission.date)} para investigação no protocolo ${possibleDiagnosis}.`,
-        complaints: `Na admissão, apresentava ${symptomsText}.`,
-        physicalExam: vitalSummary
-          ? `Ao exame inicial, observou-se ${vitalSummary}.`
-          : 'Sinais vitais não registrados de forma estruturada.',
-        laboratoryResults: examEvents.length > 0
-          ? `No eixo diagnóstico, os principais exames e decisões registrados foram: ${examEvents.join('; ')}.`
-          : 'Exames complementares não registrados no fluxo.',
-        classification: patient.selectedFlowchart === 'tvp' && wellsData?.score != null
-          ? `A estratificação clínica pelo escore de Wells resultou em ${wellsData.score} ponto(s), com classificação ${String(wellsData.classificacao || '').toLowerCase()}.`
-          : `Diagnóstico sindrômico e protocolo conduzidos como ${possibleDiagnosis}.`,
-        treatment: patient.selectedFlowchart === 'tvp'
-          ? `${contraindicationNarrative} ${therapiesNarrative} ${chronologyText}`.trim()
-          : chronologyText || 'Tratamento definido conforme decisões registradas no fluxograma clínico.',
-        prescriptions: prescribedMeds.length > 0
-          ? `Ao final, foram prescritos: ${prescribedMeds.join(', ')}.`
-          : 'Nenhum medicamento estruturado foi registrado.',
-        shockManagement: '',
-        observations: patient.generalObservations ? `Observações do atendimento: ${patient.generalObservations}.` : '',
-        followUp: 'Foi orientado seguimento clínico, com vigilância de sinais de alarme e retorno imediato ao serviço em caso de piora.',
-        conclusion: patient.selectedFlowchart === 'tvp'
-          ? 'Em síntese, o caso foi conduzido de forma protocolar, com progressão lógica entre suspeita clínica, confirmação diagnóstica, avaliação de segurança para anticoagulação e definição terapêutica.'
-          : 'Relatório cronológico concluído com base nas interações e decisões médicas registradas durante o atendimento.'
+    const safeParse = (value?: string) => {
+      if (!value) return null
+      try {
+        return JSON.parse(value)
+      } catch {
+        return null
       }
     }
+
+    const formatStepId = (stepId: string) =>
+      stepId
+        .replace(/_/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/^./, (char) => char.toUpperCase())
+
+    const flowId = patient.selectedFlowchart || 'dengue'
+    const flowchart = getFlowchartById(flowId)
+    const answers = patient.flowchartState?.answers || {}
+    const currentStep = patient.flowchartState?.currentStep
+    const history = patient.flowchartState?.history || []
+    const stepSequence = Array.from(new Set([...history, currentStep].filter(Boolean))) as string[]
+
+    const tvpPrescriptionMap: Record<string, string> = {
+      rivaroxabana: 'Rivaroxabana',
+      apixabana: 'Apixabana',
+      dabigatrana: 'Dabigatrana',
+      edoxabana: 'Edoxabana',
+      enoxaparina: 'Enoxaparina',
+      hnf: 'Heparina não fracionada',
+      varfarina: 'Varfarina'
+    }
+
+    const buildDecisionText = (stepId: string, rawAnswer?: string) => {
+      if (!rawAnswer) return ''
+      const parsed = safeParse(rawAnswer)
+      const step = flowchart?.steps?.[stepId]
+
+      if (parsed?.score != null) {
+        const classificacao = parsed?.classificacao ? ` (${String(parsed.classificacao).toUpperCase()})` : ''
+        return `Escore ${parsed.score}${classificacao}`
+      }
+
+      if (Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) && parsed.opcoesTerapeuticasSelecionadas.length > 0) {
+        const meds = parsed.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
+        return `Opções terapêuticas: ${meds.join(', ')}`
+      }
+
+      if (Array.isArray(parsed?.sinaisEAchados) && parsed.sinaisEAchados.length > 0) {
+        return `Sinais/achados selecionados: ${parsed.sinaisEAchados.length}`
+      }
+
+      if (typeof parsed?.decision === 'string' && parsed.decision.trim()) {
+        return `Decisão: ${parsed.decision.trim()}`
+      }
+
+      if (step?.options?.length) {
+        const selectedOption = step.options.find(
+          (option) => option.value === rawAnswer || option.nextStep === rawAnswer || option.text === rawAnswer
+        )
+        if (selectedOption) return selectedOption.text
+      }
+
+      if (typeof parsed === 'object' && parsed) return 'Registro estruturado preenchido'
+      return rawAnswer
+    }
+
+    const timeline = stepSequence.map((stepId, index) => {
+      const stepTitle = flowchart?.steps?.[stepId]?.title || formatStepId(stepId)
+      const decision = buildDecisionText(stepId, answers[stepId])
+      return `${index + 1}. ${stepTitle}${decision ? ` — ${decision}` : ''}`
+    })
+
+    const symptomsText = patient.admission.symptoms.length > 0
+      ? patient.admission.symptoms.join(', ')
+      : 'não informados'
+
+    const vs = patient.admission.vitalSigns || {}
+    const vitalSummary = [
+      vs.temperature != null ? `Temperatura ${vs.temperature} °C` : null,
+      vs.heartRate != null ? `FC ${vs.heartRate} bpm` : null,
+      vs.respiratoryRate != null ? `FR ${vs.respiratoryRate} irpm` : null,
+      vs.bloodPressure ? `PA ${vs.bloodPressure} mmHg` : null,
+      vs.oxygenSaturation != null ? `SpO₂ ${vs.oxygenSaturation}%` : null,
+      vs.glucose != null ? `Glicemia ${vs.glucose} mg/dL` : null
+    ].filter(Boolean).join(' | ')
+
+    const labs = patient.labResults
+    const labFindings: string[] = []
+    if (labs?.status === 'pending') {
+      labFindings.push('Exames laboratoriais solicitados, ainda pendentes.')
+    }
+    if (labs?.hemoglobin != null) {
+      const hbRange = getHbRange()
+      labFindings.push(`Hemoglobina ${labs.hemoglobin} g/dL (ref. ${hbRange.min.toFixed(1)}-${hbRange.max.toFixed(1)})`)
+    }
+    if (labs?.hematocrit != null) {
+      if (labs.hemoglobin != null && labs.hemoglobin > 0) {
+        const ratio = (labs.hematocrit / labs.hemoglobin).toFixed(2)
+        labFindings.push(`Hematócrito ${labs.hematocrit}% (Ht/Hb ${ratio}x)`)
+      } else {
+        labFindings.push(`Hematócrito ${labs.hematocrit}%`)
+      }
+    }
+    if (labs?.platelets != null) labFindings.push(`Plaquetas ${labs.platelets.toLocaleString('pt-BR')}/mm³`)
+    if (labs?.albumin != null) labFindings.push(`Albumina ${labs.albumin} g/dL`)
+    if (labs?.transaminases?.alt != null) labFindings.push(`ALT ${labs.transaminases.alt} U/L`)
+    if (labs?.transaminases?.ast != null) labFindings.push(`AST ${labs.transaminases.ast} U/L`)
 
     const groupInfo = getGroupInfo(patient.flowchartState.group)
-    const admissionDate = formatDateOnly(patient.admission.date)
-    const admissionTime = patient.admission.time
-    
-    // Usar o sexo definido no cadastro do paciente
-    const isFemale = patient.gender === 'feminino'
-    const gender = patient.gender
-    
-    // Construir lista de sintomas de forma mais fluida
-    const symptoms = patient.admission.symptoms
-    let symptomsText = ''
-    if (symptoms.length > 0) {
-      const symptomsList = symptoms.map(s => s.toLowerCase())
-      if (symptomsList.includes('febre')) {
-        symptomsText = 'quadro febril'
-        if (symptomsList.length > 1) {
-          const otherSymptoms = symptomsList.filter(s => s !== 'febre')
-          if (otherSymptoms.length === 1) {
-            symptomsText += ` associado a ${otherSymptoms[0]}`
-          } else {
-            symptomsText += ` acompanhado de ${otherSymptoms.slice(0, -1).join(', ')} e ${otherSymptoms[otherSymptoms.length - 1]}`
-          }
-        }
-      } else {
-        if (symptomsList.length === 1) {
-          symptomsText = `manifestações clínicas caracterizadas por ${symptomsList[0]}`
-        } else if (symptomsList.length === 2) {
-          symptomsText = `sintomatologia constituída por ${symptomsList[0]} e ${symptomsList[1]}`
-        } else {
-          symptomsText = `sintomatologia polimórfica incluindo ${symptomsList.slice(0, -1).join(', ')} e ${symptomsList[symptomsList.length - 1]}`
-        }
-      }
-    }
+    const wellsData = safeParse(answers.wells_score)
+    const classificationSummary = [
+      groupInfo ? groupInfo.name : null,
+      groupInfo ? groupInfo.description : null,
+      wellsData?.score != null
+        ? `Escore de Wells: ${wellsData.score}${wellsData?.classificacao ? ` (${String(wellsData.classificacao).toLowerCase()})` : ''}`
+        : null
+    ].filter(Boolean).join(' | ') || 'Classificação não registrada no momento.'
 
-    // Construir informações sobre febre de forma mais técnica
-    let feverInfo = ''
-    if (patient.admission.vitalSigns?.temperature != null) {
-      const temp = patient.admission.vitalSigns.temperature as number
-      const days = patient.admission.vitalSigns.feverDays
+    const prescriptions = patient.treatment.prescriptions.map((item) => {
+      const parts = [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean)
+      return parts.join(' - ')
+    })
+    const dynamicMedsFromAnswers = Object.values(answers)
+      .map((value) => safeParse(value))
+      .filter((entry) => Array.isArray(entry?.opcoesTerapeuticasSelecionadas))
+      .flatMap((entry) => entry.opcoesTerapeuticasSelecionadas as string[])
+      .map((id) => tvpPrescriptionMap[id] || id)
+    const allMeds = Array.from(new Set([...prescriptions, ...dynamicMedsFromAnswers]))
 
-      // Parametrização institucional para temperatura
-      if (temp < 28) {
-        feverInfo = `hipotermia grave (${temp}°C)`
-      } else if (temp <= 31.9) {
-        feverInfo = `hipotermia moderada (${temp}°C)`
-      } else if (temp <= 35.9) {
-        feverInfo = `hipotermia leve (${temp}°C)`
-      } else if (temp >= 36.0 && temp <= 37.2) {
-        feverInfo = `temperatura dentro da normalidade (${temp}°C)`
-      } else if (temp <= 37.7) {
-        feverInfo = `estado subfebril (${temp}°C)`
-      } else if (temp <= 39.9) {
-        feverInfo = `febre (${temp}°C)`
-      } else if (temp > 40) {
-        feverInfo = `hipertermia (${temp}°C)`
-      } else {
-        // valor limítrofe (≈ 40°C)
-        feverInfo = `febre alta (${temp}°C)`
-      }
+    const observations = [
+      patient.generalObservations?.trim() || '',
+      ...(patient.treatment.observations || []).map((item) => item?.trim()).filter(Boolean)
+    ].filter(Boolean)
 
-      if (days) {
-        if (days === 1) {
-          feverInfo += ' com início há 24 horas'
-        } else if (days <= 3) {
-          feverInfo += ` com evolução de ${days} dias, caracterizando fase febril aguda`
-        } else if (days <= 7) {
-          feverInfo += ` persistente há ${days} dias, compatível com síndrome febril prolongada`
-        } else {
-          feverInfo += ` com duração prolongada de ${days} dias`
-        }
-      }
-    }
+    const followUp = patient.treatment.nextEvaluation
+      ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.`
+      : 'Sem data de reavaliação registrada.'
 
-    // Construir informações sobre sinais vitais de forma mais técnica
-    let vitalSignsInfo = ''
-    const vs = patient.admission.vitalSigns
-    if (vs) {
-      const vitals = []
-      
-      if (vs.bloodPressure) {
-        const [systolic, diastolic] = vs.bloodPressure.split('/').map(p => parseInt(p.trim()))
-        if (systolic && diastolic) {
-          if (systolic < 90 || diastolic < 60) {
-            vitals.push(`hipotensão arterial (${vs.bloodPressure} mmHg)`)
-          } else if (systolic > 140 || diastolic > 90) {
-            vitals.push(`hipertensão arterial (${vs.bloodPressure} mmHg)`)
-          } else {
-            vitals.push(`pressão arterial dentro dos parâmetros de normalidade (${vs.bloodPressure} mmHg)`)
-          }
-          // Adicionar cálculo da Pressão Arterial Média (PAM)
-          const pam = vs.pam != null ? Math.round(vs.pam) : Math.round((systolic + 2 * diastolic) / 3)
-          vitals.push(`pressão arterial média (PAM) ≈ ${pam} mmHg`)
-        }
-      }
-      
-      if (vs.heartRate) {
-        if (vs.heartRate > 100) {
-          vitals.push(`taquicardia (${vs.heartRate} bpm)`)
-        } else if (vs.heartRate < 60) {
-          vitals.push(`bradicardia (${vs.heartRate} bpm)`)
-        } else {
-          vitals.push(`frequência cardíaca regular (${vs.heartRate} bpm)`)
-        }
-      }
-      
-      if (vs.respiratoryRate) {
-        if (vs.respiratoryRate > 20) {
-          vitals.push(`taquipneia (${vs.respiratoryRate} rpm)`) 
-        } else if (vs.respiratoryRate < 12) {
-          vitals.push(`bradipneia (${vs.respiratoryRate} rpm)`) 
-        } else {
-          vitals.push(`padrão respiratório regular (${vs.respiratoryRate} rpm)`) 
-        }
-      }
-
-      // Saturação periférica de oxigênio (SpO2)
-      if (vs.oxygenSaturation != null) {
-        const spo2 = vs.oxygenSaturation
-        if (spo2 <= 85) {
-          vitals.push(`hipoxemia severa (SpO₂ ${spo2}%)`)
-        } else if (spo2 <= 89) {
-          vitals.push(`hipoxemia moderada (SpO₂ ${spo2}%)`)
-        } else if (spo2 <= 94) {
-          vitals.push(`hipoxemia leve (SpO₂ ${spo2}%)`)
-        } else {
-          vitals.push(`saturação periférica de O₂ preservada (SpO₂ ${spo2}%)`)
-        }
-      }
-
-      // Glicemia capilar (mg/dL)
-      if (vs.glucose) {
-        const gStr = String(vs.glucose).trim().toUpperCase()
-        if (gStr === 'HI') {
-          vitals.push('hiperglicemia extrema (HI)')
-        } else if (gStr === 'LO') {
-          vitals.push('hipoglicemia extrema (LO)')
-        } else {
-          const gVal = parseFloat(gStr)
-          if (!isNaN(gVal)) {
-            if (gVal >= 200) {
-              vitals.push(`hiperglicemia severa (${gVal} mg/dL)`) 
-            } else if (gVal >= 151) {
-              vitals.push(`hiperglicemia moderada (${gVal} mg/dL)`) 
-            } else if (gVal >= 126) {
-              vitals.push(`hiperglicemia leve (${gVal} mg/dL)`) 
-            } else if (gVal >= 100) {
-              vitals.push(`glicemia em faixa de pré-diabetes (${gVal} mg/dL)`) 
-            } else if (gVal >= 75) {
-              vitals.push(`glicemia dentro da normalidade (${gVal} mg/dL)`) 
-            } else if (gVal >= 60) {
-              vitals.push(`hipoglicemia leve (${gVal} mg/dL)`) 
-            } else if (gVal >= 45) {
-              vitals.push(`hipoglicemia moderada (${gVal} mg/dL)`) 
-            } else {
-              vitals.push(`hipoglicemia severa (${gVal} mg/dL)`) 
-            }
-          }
-        }
-      }
-      
-      if (vitals.length > 0) {
-        if (vitals.length === 1) {
-          vitalSignsInfo = `evidenciando ${vitals[0]}`
-        } else if (vitals.length === 2) {
-          vitalSignsInfo = `demonstrando ${vitals[0]} e ${vitals[1]}`
-        } else {
-          vitalSignsInfo = `revelando ${vitals.slice(0, -1).join(', ')} e ${vitals[vitals.length - 1]}`
-        }
-      }
-    }
-
-    // Construir informações sobre exames de forma mais técnica
-    let labInfo = ''
-    if (patient.labResults && patient.labResults.status === 'completed') {
-      const findings = []
-      
-      if (patient.labResults.hemoglobin != null) {
-        const hb = patient.labResults.hemoglobin
-        const range = getHbRange()
-        const refText = `${range.min.toFixed(1)}–${range.max.toFixed(1)} g/dL`
-        if (hb < range.min) {
-          findings.push(`hemoglobina abaixo da faixa (${hb} g/dL; ref. ${refText})`)
-        } else if (hb > range.max) {
-          findings.push(`hemoglobina acima da faixa (${hb} g/dL; ref. ${refText})`)
-        } else {
-          findings.push(`hemoglobina dentro da faixa (${hb} g/dL; ref. ${refText})`)
-        }
-      }
-      
-      if (patient.labResults.hematocrit != null) {
-        const ht = patient.labResults.hematocrit
-        const hb = patient.labResults.hemoglobin
-        if (hb != null && hb > 0) {
-          const ratio = ht / hb
-          const r = ratio.toFixed(1)
-          if (ratio >= 2.8 && ratio <= 3.2) {
-            findings.push(`hematócrito dentro da faixa (Ht/Hb ${r}x)`) 
-          } else if (ratio >= 3.21 && ratio <= 3.59) {
-            findings.push(`hematócrito aumentado (Ht/Hb ${r}x)`) 
-          } else if (ratio >= 3.6) {
-            findings.push(`hemoconcentração (Ht/Hb ${r}x)`) 
-          } else {
-            findings.push(`razão Ht/Hb ${r}x, abaixo do esperado`) 
-          }
-        } else {
-          findings.push(`hematócrito de ${ht}%`)
-        }
-      }
-      
-      if (patient.labResults.platelets != null) {
-        const plt = patient.labResults.platelets
-        if (plt > 450000) {
-          findings.push(`plaquetose (${plt.toLocaleString()}/mm³)`) 
-        } else if (plt < 20000) {
-          findings.push(`plaquetopenia muito grave (${plt.toLocaleString()}/mm³)`) 
-        } else if (plt < 50000) {
-          findings.push(`plaquetopenia grave (${plt.toLocaleString()}/mm³)`) 
-        } else if (plt < 100000) {
-          findings.push(`plaquetopenia moderada (${plt.toLocaleString()}/mm³)`) 
-        } else if (plt < 150000) {
-          findings.push(`plaquetopenia leve (${plt.toLocaleString()}/mm³)`) 
-        } else {
-          findings.push(`contagem plaquetária preservada (${plt.toLocaleString()}/mm³)`) 
-        }
-      }
-      
-      if (patient.labResults.albumin != null) {
-        const alb = patient.labResults.albumin
-        if (alb > 5.6) {
-          findings.push(`hiperalbuminemia (${alb} g/dL)`) 
-        } else if (alb >= 3.5 && alb <= 5.5) {
-          findings.push(`albumina dentro da faixa (3,5–5,5 g/dL; medido ${alb} g/dL)`) 
-        } else if (alb >= 3.0 && alb < 3.5) {
-          findings.push(`hipoalbuminemia leve (${alb} g/dL)`) 
-        } else if (alb < 2.0) {
-          findings.push(`hipoalbuminemia grave (${alb} g/dL)`) 
-        } else {
-          findings.push(`hipoalbuminemia moderada (${alb} g/dL)`) 
-        }
-      }
-      
-      if (patient.labResults.transaminases?.alt != null || patient.labResults.transaminases?.ast != null) {
-        const alt = patient.labResults.transaminases?.alt
-        const ast = patient.labResults.transaminases?.ast
-
-        const transFindings: string[] = []
-
-        if (alt != null) {
-          if (alt <= 56) transFindings.push(`ALT normal (7–56 U/L; ${alt} U/L)`) 
-          else if (alt <= 120) transFindings.push(`ALT elevação leve (57–120 U/L; ${alt} U/L)`) 
-          else if (alt <= 220) transFindings.push(`ALT elevação moderada (121–220 U/L; ${alt} U/L)`) 
-          else transFindings.push(`ALT elevação grave (≥ 221 U/L; ${alt} U/L)`) 
-        }
-
-        if (ast != null) {
-          if (ast <= 40) transFindings.push(`AST normal (5–40 U/L; ${ast} U/L)`) 
-          else if (ast <= 100) transFindings.push(`AST elevação leve (41–100 U/L; ${ast} U/L)`) 
-          else if (ast <= 200) transFindings.push(`AST elevação moderada (101–200 U/L; ${ast} U/L)`) 
-          else transFindings.push(`AST elevação grave (≥ 201 U/L; ${ast} U/L)`) 
-        }
-
-        if (transFindings.length > 0) {
-          findings.push(transFindings.join('; ')) 
-        } else {
-          findings.push('função hepática preservada') 
-        }
-      }
-      
-      if (findings.length > 0) {
-        labInfo = `A investigação laboratorial complementar evidenciou ${findings.join(', ')}, achados compatíveis com o quadro clínico apresentado.`
-      }
-    } else if (patient.labResults && patient.labResults.status === 'pending') {
-      labInfo = 'Foram solicitados exames laboratoriais complementares para elucidação diagnóstica e estratificação de risco, encontrando-se pendentes de resultado no momento desta avaliação.'
-    }
-
-    // Construir informações sobre prescrições de forma mais técnica
-    let prescriptionInfo = ''
-    if (patient.treatment.prescriptions.length > 0) {
-      const medications = patient.treatment.prescriptions.map(p => p.medication.toLowerCase())
-      
-      // Categorizar medicamentos
-      const analgesicos = medications.filter(m => m.includes('paracetamol') || m.includes('dipirona'))
-      const hidratacao = medications.filter(m => m.includes('soro') || m.includes('hidratação'))
-      const outros = medications.filter(m => !analgesicos.includes(m) && !hidratacao.includes(m))
-      
-      const treatments = []
-      
-      if (analgesicos.length > 0) {
-        treatments.push('terapia analgésica e antitérmica')
-      }
-      
-      if (hidratacao.length > 0) {
-        treatments.push('suporte hidroeletrolítico')
-      }
-      
-      if (outros.length > 0) {
-        treatments.push('terapia adjuvante específica')
-      }
-      
-      if (treatments.length > 0) {
-        prescriptionInfo = `Instituiu-se protocolo terapêutico baseado em ${treatments.join(', ')}, conforme diretrizes clínicas estabelecidas.`
-      }
-    }
-
-    // Registrar manejo do choque (persistência e decisões) para narrativa
-    let shockManagementInfo = ''
-    try {
-      const shockPersist = localStorage.getItem(`shock_persistent_${patient.id}`) === 'true'
-      const decisionsRaw = localStorage.getItem(`shock_decisions_${patient.id}`)
-      const decisions: string[] = decisionsRaw ? JSON.parse(decisionsRaw) : []
-
-      const formatList = (items: string[]) => {
-        if (items.length === 0) return ''
-        if (items.length === 1) return items[0].toLowerCase()
-        if (items.length === 2) return `${items[0].toLowerCase()} e ${items[1].toLowerCase()}`
-        return `${items.slice(0, -1).map(i => i.toLowerCase()).join(', ')} e ${items[items.length - 1].toLowerCase()}`
-      }
-
-      if (shockPersist || decisions.length > 0) {
-        const prefix = 'No contexto do manejo hemodinâmico na dengue grave'
-        const persistText = shockPersist ? ' foi registrada persistência do choque.' : ''
-        const decisionsText = decisions.length > 0 ? ` Medidas adotadas: ${formatList(decisions)}.` : ''
-        shockManagementInfo = `${prefix},${persistText || decisionsText ? '' : ' foram instituídas medidas de suporte conforme protocolo institucional.'}${persistText}${decisionsText}`
-      }
-    } catch (error) {
-      console.warn('Erro ao recuperar manejo do choque para relatório:', error)
-    }
-
-    // Observações de forma mais técnica
-    let observationsInfo = ''
-    const allObservations = []
-    
-    if (patient.generalObservations && patient.generalObservations.trim()) {
-      allObservations.push(patient.generalObservations)
-    }
-    
-    if (patient.treatment.observations.length > 0) {
-      allObservations.push(...patient.treatment.observations)
-    }
-    
-    if (allObservations.length > 0) {
-      observationsInfo = `Observações clínicas relevantes incluem: ${allObservations.join('. ')}.`
-    }
+    const chronologyText = timeline.length > 0
+      ? `Passagem no fluxograma: ${timeline.join(' | ')}`
+      : 'Passagem no fluxograma não registrada.'
 
     return {
-      introduction: `Paciente ${patient.name}, sexo ${gender}, ${patient.age} anos de idade, sendo realizado atendimento médico às ${admissionTime} do dia ${admissionDate}, para avaliação de quadro clínico sugestivo de síndrome febril aguda.`,
-      
-      complaints: symptomsText ? 
-        `À anamnese, ${isFemale ? 'a paciente relatou' : 'o paciente relatou'} ${symptomsText}${feverInfo ? `, apresentando ${feverInfo}` : ''}. A história clínica atual sugere processo infeccioso de etiologia viral, com características epidemiológicas compatíveis com arbovirose.` : 
-        `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à avaliação clínica sistemática para investigação de síndrome febril aguda.`,
-      
-      physicalExam: vitalSignsInfo ? 
-        `O exame físico geral revelou paciente em regular estado geral, ${isFemale ? 'consciente e orientada' : 'consciente e orientado'}, com sinais vitais ${vitalSignsInfo}. O exame segmentar não evidenciou alterações significativas nos demais aparelhos e sistemas.` : 
-        `Ao exame físico, ${isFemale ? 'a paciente apresentava-se' : 'o paciente apresentava-se'} em bom estado geral, com exame segmentar dentro dos parâmetros de normalidade.`,
-      
-      laboratoryResults: labInfo,
-      
-      classification: groupInfo ? 
-        (() => {
-          // Recuperar fatores de risco específicos do localStorage
-          const savedRiskFactors = localStorage.getItem(`risk_factors_${patient.id}`)
-          let riskFactorsText = ''
-          
-          if (savedRiskFactors && groupInfo.name.includes('Grupo B')) {
-            try {
-              const riskFactors = JSON.parse(savedRiskFactors) as string[]
-              if (riskFactors.length > 0) {
-                if (riskFactors.length === 1) {
-                  riskFactorsText = ` Os fatores de risco identificados incluem: ${riskFactors[0].toLowerCase()}.`
-                } else if (riskFactors.length === 2) {
-                  riskFactorsText = ` Os fatores de risco identificados incluem: ${riskFactors[0].toLowerCase()} e ${riskFactors[1].toLowerCase()}.`
-                } else {
-                  riskFactorsText = ` Os fatores de risco identificados incluem: ${riskFactors.slice(0, -1).map(f => f.toLowerCase()).join(', ')} e ${riskFactors[riskFactors.length - 1].toLowerCase()}.`
-                }
-              }
-            } catch (error) {
-              console.warn('Erro ao recuperar fatores de risco:', error)
-            }
-          }
-
-          const diseaseName = patient.selectedFlowchart 
-            ? patient.selectedFlowchart.charAt(0).toUpperCase() + patient.selectedFlowchart.slice(1)
-            : 'Dengue'
-          const groupLetter = patient.flowchartState.group || groupInfo.name.match(/Grupo\s([ABCD])/i)?.[1] || 'B'
-          const basePhrase = `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional, sendo ${isFemale ? 'classificada' : 'classificado'} como Grupo ${groupLetter} de ${diseaseName}.`
-          
-          return `${basePhrase} Após análise criteriosa dos dados clínicos, epidemiológicos e laboratoriais, utilizando-se o protocolo padronizado pelo Ministério da Saúde para manejo de ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}, ${isFemale ? 'a paciente foi estratificada' : 'o paciente foi estratificado'} no ${groupInfo.name}. Esta classificação baseia-se na presença de critérios específicos que caracterizam ${groupInfo.risk}, demandando abordagem terapêutica direcionada.${riskFactorsText}`
-        })() : 
-        (() => {
-          const diseaseName = patient.selectedFlowchart 
-            ? patient.selectedFlowchart.charAt(0).toUpperCase() + patient.selectedFlowchart.slice(1)
-            : 'Dengue'
-          const letter = patient.flowchartState.group || 'A'
-          return `${isFemale ? 'A paciente foi submetida' : 'O paciente foi submetido'} à estratificação de risco conforme protocolo institucional, sendo ${isFemale ? 'classificada' : 'classificado'} como Grupo ${letter} de ${diseaseName}.`
-        })(),
-      
-      treatment: groupInfo ? 
-        `O plano terapêutico instituído contempla ${groupInfo.treatment}, seguindo rigorosamente as diretrizes clínicas preconizadas. Esta abordagem visa otimizar o prognóstico e minimizar o risco de complicações.` : 
-        'Foi estabelecido plano terapêutico individualizado conforme necessidades clínicas identificadas.',
-      
-      prescriptions: prescriptionInfo,
-      shockManagement: shockManagementInfo,
-      
-      observations: observationsInfo,
-      
-      followUp: patient.treatment.nextEvaluation ? 
-        `Programou-se reavaliação clínica para ${formatDateOnly(patient.treatment.nextEvaluation)}, com orientações específicas para retorno imediato em caso de surgimento de sinais de alarme ou deterioração do quadro clínico.` : 
-        `${isFemale ? 'A paciente foi orientada' : 'O paciente foi orientado'} quanto aos sinais de alarme e critérios para retorno, estabelecendo-se seguimento ambulatorial conforme evolução clínica e protocolo assistencial vigente.`,
-      
-      conclusion: `O atendimento prestado seguiu integralmente os protocolos clínicos estabelecidos pelo Ministério da Saúde, garantindo abordagem baseada em evidências científicas. ${isFemale ? 'A paciente' : 'O paciente'} e/ou responsáveis legais receberam orientações detalhadas sobre a patologia, sinais de alarme, medidas de suporte domiciliar e critérios para retorno ao serviço de saúde. A conduta adotada visa assegurar desfecho clínico favorável e prevenção de complicações, mantendo-se vigilância epidemiológica adequada conforme preconizado pelas autoridades sanitárias.`
+      introduction: `Identificação: ${patient.name}, ${patient.age} anos, sexo ${patient.gender}, prontuário ${patient.medicalRecord || 'não informado'}. Atendimento em ${formatDate(patient.admission.date)} (hora informada: ${patient.admission.time || 'não informada'}). Protocolo selecionado: ${(patient.selectedFlowchart || 'dengue').toUpperCase()}.`,
+      complaints: `Queixa e história inicial: sintomas relatados na admissão: ${symptomsText}.`,
+      physicalExam: `Exame inicial / sinais vitais: ${vitalSummary || 'não registrados de forma estruturada.'}`,
+      laboratoryResults: `Exames laboratoriais: ${labFindings.length > 0 ? labFindings.join(' | ') : 'sem resultados laboratoriais estruturados.'}`,
+      classification: `Classificação clínica: ${classificationSummary}`,
+      treatment: `Conduta e evolução: progresso do caso conforme protocolo, com registro de decisões em cada etapa.`,
+      prescriptions: `Prescrições registradas: ${allMeds.length > 0 ? allMeds.join(' | ') : 'nenhuma prescrição estruturada.'}`,
+      shockManagement: chronologyText,
+      observations: `Observações adicionais: ${observations.length > 0 ? observations.join(' | ') : 'não registradas.'}`,
+      followUp: `Plano de seguimento: ${followUp} Orientado retorno imediato se sinais de alarme.`,
+      conclusion: 'Conclusão: relatório padronizado com texto fixo e preenchimento automático dos campos variáveis do paciente.'
     }
   }
 
