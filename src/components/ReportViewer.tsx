@@ -223,44 +223,59 @@ ${formatDate(new Date())}`
       varfarina: 'Varfarina'
     }
 
+    const prettifyRawValue = (value: string) => {
+      const mapped: Record<string, string> = {
+        other: 'outras localizações',
+        left: 'membro inferior esquerdo',
+        right: 'membro inferior direito',
+        contraindicacao_absoluta: 'presença de contraindicação absoluta à anticoagulação',
+        contraindicacao_relativa: 'presença de contraindicação relativa à anticoagulação',
+        sem_contraindicacao_anticoagular: 'ausência de contraindicação relevante à anticoagulação'
+      }
+      return mapped[value] || value.replace(/_/g, ' ')
+    }
+
     const buildDecisionText = (stepId: string, rawAnswer?: string) => {
-      if (!rawAnswer) return ''
+      if (!rawAnswer) return null
       const parsed = safeParse(rawAnswer)
       const step = flowchart?.steps?.[stepId]
 
       if (parsed?.score != null) {
-        const classificacao = parsed?.classificacao ? ` (${String(parsed.classificacao).toUpperCase()})` : ''
-        return `Escore ${parsed.score}${classificacao}`
+        const classificacao = parsed?.classificacao ? String(parsed.classificacao).toLowerCase() : ''
+        return `o escore totalizou ${parsed.score} ponto${parsed.score === 1 ? '' : 's'}${classificacao ? `, com probabilidade ${classificacao}` : ''}`
       }
 
       if (Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) && parsed.opcoesTerapeuticasSelecionadas.length > 0) {
         const meds = parsed.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
-        return `Opções terapêuticas: ${meds.join(', ')}`
+        return `foram selecionadas as opções terapêuticas ${meds.join(', ')}`
       }
 
       if (Array.isArray(parsed?.sinaisEAchados) && parsed.sinaisEAchados.length > 0) {
-        return `Sinais/achados selecionados: ${parsed.sinaisEAchados.length}`
+        return `foram selecionados ${parsed.sinaisEAchados.length} sinal${parsed.sinaisEAchados.length === 1 ? '' : 'is'}/achado${parsed.sinaisEAchados.length === 1 ? '' : 's'} clínico${parsed.sinaisEAchados.length === 1 ? '' : 's'}`
       }
 
       if (typeof parsed?.decision === 'string' && parsed.decision.trim()) {
-        return `Decisão: ${parsed.decision.trim()}`
+        return `a decisão clínica registrada foi ${prettifyRawValue(parsed.decision.trim())}`
       }
 
       if (step?.options?.length) {
         const selectedOption = step.options.find(
           (option) => option.value === rawAnswer || option.nextStep === rawAnswer || option.text === rawAnswer
         )
-        if (selectedOption) return selectedOption.text
+        if (selectedOption) return selectedOption.text.toLowerCase()
       }
 
-      if (typeof parsed === 'object' && parsed) return 'Registro estruturado preenchido'
-      return rawAnswer
+      if (typeof parsed === 'object' && parsed) return 'houve preenchimento de registro estruturado'
+      return `foi registrado ${prettifyRawValue(rawAnswer)}`
     }
 
-    const timeline = stepSequence.map((stepId, index) => {
+    const timeline = stepSequence.map((stepId) => {
       const stepTitle = flowchart?.steps?.[stepId]?.title || formatStepId(stepId)
       const decision = buildDecisionText(stepId, answers[stepId])
-      return `${index + 1}. ${stepTitle}${decision ? ` — ${decision}` : ''}`
+      if (decision) {
+        return `Na etapa "${stepTitle}", ${decision}.`
+      }
+      return `Na etapa "${stepTitle}", houve progressão conforme o protocolo institucional.`
     })
 
     const protocolLabels: Record<string, string> = {
@@ -328,7 +343,7 @@ ${formatDate(new Date())}`
     ].filter(Boolean)
 
     const chronologyText = timeline.length > 0
-      ? `As etapas registradas no sistema durante a condução do caso foram: ${timeline.join('; ')}.`
+      ? `${timeline.join(' ')}`
       : ''
 
     const identificationText = `Paciente do sexo ${patient.gender}, ${patient.age} anos, prontuário nº ${patient.medicalRecord || 'não informado'}, atendido em ${formatDate(patient.admission.date)}, em avaliação conforme protocolo institucional para investigação de ${protocolLabel}.`
