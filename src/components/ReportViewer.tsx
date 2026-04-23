@@ -16,6 +16,93 @@ import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
+interface ReportSection {
+  title: string
+  text?: string
+  items?: string[]
+}
+
+interface StructuredMedicalReport {
+  title: string
+  sections: ReportSection[]
+}
+
+const TVP_CLASSIC_SIGNS = [
+  'Dor unilateral na perna (panturrilha ou coxa), tipo peso/pressão, que piora ao deambular ou ao ficar em pé',
+  'Edema unilateral',
+  'Sensação de calor, rubor ou mudança de coloração (eritema ou cianose leve) no membro afetado',
+  'Rigidez ou sensação de tensão na panturrilha',
+  'Sensibilidade à palpação em trajeto venoso profundo',
+  'Aumento de circunferência da panturrilha ou coxa comparado ao lado contralateral',
+  'Dor à compressão da panturrilha ou ao espremer o gastrocnêmio',
+  'Febre baixa inespecífica',
+  'Taquicardia'
+]
+
+const TVP_PHYSICAL_EXAM_FINDINGS = [
+  'Edema assimétrico, frequentemente com cacifo',
+  'Aumento da circunferência da panturrilha em relação ao lado oposto',
+  'Calor local e rubor; pele brilhante e tensa',
+  'Veias superficiais colaterais dilatadas (circulação de derivação)',
+  'Dor à palpação profunda da panturrilha ou do trajeto venoso',
+  'Eritema (vermelhidão na região)',
+  'Cianose (coloração azulada ou arroxeada na região)',
+  'Palidez cutânea',
+  'Pulsos arteriais preservados: femoral, poplíteo, tibial posterior e pedioso palpáveis e simétricos',
+  'Sinal de Homans positivo (dor à dorsiflexão do pé)'
+]
+
+const TVP_ALERT_SIGNS = [
+  'Edema súbito e importante com dor intensa e cianose: suspeitar flegmasia cerulea dolens (urgência)',
+  'Edema que envolve toda a perna, inclusive raiz da coxa/inguinal (possível TVP iliofemoral)',
+  'Progressão rápida do edema e dor em horas/dias',
+  'Veias superficiais muito proeminentes e tensas',
+  'Dor de início recente associada a imobilização, cirurgia recente (≤4 semanas), trauma, câncer ativo, gravidez/puerpério, uso de estrogênios, história prévia de TVP/TEV ou trombofilia',
+  'Sintomas respiratórios concomitantes (dispneia súbita, dor torácica pleurítica, hemoptise, síncope): suspeitar embolia pulmonar'
+]
+
+const TVP_WELLS_CRITERIA_LABELS: Record<string, string> = {
+  cancer_ativo: 'Câncer ativo',
+  paresia_imobilizacao: 'Paralisia/paresia ou imobilização com gesso em membro inferior',
+  restrito_leito_cirurgia: 'Restrito ao leito por 3 dias ou mais / cirurgia maior nas últimas 12 semanas',
+  dor_trajeto_venoso: 'Dor à palpação ao longo do sistema venoso profundo',
+  perna_inteira_edemaciada: 'Perna inteira edemaciada',
+  panturrilha_3cm: 'Aumento da panturrilha maior ou igual a 3 cm',
+  edema_cacifo: 'Edema com cacifo limitado à perna sintomática',
+  veias_colaterais: 'Veias colaterais superficiais não varicosas',
+  tvp_previa: 'TVP prévia documentada',
+  diagnostico_alternativo: 'Diagnóstico alternativo pelo menos tão provável quanto TVP'
+}
+
+const TVP_CONTRAINDICATION_LABELS: Record<string, string> = {
+  abs_sangramento_ativo: 'Sangramento ativo maior',
+  abs_intracraniano_recente: 'Sangramento intracraniano recente',
+  abs_neuro_ocular_recente: 'Cirurgia neuro/ocular recente',
+  abs_trombocitopenia_grave: 'Plaquetas muito baixas',
+  abs_risco_critico: 'Risco hemorrágico crítico não corrigível',
+  rel_trombocitopenia_moderada: 'Plaquetopenia moderada',
+  rel_hipertensao_nao_controlada: 'Hipertensão arterial importante não controlada',
+  rel_disfuncao_renal_hepatica: 'Disfunção renal/hepática moderada',
+  rel_sangramento_gi_recente: 'Sangramento gastrointestinal recente'
+}
+
+const TVP_THERAPY_LABELS: Record<string, string> = {
+  rivaroxabana: 'Rivaroxabana',
+  apixabana: 'Apixabana',
+  dabigatrana: 'Dabigatrana',
+  edoxabana: 'Edoxabana',
+  enoxaparina: 'Enoxaparina',
+  hnf: 'Heparina não fracionada',
+  varfarina: 'Varfarina'
+}
+
+const TVP_DURATION_PLAN_LABELS: Record<string, string> = {
+  duracao_provocada: 'Duração planejada de 3 meses em evento provocado por fator transitório.',
+  duracao_nao_provocada: 'Considerar anticoagulação estendida ou indefinida em caso não provocado/trombofilia persistente.',
+  duracao_cancer: 'Manter anticoagulação enquanto houver câncer ativo ou tratamento oncológico em curso.',
+  duracao_gravidez: 'Manter HBPM durante a gestação e até 6 semanas pós-parto, com mínimo total de 3 meses.'
+}
+
 interface ReportViewerProps {
   patient: Patient
   onClose: () => void
@@ -85,39 +172,25 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
   const copyReportText = async () => {
     try {
-      const narrative = generateNarrativeReport()
-      
-      // Construir texto completo do relatório
-      const groupInfo = getGroupInfo(patient.flowchartState.group)
-      const classificationText = groupInfo ? `\nCLASSIFICAÇÃO: ${groupInfo.name}
-${groupInfo.description}\n` : ''
-      
-      const fullText = `RELATÓRIO MÉDICO
-Sistema Siga o Fluxo
-Protocolo de Diagnóstico Clínico - ${patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}
-
-Data do relatório: ${formatDate(new Date())}
-Número do protocolo: ${patient.id}${classificationText}
-
-${narrative.introduction}
-
-${narrative.complaints}${narrative.observations ? ` ${narrative.observations}` : ''}
-
-${narrative.physicalExam}
-
-${narrative.laboratoryResults ? `${narrative.laboratoryResults}
-
-` : ''}${narrative.classification ? `${narrative.classification}
-
-` : ''}${narrative.treatment}${narrative.prescriptions ? ` ${narrative.prescriptions}` : ''}
-
-${narrative.followUp}
-
-${narrative.conclusion}
-
----
-Relatório gerado automaticamente pelo Sistema Siga o Fluxo
-${formatDate(new Date())}`
+      const report = buildStructuredReport()
+      const fullText = [
+        report.title,
+        `Data do relatório: ${formatDate(new Date())}`,
+        `Número do protocolo: ${patient.id}`,
+        '',
+        ...report.sections.flatMap((section, index) => {
+          const content = [`${index + 1}. ${section.title}`]
+          if (section.text) content.push(section.text)
+          if (section.items?.length) {
+            content.push(...section.items.map((item) => `- ${item}`))
+          }
+          content.push('')
+          return content
+        }),
+        '---',
+        'Relatório gerado automaticamente pelo Sistema Siga o Fluxo',
+        formatDate(new Date())
+      ].join('\n')
 
       await navigator.clipboard.writeText(fullText)
       setCopied(true)
@@ -189,7 +262,7 @@ ${formatDate(new Date())}`
     return group ? groupData[group] : null
   }
 
-  const generateNarrativeReport = () => {
+  const buildStructuredReport = (): StructuredMedicalReport => {
     const safeParse = (value?: string) => {
       if (!value) return null
       try {
@@ -199,208 +272,305 @@ ${formatDate(new Date())}`
       }
     }
 
-    const formatStepId = (stepId: string) =>
-      stepId
-        .replace(/_/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/^./, (char) => char.toUpperCase())
+    const uniqueItems = (items: Array<string | null | undefined>) =>
+      Array.from(new Set(items.map((item) => item?.trim()).filter(Boolean) as string[]))
+
+    const formatWeight = (weight?: number) =>
+      typeof weight === 'number' && Number.isFinite(weight) ? `${weight.toFixed(1).replace('.', ',')} kg` : 'não informado'
+
+    const formatGender = (gender?: string) => gender?.trim() || 'não informado'
+
+    const buildVitalsList = () => {
+      const vs = patient.admission.vitalSigns || {}
+      return uniqueItems([
+        vs.temperature != null ? `Temperatura: ${vs.temperature} °C` : null,
+        vs.heartRate != null ? `Frequência cardíaca: ${vs.heartRate} bpm` : null,
+        vs.respiratoryRate != null ? `Frequência respiratória: ${vs.respiratoryRate} irpm` : null,
+        vs.bloodPressure ? `Pressão arterial: ${vs.bloodPressure} mmHg` : null,
+        vs.oxygenSaturation != null ? `Saturação de oxigênio: ${vs.oxygenSaturation}%` : null,
+        vs.glucose != null ? `Glicemia capilar: ${vs.glucose} mg/dL` : null,
+        vs.painLevel != null ? `Escala de dor referida: ${vs.painLevel}/10` : null
+      ])
+    }
+
+    const buildLabItems = () => {
+      const labs = patient.labResults
+      const findings: string[] = []
+      if (labs?.status === 'pending') findings.push('Exames laboratoriais solicitados, ainda pendentes.')
+      if (labs?.hemoglobin != null) {
+        const hbRange = getHbRange()
+        findings.push(`Hemoglobina: ${labs.hemoglobin} g/dL (referência ${hbRange.min.toFixed(1)}-${hbRange.max.toFixed(1)} g/dL).`)
+      }
+      if (labs?.hematocrit != null) findings.push(`Hematócrito: ${labs.hematocrit}%.`)
+      if (labs?.platelets != null) findings.push(`Plaquetas: ${labs.platelets.toLocaleString('pt-BR')}/mm³.`)
+      if (labs?.albumin != null) findings.push(`Albumina: ${labs.albumin} g/dL.`)
+      if (labs?.transaminases?.alt != null) findings.push(`ALT: ${labs.transaminases.alt} U/L.`)
+      if (labs?.transaminases?.ast != null) findings.push(`AST: ${labs.transaminases.ast} U/L.`)
+      return findings
+    }
 
     const flowId = patient.selectedFlowchart || 'dengue'
     const flowchart = getFlowchartById(flowId)
     const answers = patient.flowchartState?.answers || {}
-    const currentStep = patient.flowchartState?.currentStep
-    const history = patient.flowchartState?.history || []
-    const stepSequence = Array.from(new Set([...history, currentStep].filter(Boolean))) as string[]
+    const currentStep = patient.flowchartState?.currentStep || ''
+    const symptoms = uniqueItems(patient.admission.symptoms)
+    const vitalItems = buildVitalsList()
+    const labItems = buildLabItems()
+    const prescriptions = uniqueItems(
+      patient.treatment.prescriptions.map((item) => {
+        const parts = [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean)
+        return parts.join(' - ')
+      })
+    )
+    const observations = uniqueItems([
+      patient.generalObservations,
+      ...(patient.treatment.observations || [])
+    ])
 
-    const tvpPrescriptionMap: Record<string, string> = {
-      rivaroxabana: 'Rivaroxabana',
-      apixabana: 'Apixabana',
-      dabigatrana: 'Dabigatrana',
-      edoxabana: 'Edoxabana',
-      enoxaparina: 'Enoxaparina',
-      hnf: 'Heparina não fracionada',
-      varfarina: 'Varfarina'
+    if (flowId === 'tvp') {
+      const startData = safeParse(answers.start) as { selectedLeg?: string; selectedLegLabel?: string } | null
+      const clinicalData = safeParse(answers.avaliacao_clinica) as { sinaisEAchados?: string[]; outrosAchados?: string } | null
+      const wellsData = safeParse(answers.wells_score) as {
+        score?: number
+        classificacao?: string
+        criteriosSelecionados?: string[]
+      } | null
+      const contraData = safeParse(answers.checar_contra_anticoagulacao) as {
+        contraindicacoesSelecionadas?: string[]
+        possuiContraindicacaoAbsoluta?: boolean
+        possuiContraindicacaoRelativa?: boolean
+      } | null
+      const treatmentData = safeParse(answers.tratamento_inicial) as {
+        opcoesTerapeuticasSelecionadas?: string[]
+        planoDuracaoSelecionado?: string
+      } | null
+
+      const selectedLegNarrative = startData?.selectedLeg === 'left'
+        ? 'membro inferior esquerdo'
+        : startData?.selectedLeg === 'right'
+          ? 'membro inferior direito'
+          : startData?.selectedLeg === 'other'
+            ? 'outras localizações'
+            : 'membro não especificado'
+
+      const selectedClinicalFindings = Array.isArray(clinicalData?.sinaisEAchados) ? clinicalData.sinaisEAchados : []
+      const classicSignsSet = new Set(TVP_CLASSIC_SIGNS)
+      const physicalExamSet = new Set(TVP_PHYSICAL_EXAM_FINDINGS)
+      const alertSignsSet = new Set(TVP_ALERT_SIGNS)
+
+      const symptomItems = uniqueItems([
+        ...symptoms,
+        ...selectedClinicalFindings.filter((item) => classicSignsSet.has(item)),
+        patient.admission.vitalSigns?.heartRate != null && patient.admission.vitalSigns.heartRate >= 100
+          ? `Taquicardia documentada (FC ${patient.admission.vitalSigns.heartRate} bpm)`
+          : null
+      ])
+
+      const physicalExamItems = uniqueItems([
+        ...selectedClinicalFindings.filter((item) => physicalExamSet.has(item)),
+        ...vitalItems,
+        clinicalData?.outrosAchados
+      ])
+
+      const alertItems = uniqueItems(selectedClinicalFindings.filter((item) => alertSignsSet.has(item)))
+      const wellsCriteria = uniqueItems(
+        (wellsData?.criteriosSelecionados || []).map((item) => TVP_WELLS_CRITERIA_LABELS[item] || item)
+      )
+      const contraindications = uniqueItems(
+        (contraData?.contraindicacoesSelecionadas || []).map((item) => TVP_CONTRAINDICATION_LABELS[item] || item)
+      )
+      const therapies = uniqueItems(
+        (treatmentData?.opcoesTerapeuticasSelecionadas || []).map((item) => TVP_THERAPY_LABELS[item] || item)
+      )
+
+      const hasPositiveUS = answers.us_compressiva === 'us_positive' || answers.repetir_us === 'repeat_positive'
+      const hasNegativeUS = answers.us_compressiva === 'us_negative' || answers.repetir_us === 'repeat_negative'
+      const hasPositiveDdimer = answers.baixa_probabilidade === 'ddimer_positive'
+      const hasNegativeDdimer = answers.baixa_probabilidade === 'ddimer_negative'
+      const isUrgentVascular = currentStep === 'tvp_urgencia_vascular_imediata'
+      const isExcluded = currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial'
+      const isConfirmed = hasPositiveUS || currentStep === 'anticoagulacao_iniciada' || currentStep === 'encaminhamento_urgente'
+
+      const title = isConfirmed
+        ? 'PRONTUÁRIO MÉDICO – TROMBOSE VENOSA PROFUNDA (TVP)'
+        : isExcluded
+          ? 'PRONTUÁRIO MÉDICO – INVESTIGAÇÃO DE TROMBOSE VENOSA PROFUNDA (TVP)'
+          : 'PRONTUÁRIO MÉDICO – SUSPEITA DE TROMBOSE VENOSA PROFUNDA (TVP)'
+
+      const chiefComplaint = symptomItems.find((item) =>
+        /dor|edema|panturrilha|coxa|membro/i.test(item)
+      ) || `Suspeita clínica de trombose venosa profunda em ${selectedLegNarrative}.`
+
+      const historyTextParts = [
+        `Paciente admitido em ${formatDate(patient.admission.date)} para avaliação de quadro compatível com trombose venosa profunda em ${selectedLegNarrative}.`,
+        symptomItems.length > 0
+          ? `Durante a anamnese e a triagem, foram registrados os seguintes achados clínicos: ${symptomItems.join('; ')}.`
+          : 'Durante a admissão, não houve descrição estruturada suficiente da história da doença atual.',
+        observations.length > 0 ? `Observações adicionais registradas: ${observations.join('; ')}.` : '',
+        alertItems.length > 0 ? `Também foram documentados sinais de alerta: ${alertItems.join('; ')}.` : ''
+      ].filter(Boolean).join(' ')
+
+      const evaluationItems = uniqueItems([
+        wellsData?.score != null
+          ? `Aplicado escore de Wells para TVP, com ${wellsData.score} ponto${wellsData.score === 1 ? '' : 's'} e probabilidade clínica ${String(wellsData.classificacao || 'indeterminada').toLowerCase()}.`
+          : null,
+        wellsCriteria.length > 0 ? `Critérios pontuados no escore de Wells: ${wellsCriteria.join('; ')}.` : null,
+        isUrgentVascular
+          ? 'Presença de sinal de gravidade com indicação de urgência vascular e internação imediata.'
+          : isConfirmed
+            ? 'Quadro compatível com TVP confirmada durante a investigação.'
+            : isExcluded
+              ? 'Investigação sem evidência final de TVP no fluxo assistencial.'
+              : 'Mantida suspeita clínica de TVP, em investigação conforme protocolo institucional.'
+      ])
+
+      const complementaryExamItems = uniqueItems([
+        hasNegativeDdimer ? 'D-dímero: negativo.' : null,
+        hasPositiveDdimer ? 'D-dímero: positivo.' : null,
+        answers.moderada_probabilidade ? 'D-dímero não utilizado nesta etapa, devido à probabilidade clínica moderada/alta.' : null,
+        hasPositiveUS ? 'Ultrassonografia Doppler venosa: positiva para trombose venosa profunda.' : null,
+        hasNegativeUS ? 'Ultrassonografia Doppler venosa: sem evidência de trombose venosa profunda.' : null,
+        answers.us_negativa_conduta === 'high_suspicion' ? 'Mantida suspeita clínica após ultrassonografia inicial negativa, com indicação de repetição do exame em 5 a 7 dias.' : null,
+        ...labItems
+      ])
+
+      const conductItems = uniqueItems([
+        contraData?.possuiContraindicacaoAbsoluta
+          ? `Identificadas contraindicações absolutas à anticoagulação: ${contraindications.join('; ')}.`
+          : null,
+        !contraData?.possuiContraindicacaoAbsoluta && contraData?.possuiContraindicacaoRelativa
+          ? `Identificadas contraindicações relativas à anticoagulação: ${contraindications.join('; ')}.`
+          : null,
+        contraData && !contraData?.possuiContraindicacaoAbsoluta && !contraData?.possuiContraindicacaoRelativa
+          ? 'Contraindicações para anticoagulação avaliadas e não identificadas.'
+          : null,
+        therapies.length === 1 ? `Optado por anticoagulação com ${therapies[0]}.` : null,
+        therapies.length > 1 ? `Opções terapêuticas selecionadas: ${therapies.join('; ')}.` : null,
+        currentStep === 'anticoagulacao_iniciada' ? 'Paciente anticoagulado.' : null,
+        currentStep === 'encaminhamento_urgente' ? 'Solicitada avaliação da Cirurgia Vascular.' : null,
+        isUrgentVascular ? 'Indicação de internação hospitalar imediata e acionamento urgente da Cirurgia Vascular.' : null,
+        prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
+      ])
+
+      const planItems = uniqueItems([
+        treatmentData?.planoDuracaoSelecionado
+          ? TVP_DURATION_PLAN_LABELS[treatmentData.planoDuracaoSelecionado] || treatmentData.planoDuracaoSelecionado
+          : null,
+        patient.treatment.nextEvaluation
+          ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.`
+          : 'Reavaliação clínica conforme evolução e protocolo institucional.',
+        'Orientado retorno imediato em caso de piora da dor, aumento do edema, dispneia, dor torácica, síncope ou sinais de sangramento.',
+        therapies.length > 0 ? 'Monitorização clínica e laboratorial conforme necessidade e esquema anticoagulante adotado.' : null
+      ])
+
+      return {
+        title,
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'Queixa Principal',
+            text: symptomItems.length > 0
+              ? chiefComplaint
+              : `Suspeita clínica de trombose venosa profunda em ${selectedLegNarrative}.`
+          },
+          {
+            title: 'História da Doença Atual',
+            text: historyTextParts
+          },
+          {
+            title: 'Sinais e Sintomas',
+            items: symptomItems.length > 0 ? symptomItems : ['Sem sinais e sintomas estruturados registrados no fluxo.']
+          },
+          {
+            title: 'Exame Físico',
+            items: physicalExamItems.length > 0 ? physicalExamItems : ['Sem descrição estruturada de exame físico no fluxo.']
+          },
+          {
+            title: 'Avaliação Clínica',
+            items: evaluationItems
+          },
+          {
+            title: 'Exames Complementares',
+            items: complementaryExamItems.length > 0 ? complementaryExamItems : ['Sem exames complementares registrados no fluxo.']
+          },
+          {
+            title: 'Conduta',
+            items: conductItems.length > 0 ? conductItems : ['Conduta ainda não registrada de forma estruturada no sistema.']
+          },
+          {
+            title: 'Plano / Acompanhamento',
+            items: planItems
+          }
+        ]
+      }
     }
-
-    const prettifyRawValue = (value: string) => {
-      const mapped: Record<string, string> = {
-        other: 'outras localizações',
-        left: 'membro inferior esquerdo',
-        right: 'membro inferior direito',
-        contraindicacao_absoluta: 'presença de contraindicação absoluta à anticoagulação',
-        contraindicacao_relativa: 'presença de contraindicação relativa à anticoagulação',
-        sem_contraindicacao_anticoagular: 'ausência de contraindicação relevante à anticoagulação'
-      }
-      return mapped[value] || value.replace(/_/g, ' ')
-    }
-
-    const buildDecisionText = (stepId: string, rawAnswer?: string) => {
-      if (!rawAnswer) return null
-      const parsed = safeParse(rawAnswer)
-      const step = flowchart?.steps?.[stepId]
-
-      if (parsed?.score != null) {
-        const classificacao = parsed?.classificacao ? String(parsed.classificacao).toLowerCase() : ''
-        return `o escore totalizou ${parsed.score} ponto${parsed.score === 1 ? '' : 's'}${classificacao ? `, com probabilidade ${classificacao}` : ''}`
-      }
-
-      if (Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) && parsed.opcoesTerapeuticasSelecionadas.length > 0) {
-        const meds = parsed.opcoesTerapeuticasSelecionadas.map((id: string) => tvpPrescriptionMap[id] || id)
-        return `foram selecionadas as opções terapêuticas ${meds.join(', ')}`
-      }
-
-      if (Array.isArray(parsed?.sinaisEAchados) && parsed.sinaisEAchados.length > 0) {
-        return `foram selecionados ${parsed.sinaisEAchados.length} sinal${parsed.sinaisEAchados.length === 1 ? '' : 'is'}/achado${parsed.sinaisEAchados.length === 1 ? '' : 's'} clínico${parsed.sinaisEAchados.length === 1 ? '' : 's'}`
-      }
-
-      if (typeof parsed?.decision === 'string' && parsed.decision.trim()) {
-        return `a decisão clínica registrada foi ${prettifyRawValue(parsed.decision.trim())}`
-      }
-
-      if (step?.options?.length) {
-        const selectedOption = step.options.find(
-          (option) => option.value === rawAnswer || option.nextStep === rawAnswer || option.text === rawAnswer
-        )
-        if (selectedOption) return selectedOption.text.toLowerCase()
-      }
-
-      if (typeof parsed === 'object' && parsed) return 'houve preenchimento de registro estruturado'
-      return `foi registrado ${prettifyRawValue(rawAnswer)}`
-    }
-
-    const timeline = stepSequence.map((stepId) => {
-      const stepTitle = flowchart?.steps?.[stepId]?.title || formatStepId(stepId)
-      const decision = buildDecisionText(stepId, answers[stepId])
-      if (decision) {
-        return `Na etapa "${stepTitle}", ${decision}.`
-      }
-      return `Na etapa "${stepTitle}", houve progressão conforme o protocolo institucional.`
-    })
-
-    const protocolLabels: Record<string, string> = {
-      tvp: 'trombose venosa profunda (TVP)',
-      dengue: 'dengue'
-    }
-    const protocolLabel = protocolLabels[flowId] || (flowchart?.name ? `${flowchart.name}` : flowId.toUpperCase())
-
-    const symptomsText = patient.admission.symptoms.length > 0
-      ? patient.admission.symptoms.join(', ')
-      : ''
-
-    const vs = patient.admission.vitalSigns || {}
-    const vitalSummary = [
-      vs.temperature != null ? `Temperatura ${vs.temperature} °C` : null,
-      vs.heartRate != null ? `FC ${vs.heartRate} bpm` : null,
-      vs.respiratoryRate != null ? `FR ${vs.respiratoryRate} irpm` : null,
-      vs.bloodPressure ? `PA ${vs.bloodPressure} mmHg` : null,
-      vs.oxygenSaturation != null ? `SpO₂ ${vs.oxygenSaturation}%` : null,
-      vs.glucose != null ? `Glicemia ${vs.glucose} mg/dL` : null
-    ].filter(Boolean).join(' | ')
-
-    const labs = patient.labResults
-    const labFindings: string[] = []
-    if (labs?.status === 'pending') {
-      labFindings.push('Exames laboratoriais solicitados, ainda pendentes.')
-    }
-    if (labs?.hemoglobin != null) {
-      const hbRange = getHbRange()
-      labFindings.push(`Hemoglobina ${labs.hemoglobin} g/dL (ref. ${hbRange.min.toFixed(1)}-${hbRange.max.toFixed(1)})`)
-    }
-    if (labs?.hematocrit != null) {
-      if (labs.hemoglobin != null && labs.hemoglobin > 0) {
-        const ratio = (labs.hematocrit / labs.hemoglobin).toFixed(2)
-        labFindings.push(`Hematócrito ${labs.hematocrit}% (Ht/Hb ${ratio}x)`)
-      } else {
-        labFindings.push(`Hematócrito ${labs.hematocrit}%`)
-      }
-    }
-    if (labs?.platelets != null) labFindings.push(`Plaquetas ${labs.platelets.toLocaleString('pt-BR')}/mm³`)
-    if (labs?.albumin != null) labFindings.push(`Albumina ${labs.albumin} g/dL`)
-    if (labs?.transaminases?.alt != null) labFindings.push(`ALT ${labs.transaminases.alt} U/L`)
-    if (labs?.transaminases?.ast != null) labFindings.push(`AST ${labs.transaminases.ast} U/L`)
 
     const groupInfo = getGroupInfo(patient.flowchartState.group)
-    const wellsData = safeParse(answers.wells_score)
-    const wellsProbability = wellsData?.classificacao
-      ? String(wellsData.classificacao).toLowerCase()
-      : ''
-
-    const prescriptions = patient.treatment.prescriptions.map((item) => {
-      const parts = [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean)
-      return parts.join(' - ')
-    })
-    const dynamicMedsFromAnswers = Object.values(answers)
-      .map((value) => safeParse(value))
-      .filter((entry) => Array.isArray(entry?.opcoesTerapeuticasSelecionadas))
-      .flatMap((entry) => entry.opcoesTerapeuticasSelecionadas as string[])
-      .map((id) => tvpPrescriptionMap[id] || id)
-    const allMeds = Array.from(new Set([...prescriptions, ...dynamicMedsFromAnswers]))
-
-    const observationsList = [
-      patient.generalObservations?.trim() || '',
-      ...(patient.treatment.observations || []).map((item) => item?.trim()).filter(Boolean)
-    ].filter(Boolean)
-
-    const chronologyText = timeline.length > 0
-      ? `${timeline.join(' ')}`
-      : ''
-
-    const identificationText = `Paciente do sexo ${patient.gender}, ${patient.age} anos, prontuário nº ${patient.medicalRecord || 'não informado'}, atendido em ${formatDate(patient.admission.date)}, em avaliação conforme protocolo institucional para investigação de ${protocolLabel}.`
-
-    const complaintsText = symptomsText
-      ? `No momento do atendimento, há registro estruturado de sintomas iniciais (${symptomsText}), conforme dados inseridos no sistema.`
-      : 'No momento do atendimento, não há registro estruturado da queixa principal, tampouco descrição detalhada da história da doença atual ou de fatores de risco associados.'
-
-    const examText = vitalSummary
-      ? `Ao exame inicial, foram registrados os seguintes dados clínicos e sinais vitais: ${vitalSummary}.`
-      : 'Não foram registrados, no sistema, dados de exame físico ou sinais vitais no momento da avaliação.'
-
-    const labsText = labFindings.length > 0
-      ? `Foram documentados os seguintes resultados de exames complementares: ${labFindings.join('; ')}.`
-      : 'Da mesma forma, não há resultados de exames laboratoriais ou de imagem disponíveis até o presente momento.'
-
-    const classificationText = flowId === 'tvp' && wellsData?.score != null
-      ? `Foi aplicado o escore de Wells para TVP, com pontuação total de ${wellsData.score} ponto${wellsData.score === 1 ? '' : 's'}, classificando o paciente como de probabilidade clínica ${wellsProbability || 'indeterminada'} para trombose venosa profunda.`
-      : groupInfo
-        ? `A estratificação clínica pelo protocolo institucional classificou o paciente como ${groupInfo.name.toLowerCase()}, compatível com ${groupInfo.description.toLowerCase()}.`
-        : 'Até o momento, não há classificação clínica final estruturada no sistema.'
-
-    const prescriptionsText = allMeds.length > 0
-      ? `Foram registradas prescrições médicas no sistema: ${allMeds.join('; ')}.`
-      : 'Até o momento, não há prescrições médicas formalmente registradas.'
-
-    const conductText = `A conduta seguiu o protocolo clínico institucional, com registro da evolução conforme as etapas preconizadas pelo sistema. ${prescriptionsText}`
-
-    const followUpText = patient.treatment.nextEvaluation
-      ? `Paciente orientado quanto à necessidade de acompanhamento clínico e reavaliação, com retorno programado para ${formatDateOnly(patient.treatment.nextEvaluation)}. Foram fornecidas orientações para procura imediata de atendimento em caso de sinais de alarme.`
-      : `Paciente orientado quanto à necessidade de acompanhamento clínico e reavaliação conforme evolução do quadro, embora não haja data de retorno agendada no sistema. Foram fornecidas orientações para procura imediata de atendimento em caso de sinais de alarme${flowId === 'tvp' ? ', como piora da dor, aumento de edema em membro, dispneia ou dor torácica' : ''}.`
-
-    const conclusionText = flowId === 'tvp' && wellsData?.score != null
-      ? `Conclui-se que o paciente encontra-se em investigação para TVP, com probabilidade clínica ${wellsProbability || 'indeterminada'} segundo escore de Wells, aguardando complementação de dados clínicos e realização de exames para definição diagnóstica e conduta terapêutica.`
-      : `Conclui-se que o paciente encontra-se em investigação conforme protocolo institucional de ${protocolLabel}, aguardando complementação de dados clínicos e evolução para definição diagnóstica e terapêutica.`
-
-    const mergedObservations = [
-      chronologyText,
-      observationsList.length > 0 ? `Observações adicionais registradas: ${observationsList.join('; ')}.` : ''
-    ].filter(Boolean).join(' ')
-
     return {
-      introduction: identificationText,
-      complaints: complaintsText,
-      physicalExam: examText,
-      laboratoryResults: labsText,
-      classification: classificationText,
-      treatment: conductText,
-      prescriptions: '',
-      shockManagement: '',
-      observations: mergedObservations,
-      followUp: followUpText,
-      conclusion: conclusionText
+      title: `PRONTUÁRIO MÉDICO – ${(flowchart?.name || flowId).toUpperCase()}`,
+      sections: [
+        {
+          title: 'Identificação do Paciente',
+          text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+        },
+        {
+          title: 'Queixa Principal',
+          text: symptoms.length > 0
+            ? symptoms[0]
+            : `Avaliação clínica conforme protocolo institucional de ${flowchart?.name || flowId}.`
+        },
+        {
+          title: 'História da Doença Atual',
+          text: `Paciente admitido em ${formatDate(patient.admission.date)} para seguimento do protocolo ${flowchart?.name || flowId}. ${symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : 'Sem sintomas estruturados descritos na admissão.'} ${observations.length > 0 ? `Observações adicionais: ${observations.join('; ')}.` : ''}`.trim()
+        },
+        {
+          title: 'Sinais e Sintomas',
+          items: symptoms.length > 0 ? symptoms : ['Sem sinais e sintomas estruturados registrados no sistema.']
+        },
+        {
+          title: 'Exame Físico',
+          items: vitalItems.length > 0 ? vitalItems : ['Sem dados de exame físico ou sinais vitais registrados no sistema.']
+        },
+        {
+          title: 'Avaliação Clínica',
+          items: uniqueItems([
+            groupInfo ? `Classificação assistencial: ${groupInfo.name}.` : null,
+            groupInfo ? groupInfo.description : null,
+            currentStep ? `Etapa atual do fluxograma: ${flowchart?.steps?.[currentStep]?.title || currentStep}.` : null
+          ])
+        },
+        {
+          title: 'Exames Complementares',
+          items: labItems.length > 0 ? labItems : ['Sem exames complementares registrados no sistema.']
+        },
+        {
+          title: 'Conduta',
+          items: uniqueItems([
+            prescriptions.length > 0 ? `Prescrições registradas: ${prescriptions.join('; ')}.` : null,
+            observations.length > 0 ? `Condutas/observações registradas: ${observations.join('; ')}.` : null,
+            'Fluxograma seguido conforme protocolo institucional.'
+          ])
+        },
+        {
+          title: 'Plano / Acompanhamento',
+          items: uniqueItems([
+            patient.treatment.nextEvaluation
+              ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.`
+              : 'Reavaliação conforme evolução clínica.',
+            patient.treatment.dischargeDate
+              ? `Alta registrada em ${formatDateOnly(patient.treatment.dischargeDate)}.`
+              : null,
+            'Orientado retorno em caso de piora clínica ou surgimento de sinais de alerta.'
+          ])
+        }
+      ]
     }
   }
 
-  const narrative = generateNarrativeReport()
+  const report = buildStructuredReport()
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -419,7 +589,7 @@ ${formatDate(new Date())}`
                 <FileText className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Relatório Médico Narrativo</h2>
+                <h2 className="text-2xl font-bold">Relatório Médico Estruturado</h2>
                 <p className="text-blue-100">Sistema Siga o Fluxo - Protocolo MS 2024</p>
               </div>
             </div>
@@ -482,7 +652,7 @@ ${formatDate(new Date())}`
                     <Stethoscope className="w-8 h-8 text-white" />
                   </div>
                 </div>
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">RELATÓRIO MÉDICO</h1>
+                <h1 className="text-3xl font-bold text-slate-800 mb-2">{report.title}</h1>
                 <p className="text-lg text-slate-600">Sistema Siga o Fluxo</p>
                 <p className="text-sm text-slate-500">Protocolo de Diagnóstico Clínico - {patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}</p>
               </div>
@@ -514,49 +684,31 @@ ${formatDate(new Date())}`
               </div>
             )}
 
-            {/* Narrative Report - Formato Contínuo como Redação Médica */}
+            {/* Report - Formato estruturado por seções */}
             <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-              <div className="prose prose-lg max-w-none">
-                <div className="space-y-6 text-slate-800">
-                  <p className="text-lg leading-10 text-justify indent-8 font-medium">
-                    {narrative.introduction}
-                  </p>
-                  
-                  <p className="text-lg leading-10 text-justify indent-8">
-                    {narrative.complaints}
-                    {narrative.observations && ` ${narrative.observations}`}
-                  </p>
-                  
-                  <p className="text-lg leading-10 text-justify indent-8">
-                    {narrative.physicalExam}
-                  </p>
-                  
-                  {narrative.laboratoryResults && (
-                    <p className="text-lg leading-10 text-justify indent-8">
-                      {narrative.laboratoryResults}
-                    </p>
-                  )}
-                  
-                  {narrative.classification && (
-                    <p className="text-lg leading-10 text-justify indent-8">
-                      {narrative.classification}
-                    </p>
-                  )}
-                  
-                  <p className="text-lg leading-10 text-justify indent-8">
-                    {narrative.treatment}
-                    {narrative.prescriptions && ` ${narrative.prescriptions}`}
-                    {narrative.shockManagement && ` ${narrative.shockManagement}`}
-                  </p>
-                  
-                  <p className="text-lg leading-10 text-justify indent-8">
-                    {narrative.followUp}
-                  </p>
-                  
-                  <p className="text-lg leading-10 text-justify indent-8 font-medium">
-                    {narrative.conclusion}
-                  </p>
-                </div>
+              <div className="space-y-6 text-slate-800">
+                {report.sections.map((section, index) => (
+                  <section key={section.title} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                    <h3 className="text-lg font-bold text-slate-900">
+                      {index + 1}. {section.title}
+                    </h3>
+                    {section.text && (
+                      <p className="mt-3 text-base leading-8 text-slate-800 whitespace-pre-line">
+                        {section.text}
+                      </p>
+                    )}
+                    {section.items && section.items.length > 0 && (
+                      <ul className="mt-3 space-y-2">
+                        {section.items.map((item) => (
+                          <li key={`${section.title}-${item}`} className="flex items-start gap-3 text-base leading-7 text-slate-800">
+                            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                ))}
               </div>
             </div>
 
