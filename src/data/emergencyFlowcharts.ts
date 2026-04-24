@@ -1427,7 +1427,6 @@ export const asthmaFlowchart: EmergencyFlowchart = {
   initialStep: 'asma_tipo',
   finalSteps: [
     'asma_alta_final',
-    'asma_observacao_ps',
     'asma_internacao',
     'asma_uti',
     'asma_intubacao'
@@ -1544,8 +1543,13 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Corticoide sistêmico precoce na 1ª hora.',
       type: 'question',
       content: `
-        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p><strong>Corticoide sistêmico:</strong> Prednisona/Prednisolona 40-50 mg VO ou Metilpred 40-80 mg IV quando VO não for possível.</p>
+        <div class="space-y-2 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Preferir VO:</strong> Prednisona ou Prednisolona 40-60 mg/dia por 5-7 dias.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>IV apenas se VO não for possível:</strong> reservar metilprednisolona IV para vômitos, incapacidade de deglutir ou outra impossibilidade prática de usar a via oral.</p>
+          </div>
         </div>
       `,
       options: [
@@ -1582,35 +1586,46 @@ export const asthmaFlowchart: EmergencyFlowchart = {
     },
     asma_nebulizacao_grave_vida: {
       id: 'asma_nebulizacao_grave_vida',
-      title: 'Nebulização Grave/Risco',
+      title: 'SABA + Ipratrópio',
       description: 'Broncodilatação combinada intensiva.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>Salbutamol 5 mg + Ipratrópio 0,5 mg</strong> em 4 ml SF, repetir a cada 20 minutos.</p>
+            <p><strong>Salbutamol + brometo de ipratrópio:</strong> associar ipratrópio nas exacerbações moderadas a graves, sobretudo se PFE &lt; 60%, SpO2 &lt; 92% persistente ou necessidade de múltiplas doses de SABA.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>MDI com espaçador (adultos):</strong> 4-8 jatos de ipratrópio (80-160 mcg) a cada 20 min na 1ª hora, em associação ao salbutamol.</p>
+            <p><strong>Nebulização (adultos):</strong> ipratrópio 500 mcg associado ao salbutamol, repetir a cada 20 min por até 3 doses na 1ª hora.</p>
+            <p><strong>Observação prática:</strong> existem combinações fixas para nebulização, como salbutamol 2,5 mg + ipratrópio 500 mcg, quando disponíveis no serviço.</p>
             <p>Adicionar brometo de ipratrópio em exacerbações moderadas/graves reduz hospitalização quando associado ao SABA.</p>
           </div>
         </div>
       `,
       options: [
-        { text: 'Iniciar corticoide IV', nextStep: 'asma_corticoide_grave_vida', value: 'neb_grave_ok', critical: true }
+        { text: 'Iniciar corticoide sistêmico precoce', nextStep: 'asma_corticoide_grave_vida', value: 'neb_grave_ok', critical: true }
       ]
     },
     asma_corticoide_grave_vida: {
       id: 'asma_corticoide_grave_vida',
-      title: 'Corticoide IV Grave/Risco',
+      title: 'Corticoide Sistêmico Precoce',
       description: 'Corticoide sistêmico precoce na primeira hora.',
       type: 'question',
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>Corticoide IV:</strong> Metilpred 60-125 mg IV ou Hidrocortisona 200 mg IV.</p>
+        <div class="space-y-2 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Indicação:</strong> iniciar corticoide sistêmico idealmente na 1ª hora em todas as exacerbações moderadas a graves ou quando não houver resposta imediata ao broncodilatador.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Preferir VO se o paciente conseguir deglutir:</strong> Prednisona ou Prednisolona 40-60 mg/dia por 5-7 dias.</p>
+            <p><strong>Reservar IV para casos selecionados:</strong> metilprednisolona IV quando houver vômitos, incapacidade de deglutir, necessidade de UTI ou impossibilidade prática da via oral.</p>
+            <p><strong>Metilprednisolona IV (adultos):</strong> 60-125 mg IV, com transição para VO após melhora clínica.</p>
+            <p><strong>Equivalência útil:</strong> metilprednisolona 4 mg = prednisolona 5 mg = hidrocortisona 20 mg.</p>
+          </div>
         </div>
       `,
       options: [
-        { text: 'Fazer magnésio EV', nextStep: 'asma_magnesio_grave_vida', value: 'cort_grave_ok', critical: true }
+        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'cort_grave_ok', critical: true }
       ]
     },
     asma_magnesio_grave_vida: {
@@ -1719,12 +1734,12 @@ export const asthmaFlowchart: EmergencyFlowchart = {
     asma_escalonamento: {
       id: 'asma_escalonamento',
       title: 'Terapias de Resgate',
-      description: 'Para má resposta após 1ª hora de tratamento.',
+      description: 'Para má resposta após SABA/ipratrópio e corticoide sistêmico na 1ª hora.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
-            <p><strong>Crise grave/refratária:</strong> iniciar terapias adjuvantes de 2a linha, transferir para UTI, monitorização cardíaca contínua, acesso venoso calibroso e gasometria arterial.</p>
+            <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA/ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p><strong>Adjuvantes intensivos no fluxo:</strong> magnésio IV, salbutamol IV, aminofilina, heliox (se disponível) e VNI/BIPAP em selecionados.</p>
@@ -1741,11 +1756,11 @@ export const asthmaFlowchart: EmergencyFlowchart = {
     asma_resgate_magnesio: {
       id: 'asma_resgate_magnesio',
       title: 'Magnésio 2 g IV se não feito',
-      description: 'Primeira terapia adjuvante em crise refratária.',
+      description: 'Primeira terapia adjuvante após má resposta ao tratamento inicial.',
       type: 'question',
       content: `
         <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Sulfato de Magnesio IV:</strong> 2 g EV em 15-20 min (dose unica) se ainda nao realizado.</p>
+          <p><strong>Sulfato de Magnésio IV:</strong> 2 g EV em 15-20 min, se ainda não realizado, para crise grave com resposta inadequada ao tratamento inicial.</p>
           <p>Monitorar FC, PA e reflexos; efeitos adversos: rubor, hipotensao leve e bradicardia.</p>
         </div>
       `,
@@ -1880,29 +1895,34 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-            <p>Continuar broncodilatadores (salbutamol ± ipratrópio), manter corticoide e monitorar resposta clínica.</p>
+            <p><strong>Resposta incompleta não encerra o fluxo:</strong> manter o paciente em observação e repetir o esquema broncodilatador durante 2-4 horas.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p>Observação por 2-4 horas e manutenção do tratamento.</p>
+            <p>Continuar salbutamol, considerar manter ipratrópio conforme gravidade/resposta, manter corticoide sistêmico e monitorar evolução clínica seriada.</p>
           </div>
         </div>
       `,
       options: [
-        { text: 'Manter observação por 2-4h', nextStep: 'asma_repetir_nebulizacao', value: 'observar_repetir' }
+        { text: 'Repetir esquema e manter observação por 2-4h', nextStep: 'asma_repetir_nebulizacao', value: 'observar_repetir' }
       ]
     },
     asma_repetir_nebulizacao: {
       id: 'asma_repetir_nebulizacao',
-      title: 'Repetir Nebulizações',
-      description: 'Broncodilatação seriada durante observação.',
+      title: 'Repetir Esquema Durante Observação',
+      description: 'Broncodilatação seriada e manutenção do tratamento durante o período observacional.',
       type: 'question',
       content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p>Repetir nebulizações a cada 1-2 horas, com reavaliação clínica seriada.</p>
+        <div class="space-y-2 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Repetir o esquema broncodilatador:</strong> manter salbutamol em doses seriadas, geralmente a cada 1-2 horas, conforme resposta clínica e protocolo institucional.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Se estava usando associação com ipratrópio, reavaliar a necessidade de mantê-la conforme gravidade e resposta. Manter corticoide sistêmico e observação por 2-4 horas.</p>
+          </div>
         </div>
       `,
       options: [
-        { text: 'Reavaliar novamente', nextStep: 'asma_reavaliar_novamente', value: 'reavaliar_pos_obs' }
+        { text: 'Após observação, reavaliar novamente', nextStep: 'asma_reavaliar_novamente', value: 'reavaliar_pos_obs' }
       ]
     },
     asma_reavaliar_novamente: {
@@ -2819,7 +2839,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
   icon: 'activity',
   color: 'from-indigo-600 to-blue-800',
   initialStep: 'start',
-  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_imediata'],
+  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_imediata', 'tvp_internacao_investigacao_clinica', 'tvp_internacao_investigar_tep'],
   steps: {
     start: {
       id: 'start',
@@ -3112,7 +3132,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
     tvp_urgencia_vascular_imediata: {
       id: 'tvp_urgencia_vascular_imediata',
       title: 'URGÊNCIA VASCULAR + INTERNAÇÃO IMEDIATA',
-      description: 'Presença de sinal de alerta de maior gravidade para TVP.',
+      description: 'Presença de sinal de alerta com gravidade local do membro, compatível com necessidade de avaliação vascular urgente.',
       type: 'result',
       critical: true,
       timeSensitive: true,
@@ -3120,13 +3140,61 @@ export const tvpFlowchart: EmergencyFlowchart = {
         <div class="space-y-3">
           <div class="bg-red-100 p-4 rounded border-l-4 border-red-700 text-red-950">
             <h4 class="font-bold text-red-900">Interromper fluxo ambulatorial</h4>
-            <p class="text-sm mt-1">Qualquer item da caixa de <strong>sinais de alerta</strong> exige <strong>internação hospitalar mandatória</strong> e <strong>acionamento urgente da Cirurgia Vascular</strong>.</p>
+            <p class="text-sm mt-1">Os <strong>quatro primeiros sinais de alerta</strong> desta caixa exigem <strong>internação hospitalar mandatória</strong> e <strong>acionamento urgente da Cirurgia Vascular</strong>.</p>
           </div>
           <div class="bg-red-50 p-4 rounded border border-red-300 text-sm text-red-900">
             <ul class="list-disc pl-5 space-y-1">
               <li>Suspeitar flegmasia cerulea dolens/TVP iliofemoral em edema súbito importante, dor intensa e cianose.</li>
               <li>Acionar avaliação vascular imediata e priorizar leito hospitalar.</li>
-              <li>Se houver dispneia súbita, dor torácica pleurítica, hemoptise ou síncope, tratar como possível TEP associado.</li>
+              <li>Persistindo suspeita de TEP associada, conduzir investigação em paralelo conforme estabilidade clínica.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    tvp_internacao_investigacao_clinica: {
+      id: 'tvp_internacao_investigacao_clinica',
+      title: 'INTERNAÇÃO IMEDIATA + APROFUNDAMENTO DA INVESTIGAÇÃO',
+      description: 'Situação de alto risco tromboembólico, com necessidade de internação mandatória e seguimento da investigação.',
+      type: 'result',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3">
+          <div class="bg-amber-100 p-4 rounded border-l-4 border-amber-700 text-amber-950">
+            <h4 class="font-bold text-amber-900">Interromper fluxo ambulatorial</h4>
+            <p class="text-sm mt-1">Este achado exige <strong>internação hospitalar mandatória</strong> e <strong>aprofundamento / seguimento da investigação</strong>, sem indicação automática de avaliação urgente da Cirurgia Vascular.</p>
+          </div>
+          <div class="bg-amber-50 p-4 rounded border border-amber-300 text-sm text-amber-900">
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Trata-se de situação de alto risco para evento tromboembólico.</li>
+              <li>Manter investigação diagnóstica e acompanhamento intra-hospitalar conforme evolução clínica.</li>
+              <li>Acionar outras especialidades apenas se houver achados adicionais que justifiquem avaliação direcionada.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    tvp_internacao_investigar_tep: {
+      id: 'tvp_internacao_investigar_tep',
+      title: 'INTERNAÇÃO IMEDIATA + INVESTIGAÇÃO DE POSSÍVEL TEP',
+      description: 'Presença de sintomas respiratórios sugestivos de tromboembolismo pulmonar associado.',
+      type: 'result',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3">
+          <div class="bg-red-100 p-4 rounded border-l-4 border-red-700 text-red-950">
+            <h4 class="font-bold text-red-900">Interromper fluxo ambulatorial</h4>
+            <p class="text-sm mt-1">Sintomas respiratórios associados exigem <strong>internação hospitalar mandatória</strong> e <strong>investigação imediata de possível tromboembolismo pulmonar (TEP)</strong>.</p>
+          </div>
+          <div class="bg-red-50 p-4 rounded border border-red-300 text-sm text-red-900">
+            <ul class="list-disc pl-5 space-y-1">
+              <li>Reavaliar imediatamente estabilidade clínica, oxigenação e sinais de repercussão hemodinâmica.</li>
+              <li>Prosseguir com investigação dirigida para TEP conforme protocolo institucional e disponibilidade local.</li>
+              <li>Avaliação da Cirurgia Vascular não é automática neste cenário, salvo outros achados concomitantes que a indiquem.</li>
             </ul>
           </div>
         </div>

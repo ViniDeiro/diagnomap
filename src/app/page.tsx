@@ -459,6 +459,7 @@ export default function Home() {
                   birthDate: new Date(currentPatient.birthDate),
                   age: currentPatient.age,
                   gender: currentPatient.gender,
+                  weight: currentPatient.weight,
                   medicalRecord: currentPatient.medicalRecord,
                   selectedFlowchart: currentPatient.selectedFlowchart,
                   admission: {

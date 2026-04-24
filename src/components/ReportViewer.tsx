@@ -388,6 +388,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const hasPositiveDdimer = answers.baixa_probabilidade === 'ddimer_positive'
       const hasNegativeDdimer = answers.baixa_probabilidade === 'ddimer_negative'
       const isUrgentVascular = currentStep === 'tvp_urgencia_vascular_imediata'
+      const isMandatoryAdmissionInvestigation = currentStep === 'tvp_internacao_investigacao_clinica'
+      const isTEPInvestigation = currentStep === 'tvp_internacao_investigar_tep'
       const isExcluded = currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial'
       const isConfirmed = hasPositiveUS || currentStep === 'anticoagulacao_iniciada' || currentStep === 'encaminhamento_urgente'
 
@@ -417,11 +419,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         wellsCriteria.length > 0 ? `Critérios pontuados no escore de Wells: ${wellsCriteria.join('; ')}.` : null,
         isUrgentVascular
           ? 'Presença de sinal de gravidade com indicação de urgência vascular e internação imediata.'
-          : isConfirmed
-            ? 'Quadro compatível com TVP confirmada durante a investigação.'
-            : isExcluded
-              ? 'Investigação sem evidência final de TVP no fluxo assistencial.'
-              : 'Mantida suspeita clínica de TVP, em investigação conforme protocolo institucional.'
+          : isTEPInvestigation
+            ? 'Presença de sintomas respiratórios associados, com necessidade de internação e investigação imediata de possível tromboembolismo pulmonar.'
+            : isMandatoryAdmissionInvestigation
+              ? 'Presença de situação clínica de alto risco, com necessidade de internação mandatória e aprofundamento da investigação.'
+              : isConfirmed
+                ? 'Quadro compatível com TVP confirmada durante a investigação.'
+                : isExcluded
+                  ? 'Investigação sem evidência final de TVP no fluxo assistencial.'
+                  : 'Mantida suspeita clínica de TVP, em investigação conforme protocolo institucional.'
       ])
 
       const complementaryExamItems = uniqueItems([
@@ -449,6 +455,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         currentStep === 'anticoagulacao_iniciada' ? 'Paciente anticoagulado.' : null,
         currentStep === 'encaminhamento_urgente' ? 'Solicitada avaliação da Cirurgia Vascular.' : null,
         isUrgentVascular ? 'Indicação de internação hospitalar imediata e acionamento urgente da Cirurgia Vascular.' : null,
+        isMandatoryAdmissionInvestigation ? 'Indicada internação hospitalar mandatória para aprofundamento e seguimento da investigação clínica.' : null,
+        isTEPInvestigation ? 'Indicada internação hospitalar mandatória com investigação imediata de possível tromboembolismo pulmonar.' : null,
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
       ])
 
@@ -459,6 +467,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         patient.treatment.nextEvaluation
           ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.`
           : 'Reavaliação clínica conforme evolução e protocolo institucional.',
+        isTEPInvestigation ? 'Prosseguir com protocolo institucional para investigação de TEP conforme estabilidade clínica e recursos disponíveis.' : null,
         'Orientado retorno imediato em caso de piora da dor, aumento do edema, dispneia, dor torácica, síncope ou sinais de sangramento.',
         therapies.length > 0 ? 'Monitorização clínica e laboratorial conforme necessidade e esquema anticoagulante adotado.' : null
       ])

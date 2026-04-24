@@ -21,6 +21,7 @@ import {
   Microscope,
   ArrowLeft,
   Info,
+  Volume2,
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -87,14 +88,14 @@ const asthmaInitialFieldConfig: Array<{ key: AsthmaInitialFieldKey; label: strin
   { key: 'sato2', label: 'SatO2', unit: '%', min: 50, max: 100, required: true },
   { key: 'fr', label: 'FR', unit: 'irpm', min: 8, max: 60, required: true },
   { key: 'fc', label: 'FC', unit: 'bpm', min: 30, max: 220, required: true },
-  { key: 'pfe', label: 'PFE', unit: '% previsto', min: 5, max: 150, required: true },
+  { key: 'pfe', label: 'PFE', unit: '% previsto', min: 0, max: 100, required: true },
   { key: 'paco2', label: 'PaCO2', unit: 'mmHg', min: 10, max: 120, required: false }
 ]
 
 const asthmaReevalFieldConfig: Array<{ key: AsthmaReevalFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
   { key: 'sato2Re', label: 'SatO2 reavaliação', unit: '%', min: 50, max: 100, required: true },
   { key: 'frRe', label: 'FR reavaliação', unit: 'irpm', min: 8, max: 60, required: true },
-  { key: 'pfeRe', label: 'PFE reavaliação', unit: '% previsto', min: 5, max: 150, required: true }
+  { key: 'pfeRe', label: 'PFE reavaliação', unit: '% previsto', min: 0, max: 100, required: true }
 ]
 
 const asthmaInitialInfo: Record<AsthmaInitialFieldKey, string[]> = {
@@ -144,6 +145,10 @@ const tvpAlertSigns = [
   'Dor de início recente associada a imobilização, cirurgia recente (≤4 semanas), trauma, câncer ativo, gravidez/puerpério, uso de estrogênios, história prévia de TVP/TEV ou trombofilia',
   'Sintomas respiratórios concomitantes (dispneia súbita, dor torácica pleurítica, hemoptise, síncope): suspeitar embolia pulmonar'
 ]
+
+const tvpVascularSurgeryAlertSigns = tvpAlertSigns.slice(0, 4)
+const tvpMandatoryAdmissionInvestigationAlertSigns = [tvpAlertSigns[4]]
+const tvpRespiratoryTEPAlertSigns = [tvpAlertSigns[5]]
 
 const flegmasiaReferenceImages = [
   '/flegmasia 1.jpg',
@@ -253,9 +258,11 @@ const tvpNoacHighRiskNotes = [
     title: 'SAF (síndrome antifosfolípide), especialmente triplo positivo',
     summary: 'Evitar NOAC; preferir varfarina.',
     details: [
-      'Maior risco de recorrência trombótica com NOAC em SAF de alto risco (triplo positivo).',
-      'Risco é particularmente relevante para eventos arteriais.',
-      'Conduta usual: varfarina com alvo de INR individualizado conforme perfil clínico.'
+      'SAF (síndrome antifosfolípide) é uma condição autoimune pró-trombótica, na qual o paciente produz anticorpos antifosfolípides associados a trombose venosa, trombose arterial e complicações obstétricas.',
+      'Quando falamos em "triplo positivo", significa positividade para os 3 principais anticorpos da SAF: anticoagulante lúpico, anticorpo anticardiolipina e anticorpo anti-beta-2-glicoproteína I.',
+      'Esse perfil "triplo positivo" identifica um subgrupo de risco trombótico muito mais alto, com maior chance de recorrência, especialmente se houver eventos arteriais.',
+      'Nesses casos, os NOACs têm pior sustentação de evidência e podem estar associados a maior risco de recorrência trombótica.',
+      'Conduta prática usual: evitar NOAC e preferir varfarina, com alvo de INR individualizado conforme perfil clínico e acompanhamento especializado.'
     ]
   },
   {
@@ -465,6 +472,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
   const [tvpNoacInfoOpen, setTVPNoacInfoOpen] = useState<string | null>(null)
   const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
+  const [isAsthmaReferencePlaying, setIsAsthmaReferencePlaying] = useState(false)
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -877,6 +885,57 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => selectedClinicalFindings.some((item) => tvpAlertSigns.includes(item)),
     [selectedClinicalFindings]
   )
+  const hasTVPVascularAlertSelected = useMemo(
+    () => selectedClinicalFindings.some((item) => tvpVascularSurgeryAlertSigns.includes(item)),
+    [selectedClinicalFindings]
+  )
+  const hasTVPAdmissionInvestigationAlertSelected = useMemo(
+    () => selectedClinicalFindings.some((item) => tvpMandatoryAdmissionInvestigationAlertSigns.includes(item)),
+    [selectedClinicalFindings]
+  )
+  const hasTVPRespiratoryAlertSelected = useMemo(
+    () => selectedClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
+    [selectedClinicalFindings]
+  )
+  const tvpAlertInterruptionOption = useMemo(() => {
+    if (!hasTVPAlertSignSelected) return null
+
+    if (hasTVPVascularAlertSelected) {
+      return {
+        text: 'Interromper fluxo: urgência vascular + internação imediata',
+        nextStep: 'tvp_urgencia_vascular_imediata',
+        value: 'tvp_alerta_urgencia_vascular',
+        critical: true,
+        requiresImmediateAction: true,
+        description: 'Achados compatíveis com maior gravidade local do membro. Exigem internação mandatória e avaliação urgente da Cirurgia Vascular.'
+      }
+    }
+
+    if (hasTVPRespiratoryAlertSelected) {
+      return {
+        text: 'Interromper fluxo: internação imediata + investigar possível TEP',
+        nextStep: 'tvp_internacao_investigar_tep',
+        value: 'tvp_alerta_tep',
+        critical: true,
+        requiresImmediateAction: true,
+        description: 'Sintomas respiratórios associados exigem internação mandatória e investigação imediata de possível tromboembolismo pulmonar.'
+      }
+    }
+
+    return {
+      text: 'Interromper fluxo: internação imediata + aprofundar investigação',
+      nextStep: 'tvp_internacao_investigacao_clinica',
+      value: 'tvp_alerta_investigacao',
+      critical: true,
+      requiresImmediateAction: true,
+      description: 'Situação de alto risco com necessidade de internação mandatória e seguimento da investigação, sem indicação automática de Cirurgia Vascular.'
+    }
+  }, [
+    hasTVPAlertSignSelected,
+    hasTVPAdmissionInvestigationAlertSelected,
+    hasTVPVascularAlertSelected,
+    hasTVPRespiratoryAlertSelected
+  ])
   const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
     const criterion = tvpWellsCriteria.find(item => item.id === criterionId)
@@ -892,6 +951,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
   const isGasometryFlow = flowchart.id === 'gasometria'
   const isAsthmaFlow = flowchart.id === 'asthma'
+  const isAsthmaStartStep = flowchart.id === 'asthma' && currentStepData?.id === 'asma_tipo'
 
   const isDpocSinaisGravidade = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'sinais_gravidade'
   const isDpocAnthonisenAmbulatorial = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb'
@@ -906,6 +966,82 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const toggleSelection = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
   }
+
+  const playAsthmaReference = useCallback(async () => {
+    if (isAsthmaReferencePlaying || typeof window === 'undefined') return
+
+    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    if (!AudioContextCtor) return
+
+    const context = new AudioContextCtor()
+    const duration = 3.8
+    const sampleRate = context.sampleRate
+    const buffer = context.createBuffer(1, Math.floor(sampleRate * duration), sampleRate)
+    const data = buffer.getChannelData(0)
+
+    for (let i = 0; i < data.length; i += 1) {
+      data[i] = (Math.random() * 2 - 1) * 0.35
+    }
+
+    const source = context.createBufferSource()
+    source.buffer = buffer
+
+    const highPass = context.createBiquadFilter()
+    highPass.type = 'highpass'
+    highPass.frequency.value = 350
+
+    const bandPass = context.createBiquadFilter()
+    bandPass.type = 'bandpass'
+    bandPass.frequency.value = 820
+    bandPass.Q.value = 12
+
+    const lowPass = context.createBiquadFilter()
+    lowPass.type = 'lowpass'
+    lowPass.frequency.value = 1800
+
+    const gainNode = context.createGain()
+    const now = context.currentTime
+
+    gainNode.gain.setValueAtTime(0.0001, now)
+    gainNode.gain.linearRampToValueAtTime(0.02, now + 0.15)
+    gainNode.gain.linearRampToValueAtTime(0.085, now + 0.65)
+    gainNode.gain.linearRampToValueAtTime(0.06, now + 1.4)
+    gainNode.gain.linearRampToValueAtTime(0.09, now + 2.3)
+    gainNode.gain.linearRampToValueAtTime(0.025, now + 3.15)
+    gainNode.gain.linearRampToValueAtTime(0.0001, now + duration)
+
+    const lfo = context.createOscillator()
+    lfo.type = 'sine'
+    lfo.frequency.value = 5.2
+
+    const lfoDepth = context.createGain()
+    lfoDepth.gain.value = 120
+
+    lfo.connect(lfoDepth)
+    lfoDepth.connect(bandPass.frequency)
+
+    source.connect(highPass)
+    highPass.connect(bandPass)
+    bandPass.connect(lowPass)
+    lowPass.connect(gainNode)
+    gainNode.connect(context.destination)
+
+    setIsAsthmaReferencePlaying(true)
+
+    source.onended = () => {
+      setIsAsthmaReferencePlaying(false)
+      lfo.stop()
+      context.close().catch(() => {})
+    }
+
+    if (context.state === 'suspended') {
+      await context.resume()
+    }
+
+    lfo.start(now)
+    source.start(now)
+    source.stop(now + duration)
+  }, [isAsthmaReferencePlaying])
 
   const toNumber = useCallback((value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -1026,6 +1162,49 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (key === 'chloride') return value < 98 ? { tone: 'amber', text: 'Hipocloremia' } : value > 107 ? { tone: 'amber', text: 'Hipercloremia' } : { tone: 'emerald', text: 'Faixa usual' }
     if (key === 'albumin') return value < 3.5 ? { tone: 'amber', text: 'Baixa (corrigir AG)' } : { tone: 'emerald', text: 'Faixa usual' }
     return { tone: 'slate', text: 'Sem classificação' }
+  }
+
+  const getAsthmaFieldFeedback = (key: AsthmaInitialFieldKey | AsthmaReevalFieldKey, value: number | null) => {
+    if (value === null) return { tone: 'slate', text: 'Aguardando preenchimento' }
+
+    if (key === 'sato2' || key === 'sato2Re') {
+      if (value < 90) return { tone: 'red', text: 'Hipoxemia grave' }
+      if (value <= 95) return { tone: 'amber', text: 'Hipoxemia / resposta incompleta' }
+      return { tone: 'emerald', text: 'Saturação adequada' }
+    }
+
+    if (key === 'fr' || key === 'frRe') {
+      if (value > 30) return { tone: 'red', text: 'Taquipneia grave' }
+      if (value >= 25) return { tone: 'amber', text: 'Taquipneia moderada' }
+      return { tone: 'emerald', text: 'FR mais favorável' }
+    }
+
+    if (key === 'fc') {
+      if (value > 120) return { tone: 'red', text: 'Taquicardia grave' }
+      if (value >= 110) return { tone: 'amber', text: 'Taquicardia moderada' }
+      return { tone: 'emerald', text: 'FC mais favorável' }
+    }
+
+    if (key === 'pfe' || key === 'pfeRe') {
+      if (value < 40) return { tone: 'red', text: 'PFE grave (<40%)' }
+      if (value <= 69) return { tone: 'amber', text: 'PFE moderado (40–69%)' }
+      return { tone: 'emerald', text: 'PFE favorável (≥70%)' }
+    }
+
+    if (key === 'paco2') {
+      if (value >= 45) return { tone: 'red', text: 'Hipercapnia / risco de fadiga' }
+      if (value >= 35) return { tone: 'amber', text: 'PaCO2 normal em crise importante: atenção' }
+      return { tone: 'emerald', text: 'Hipocapnia compatível com hiperventilação' }
+    }
+
+    return { tone: 'slate', text: 'Sem classificação' }
+  }
+
+  const getFeedbackToneClass = (tone: 'slate' | 'emerald' | 'amber' | 'red') => {
+    if (tone === 'red') return 'border-red-300 bg-red-50 text-red-700'
+    if (tone === 'amber') return 'border-amber-300 bg-amber-50 text-amber-700'
+    if (tone === 'emerald') return 'border-emerald-300 bg-emerald-50 text-emerald-700'
+    return 'border-slate-300 bg-slate-50 text-slate-600'
   }
 
   const gasometryStepOptions = useMemo(() => {
@@ -1698,6 +1877,34 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
+                  {isAsthmaStartStep && (
+                    <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="space-y-1">
+                          <h5 className="text-sm font-extrabold uppercase tracking-wide text-cyan-900">
+                            Referência rápida de ausculta
+                          </h5>
+                          <p className="text-sm text-cyan-900">
+                            Sibilância costuma soar como um chiado agudo, musical, predominante na expiração. Tórax silencioso em paciente cansado pode indicar gravidade maior.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { void playAsthmaReference() }}
+                          disabled={isAsthmaReferencePlaying}
+                          className={clsx(
+                            'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                            isAsthmaReferencePlaying
+                              ? 'bg-cyan-100 text-cyan-500 cursor-not-allowed border border-cyan-200'
+                              : 'bg-cyan-600 hover:bg-cyan-700 text-white'
+                          )}
+                        >
+                          <Volume2 className="w-4 h-4" />
+                          {isAsthmaReferencePlaying ? 'Reproduzindo referência...' : 'Ouvir sibilância de referência'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1813,11 +2020,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       const value = asthmaInitialDraft[field.key]
                       const parsed = asthmaInitialValidation.parsed[field.key]
                       const error = asthmaInitialValidation.errors[field.key]
+                      const feedback = getAsthmaFieldFeedback(field.key, parsed)
                       const toneClass = error
                         ? 'border-red-300 bg-red-50 text-red-700'
                         : parsed === null
                           ? 'border-slate-300 bg-slate-50 text-slate-600'
-                          : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          : getFeedbackToneClass(feedback.tone)
                       return (
                         <div key={field.key} className="rounded-xl border border-slate-200 bg-white p-3">
                           <div className="flex items-center justify-between">
@@ -1844,7 +2052,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                             placeholder={`${field.min} – ${field.max}`}
                           />
                           <div className={clsx('mt-2 inline-flex items-center px-2 py-1 rounded-md border text-xs font-semibold', toneClass)}>
-                            {error ? error : parsed === null ? 'Aguardando preenchimento' : 'Valor válido'}
+                            {error ? error : feedback.text}
                           </div>
                         </div>
                       )
@@ -1900,11 +2108,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       const value = asthmaReevalDraft[field.key]
                       const parsed = asthmaReevalValidation.parsed[field.key]
                       const error = asthmaReevalValidation.errors[field.key]
+                      const feedback = getAsthmaFieldFeedback(field.key, parsed)
                       const toneClass = error
                         ? 'border-red-300 bg-red-50 text-red-700'
                         : parsed === null
                           ? 'border-slate-300 bg-slate-50 text-slate-600'
-                          : 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                          : getFeedbackToneClass(feedback.tone)
                       return (
                         <div key={field.key} className="rounded-xl border border-slate-200 bg-white p-3">
                           <div className="flex items-center justify-between">
@@ -1931,7 +2140,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                             placeholder={`${field.min} – ${field.max}`}
                           />
                           <div className={clsx('mt-2 inline-flex items-center px-2 py-1 rounded-md border text-xs font-semibold', toneClass)}>
-                            {error ? error : parsed === null ? 'Aguardando preenchimento' : 'Valor válido'}
+                            {error ? error : feedback.text}
                           </div>
                         </div>
                       )
@@ -2235,8 +2444,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         Sinal de alerta detectado
                       </h5>
                       <p className="mt-1 text-sm text-red-900">
-                        Fluxograma deve ser interrompido: acionar <strong>Cirurgia Vascular em urgência</strong> e indicar
-                        <strong> internação hospitalar mandatória</strong>.
+                        {hasTVPVascularAlertSelected ? (
+                          <>
+                            Fluxograma deve ser interrompido: indicar <strong>internação hospitalar mandatória</strong> e
+                            acionar <strong>Cirurgia Vascular em urgência</strong>.
+                          </>
+                        ) : hasTVPRespiratoryAlertSelected ? (
+                          <>
+                            Fluxograma deve ser interrompido: indicar <strong>internação hospitalar mandatória</strong> e
+                            prosseguir com <strong>investigação imediata de possível tromboembolismo pulmonar (TEP)</strong>.
+                          </>
+                        ) : (
+                          <>
+                            Fluxograma deve ser interrompido: indicar <strong>internação hospitalar mandatória</strong> e
+                            realizar <strong>aprofundamento/seguimento da investigação</strong>, sem indicação automática de Cirurgia Vascular.
+                          </>
+                        )}
                       </p>
                     </div>
                   )}
@@ -2799,7 +3022,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
               {isTVPTreatmentInitial && tvpAnticoagConsiderationsOpen && tvpNoacInfoOpen && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-2xl rounded-2xl border border-red-200 bg-white shadow-2xl overflow-hidden">
+                  <div className="w-full max-w-2xl max-h-[85vh] rounded-2xl border border-red-200 bg-white shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-red-700 to-rose-700 text-white">
                       <h4 className="font-bold">
                         {tvpNoacHighRiskNotes.find((item) => item.id === tvpNoacInfoOpen)?.title}
@@ -2813,7 +3036,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="p-5">
+                    <div className="p-5 overflow-y-auto">
                       <ul className="list-disc pl-5 space-y-2 text-sm text-slate-800">
                         {(tvpNoacHighRiskNotes.find((item) => item.id === tvpNoacInfoOpen)?.details ?? []).map((detail) => (
                           <li key={detail}>{detail}</li>
@@ -2920,7 +3143,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
               {tvpPrescriptionPreview?.therapyId === 'varfarina' && varfarinaDietInfoOpen && (
                 <div className="fixed inset-0 z-[70] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-4xl rounded-2xl border border-emerald-200 bg-white shadow-2xl overflow-hidden">
+                  <div className="w-full max-w-4xl max-h-[85vh] rounded-2xl border border-emerald-200 bg-white shadow-2xl overflow-hidden flex flex-col">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white">
                       <h4 className="font-bold">Varfarina e alimentação: orientações essenciais</h4>
                       <button
@@ -2932,7 +3155,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="p-5 grid gap-3">
+                    <div className="p-5 grid gap-3 overflow-y-auto">
                       <div className="rounded-xl border border-red-200 bg-red-50 p-4">
                         <h5 className="text-sm font-extrabold text-red-900 mb-2">
                           Interações medicamentosas da varfarina (alto impacto clínico)
@@ -3329,17 +3552,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     ? gasometryStepOptions
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
-                      : isTVPClinicalEvaluation && hasTVPAlertSignSelected
-                        ? [
-                            {
-                              text: 'Interromper fluxo: urgência vascular + internação imediata',
-                              nextStep: 'tvp_urgencia_vascular_imediata',
-                              value: 'tvp_alerta_urgencia',
-                              critical: true,
-                              requiresImmediateAction: true
-                            }
-                          ]
-                      : currentStepData.options
+                      : isTVPClinicalEvaluation && tvpAlertInterruptionOption
+                        ? [tvpAlertInterruptionOption]
+                        : currentStepData.options
                 if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen) return null
                 return (
                 <div className="grid gap-4">
