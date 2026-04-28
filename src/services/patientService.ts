@@ -319,9 +319,9 @@ class PatientService {
       if (isAdult) {
         perKg = 60 // Adultos
       } else {
-        // Pediatria: ≤10 kg → 100 mL/kg/dia; 10–20 kg → 150 mL/kg/dia; >20 kg → 80 mL/kg/dia
-        if (weight <= 10) perKg = 100
-        else if (weight <= 20) perKg = 150
+        // Pediatria: ≤10 kg → 130 mL/kg/dia; 10–20 kg → 100 mL/kg/dia; >20 kg → 80 mL/kg/dia
+        if (weight <= 10) perKg = 130
+        else if (weight <= 20) perKg = 100
         else perKg = 80
       }
       const totalDaily = Math.round(weight * perKg)

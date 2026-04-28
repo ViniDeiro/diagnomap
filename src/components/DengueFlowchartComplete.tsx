@@ -47,9 +47,18 @@ interface DengueFlowchartProps {
   onBack?: () => void
   onViewPrescriptions?: (patient: Patient) => void
   onViewReport?: (patient: Patient) => void
+  onViewMedicalPrescription?: (patient: Patient) => void
 }
 
-const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onComplete, onUpdate, onBack, onViewPrescriptions, onViewReport }) => {
+const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
+  patient,
+  onComplete,
+  onUpdate,
+  onBack,
+  onViewPrescriptions,
+  onViewReport,
+  onViewMedicalPrescription
+}) => {
   const [currentStep, setCurrentStep] = useState(patient.flowchartState.currentStep || 'start')
   const [history, setHistory] = useState<string[]>(patient.flowchartState.history || [])
   const [answers, setAnswers] = useState<Record<string, string>>(patient.flowchartState.answers || {})
@@ -74,6 +83,27 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_d_${patient.id}`) || '') : ''
   )
   const [antipyreticAddedD, setAntipyreticAddedD] = useState<boolean>(false)
+  const [notificationConfirmed, setNotificationConfirmed] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`dengue_notification_ack_${patient.id}`)
+      if (saved !== null) return saved === 'true'
+    }
+    return (patient.flowchartState.answers?.dengue_notification_ack || '') === 'true'
+  })
+  const [notificationNumber, setNotificationNumber] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`dengue_notification_number_${patient.id}`)
+      if (saved) return saved
+    }
+    return patient.flowchartState.answers?.dengue_notification_number || ''
+  })
+  const [groupCExpansionRepeats, setGroupCExpansionRepeats] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = Number(localStorage.getItem(`dengue_group_c_repeats_${patient.id}`) || '0')
+      if (!Number.isNaN(saved)) return Math.max(0, Math.min(saved, 3))
+    }
+    return 0
+  })
 
   // Estado para persistência do choque (Grupo D)
   const [shockPersistent, setShockPersistent] = useState<boolean>(false)
@@ -89,6 +119,168 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     const n = Number(normalized)
     return isNaN(n) ? undefined : n
   }
+
+  const getHtHbStatus = (ht?: number, hb?: number) => {
+    if (ht == null || hb == null || hb <= 0) return null
+
+    const ratio = ht / hb
+    const ratioShort = ratio.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    const ratioPrecise = ratio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+    if (ratio >= 3.6) {
+      return {
+        ratio,
+        ratioShort,
+        ratioPrecise,
+        level: 'significant' as const,
+        summary: `Razão Ht/Hb ${ratioShort}x - Hemoconcentração significativa (>= 3,6x)`
+      }
+    }
+
+    if (ratio >= 3.5) {
+      return {
+        ratio,
+        ratioShort,
+        ratioPrecise,
+        level: 'borderline' as const,
+        summary: `Razão Ht/Hb ${ratioShort}x - Limítrofe, ainda sem hemoconcentração significativa`
+      }
+    }
+
+    if (ratio >= 2.8) {
+      return {
+        ratio,
+        ratioShort,
+        ratioPrecise,
+        level: 'expected' as const,
+        summary: `Razão Ht/Hb ${ratioShort}x - Sem hemoconcentração laboratorial`
+      }
+    }
+
+    return {
+      ratio,
+      ratioShort,
+      ratioPrecise,
+      level: 'low' as const,
+      summary: `Razão Ht/Hb ${ratioShort}x - Abaixo da faixa esperada`
+    }
+  }
+
+  const persistNotificationState = (confirmed: boolean, rawNumber: string) => {
+    const normalizedNumber = rawNumber.trim().toUpperCase()
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`dengue_notification_ack_${patient.id}`, String(confirmed))
+      if (normalizedNumber) {
+        localStorage.setItem(`dengue_notification_number_${patient.id}`, normalizedNumber)
+      } else {
+        localStorage.removeItem(`dengue_notification_number_${patient.id}`)
+      }
+    }
+
+    setAnswers(prev => ({
+      ...prev,
+      dengue_notification_ack: confirmed ? 'true' : 'false',
+      dengue_notification_number: normalizedNumber
+    }))
+  }
+
+  const handleNotificationConfirmedChange = (checked: boolean) => {
+    setNotificationConfirmed(checked)
+    persistNotificationState(checked, notificationNumber)
+  }
+
+  const handleNotificationNumberChange = (value: string) => {
+    const normalized = value.toUpperCase()
+    setNotificationNumber(normalized)
+    persistNotificationState(notificationConfirmed, normalized)
+  }
+
+  const persistGroupCExpansionRepeats = (count: number) => {
+    const normalized = Math.max(0, Math.min(count, 3))
+    setGroupCExpansionRepeats(normalized)
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`dengue_group_c_repeats_${patient.id}`, String(normalized))
+    }
+  }
+
+  const hasNotificationNumber = notificationNumber.trim().length > 0
+
+  const renderNotificationCard = (requireNumberForFinalization = false) => (
+    <div className={clsx(
+      'rounded-2xl border p-4 space-y-3',
+      requireNumberForFinalization ? 'bg-amber-50 border-amber-300' : 'bg-red-50 border-red-300'
+    )}>
+      <div className="flex items-start space-x-3">
+        <div className={clsx(
+          'mt-0.5 w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0',
+          requireNumberForFinalization ? 'bg-amber-500' : 'bg-red-600'
+        )}>
+          <AlertTriangle className="w-5 h-5" />
+        </div>
+        <div className="flex-1">
+          <h4 className={clsx(
+            'font-bold',
+            requireNumberForFinalization ? 'text-amber-900' : 'text-red-900'
+          )}>
+            Notificação compulsória de caso suspeito
+          </h4>
+          <p className={clsx(
+            'text-sm mt-1',
+            requireNumberForFinalization ? 'text-amber-800' : 'text-red-800'
+          )}>
+            Todo caso suspeito de dengue deve ser notificado. O fluxo só pode ser concluído com o número da notificação registrado.
+          </p>
+        </div>
+      </div>
+
+      {!requireNumberForFinalization && (
+        <label className="flex items-center space-x-3 rounded-xl bg-white/80 border border-red-200 px-4 py-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={notificationConfirmed}
+            onChange={(e) => handleNotificationConfirmedChange(e.target.checked)}
+            className="w-5 h-5 rounded border-red-300 text-red-600 focus:ring-red-500"
+          />
+          <span className="text-sm font-medium text-red-900">
+            Confirmo que a notificação já foi realizada ou foi iniciada antes de prosseguir com a avaliação.
+          </span>
+        </label>
+      )}
+
+      <div className="rounded-xl bg-white/80 border border-slate-200 p-4">
+        <label className="block text-sm font-semibold text-slate-800 mb-2">
+          Número da notificação
+          {requireNumberForFinalization ? ' (obrigatório para finalizar)' : ' (se já disponível)'}
+        </label>
+        <input
+          type="text"
+          value={notificationNumber}
+          onChange={(e) => handleNotificationNumberChange(e.target.value)}
+          placeholder="Ex: SINAN 2024-000123 ou protocolo local"
+          className={clsx(
+            'w-full rounded-xl border px-4 py-3 text-sm focus:outline-none focus:ring-2',
+            requireNumberForFinalization && !hasNotificationNumber
+              ? 'border-amber-400 focus:ring-amber-300'
+              : 'border-slate-300 focus:ring-blue-300'
+          )}
+        />
+        <p className="mt-2 text-xs text-slate-600">
+          Pode ser o número do SINAN ou o identificador local usado pelo serviço.
+        </p>
+        {requireNumberForFinalization && !hasNotificationNumber && (
+          <p className="mt-2 text-sm font-medium text-amber-800">
+            Informe o número da notificação para habilitar a finalização do fluxograma.
+          </p>
+        )}
+        {hasNotificationNumber && (
+          <p className="mt-2 text-sm font-medium text-emerald-700">
+            Número registrado: {notificationNumber.trim()}
+          </p>
+        )}
+      </div>
+    </div>
+  )
 
   useEffect(() => {
     hydrateLocalStorageFromDB(patient.id).then(() => {
@@ -271,12 +463,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       }
       case 'ht': {
         if (hbContext == null || hbContext <= 0) return { label: 'Informe hemoglobina para avaliar razão Ht/Hb', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
-        const ratio = value / hbContext
-        const ratioText = `Razão Ht/Hb: ${ratio.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}x`
-        if (ratio >= 2.8 && ratio <= 3.2) return { label: `${ratioText} – Normal (2,8–3,2x)`, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
-        if (ratio >= 3.21 && ratio <= 3.59) return { label: `${ratioText} – Aumentado (3,21–3,59x)`, input: 'border-orange-300 bg-orange-50 focus:ring-orange-500 focus:border-orange-500', text: 'text-orange-700' }
-        if (ratio >= 3.6) return { label: `${ratioText} – Hemoconcentrado (≥ 3,6x)`, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
-        return { label: `${ratioText} – Abaixo (< 2,8x)`, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        const status = getHtHbStatus(value, hbContext)
+        if (!status) return { label: 'Informe hemoglobina para avaliar razão Ht/Hb', input: 'border-slate-300 focus:ring-slate-300 focus:border-slate-300', text: 'text-slate-500' }
+        if (status.level === 'expected') return { label: status.summary, input: 'border-green-300 bg-green-50 focus:ring-green-500 focus:border-green-500', text: 'text-green-700' }
+        if (status.level === 'borderline') return { label: status.summary, input: 'border-yellow-300 bg-yellow-50 focus:ring-yellow-500 focus:border-yellow-500', text: 'text-yellow-700' }
+        if (status.level === 'significant') return { label: status.summary, input: 'border-red-300 bg-red-50 focus:ring-red-500 focus:border-red-500', text: 'text-red-700' }
+        return { label: status.summary, input: 'border-blue-300 bg-blue-50 focus:ring-blue-500 focus:border-blue-500', text: 'text-blue-700' }
       }
       case 'plt': {
         // Nova classificação de plaquetopenia e plaquetose, enfatizando muito grave e extrema
@@ -464,6 +656,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     spo2: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_d_spo2_${patient.id}`) || '') : undefined,
     temp: typeof window !== 'undefined' ? parseNum(localStorage.getItem(`vitals_d_temp_${patient.id}`) || '') : undefined
   })
+  const [dIntervalChoice, setDIntervalChoice] = useState<'15min' | '20min' | '30min' | 'after_expansion'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(`d_interval_choice_${patient.id}`)
+      if (saved === '20min' || saved === '30min' || saved === 'after_expansion') return saved
+    }
+    return '15min'
+  })
   // Controle de abas de reavaliação do Grupo D (1ª a 8ª)
   const [dReevalTab, setDReevalTab] = useState<number>(1)
 
@@ -504,6 +703,35 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     })
   }
 
+  const getDReevaluationConfig = (choice: '15min' | '20min' | '30min' | 'after_expansion') => {
+    if (choice === '20min') {
+      return {
+        count: 6,
+        header: 'Reavaliações após cada etapa de expansão (intervalo de 20 min)',
+        badge: 'Até 6 etapas sequenciais documentadas'
+      }
+    }
+    if (choice === '30min') {
+      return {
+        count: 4,
+        header: 'Reavaliações após cada etapa de expansão (intervalo de 30 min)',
+        badge: 'Até 4 etapas sequenciais documentadas'
+      }
+    }
+    if (choice === 'after_expansion') {
+      return {
+        count: 8,
+        header: 'Reavaliações após cada etapa de expansão volêmica',
+        badge: 'Registrar cada etapa realizada pela equipe'
+      }
+    }
+    return {
+      count: 8,
+      header: 'Reavaliações após cada etapa de expansão (intervalo de 15 min)',
+      badge: 'Até 8 etapas sequenciais documentadas'
+    }
+  }
+
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
     const flowchartState = patient.flowchartState
@@ -511,6 +739,28 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     setHistory(flowchartState.history || [])
     setAnswers(flowchartState.answers || {})
     setProgress(flowchartState.progress || 0)
+    const storedNotificationAck = typeof window !== 'undefined'
+      ? localStorage.getItem(`dengue_notification_ack_${patient.id}`)
+      : null
+    const storedNotificationNumber = typeof window !== 'undefined'
+      ? localStorage.getItem(`dengue_notification_number_${patient.id}`)
+      : null
+    const storedGroupCRepeats = typeof window !== 'undefined'
+      ? Number(localStorage.getItem(`dengue_group_c_repeats_${patient.id}`) || '0')
+      : 0
+    const storedDInterval = typeof window !== 'undefined'
+      ? localStorage.getItem(`d_interval_choice_${patient.id}`)
+      : null
+    setNotificationConfirmed(storedNotificationAck != null
+      ? storedNotificationAck === 'true'
+      : (flowchartState.answers?.dengue_notification_ack || '') === 'true')
+    setNotificationNumber(storedNotificationNumber || flowchartState.answers?.dengue_notification_number || '')
+    setGroupCExpansionRepeats(Number.isNaN(storedGroupCRepeats) ? 0 : Math.max(0, Math.min(storedGroupCRepeats, 3)))
+    if (storedDInterval === '20min' || storedDInterval === '30min' || storedDInterval === 'after_expansion' || storedDInterval === '15min') {
+      setDIntervalChoice(storedDInterval)
+    } else {
+      setDIntervalChoice('15min')
+    }
     // Detectar se já existe prescrição de hidratação específica para observação (até retorno dos exames)
     try {
       const fresh = patientService.getPatientById(patient.id)
@@ -589,13 +839,48 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
   const steps: Record<string, FlowchartStep> = {
     start: {
       id: 'start',
-      title: 'Fluxograma de Classificação - Dengue 2024',
-      description: 'Relato de febre entre 2-7 dias + sintomas. NOTIFICAR TODO CASO SUSPEITO.',
+      title: 'Suspeita de Dengue',
+      description: 'Definição de caso suspeito, notificação compulsória e liberação da avaliação clínica.',
       type: 'question',
       icon: <Stethoscope className="w-6 h-6" />,
       color: 'bg-gradient-to-r from-blue-600 to-slate-700',
+      content: (
+        <div className="space-y-6">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <h4 className="font-bold text-slate-900 mb-2">Quando pensar em dengue?</h4>
+            <p className="text-sm text-slate-700 leading-7">
+              Suspeitar em paciente com <strong>febre entre 2 e 7 dias</strong>, acompanhada de <strong>duas ou mais</strong> manifestações como náuseas, vômitos,
+              exantema, mialgia, artralgia, cefaleia, dor retro-orbitária, petéquias, prova do laço positiva ou leucopenia.
+            </p>
+            <p className="text-sm text-slate-700 leading-7 mt-3">
+              Em crianças, também considerar suspeita diante de quadro febril agudo sem foco aparente de infecção.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-red-300 bg-red-50 p-5">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-bold text-red-900">NOTIFICAR TODO CASO SUSPEITO DE DENGUE</h4>
+                <p className="text-sm text-red-800 mt-2 leading-7">
+                  A avaliação clínica no fluxo só deve prosseguir após o registro ou início da notificação compulsória.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {renderNotificationCard(false)}
+        </div>
+      ),
       options: [
-        { text: 'Iniciar avaliação', nextStep: 'alarm_check', value: 'start' }
+        {
+          text: notificationConfirmed ? 'Iniciar avaliação' : 'Confirme a notificação para liberar a avaliação',
+          nextStep: 'alarm_check',
+          value: 'start',
+          disabled: !notificationConfirmed
+        }
       ]
     },
 
@@ -612,28 +897,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         <div className="space-y-4">
           <div className="bg-red-50 p-4 rounded-lg">
             <h4 className="font-semibold text-red-800 mb-2">Orientação inicial:</h4>
-            <div className="flex items-start space-x-2">
-              <p className="text-red-700">
-                Resposta inadequada caracterizada pela <span className="font-bold">persistência do choque</span>. Avaliar hematócrito.
-              </p>
-              {/* Botão de informação sobre persistência do choque */}
-              <div className="relative group">
-                <button
-                  type="button"
-                  aria-label="Informações"
-                  className="w-5 h-5 rounded-full border border-red-400 text-red-700 text-xs leading-none flex items-center justify-center bg-white hover:bg-red-50"
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  title="Saiba mais sobre persistência do choque"
-                >
-                  i
-                </button>
-                <div className="absolute right-0 top-6 z-20 hidden group-hover:block bg-white border border-red-300 rounded-md shadow-lg p-4 text-red-800 text-xs w-96 max-w-none break-words whitespace-pre-line text-left">
-                  <strong className="block mb-2 text-sm">O que é persistência do choque na dengue?</strong>
-                  {infoTexts.grupoD.persistencia_choque}
-                </div>
+            <p className="text-red-700">
+              Resposta inadequada caracterizada pela <span className="font-bold">persistência do choque</span>. Avaliar hematócrito.
+            </p>
+            <details className="mt-3 rounded-lg border border-red-200 bg-white p-4">
+              <summary className="cursor-pointer text-sm font-semibold text-red-800">
+                Ver explicação clínica sobre persistência do choque
+              </summary>
+              <div className="mt-3 text-sm text-red-700 whitespace-pre-line leading-relaxed">
+                {infoTexts.grupoD.persistencia_choque}
               </div>
-            </div>
+            </details>
           </div>
 
           {/* Seção de Exames para Avaliação */}
@@ -727,15 +1001,20 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             let bgClass = 'bg-slate-50 border-slate-200'
 
             if (ratio !== undefined) {
+              const ratioStatus = getHtHbStatus(ht, hb)
               const ratioStr = `${ratio.toFixed(2)}x`
               if (ratio >= 3.6) {
                 previewText = `Hemoconcentração detectada (Razão Ht/Hb ${ratioStr}) — Indicativo de aumento do Ht`
                 highlightClass = 'text-red-800'
                 bgClass = 'bg-red-50 border-red-200'
-              } else {
-                previewText = `Sem hemoconcentração significativa (Razão Ht/Hb ${ratioStr}) — Indicativo de queda/estabilidade`
+              } else if (ratioStatus?.level === 'borderline') {
+                previewText = `Razão Ht/Hb limítrofe (${ratioStr}), porém sem hemoconcentração significativa — avaliar persistência do choque`
                 highlightClass = 'text-yellow-800'
                 bgClass = 'bg-yellow-50 border-yellow-200'
+              } else {
+                previewText = `Sem hemoconcentração laboratorial significativa (Razão Ht/Hb ${ratioStr}) — avaliar persistência do choque`
+                highlightClass = 'text-green-800'
+                bgClass = 'bg-green-50 border-green-200'
               }
             } else if (ht != null) {
               if (ht >= 45) {
@@ -880,8 +1159,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Resposta adequada — Tratar como Grupo C (melhora clínica)', nextStep: 'maintenance_c_phase2', value: 'back_to_c' },
-        { text: 'Sem resposta — Continuar UTI', nextStep: 'wait_reevaluation_d', value: 'stay_d' }
+        { text: 'Melhora clínica após expansor — retornar à manutenção do Grupo C', nextStep: 'maintenance_c_phase1', value: 'back_to_c' },
+        { text: 'Sem resposta após expansor — seguimento em UTI', nextStep: 'wait_reevaluation_d', value: 'stay_d' }
       ]
     },
 
@@ -1939,13 +2218,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               volumeLiquidos = volumeTotal - volumeSRO // 2/3 líquidos caseiros
             } else {
               // Crianças
-              if (peso <= 10) {
-                volumeTotal = peso * 100 // 100ml/kg/dia
-              } else if (peso <= 20) {
-                volumeTotal = peso * 150 // 150ml/kg/dia
-              } else {
-                volumeTotal = peso * 80 // 80ml/kg/dia
-              }
+                if (peso <= 10) {
+                  volumeTotal = peso * 130 // 130ml/kg/dia
+                } else if (peso <= 20) {
+                  volumeTotal = peso * 100 // 100ml/kg/dia
+                } else {
+                  volumeTotal = peso * 80 // 80ml/kg/dia
+                }
               volumeSRO = Math.round(volumeTotal / 3)
               volumeLiquidos = volumeTotal - volumeSRO
             }
@@ -2029,7 +2308,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                                     <ul class="text-cyan-700 text-sm space-y-1">
                                       <li>• Pequenos volumes em intervalos frequentes</li>
                                       <li>• Adultos: 60–75 ml/kg/dia (dividir ao longo do dia)</li>
-                                      <li>• Crianças: volume diário calculado por peso (ver card de hidratação)</li>
+                                      <li>• Crianças: até 10 kg → 130 mL/kg/dia; 10–20 kg → 100 mL/kg/dia; acima de 20 kg → 80 mL/kg/dia</li>
                                       <li>• Alternar com líquidos caseiros (água, sucos, chá, água de coco)</li>
                                     </ul>
                                   </div>
@@ -2186,8 +2465,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     Retorno ao Serviço
                   </h4>
                   <div className="space-y-2 text-sm text-red-700">
-                    <p><strong>Imediatamente se:</strong> Vômitos persistentes • Dor abdominal intensa • Sangramentos • Tontura</p>
-                    <p><strong>No 5° dia se:</strong> Não houver defervescência (queda da febre)</p>
+                    <p><strong>Imediatamente se:</strong> surgirem sinais de alarme, sangramentos, tontura ou piora clínica</p>
+                    <p><strong>No dia da melhora da febre:</strong> retornar para reavaliação, pela possível entrada na fase crítica</p>
+                    <p><strong>No 5º dia:</strong> retornar se não houver defervescência</p>
                   </div>
                 </div>
               </div>
@@ -2276,8 +2556,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     if (patient.age >= 18) {
                       perKg = 60
                     } else {
-                      if (peso <= 10) perKg = 100
-                      else if (peso <= 20) perKg = 150
+                      if (peso <= 10) perKg = 130
+                      else if (peso <= 20) perKg = 100
                       else perKg = 80
                     }
                     const totalDiario = Math.round(peso * perKg)
@@ -2531,43 +2811,42 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             {(() => {
               const hb = labsB?.hb
               const ht = labsB?.ht
-              const plt = labsB?.plt
-              const alb = labsB?.alb
               const ratio = hb != null && ht != null ? ht / hb : undefined
-              const shouldUpgrade = (
-                (plt !== undefined && plt < 100000) ||
-                (ht !== undefined && ht >= 45) ||
-                (hb !== undefined && hb >= 16) ||
-                (alb !== undefined && alb < 3.5)
-              )
 
-              let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
+              let previewText = 'Preencha Hematócrito e Hemoglobina para avaliar hemoconcentração e prever a classificação.'
               let highlightClass = 'text-slate-700'
+              let bgClass = 'bg-slate-50 border-slate-200'
 
               if (ratio !== undefined) {
+                const ratioStatus = getHtHbStatus(ht, hb)
                 const ratioStr = `${ratio.toFixed(2)}x`
                 if (ratio >= 3.6) {
                   previewText = `Classificado para o Grupo C — hemoconcentração (Razão Ht/Hb ${ratioStr})`
                   highlightClass = 'text-amber-800'
-                } else if (shouldUpgrade) {
-                  previewText = `Classificado para o Grupo C — alteração laboratorial relevante (Razão Ht/Hb ${ratioStr})`
-                  highlightClass = 'text-amber-800'
+                  bgClass = 'bg-amber-50 border-amber-200'
+                } else if (ratioStatus?.level === 'borderline') {
+                  previewText = `Classificado para o Grupo B — razão Ht/Hb limítrofe (${ratioStr}), ainda sem hemoconcentração significativa`
+                  highlightClass = 'text-yellow-800'
+                  bgClass = 'bg-yellow-50 border-yellow-200'
                 } else {
-                  previewText = `Classificado para o Grupo B — sem hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                  previewText = `Classificado para o Grupo B — sem hemoconcentração laboratorial (${ratioStr})`
                   highlightClass = 'text-green-800'
+                  bgClass = 'bg-green-50 border-green-200'
                 }
               } else if (ht != null) {
                 if (ht >= 45) {
                   previewText = `Classificado para o Grupo C — hematócrito elevado (${ht}%)`
                   highlightClass = 'text-amber-800'
+                  bgClass = 'bg-amber-50 border-amber-200'
                 } else {
                   previewText = `Classificado para o Grupo B — hematócrito dentro do esperado (${ht}%)`
                   highlightClass = 'text-green-800'
+                  bgClass = 'bg-green-50 border-green-200'
                 }
               }
 
               return (
-                <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                <div className={clsx('mt-4 p-3 border rounded-md', bgClass)}>
                   <p className={clsx('text-sm font-medium', highlightClass)}>
                     {previewText}
                   </p>
@@ -2577,8 +2856,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
             <div className="mt-4 p-3 bg-green-50 rounded-lg">
               <p className="text-xs text-green-700">
-                💡 <strong>Dica:</strong> Preencha os resultados disponíveis para melhor documentação.
-                Baseie sua decisão clínica nos valores alterados conforme protocolo.
+                💡 <strong>Dica:</strong> No Grupo B, a reclassificação laboratorial para Grupo C deve ser entendida como
+                <strong> hemoconcentração</strong>. As demais alterações laboratoriais ajudam na avaliação global, mas não mudam
+                isoladamente o grupo assistencial.
               </p>
             </div>
           </div>
@@ -2588,23 +2868,15 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         (() => {
           const hb = labsB?.hb
           const ht = labsB?.ht
-          const plt = labsB?.plt
-          const alb = labsB?.alb
           const ratio = hb != null && ht != null ? ht / hb : undefined
-          const shouldUpgrade = (
-            (plt !== undefined && plt < 100000) ||
-            (ht !== undefined && ht >= 45) ||
-            (hb !== undefined && hb >= 16) ||
-            (alb !== undefined && alb < 3.5)
-          )
 
           // Texto e próximo passo dinâmicos com base no Ht/Hb (ou apenas Ht se Hb ausente)
           let text = 'Classificar automaticamente (Ht/Hb)'
           let nextStep: 'group_c' | 'end_group_b' | 'auto_classify_labs_b' = 'auto_classify_labs_b'
 
           if (ratio !== undefined) {
-            if (ratio >= 3.6 || shouldUpgrade) {
-              text = 'Classificado para o Grupo C'
+            if (ratio >= 3.6) {
+              text = 'Classificado para o Grupo C por hemoconcentração'
               nextStep = 'group_c'
             } else {
               text = 'Classificado para o Grupo B'
@@ -2638,12 +2910,15 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-green-50 p-4 rounded-lg">
             <h4 className="font-semibold text-green-800 mb-2">Orientações finais:</h4>
             <ul className="text-green-700 text-sm space-y-1">
-              <li>• Retornar se sinais de alarme</li>
+              <li>• Retornar imediatamente se surgirem sinais de alarme ou piora clínica</li>
+              <li>• Retornar no dia da melhora da febre, pela possibilidade de início da fase crítica</li>
               <li>• Retorno diário para reavaliação clínica e ambulatorial até 48h após remissão da febre</li>
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
           </div>
+
+          {renderNotificationCard(true)}
 
           {/* Seleção de antitérmico para receita */}
           <div className="bg-white border-2 border-green-200 rounded-lg p-4">
@@ -2766,7 +3041,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Finalizar', nextStep: 'end', value: 'finish' }
+        {
+          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          nextStep: 'end',
+          value: 'finish',
+          disabled: !hasNotificationNumber
+        }
       ]
     },
 
@@ -2781,6 +3061,32 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       color: 'bg-gradient-to-r from-amber-500 to-amber-700',
       content: (
         <div className="space-y-6">
+          {(() => {
+            let classificationData = { grupoC: [] as string[], grupoD: [] as string[] }
+            if (answers.alarm_check) {
+              try {
+                if (answers.alarm_check.startsWith('{')) {
+                  classificationData = JSON.parse(answers.alarm_check)
+                }
+              } catch (error) {
+                console.warn('Erro ao interpretar alarm_check no Grupo C:', error)
+              }
+            }
+
+            const cameFromGroupBByLabs = history.includes('evaluate_labs_b') && classificationData.grupoC.length === 0 && classificationData.grupoD.length === 0
+
+            if (!cameFromGroupBByLabs) return null
+
+            return (
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
+                <p className="text-sm font-medium text-amber-900">
+                  Reclassificação para <strong>Grupo C por hemoconcentração</strong>. Neste cenário, a mudança de grupo ocorreu pelo padrão de concentração plasmática,
+                  e não por outras alterações laboratoriais isoladas.
+                </p>
+              </div>
+            )
+          })()}
+
           <div className="grid md:grid-cols-3 gap-6">
             {/* Acompanhamento */}
             <div className="bg-gradient-to-br from-amber-50 to-amber-100 p-6 rounded-2xl border border-amber-200 shadow-lg">
@@ -2858,6 +3164,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     </div>
                   </div>
                 )}
+                <div className="p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
+                  <p className="text-yellow-900 text-sm">
+                    <strong>Exame confirmatório específico para dengue:</strong> a solicitação é obrigatória conforme rotina institucional e vigilância epidemiológica,
+                    mas <strong>não deve atrasar a hidratação nem a conduta clínica imediata</strong>.
+                  </p>
+                </div>
               </div>
               {/* Botão de exames removido conforme solicitação */}
             </div>
@@ -3034,6 +3346,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                     </div>
                   </div>
                 )}
+                <div className="p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                  <p className="text-amber-900 text-sm">
+                    <strong>Exame confirmatório específico para dengue:</strong> permanece obrigatório conforme rotina do serviço e vigilância,
+                    porém <strong>não deve atrasar as medidas de suporte e a conduta imediata</strong>.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -3118,32 +3436,42 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
     choose_reevaluation_interval_d: {
       id: 'choose_reevaluation_interval_d',
-      title: 'Intervalo de Reavaliação - UTI',
-      description: 'Defina a frequência de monitoramento',
+      title: 'Reavaliação após Expansão - UTI',
+      description: 'Documente como a equipe vai reavaliar após cada etapa de expansão',
       type: 'question',
       icon: <Clock className="w-6 h-6" />,
       color: 'bg-red-600',
       content: (
         <div className="bg-red-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-red-800 mb-2">Selecione o intervalo de reavaliação:</h4>
-          <p className="text-red-700 mb-4">Escolha a frequência para gerar as abas de acompanhamento durante as próximas 2 horas.</p>
+          <h4 className="font-semibold text-red-800 mb-2">Como será a reavaliação após cada etapa de expansão?</h4>
+          <p className="text-red-700 mb-3">
+            No Grupo D, a reavaliação clínica deve acontecer <strong>depois de cada expansão volêmica</strong>, mantendo monitorização contínua.
+          </p>
+          <p className="text-red-700">
+            Se o serviço quiser, também pode registrar o intervalo usado entre as etapas.
+          </p>
         </div>
       ),
       options: [
         { 
-          text: 'A cada 15 min (8 reavaliações)', 
+          text: 'Após expansão, com reavaliação em 15 min', 
           nextStep: 'reevaluation_d', 
           value: '15min'
         },
         { 
-          text: 'A cada 20 min (6 reavaliações)', 
+          text: 'Após expansão, com reavaliação em 20 min', 
           nextStep: 'reevaluation_d', 
           value: '20min'
         },
         { 
-          text: 'A cada 30 min (4 reavaliações)', 
+          text: 'Após expansão, com reavaliação em 30 min', 
           nextStep: 'reevaluation_d', 
           value: '30min'
+        },
+        {
+          text: 'Após cada expansão volêmica (intervalo definido pela equipe)',
+          nextStep: 'reevaluation_d',
+          value: 'after_expansion'
         }
       ]
     },
@@ -3151,7 +3479,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     wait_reevaluation_d: {
       id: 'wait_reevaluation_d',
       title: 'Aguardando Evolução - UTI',
-      description: 'Reavaliação a cada 15-30 minutos durante 2 horas',
+      description: 'Paciente em seguimento intensivo, com nova avaliação após a etapa de expansão realizada',
       type: 'wait_labs',
       icon: <AlertTriangle className="w-6 h-6" />,
       color: 'bg-red-600',
@@ -3161,8 +3489,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <h4 className="font-semibold text-red-800 mb-2">Status UTI:</h4>
           <p className="text-red-700">• Paciente em cuidados intensivos</p>
           <p className="text-red-700">• Monitoramento contínuo</p>
-          <p className="text-red-700">• Reavaliação constante (15-30 min)</p>
-          <p className="text-red-700">• Aguardando estabilização</p>
+          <p className="text-red-700">• Reavaliar após cada nova etapa de expansão volêmica</p>
+          <p className="text-red-700">• Documentar o intervalo adotado pela equipe</p>
         </div>
       ),
       options: [
@@ -3516,12 +3844,15 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-yellow-50 p-4 rounded-lg">
             <h4 className="font-semibold text-yellow-800 mb-2">Retorno (igual ao Grupo B):</h4>
             <ul className="text-yellow-700 text-sm space-y-1">
-              <li>• Retornar se sinais de alarme</li>
+              <li>• Retornar imediatamente se surgirem sinais de alarme ou piora clínica</li>
+              <li>• Retornar no dia da melhora da febre, pela possibilidade de início da fase crítica</li>
               <li>• Retorno diário para reavaliação clínica e ambulatorial até 48h após remissão da febre</li>
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
           </div>
+
+          {renderNotificationCard(true)}
 
           {/* Seleção de antitérmico para receita (Grupo C) */}
           <div className="bg-white border-2 border-yellow-200 rounded-lg p-4">
@@ -3621,7 +3952,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Finalizar', nextStep: 'end', value: 'finish' }
+        {
+          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          nextStep: 'end',
+          value: 'finish',
+          disabled: !hasNotificationNumber
+        }
       ]
     },
 
@@ -3633,13 +3969,22 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       icon: <Clock className="w-6 h-6" />,
       color: 'bg-yellow-500',
       content: (
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
-          <ul className="text-yellow-700 text-sm space-y-1">
-            <li>• Repetir expansão: 10 ml/kg em 1 hora (SF 0,9%)</li>
-            <li>• Monitorar sinais vitais e diurese</li>
-            <li>• Reavaliar na 2ª hora</li>
-          </ul>
+        <div className="space-y-4">
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h4 className="font-semibold text-yellow-800 mb-2">Conduta:</h4>
+            <ul className="text-yellow-700 text-sm space-y-1">
+              <li>• Repetição atual da fase de expansão: {Math.max(groupCExpansionRepeats, 1)}/3</li>
+              <li>• Repetir expansão: 10 ml/kg em 1 hora (SF 0,9%)</li>
+              <li>• Monitorar sinais vitais e diurese</li>
+              <li>• Reavaliar clinicamente após 1 hora e laboratorialmente após 2 horas</li>
+            </ul>
+          </div>
+          <div className="p-3 bg-white border border-yellow-200 rounded-lg">
+            <p className="text-sm text-slate-700">
+              Na ausência de choque franco, esta fase de expansão pode ser repetida <strong>até 3 vezes</strong>.
+              Se permanecer sem melhora clínica e laboratorial após as 3 repetições, conduzir como <strong>Grupo D</strong>.
+            </p>
+          </div>
         </div>
       ),
       options: [
@@ -4043,6 +4388,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             const hb = labs?.hb
             const ht = labs?.ht
             const ratio = hb != null && ht != null ? ht / hb : undefined
+            const ratioStatus = getHtHbStatus(ht, hb)
 
             let previewText = 'Preencha Hematócrito (e Hb) para prever classificação.'
             let highlightClass = 'text-slate-700'
@@ -4051,17 +4397,29 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             if (ratio !== undefined) {
               const ratioStr = `${ratio.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}x`
               if (ratio >= 3.6) {
-                previewText = `Hemoconcentração detectada (Razão Ht/Hb ${ratioStr}) — Reclassificar para Grupo D`
+                if (groupCExpansionRepeats < 3) {
+                  previewText = `Hemoconcentração mantida (Razão Ht/Hb ${ratioStr}) — repetir fase de expansão (${groupCExpansionRepeats + 1}/3)`
+                } else {
+                  previewText = `Hemoconcentração mantida após 3 expansões (Razão Ht/Hb ${ratioStr}) — conduzir como Grupo D`
+                }
                 highlightClass = 'text-red-800'
                 bgClass = 'bg-red-50 border-red-200'
+              } else if (ratioStatus?.level === 'borderline') {
+                previewText = `Razão Ht/Hb limítrofe (${ratioStr}), porém sem hemoconcentração significativa — manter no Grupo C`
+                highlightClass = 'text-yellow-800'
+                bgClass = 'bg-yellow-50 border-yellow-200'
               } else {
-                previewText = `Sem hemoconcentração significativa (Razão Ht/Hb ${ratioStr}) — Manter no Grupo C`
+                previewText = `Sem hemoconcentração laboratorial significativa (Razão Ht/Hb ${ratioStr}) — manter no Grupo C`
                 highlightClass = 'text-green-800'
                 bgClass = 'bg-green-50 border-green-200'
               }
             } else if (ht != null) {
               if (ht >= 45) {
-                previewText = `Hematócrito elevado (${ht.toLocaleString('pt-BR')}%) — Reclassificar para Grupo D`
+                if (groupCExpansionRepeats < 3) {
+                  previewText = `Hematócrito elevado (${ht.toLocaleString('pt-BR')}%) — repetir fase de expansão (${groupCExpansionRepeats + 1}/3)`
+                } else {
+                  previewText = `Hematócrito elevado após 3 expansões (${ht.toLocaleString('pt-BR')}%) — conduzir como Grupo D`
+                }
                 highlightClass = 'text-red-800'
                 bgClass = 'bg-red-50 border-red-200'
               } else {
@@ -4094,20 +4452,27 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         const hb = labs?.hb
         const ht = labs?.ht
         const ratio = hb != null && ht != null ? ht / hb : undefined
+        const canRepeatExpansion = groupCExpansionRepeats < 3
+        const nextRepeatLabel = `Sem melhora — repetir expansão (${groupCExpansionRepeats + 1}/3)`
+        const escalationLabel = 'Sem melhora após 3 expansões — conduzir como Grupo D'
 
         if (ratio !== undefined) {
-          if (ratio >= 3.6) return [
-            { text: 'Hemoconcentração (Piora) - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
-          ]
+          if (ratio >= 3.6) {
+            return canRepeatExpansion
+              ? [{ text: nextRepeatLabel, nextStep: 'continue_treatment_c', value: `repeat_${groupCExpansionRepeats + 1}` }]
+              : [{ text: escalationLabel, nextStep: 'group_d_shock', value: 'ht_up_after_repeats' }]
+          }
           return [
             { text: 'Hematócrito em queda (Melhora) - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
           ]
         }
         
         if (ht != null) {
-          if (ht >= 45) return [
-            { text: 'Hematócrito Elevado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
-          ]
+          if (ht >= 45) {
+            return canRepeatExpansion
+              ? [{ text: nextRepeatLabel, nextStep: 'continue_treatment_c', value: `repeat_${groupCExpansionRepeats + 1}` }]
+              : [{ text: escalationLabel, nextStep: 'group_d_shock', value: 'ht_up_after_repeats' }]
+          }
           return [
             { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' }
           ]
@@ -4227,7 +4592,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
     reevaluation_d: {
       id: 'reevaluation_d',
       title: 'Reavaliação - Grupo D',
-      description: 'Avaliação da evolução em UTI (15-30 min)',
+      description: 'Avaliação da evolução após cada etapa de expansão volêmica',
       type: 'question',
       icon: <Heart className="w-6 h-6" />,
       color: 'bg-red-500',
@@ -4243,44 +4608,28 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
             </ul>
           </div>
 
+          <div className="bg-red-100 border border-red-200 rounded-lg p-4">
+            <p className="text-sm font-semibold text-red-900">
+              A reavaliação deve acontecer após cada etapa de expansão. Esses pacientes precisam ser continuamente monitorados.
+            </p>
+          </div>
+
           {/* Abas de reavaliação 1ª a Xª — dentro do Grupo D */}
           <div className="bg-white border-2 border-red-200 rounded-lg p-3">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2">
                 <Activity className="w-5 h-5 text-red-600" />
                 <h4 className="font-semibold text-red-800">
-                  {(() => {
-                    const selectedInterval = currentStep === 'reevaluation_d' && typeof window !== 'undefined' 
-                      ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '15min'
-                      : '15min'
-                      
-                    if (selectedInterval === '20min') return 'Reavaliações a cada 20 min (2h)'
-                    if (selectedInterval === '30min') return 'Reavaliações a cada 30 min (2h)'
-                    return 'Reavaliações a cada 15 min (2h)'
-                  })()}
+                  {getDReevaluationConfig(dIntervalChoice).header}
                 </h4>
               </div>
               <span className="text-xs font-medium text-red-700">
-                {(() => {
-                    const selectedInterval = currentStep === 'reevaluation_d' && typeof window !== 'undefined' 
-                      ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '15min'
-                      : '15min'
-                      
-                    if (selectedInterval === '20min') return '6ª reavaliação obrigatória'
-                    if (selectedInterval === '30min') return '4ª reavaliação obrigatória'
-                    return '8ª reavaliação obrigatória'
-                  })()}
+                {getDReevaluationConfig(dIntervalChoice).badge}
               </span>
             </div>
             <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
               {(() => {
-                const selectedInterval = currentStep === 'reevaluation_d' && typeof window !== 'undefined' 
-                  ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '15min'
-                  : '15min'
-                
-                let count = 8
-                if (selectedInterval === '20min') count = 6
-                if (selectedInterval === '30min') count = 4
+                const count = getDReevaluationConfig(dIntervalChoice).count
                 
                 return Array.from({ length: count }, (_, i) => i + 1).map((n) => (
                   <button
@@ -4595,13 +4944,18 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               let bgClass = 'bg-slate-50 border-slate-200'
 
               if (ratio !== undefined) {
+                const ratioStatus = getHtHbStatus(ht, hb)
                 const ratioStr = `${ratio.toFixed(2)}x`
                 if (ratio >= 3.6) {
-                  previewText = `Hemoconcentração mantida (Razão Ht/Hb ${ratioStr}) — Iniciar Expansores`
+                  previewText = `Hemoconcentração persistente (Razão Ht/Hb ${ratioStr}) — considerar expansor plasmático`
                   highlightClass = 'text-red-800'
                   bgClass = 'bg-red-50 border-red-200'
+                } else if (ratioStatus?.level === 'borderline') {
+                  previewText = `Razão Ht/Hb limítrofe (${ratioStr}), porém sem hemoconcentração significativa — reavaliar persistência do choque`
+                  highlightClass = 'text-yellow-800'
+                  bgClass = 'bg-yellow-50 border-yellow-200'
                 } else {
-                  previewText = `Melhora da hemoconcentração (Razão Ht/Hb ${ratioStr}) — Avaliar Persistência do Choque`
+                  previewText = `Sem hemoconcentração significativa no momento (Razão Ht/Hb ${ratioStr}) — reavaliar persistência do choque`
                   highlightClass = 'text-green-800'
                   bgClass = 'bg-green-50 border-green-200'
                 }
@@ -4622,9 +4976,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
                   <p className={clsx('text-sm font-medium', highlightClass)}>
                     {previewText}
                   </p>
-                  {dReevalTab < 8 && (
+                  {dReevalTab < getDReevaluationConfig(dIntervalChoice).count && (
                     <p className="text-xs text-slate-600 mt-2">
-                      Avance para a {dReevalTab + 1}ª reavaliação. As ações definitivas aparecem na 8ª.
+                      Avance para a {dReevalTab + 1}ª reavaliação após a próxima etapa de expansão. As decisões finais aparecem na última etapa configurada.
                     </p>
                   )}
                 </div>
@@ -4634,8 +4988,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: (() => {
-        // Abas 1–7: somente navegação de aba
-        if (dReevalTab < 8) {
+        const maxDReevalTabs = getDReevaluationConfig(dIntervalChoice).count
+
+        // Etapas intermediárias: somente navegação de aba
+        if (dReevalTab < maxDReevalTabs) {
           const nextLabel = `${dReevalTab + 1}ª reavaliação`
           const prevLabel = `${dReevalTab - 1}ª reavaliação`
           const opts: { text: string; nextStep: string; value: string }[] = [
@@ -4666,7 +5022,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           return opts
         }
 
-        // 8ª reavaliação: decisões só se Ht/Hb informados da ABA ATUAL
+        // Última etapa configurada: decisões só se Ht/Hb informados da aba atual
         const hb = dReevalData[dReevalTab]?.labs?.hb
         const ht = dReevalData[dReevalTab]?.labs?.ht
         const ratio = hb != null && ht != null ? ht / hb : undefined
@@ -4689,9 +5045,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           ]
         }
 
-        // Sem Ht/Hb na 8ª: mostrar botão não clicável orientando a informar resultados
+        // Sem Ht/Hb na última etapa configurada: mostrar botão não clicável orientando a informar resultados
         return [
-          { text: 'Informe Hematócrito/Hemoglobina para habilitar decisões (8ª reavaliação)', nextStep: 'noop', value: 'disabled', disabled: true }
+          { text: 'Informe Hematócrito/Hemoglobina para habilitar decisões nesta etapa final', nextStep: 'noop', value: 'disabled', disabled: true }
         ]
       })()
     },
@@ -4714,6 +5070,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
               <li>• Acompanhamento ambulatorial</li>
             </ul>
           </div>
+
+          {renderNotificationCard(true)}
 
           {/* Seleção de antitérmico para receita (Grupo D) */}
           <div className="bg-white border-2 border-red-200 rounded-lg p-4">
@@ -4813,7 +5171,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Finalizar', nextStep: 'end', value: 'finish' }
+        {
+          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          nextStep: 'end',
+          value: 'finish',
+          disabled: !hasNotificationNumber
+        }
       ]
     },
 
@@ -4831,12 +5194,15 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
           <div className="bg-green-50 p-4 rounded-lg mt-2 text-left">
             <h4 className="font-semibold text-green-800 mb-2">Orientações:</h4>
             <ul className="text-green-700 text-sm space-y-1">
-              <li>• Retornar se sinais de alarme</li>
-              <li>• Retornar se não houver defervescência</li>
+              <li>• Retornar imediatamente se surgirem sinais de alarme ou piora clínica</li>
+              <li>• Retornar no dia da melhora da febre, pela possível entrada na fase crítica</li>
+              <li>• Retornar no 5º dia da doença se não houver defervescência</li>
               <li>• Manter hidratação adequada</li>
               <li>• Cartão de acompanhamento entregue</li>
             </ul>
           </div>
+
+          {renderNotificationCard(true)}
 
           {/* Seleção de antitérmico para receita (Grupo A) */}
           <div className="bg-white border-2 border-green-200 rounded-lg p-4 text-left">
@@ -4936,7 +5302,12 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         </div>
       ),
       options: [
-        { text: 'Finalizar', nextStep: 'end', value: 'finish' }
+        {
+          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          nextStep: 'end',
+          value: 'finish',
+          disabled: !hasNotificationNumber
+        }
       ]
     },
 
@@ -4966,7 +5337,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
     // Navegação interna das abas da reavaliação do Grupo D
     if (nextStep === 'reevaluation_d_tab_next') {
-      setDReevalTab(prev => Math.min(prev + 1, 8))
+      const maxDReevalTabs = getDReevaluationConfig(dIntervalChoice).count
+      setDReevalTab(prev => Math.min(prev + 1, maxDReevalTabs))
       setTimeout(() => setIsTransitioning(false), 200)
       return
     }
@@ -4976,7 +5348,36 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       return
     }
 
-    const newAnswers = value ? { ...answers, [currentStep]: value } : answers
+    if (nextStep === 'continue_treatment_c') {
+      persistGroupCExpansionRepeats(groupCExpansionRepeats + 1)
+    }
+
+    if ([
+      'group_c',
+      'treatment_c',
+      'maintenance_c_phase1',
+      'maintenance_c_phase2',
+      'end_group_c',
+      'group_d_shock'
+    ].includes(nextStep) && nextStep !== 'continue_treatment_c') {
+      persistGroupCExpansionRepeats(0)
+    }
+
+    if (currentStep === 'choose_reevaluation_interval_d' && value && ['15min', '20min', '30min', 'after_expansion'].includes(value)) {
+      const interval = value as '15min' | '20min' | '30min' | 'after_expansion'
+      setDIntervalChoice(interval)
+      setDReevalTab(1)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`d_interval_choice_${patient.id}`, interval)
+      }
+    }
+
+    const baseAnswers = {
+      ...answers,
+      dengue_notification_ack: notificationConfirmed ? 'true' : 'false',
+      dengue_notification_number: notificationNumber.trim().toUpperCase()
+    }
+    const newAnswers = value ? { ...baseAnswers, [currentStep]: value } : baseAnswers
     const newHistory = [...history, currentStep]
 
     if (value) {
@@ -5032,19 +5433,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
         }
       }
 
-      // Avaliação automática dos exames para Grupo B usando os valores do estado
-      if (currentStep === 'evaluate_labs_b') {
-        const shouldUpgrade = (
-          (pltVal !== undefined && pltVal < 100000) ||
-          (htVal !== undefined && htVal >= 45) ||
-          (hbVal !== undefined && hbVal >= 16) ||
-          (albVal !== undefined && albVal < 3.5)
-        )
-        // Se critérios de gravidade laboratorial presentes e usuário tentar manter B, reclassificar para C
-        if (shouldUpgrade && nextStep === 'end_group_b') {
-          nextStep = 'group_c'
-        }
-      }
+      // No Grupo B, a mudança laboratorial para Grupo C deve ocorrer por hemoconcentração.
     }
 
     // Classificação automática baseada em hemoconcentração (Ht/Hb) no Grupo B
@@ -5057,8 +5446,11 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
       let finalStep: 'group_c' | 'end_group_b' = 'end_group_b'
       let group: 'B' | 'C' = 'B'
 
-      // Regra solicitada: hemoconcentrado vai direto para Grupo C; senão, Grupo B
+      // Regra solicitada: hemoconcentração leva ao Grupo C; caso contrário, manter Grupo B
       if (ratio !== undefined && ratio >= 3.6) {
+        finalStep = 'group_c'
+        group = 'C'
+      } else if (ratio === undefined && ht !== undefined && ht >= 45) {
         finalStep = 'group_c'
         group = 'C'
       }
@@ -5238,7 +5630,14 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({ patient, onCo
 
     
     if (nextStep === 'end') {
-      setTimeout(() => onComplete(), 500)
+      setTimeout(() => {
+        const freshPatient = patientService.getPatientById(patient.id) || patient
+        if (onViewMedicalPrescription) {
+          onViewMedicalPrescription(freshPatient)
+          return
+        }
+        onComplete()
+      }, 500)
     }
   }
 

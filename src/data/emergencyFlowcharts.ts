@@ -491,9 +491,22 @@ export const dengueFlowchart: EmergencyFlowchart = {
   steps: {
     start: {
       id: 'start',
-      title: 'Avaliação Inicial - Dengue',
-      description: 'Identificar sinais de alarme ou gravidade e definir conduta.',
+      title: 'Suspeita de Dengue',
+      description: 'Definir caso suspeito, lembrar da notificação obrigatória e classificar a gravidade.',
       type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p><strong>Caso suspeito de dengue:</strong> febre, geralmente com duração de 2 a 7 dias, associada a duas ou mais manifestações como náuseas, vômitos, exantema, mialgia, artralgia, cefaleia, dor retro-orbitária, petéquias, prova do laço positiva ou leucopenia.</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+            <p>Também considerar suspeita em criança com quadro febril agudo, geralmente de 2 a 7 dias, sem foco de infecção aparente.</p>
+          </div>
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Notificação obrigatória:</strong> notificar todo caso suspeito de dengue, mesmo antes da classificação final.</p>
+          </div>
+        </div>
+      `,
       options: [
         { text: 'Sem sinais de alarme/gravidade', nextStep: 'group_a', value: 'A' },
         { text: 'Sangramento/Risco social/Comorbidades', nextStep: 'group_b', value: 'B' },
@@ -508,11 +521,28 @@ export const dengueFlowchart: EmergencyFlowchart = {
       type: 'group',
       group: 'A',
       content: `
-        <ul class="list-disc pl-5 space-y-1">
-          <li>Hidratação oral e antitérmicos (dipirona/paracetamol).</li>
-          <li>Evitar AINEs e salicilatos.</li>
-          <li>Retorno imediato se surgirem sinais de alarme.</li>
-        </ul>
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Tratamento ambulatorial:</strong> hidratação oral vigorosa, antitérmicos (dipirona ou paracetamol) e evitar AINEs e salicilatos.</p>
+          </div>
+          <div class="bg-sky-50 p-3 rounded border border-sky-200">
+            <p><strong>Hidratação oral:</strong> orientar água, soro de reidratação oral, sucos, chás e água de coco, fracionando ao longo do dia.</p>
+            <p class="mt-2"><strong>Crianças (&lt;13 anos):</strong></p>
+            <ul class="list-disc pl-5 space-y-1 mt-1">
+              <li>Até 10 kg: 130 mL/kg/dia.</li>
+              <li>Acima de 10 kg até 20 kg: 100 mL/kg/dia.</li>
+              <li>Acima de 20 kg: 80 mL/kg/dia.</li>
+            </ul>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Importante:</strong> os sinais de alarme e o agravamento do quadro costumam ocorrer na fase de remissão da febre.</p>
+            <p class="mt-2">Orientar retorno imediato se surgirem sinais de alarme, se houver piora clínica ou no dia da melhora da febre, quando pode se iniciar a fase crítica.</p>
+            <p class="mt-2">Se não houver defervescência, orientar retorno no 5º dia da doença para reavaliação clínica.</p>
+          </div>
+          <div class="bg-red-50 p-3 rounded border border-red-200">
+            <p><strong>Na alta:</strong> entregar cartão de acompanhamento da dengue.</p>
+          </div>
+        </div>
       `,
       options: [
         { text: 'Alta com orientações', nextStep: 'discharge', value: 'discharge' }
@@ -583,6 +613,13 @@ export const dengueFlowchart: EmergencyFlowchart = {
         <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
           <h4 class="font-bold text-green-800">Protocolo Dengue Concluído</h4>
           <p class="text-green-700">Alta ambulatorial com orientações de retorno.</p>
+          <ul class="list-disc pl-5 mt-3 space-y-1 text-green-700">
+            <li>Manter hidratação oral conforme orientação clínica.</li>
+            <li>Retornar imediatamente se surgirem sinais de alarme ou piora do quadro.</li>
+            <li>Retornar no dia da melhora da febre, pela possibilidade de entrada na fase crítica.</li>
+            <li>Se a febre não ceder, retornar no 5º dia da doença para reavaliação.</li>
+            <li>Entregar cartão de acompanhamento da dengue.</li>
+          </ul>
         </div>
       `,
       options: []

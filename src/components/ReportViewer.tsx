@@ -103,6 +103,46 @@ const TVP_DURATION_PLAN_LABELS: Record<string, string> = {
   duracao_gravidez: 'Manter HBPM durante a gestação e até 6 semanas pós-parto, com mínimo total de 3 meses.'
 }
 
+const DENGUE_ALARM_SIGN_LABELS: Record<string, string> = {
+  dor_abdominal: 'Dor abdominal intensa',
+  vomitos_persistentes: 'Vômitos persistentes',
+  acumulo_liquidos: 'Acúmulo de líquidos',
+  hipotensao_postural: 'Hipotensão postural',
+  hepatomegalia: 'Hepatomegalia maior que 2 cm',
+  sangramento_mucosa: 'Sangramento de mucosa',
+  letargia_irritabilidade: 'Letargia e/ou irritabilidade'
+}
+
+const DENGUE_GRAVITY_SIGN_LABELS: Record<string, string> = {
+  extravasamento_plasma: 'Extravasamento grave de plasma',
+  choque_taquicardia: 'Choque com taquicardia',
+  sangramento_grave: 'Sangramento grave',
+  comprometimento_orgaos: 'Comprometimento grave de órgãos'
+}
+
+const DENGUE_RECOMMENDED_EXAMS_LABELS: Record<string, string> = {
+  rx_pa_perfil_laurell: 'Raio X de tórax (PA, perfil e incidência de Laurell)',
+  usg_abdome: 'USG de abdome'
+}
+
+const DENGUE_OTHER_EXAMS_LABELS: Record<string, string> = {
+  glicemia: 'Glicemia',
+  ureia: 'Ureia',
+  creatinina: 'Creatinina',
+  eletrolitos: 'Eletrólitos',
+  gasometria: 'Gasometria',
+  coagulograma: 'Coagulograma',
+  tpae: 'TP/AE',
+  ecocardiograma: 'Ecocardiograma'
+}
+
+const DENGUE_SUGGESTED_EXAMS_B_LABELS: Record<string, string> = {
+  alb: 'Albumina sérica',
+  alt: 'Transaminases ALT/TGP',
+  ast: 'Transaminases AST/TGO',
+  coag: 'Coagulograma'
+}
+
 interface ReportViewerProps {
   patient: Patient
   onClose: () => void
@@ -313,6 +353,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     const flowchart = getFlowchartById(flowId)
     const answers = patient.flowchartState?.answers || {}
     const currentStep = patient.flowchartState?.currentStep || ''
+    const history = patient.flowchartState?.history || []
     const symptoms = uniqueItems(patient.admission.symptoms)
     const vitalItems = buildVitalsList()
     const labItems = buildLabItems()
@@ -512,6 +553,175 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Plano / Acompanhamento',
             items: planItems
+          }
+        ]
+      }
+    }
+
+    if (flowId === 'dengue') {
+      const readLocalArray = (key: string) => {
+        if (typeof window === 'undefined') return [] as string[]
+        try {
+          const raw = localStorage.getItem(key)
+          if (!raw) return []
+          const parsed = JSON.parse(raw)
+          return Array.isArray(parsed) ? parsed : []
+        } catch {
+          return []
+        }
+      }
+
+      const alarmData = safeParse(answers.alarm_check) as { grupoC?: string[]; grupoD?: string[] } | null
+      const riskFactors = readLocalArray(`risk_factors_${patient.id}`)
+      const suggestedExamsB = readLocalArray(`suggested_exams_b_${patient.id}`)
+      const recommendedExamsC = readLocalArray(`recommended_exams_c_${patient.id}`)
+      const otherExamsC = readLocalArray(`other_exams_c_${patient.id}`)
+      const recommendedExamsD = readLocalArray(`recommended_exams_d_${patient.id}`)
+      const otherExamsD = readLocalArray(`other_exams_d_${patient.id}`)
+      const notificationNumber = answers.dengue_notification_number
+        || (typeof window !== 'undefined' ? localStorage.getItem(`dengue_notification_number_${patient.id}`) || '' : '')
+      const notificationAcknowledged = (answers.dengue_notification_ack || '') === 'true'
+        || (typeof window !== 'undefined' && localStorage.getItem(`dengue_notification_ack_${patient.id}`) === 'true')
+
+      const hb = patient.labResults?.hemoglobin
+      const ht = patient.labResults?.hematocrit
+      const htHbRatio = hb != null && ht != null && hb > 0 ? ht / hb : undefined
+
+      const alarmSigns = uniqueItems((alarmData?.grupoC || []).map(item => DENGUE_ALARM_SIGN_LABELS[item] || item))
+      const gravitySigns = uniqueItems((alarmData?.grupoD || []).map(item => DENGUE_GRAVITY_SIGN_LABELS[item] || item))
+      const suggestedExamTexts = uniqueItems(suggestedExamsB.map(item => DENGUE_SUGGESTED_EXAMS_B_LABELS[item] || item))
+      const recommendedExamTextsC = uniqueItems(recommendedExamsC.map(item => DENGUE_RECOMMENDED_EXAMS_LABELS[item] || item))
+      const otherExamTextsC = uniqueItems(otherExamsC.map(item => DENGUE_OTHER_EXAMS_LABELS[item] || item))
+      const recommendedExamTextsD = uniqueItems(recommendedExamsD.map(item => DENGUE_RECOMMENDED_EXAMS_LABELS[item] || item))
+      const otherExamTextsD = uniqueItems(otherExamsD.map(item => DENGUE_OTHER_EXAMS_LABELS[item] || item))
+
+      const hasLabDrivenGroupC = patient.flowchartState.group === 'C'
+        && history.includes('evaluate_labs_b')
+        && alarmSigns.length === 0
+        && gravitySigns.length === 0
+
+      const chiefComplaint = symptoms.length > 0
+        ? symptoms[0]
+        : 'Febre aguda com suspeita clínica de dengue.'
+
+      const groupNarrative = (() => {
+        switch (patient.flowchartState.group) {
+          case 'A':
+            return 'Classificado como Grupo A, compatível com dengue sem sinais de alarme, sem comorbidades ou condições especiais descompensadoras no fluxo atual.'
+          case 'B':
+            return `Classificado como Grupo B, pela presença de fatores de risco/condições associadas${riskFactors.length > 0 ? `: ${riskFactors.join('; ')}` : ''}.`
+          case 'C':
+            if (hasLabDrivenGroupC) {
+              return `Reclassificado para Grupo C por hemoconcentração laboratorial${htHbRatio != null ? ` (razão Ht/Hb ${htHbRatio.toFixed(2)}x)` : ''}, com necessidade de internação e monitorização.`
+            }
+            return `Classificado como Grupo C pela presença de sinais de alarme${alarmSigns.length > 0 ? `: ${alarmSigns.join('; ')}` : ''}.`
+          case 'D':
+            return `Classificado como Grupo D por critérios de gravidade${gravitySigns.length > 0 ? `: ${gravitySigns.join('; ')}` : ''}.`
+          default:
+            return 'Caso em avaliação clínica dentro do protocolo institucional de dengue.'
+        }
+      })()
+
+      const historyNarrative = [
+        `Paciente admitido em ${formatDate(patient.admission.date)} para avaliação de quadro suspeito de dengue.`,
+        symptoms.length > 0
+          ? `Na admissão, apresentava ${symptoms.join('; ')}.`
+          : 'Não há descrição estruturada suficiente dos sintomas na admissão.',
+        notificationNumber
+          ? `Notificação compulsória registrada sob o número ${notificationNumber}.`
+          : notificationAcknowledged
+            ? 'Notificação compulsória assinalada como realizada no fluxo assistencial.'
+            : 'Notificação compulsória ainda não documentada no sistema.',
+        observations.length > 0 ? `Observações adicionais registradas durante o atendimento: ${observations.join('; ')}.` : null
+      ].filter(Boolean).join(' ')
+
+      const examNarrativeParts = uniqueItems([
+        ...labItems,
+        patient.flowchartState.group === 'B' && suggestedExamTexts.length > 0
+          ? `Exames complementares sugeridos/assinalados para o Grupo B: ${suggestedExamTexts.join('; ')}.`
+          : null,
+        patient.flowchartState.group === 'C' && recommendedExamTextsC.length > 0
+          ? `Exames recomendados assinalados para o Grupo C: ${recommendedExamTextsC.join('; ')}.`
+          : null,
+        patient.flowchartState.group === 'C' && otherExamTextsC.length > 0
+          ? `Outros exames registrados para o Grupo C: ${otherExamTextsC.join('; ')}.`
+          : null,
+        patient.flowchartState.group === 'D' && recommendedExamTextsD.length > 0
+          ? `Exames recomendados assinalados para o Grupo D: ${recommendedExamTextsD.join('; ')}.`
+          : null,
+        patient.flowchartState.group === 'D' && otherExamTextsD.length > 0
+          ? `Outros exames registrados para o Grupo D: ${otherExamTextsD.join('; ')}.`
+          : null,
+        ['C', 'D'].includes(patient.flowchartState.group || '')
+          ? 'Exame confirmatório específico para dengue permanece obrigatório, sem atrasar a conduta clínica imediata.'
+          : null
+      ])
+
+      const conductNarrative = uniqueItems([
+        groupNarrative,
+        prescriptions.length > 0 ? `Foram registradas as seguintes prescrições no sistema: ${prescriptions.join('; ')}.` : null,
+        patient.flowchartState.group === 'A'
+          ? 'Orientado tratamento ambulatorial com hidratação oral, antitérmico conforme prescrição e vigilância de sinais de alarme.'
+          : null,
+        patient.flowchartState.group === 'B'
+          ? 'Mantida observação clínica até resultado dos exames, com hidratação oral e reavaliação seriada.'
+          : null,
+        patient.flowchartState.group === 'C'
+          ? 'Indicada internação para hidratação, monitorização clínica/laboratorial e seguimento conforme protocolo.'
+          : null,
+        patient.flowchartState.group === 'D'
+          ? 'Indicado manejo intensivo, suporte hemodinâmico e monitorização em ambiente crítico.'
+          : null
+      ])
+
+      const planNarrative = uniqueItems([
+        patient.flowchartState.group === 'A'
+          ? 'Orientado retorno imediato se surgirem sinais de alarme ou piora clínica, retorno no dia da melhora da febre pela possibilidade de fase crítica e retorno no 5º dia da doença se não houver defervescência.'
+          : null,
+        patient.flowchartState.group === 'B'
+          ? 'Programado retorno diário para reavaliação clínica e laboratorial, mantendo seguimento até 48 horas após a remissão da febre.'
+          : null,
+        patient.flowchartState.group === 'C'
+          ? 'Manter internação, hidratação e reavaliações seriadas até estabilização clínica e laboratorial, com alta apenas após critérios protocolados.'
+          : null,
+        patient.flowchartState.group === 'D'
+          ? 'Manter acompanhamento intensivo, reavaliações frequentes e posterior seguimento ambulatorial após estabilização.'
+          : null,
+        'Entregue ou orientada a entrega do cartão de acompanhamento da dengue.'
+      ])
+
+      return {
+        title: 'PRONTUÁRIO MÉDICO – DENGUE',
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'Diagnóstico e Classificação',
+            text: `${groupNarrative} ${notificationNumber ? `Notificação compulsória registrada sob o número ${notificationNumber}.` : ''}`.trim()
+          },
+          {
+            title: 'Queixa Principal',
+            text: chiefComplaint
+          },
+          {
+            title: 'História Clínica e Evolução',
+            text: historyNarrative
+          },
+          {
+            title: 'Exames Relevantes',
+            text: examNarrativeParts.length > 0
+              ? examNarrativeParts.join(' ')
+              : 'Até o momento, não há exames complementares estruturados registrados no sistema.'
+          },
+          {
+            title: 'Condutas Terapêuticas',
+            text: conductNarrative.join(' ')
+          },
+          {
+            title: 'Plano e Orientações',
+            text: planNarrative.join(' ')
           }
         ]
       }

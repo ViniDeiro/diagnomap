@@ -185,9 +185,9 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     if (isAdult) {
       perKg = 60 // Adultos: 60 mL/kg/dia
     } else {
-      // Pediatria: 100 ml/kg/dia até 10 kg; 150 ml/kg/dia de 10–20 kg; 80 ml/kg/dia acima de 20 kg
-      if (weight <= 10) perKg = 100
-      else if (weight <= 20) perKg = 150
+      // Pediatria: 130 mL/kg/dia até 10 kg; 100 mL/kg/dia de 10–20 kg; 80 mL/kg/dia acima de 20 kg
+      if (weight <= 10) perKg = 130
+      else if (weight <= 20) perKg = 100
       else perKg = 80
     }
 
@@ -218,9 +218,11 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     const followUpLines = patient.flowchartState.group === 'B'
       ? [
           '• Retorno diário para reavaliação clínica e ambulatorial.',
+          '• Retornar no dia da melhora da febre, pela possibilidade de início da fase crítica.',
           '• Manter seguimento até 48h após remissão da febre.'
         ]
       : [
+          '• Retornar no dia da melhora da febre, pela possibilidade de início da fase crítica.',
           '• Caso não haja defervescência (queda da febre), retornar ao serviço de saúde no 5° dia da doença para nova avaliação.',
           '• Acompanhamento deve ser realizado em nível ambulatorial, com observação dos sinais clínicos e reavaliação periódica.'
         ]
@@ -406,7 +408,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                           <>
                             <div>• Orientação geral:</div>
                             <div>§ Adultos: 60 mL/kg/dia</div>
-                            <div>§ Pediatria: até 10 kg → 100 mL/kg/dia; 10–20 kg → 150 mL/kg/dia; acima de 20 kg → 80 mL/kg/dia</div>
+                            <div>§ Pediatria: até 10 kg → 130 mL/kg/dia; 10–20 kg → 100 mL/kg/dia; acima de 20 kg → 80 mL/kg/dia</div>
                             <div>§ 1/3 com sais de reidratação oral</div>
                             <div>§ 2/3 com líquidos caseiros (água, suco de frutas, soro caseiro, chás, água de coco etc.)</div>
                           </>
@@ -435,10 +437,12 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                     {patient.flowchartState.group === 'B' ? (
                       <>
                         <div>• Retorno diário para reavaliação clínica e ambulatorial.</div>
+                        <div>• Retornar no dia da melhora da febre, pela possibilidade de início da fase crítica.</div>
                         <div>• Manter seguimento até 48h após remissão da febre.</div>
                       </>
                     ) : (
                       <>
+                        <div>• Retornar no dia da melhora da febre, pela possibilidade de início da fase crítica.</div>
                         <div>• Caso não haja defervescência, retornar no 5° dia da doença para nova avaliação.</div>
                         <div>• Observação dos sinais clínicos e reavaliação periódica.</div>
                       </>

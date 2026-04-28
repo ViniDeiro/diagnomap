@@ -209,7 +209,8 @@ export default function Home() {
 
   const handleViewMedicalPrescription = (patient: Patient) => {
     setPreviousState(appState) // Guardar o estado atual antes de mudar
-    setCurrentPatient(patient)
+    const fresh = patientService.getPatientById(patient.id) || patient
+    setCurrentPatient(fresh)
     setAppState('medical-prescription')
   }
 
@@ -447,6 +448,7 @@ export default function Home() {
               onBack={() => setAppState('dashboard')}
               onViewPrescriptions={handleViewPrescriptions}
               onViewReport={handleViewReport}
+              onViewMedicalPrescription={handleViewMedicalPrescription}
             />
           ) : (
             (() => {
