@@ -3007,8 +3007,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
               )}
 
               {isAsthmaStartStep && asthmaSoundInfoOpen && (
-                <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-3xl h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/40 backdrop-blur-sm p-4">
+                  <div className="flex min-h-full items-start justify-center py-2 sm:items-center">
+                    <div className="w-full max-w-3xl max-h-[calc(100vh-2rem)] min-h-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-cyan-700 to-blue-700 text-white">
                       <div>
                         <h4 className="font-bold">Sibilância de referência</h4>
@@ -3025,7 +3026,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="flex-1 space-y-4 overflow-y-auto p-5">
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
                       <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
                         <p className="text-sm leading-relaxed text-cyan-950">
                           A sibilância é um som respiratório adventício, agudo e musical, geralmente mais evidente na expiração.
@@ -3064,6 +3065,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           </ul>
                         </div>
                       </div>
+                    </div>
                     </div>
                   </div>
                 </div>
