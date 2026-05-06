@@ -3201,7 +3201,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
         <div class="space-y-3">
           <div class="bg-amber-100 p-4 rounded border-l-4 border-amber-700 text-amber-950">
             <h4 class="font-bold text-amber-900">Interromper fluxo ambulatorial</h4>
-            <p class="text-sm mt-1">Este achado exige <strong>internação hospitalar mandatória</strong> e <strong>aprofundamento / seguimento da investigação</strong>, sem indicação automática de avaliação urgente da Cirurgia Vascular.</p>
+            <p class="text-sm mt-1"><strong>Alto risco de TVP</strong>. Deve-se proceder imediatamente na investigação. Solicitar exames pertinentes. <strong>Internação hospitalar mandatória</strong>.</p>
           </div>
           <div class="bg-amber-50 p-4 rounded border border-amber-300 text-sm text-amber-900">
             <ul class="list-disc pl-5 space-y-1">
@@ -3225,7 +3225,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
         <div class="space-y-3">
           <div class="bg-red-100 p-4 rounded border-l-4 border-red-700 text-red-950">
             <h4 class="font-bold text-red-900">Interromper fluxo ambulatorial</h4>
-            <p class="text-sm mt-1">Sintomas respiratórios associados exigem <strong>internação hospitalar mandatória</strong> e <strong>investigação imediata de possível tromboembolismo pulmonar (TEP)</strong>.</p>
+            <p class="text-sm mt-1">Atenção para a possibilidade de <strong>embolia pulmonar</strong>. Deve-se solicitar investigação e exames pertinentes para o diagnóstico. <strong>Internação hospitalar mandatória</strong>.</p>
           </div>
           <div class="bg-red-50 p-4 rounded border border-red-300 text-sm text-red-900">
             <ul class="list-disc pl-5 space-y-1">

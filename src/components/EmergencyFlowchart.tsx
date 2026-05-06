@@ -21,7 +21,6 @@ import {
   Microscope,
   ArrowLeft,
   Info,
-  Volume2,
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -472,7 +471,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
   const [tvpNoacInfoOpen, setTVPNoacInfoOpen] = useState<string | null>(null)
   const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
-  const [isAsthmaReferencePlaying, setIsAsthmaReferencePlaying] = useState(false)
+  const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -966,82 +965,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const toggleSelection = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
   }
-
-  const playAsthmaReference = useCallback(async () => {
-    if (isAsthmaReferencePlaying || typeof window === 'undefined') return
-
-    const AudioContextCtor = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
-    if (!AudioContextCtor) return
-
-    const context = new AudioContextCtor()
-    const duration = 3.8
-    const sampleRate = context.sampleRate
-    const buffer = context.createBuffer(1, Math.floor(sampleRate * duration), sampleRate)
-    const data = buffer.getChannelData(0)
-
-    for (let i = 0; i < data.length; i += 1) {
-      data[i] = (Math.random() * 2 - 1) * 0.35
-    }
-
-    const source = context.createBufferSource()
-    source.buffer = buffer
-
-    const highPass = context.createBiquadFilter()
-    highPass.type = 'highpass'
-    highPass.frequency.value = 350
-
-    const bandPass = context.createBiquadFilter()
-    bandPass.type = 'bandpass'
-    bandPass.frequency.value = 820
-    bandPass.Q.value = 12
-
-    const lowPass = context.createBiquadFilter()
-    lowPass.type = 'lowpass'
-    lowPass.frequency.value = 1800
-
-    const gainNode = context.createGain()
-    const now = context.currentTime
-
-    gainNode.gain.setValueAtTime(0.0001, now)
-    gainNode.gain.linearRampToValueAtTime(0.02, now + 0.15)
-    gainNode.gain.linearRampToValueAtTime(0.085, now + 0.65)
-    gainNode.gain.linearRampToValueAtTime(0.06, now + 1.4)
-    gainNode.gain.linearRampToValueAtTime(0.09, now + 2.3)
-    gainNode.gain.linearRampToValueAtTime(0.025, now + 3.15)
-    gainNode.gain.linearRampToValueAtTime(0.0001, now + duration)
-
-    const lfo = context.createOscillator()
-    lfo.type = 'sine'
-    lfo.frequency.value = 5.2
-
-    const lfoDepth = context.createGain()
-    lfoDepth.gain.value = 120
-
-    lfo.connect(lfoDepth)
-    lfoDepth.connect(bandPass.frequency)
-
-    source.connect(highPass)
-    highPass.connect(bandPass)
-    bandPass.connect(lowPass)
-    lowPass.connect(gainNode)
-    gainNode.connect(context.destination)
-
-    setIsAsthmaReferencePlaying(true)
-
-    source.onended = () => {
-      setIsAsthmaReferencePlaying(false)
-      lfo.stop()
-      context.close().catch(() => {})
-    }
-
-    if (context.state === 'suspended') {
-      await context.resume()
-    }
-
-    lfo.start(now)
-    source.start(now)
-    source.stop(now + duration)
-  }, [isAsthmaReferencePlaying])
 
   const toNumber = useCallback((value: unknown): number | null => {
     if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -1879,28 +1802,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   </div>
                   {isAsthmaStartStep && (
                     <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                         <div className="space-y-1">
                           <h5 className="text-sm font-extrabold uppercase tracking-wide text-cyan-900">
                             Referência rápida de ausculta
                           </h5>
                           <p className="text-sm text-cyan-900">
-                            Sibilância costuma soar como um chiado agudo, musical, predominante na expiração. Tórax silencioso em paciente cansado pode indicar gravidade maior.
+                            Sibilância costuma soar como um chiado agudo, musical, predominante na expiração. Abra a referência sonora para ouvir o áudio e revisar rapidamente o que procurar na ausculta.
                           </p>
                         </div>
                         <button
                           type="button"
-                          onClick={() => { void playAsthmaReference() }}
-                          disabled={isAsthmaReferencePlaying}
-                          className={clsx(
-                            'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
-                            isAsthmaReferencePlaying
-                              ? 'bg-cyan-100 text-cyan-500 cursor-not-allowed border border-cyan-200'
-                              : 'bg-cyan-600 hover:bg-cyan-700 text-white'
-                          )}
+                          onClick={() => setAsthmaSoundInfoOpen(true)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-white px-4 py-2.5 text-sm font-semibold text-cyan-800 transition-colors hover:bg-cyan-100"
                         >
-                          <Volume2 className="w-4 h-4" />
-                          {isAsthmaReferencePlaying ? 'Reproduzindo referência...' : 'Ouvir sibilância de referência'}
+                          <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-cyan-700 text-xs font-extrabold text-white">
+                            i
+                          </span>
+                          Ouvir e entender a sibilância
                         </button>
                       </div>
                     </div>
@@ -2451,13 +2370,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           </>
                         ) : hasTVPRespiratoryAlertSelected ? (
                           <>
-                            Fluxograma deve ser interrompido: indicar <strong>internação hospitalar mandatória</strong> e
-                            prosseguir com <strong>investigação imediata de possível tromboembolismo pulmonar (TEP)</strong>.
+                            Atenção para a possibilidade de <strong>embolia pulmonar</strong>. Deve-se solicitar investigação
+                            e exames pertinentes para o diagnóstico. <strong>Internação hospitalar mandatória</strong>.
                           </>
                         ) : (
                           <>
-                            Fluxograma deve ser interrompido: indicar <strong>internação hospitalar mandatória</strong> e
-                            realizar <strong>aprofundamento/seguimento da investigação</strong>, sem indicação automática de Cirurgia Vascular.
+                            <strong>Alto risco de TVP</strong>. Deve-se proceder imediatamente na investigação. Solicitar exames
+                            pertinentes. <strong>Internação hospitalar mandatória</strong>.
                           </>
                         )}
                       </p>
@@ -3081,6 +3000,69 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           <source src="/videos/Vídeo_Simulando_AVC_com_Legenda.mp4" type="video/mp4" />
                           Seu navegador não suporta vídeo HTML5.
                         </video>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isAsthmaStartStep && asthmaSoundInfoOpen && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-cyan-700 to-blue-700 text-white">
+                      <div>
+                        <h4 className="font-bold">Sibilância de referência</h4>
+                        <p className="mt-1 text-sm text-cyan-50">
+                          Exemplo sonoro e leitura prática da ausculta na crise asmática.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAsthmaSoundInfoOpen(false)}
+                        className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                        title="Fechar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="space-y-4 overflow-y-auto p-5">
+                      <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                        <p className="text-sm leading-relaxed text-cyan-950">
+                          A sibilância é um som respiratório adventício, agudo e musical, geralmente mais evidente na expiração.
+                          Este áudio funciona como referência didática rápida para ajudar a reconhecer o chiado típico da obstrução brônquica.
+                        </p>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="mb-3 text-sm font-semibold text-slate-800">Áudio de referência</p>
+                        <audio controls className="w-full">
+                          <source src="/audio/sounds-of-asthma-wheezing-lung-sounds.mp3" type="audio/mpeg" />
+                          Seu navegador não suporta áudio HTML5.
+                        </audio>
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                          <h5 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-slate-900">
+                            O que ouvir
+                          </h5>
+                          <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-slate-700">
+                            <li>Chiado fino, agudo e com qualidade musical.</li>
+                            <li>Predomínio na expiração, podendo surgir também na inspiração em crises mais intensas.</li>
+                            <li>Maior valor clínico quando associado a dispneia, tosse e prolongamento expiratório.</li>
+                          </ul>
+                        </div>
+
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <h5 className="mb-2 text-sm font-extrabold uppercase tracking-wide text-amber-950">
+                            Atenção clínica
+                          </h5>
+                          <ul className="list-disc space-y-2 pl-5 text-sm leading-relaxed text-amber-900">
+                            <li>Tórax silencioso em paciente cansado não é sinal de melhora; pode indicar obstrução muito grave.</li>
+                            <li>Interprete a ausculta junto com fala entrecortada, esforço respiratório, SatO2 e estado mental.</li>
+                            <li>O áudio é uma referência educacional e não substitui o exame clínico do paciente real.</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
