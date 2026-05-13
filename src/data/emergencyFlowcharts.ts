@@ -2964,16 +2964,16 @@ export const tvpFlowchart: EmergencyFlowchart = {
     moderada_probabilidade: {
       id: 'moderada_probabilidade',
       title: 'Moderada/Alta Probabilidade',
-      description: 'Realizar Doppler venoso de membros inferiores.',
+      description: 'Realizar ultrassonografia com Doppler de membros inferiores (MMII).',
       type: 'action',
       critical: true,
       content: `
         <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Conduta direta:</strong> realizar US venosa compressiva (Doppler) sem etapa prévia de D-dímero.</p>
+          <p><strong>Conduta direta:</strong> realizar USG com Doppler de membros inferiores (MMII) sem etapa prévia de D-dímero.</p>
         </div>
       `,
       options: [
-        { text: 'Realizar Doppler venoso de membros inferiores', nextStep: 'us_compressiva', value: 'direct_us', critical: true }
+        { text: 'Realizar USG com Doppler de membros inferiores (MMII)', nextStep: 'us_compressiva', value: 'direct_us', critical: true }
       ]
     },
     us_compressiva: {
@@ -2989,13 +2989,13 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     us_negativa_conduta: {
       id: 'us_negativa_conduta',
-      title: 'US Negativa - Reavaliação',
+      title: 'USG Negativa - Reavaliação',
       description: 'Decisão baseada na persistência da suspeita clínica.',
       type: 'question',
       content: `
         <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
-          <p>US negativa não exclui TVP em suspeita clínica alta.</p>
-          <p>Se persistir dúvida/suspeita clínica, repetir ultrassonografia em 5–7 dias.</p>
+          <p>USG negativa não exclui TVP em suspeita clínica alta.</p>
+          <p>Se persistir dúvida/suspeita clínica, repetir USG em 5–7 dias.</p>
         </div>
       `,
       options: [
@@ -3732,6 +3732,188 @@ export const dpocFlowchart: EmergencyFlowchart = {
   }
 }
 
+export const influenzaFlowchart: EmergencyFlowchart = {
+  id: 'influenza',
+  name: 'Influenza / Síndrome Gripal',
+  description: 'Estratificação de síndrome gripal, SRAG, necessidade de oseltamivir e nível de internação.',
+  category: 'infectious',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-sky-600 to-cyan-800',
+  initialStep: 'start',
+  finalSteps: [
+    'influenza_ambulatorial_sintomaticos',
+    'influenza_ambulatorial_oseltamivir',
+    'influenza_internacao_enfermaria',
+    'influenza_internacao_uti'
+  ],
+  steps: {
+    start: {
+      id: 'start',
+      title: 'Paciente com sintomas de síndrome gripal',
+      description: 'Definir se há sinais de gravidade e seguir a classificação clínica.',
+      type: 'question',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <p><strong>Síndrome gripal:</strong> na ausência de outro diagnóstico específico, considerar em paciente com <strong>febre</strong> (mesmo que referida) associada a <strong>tosse</strong> ou <strong>dor de garganta</strong>, somada a pelo menos um dos seguintes sintomas: <strong>mialgia</strong>, <strong>cefaleia</strong> ou <strong>artralgia</strong>.</p>
+          </div>
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+            <p class="font-semibold text-red-800">Notificação e cuidados iniciais importantes</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1 text-red-900">
+              <li>Considerar isolamento por gotículas e máscara cirúrgica para o paciente.</li>
+              <li>Influenza A e B têm maior importância clínica em humanos.</li>
+              <li>Oseltamivir deve ser priorizado em pacientes hospitalizados ou com fatores de risco para complicações.</li>
+            </ul>
+          </div>
+          <details class="rounded-xl border border-slate-200 bg-white p-4">
+            <summary class="cursor-pointer font-semibold text-slate-800">Ver pontos que não podem passar despercebidos</summary>
+            <div class="mt-3 space-y-2 text-slate-700">
+              <p>A influenza acomete vias aéreas superiores e inferiores e pode evoluir com <strong>síndrome respiratória aguda</strong>.</p>
+              <p>O subtipo H1N1 mantém maior relevância clínica no Brasil, com incubação de <strong>1 a 7 dias</strong>.</p>
+              <p>A principal complicação é a <strong>pneumonia viral</strong>, podendo haver coinfecção bacteriana associada.</p>
+              <p>O tratamento antiviral indicado inclui <strong>oseltamivir</strong> ou <strong>zanamivir</strong>, com maior benefício quando iniciado nas primeiras 48 horas.</p>
+              <p>Pacientes graves com pneumonia podem necessitar de <strong>antibioticoterapia de amplo espectro</strong> conforme avaliação clínica.</p>
+            </div>
+          </details>
+          <details class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+            <summary class="cursor-pointer font-semibold text-cyan-900">Esquema antiviral de referência</summary>
+            <div class="mt-3 space-y-2 text-cyan-950">
+              <p><strong>Adulto:</strong> oseltamivir 75 mg VO de 12/12 horas por 5 dias.</p>
+              <p><strong>Criança &gt; 1 ano:</strong> dose por peso: 30 mg (&lt; 15 kg), 45 mg (&gt; 15 a 23 kg), 60 mg (&gt; 23 a 40 kg) ou 75 mg (&gt; 40 kg) VO de 12/12 horas por 5 dias.</p>
+              <p><strong>Criança &lt; 1 ano:</strong> 12 mg (&lt; 3 meses), 20 mg (3 a 5 meses) ou 25 mg (6 a 11 meses) VO de 12/12 horas por 5 dias.</p>
+              <p><strong>Zanamivir:</strong> 2 inalações de 5 mg de 12/12 horas por 5 dias em adultos e crianças a partir de 7 anos.</p>
+            </div>
+          </details>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar avaliação clínica', nextStep: 'influenza_sinais_gravidade', value: 'start_influenza' }
+      ]
+    },
+    influenza_sinais_gravidade: {
+      id: 'influenza_sinais_gravidade',
+      title: 'Há sinais de gravidade?',
+      description: 'Sinais de gravidade definem transição para SRAG e necessidade de avaliação hospitalar.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p class="font-semibold text-amber-900">Considerar gravidade quando houver:</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1 text-amber-900">
+              <li>Dispneia</li>
+              <li>Desconforto respiratório</li>
+              <li>SatO2 menor que 95% em ar ambiente</li>
+              <li>Exacerbação de doença de base</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    influenza_fatores_risco: {
+      id: 'influenza_fatores_risco',
+      title: 'Síndrome gripal - fatores de risco ou piora clínica',
+      description: 'Na ausência de sinais de gravidade, decidir se há indicação ambulatorial de oseltamivir.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p class="font-semibold text-emerald-900">Sem gravidade imediata: avaliar fatores de risco e sinais de piora clínica.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    influenza_criterios_uti: {
+      id: 'influenza_criterios_uti',
+      title: 'SRAG - há indicação de internação em UTI?',
+      description: 'Definir nível de internação quando o paciente já apresenta sinais de gravidade.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <p class="font-semibold text-rose-900">Critérios que favorecem UTI:</p>
+            <ul class="list-disc pl-5 mt-2 space-y-1 text-rose-900">
+              <li>Choque</li>
+              <li>Disfunção de órgãos vitais</li>
+              <li>Insuficiência respiratória</li>
+              <li>Instabilidade hemodinâmica</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    influenza_ambulatorial_sintomaticos: {
+      id: 'influenza_ambulatorial_sintomaticos',
+      title: 'Ambulatorial',
+      description: 'Tratamento sintomático e vigilância clínica.',
+      type: 'result',
+      generatesPrescription: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p><strong>Conduta:</strong> sintomáticos, aumento da ingestão de líquidos e retorno apenas se houver piora do quadro ou sinais de gravidade.</p>
+            <p class="mt-2">Orientar etiqueta respiratória, hidratação adequada e reavaliação se febre persistente ou surgimento de dispneia.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    influenza_ambulatorial_oseltamivir: {
+      id: 'influenza_ambulatorial_oseltamivir',
+      title: 'Ambulatorial com oseltamivir',
+      description: 'Paciente sem gravidade imediata, mas com fator de risco ou piora clínica.',
+      type: 'result',
+      generatesPrescription: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p><strong>Conduta:</strong> oseltamivir, exames radiográficos quando pertinentes, sintomáticos, aumento da ingestão de líquidos e retorno em 48 horas ou antes se piora clínica/sinais de gravidade.</p>
+            <p class="mt-2">Fatores de risco e sinais de piora clínica justificam início do antiviral mesmo sem SRAG.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    influenza_internacao_enfermaria: {
+      id: 'influenza_internacao_enfermaria',
+      title: 'Internação em enfermaria',
+      description: 'Paciente com SRAG sem critério imediato de UTI.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <p><strong>Conduta:</strong> oseltamivir, considerar antibioticoterapia de amplo espectro quando houver suspeita de pneumonia/coinfecção bacteriana, exames radiográficos, sintomáticos, hidratação venosa, oxigenoterapia se necessária e exames complementares.</p>
+            <p class="mt-2">Manter isolamento por gotículas e reavaliação seriada da necessidade de escalonamento para terapia intensiva.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    influenza_internacao_uti: {
+      id: 'influenza_internacao_uti',
+      title: 'Internação em unidade intensiva',
+      description: 'Paciente com SRAG e indicação de terapia intensiva.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+            <p><strong>Conduta:</strong> oseltamivir, considerar antibioticoterapia de amplo espectro quando houver suspeita de pneumonia/coinfecção bacteriana, exames radiográficos, sintomáticos, hidratação venosa, oxigenoterapia se necessária e exames complementares, com monitorização intensiva.</p>
+            <p class="mt-2">Priorizar suporte ventilatório/hemodinâmico conforme necessidade e manutenção de monitorização intensiva contínua.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -3744,6 +3926,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   spider_bite: spiderBiteFlowchart,
   tvp: tvpFlowchart,
   dpoc_exacerbado: dpocFlowchart,
+  influenza: influenzaFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -3765,6 +3948,7 @@ export const allFlowcharts = [
   { id: 'hepatite_c', name: 'Hepatite C', category: 'infectious', implemented: false },
   { id: 'hepatite_delta', name: 'Hepatite Delta', category: 'infectious', implemented: false },
   { id: 'herpes_zoster', name: 'Herpes Zoster', category: 'infectious', implemented: false },
+  { id: 'influenza', name: 'Influenza / Síndrome Gripal', category: 'infectious', implemented: true },
   { id: 'ivas', name: 'Infecção de vias aéreas superiores (Gripe/Resfriado)', category: 'infectious', implemented: false },
   { id: 'itu', name: 'ITU', category: 'infectious', implemented: false },
   { id: 'meningite', name: 'Meningite', category: 'infectious', implemented: false },

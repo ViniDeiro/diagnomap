@@ -10,7 +10,9 @@ import {
   Clipboard,
   ClipboardCheck
 } from 'lucide-react'
-import { Patient } from '@/types/patient'
+import { Patient, Prescription } from '@/types/patient'
+import { getFlowchartById } from '@/data/emergencyFlowcharts'
+import { patientService } from '@/services/patientService'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import clsx from 'clsx'
@@ -24,8 +26,10 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<'orientations' | 'prescriptions'>('orientations')
-  const isDengue = !patient.selectedFlowchart || patient.selectedFlowchart === 'dengue'
-  const flowName = patient.selectedFlowchart ? patient.selectedFlowchart.toUpperCase() : 'DENGUE'
+  const livePatient = patientService.getPatientById(patient.id) || patient
+  const isDengue = !livePatient.selectedFlowchart || livePatient.selectedFlowchart === 'dengue'
+  const isInfluenza = livePatient.selectedFlowchart === 'influenza'
+  const flowName = getFlowchartById(livePatient.selectedFlowchart || '')?.name || (livePatient.selectedFlowchart ? livePatient.selectedFlowchart.toUpperCase() : 'DENGUE')
 
   const tvpPrescriptionTemplates: Record<string, Omit<Prescription, 'id' | 'prescribedAt' | 'prescribedBy'>> = {
     rivaroxabana: {
@@ -144,8 +148,8 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const getDynamicFlowPrescriptions = (): Prescription[] => {
-    if (!patient.flowchartState?.answers) return []
-    const parsedEntries = Object.values(patient.flowchartState.answers).map((value) => {
+    if (!livePatient.flowchartState?.answers) return []
+    const parsedEntries = Object.values(livePatient.flowchartState.answers).map((value) => {
       try {
         return JSON.parse(value)
       } catch {
@@ -161,13 +165,13 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       .map((id) => ({
         id: `flow_${id}`,
         ...tvpPrescriptionTemplates[id],
-        prescribedAt: new Date(patient.updatedAt || new Date()),
+        prescribedAt: new Date(livePatient.updatedAt || new Date()),
         prescribedBy: 'Fluxograma Clínico'
       }))
   }
 
   const allPrescriptions = (() => {
-    const merged = [...patient.treatment.prescriptions, ...getDynamicFlowPrescriptions()]
+    const merged = [...livePatient.treatment.prescriptions, ...getDynamicFlowPrescriptions()]
     const dedup = new Map<string, Prescription>()
     merged.forEach((prescription) => {
       const key = `${prescription.medication}_${prescription.dosage}`
@@ -176,11 +180,26 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
     return Array.from(dedup.values())
   })()
 
+  const getInfluenzaDispositionLabel = () => {
+    switch (livePatient.flowchartState.currentStep) {
+      case 'influenza_ambulatorial_sintomaticos':
+        return 'Ambulatorial com tratamento sintomático'
+      case 'influenza_ambulatorial_oseltamivir':
+        return 'Ambulatorial com oseltamivir'
+      case 'influenza_internacao_enfermaria':
+        return 'Internação em enfermaria'
+      case 'influenza_internacao_uti':
+        return 'Internação em unidade intensiva'
+      default:
+        return 'Em avaliação clínica'
+    }
+  }
+
   // Função para calcular hidratação oral baseada no peso e idade
   const calculateHydration = (weight?: number, age?: number) => {
     if (!weight) return null
 
-    const isAdult = (age ?? patient.age) >= 18
+    const isAdult = (age ?? livePatient.age) >= 18
     let perKg: number
     if (isAdult) {
       perKg = 60 // Adultos: 60 mL/kg/dia
@@ -205,6 +224,52 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
+    if (isInfluenza) {
+      const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
+        const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
+        return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
+      }).join('\n\n')
+
+      const prescriptionsText = allPrescriptions.length > 0
+        ? `Medicamentos Prescritos:\n${mappedPrescriptions}\n\n`
+        : ''
+
+      return [
+        'RECEITUÁRIO MÉDICO',
+        'Sistema Siga o Fluxo',
+        '',
+        `Paciente: ${patient.name}`,
+        `Idade: ${patient.age} anos`,
+        `Data: ${new Date().toLocaleDateString('pt-BR')}`,
+        '',
+        `Diagnóstico: ${flowName}`,
+        `Classificação clínica: ${getInfluenzaDispositionLabel()}`,
+        '',
+        'Orientações:',
+        '',
+        '1. Medidas gerais',
+        '• Manter boa hidratação e alimentação fracionada, conforme tolerância.',
+        '• Priorizar repouso relativo e controle sintomático.',
+        '• Manter isolamento por gotículas e etiqueta respiratória enquanto sintomático.',
+        '',
+        '2. Retorno / reavaliação',
+        '• Reavaliar em 48 a 72 horas, ou antes se houver piora do quadro.',
+        '• Retornar imediatamente em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação, febre persistente ou agravamento geral.',
+        '',
+        '3. Observações sobre antiviral',
+        '• Oseltamivir tem maior benefício quando iniciado precocemente, preferencialmente nas primeiras 48 horas.',
+        '• Ajustar dose em disfunção renal, quando aplicável.',
+        '',
+        prescriptionsText + 'Assinatura do Médico:',
+        '__________________________________________________',
+        'Dr. Rodrigo Machado / CRM: XXXX.XXX',
+        '',
+        '---',
+        'Receituário gerado automaticamente pelo Sistema Siga o Fluxo',
+        formatDate(new Date())
+      ].join('\n')
+    }
+
     const hydration = calculateHydration(patient.weight, patient.age)
     const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
       const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
@@ -460,6 +525,29 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                   </div>
                 </div>
                 </>
+                ) : isInfluenza ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                      <h3 className="font-bold text-cyan-900 mb-2">Classificação atual</h3>
+                      <p className="text-cyan-900">{getInfluenzaDispositionLabel()}.</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <h3 className="font-bold text-slate-800 mb-2">Cuidados gerais</h3>
+                      <ul className="space-y-1 text-slate-700">
+                        <li>• Manter hidratação oral e alimentação conforme tolerância.</li>
+                        <li>• Reforçar etiqueta respiratória e isolamento por gotículas enquanto sintomático.</li>
+                        <li>• Controlar febre, dor e congestão conforme prescrição registrada.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <h3 className="font-bold text-amber-900 mb-2">Retorno e sinais de alerta</h3>
+                      <ul className="space-y-1 text-amber-900">
+                        <li>• Reavaliar em 48 a 72 horas ou antes se houver piora.</li>
+                        <li>• Retorno imediato em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação ou febre persistente.</li>
+                        <li>• Pacientes com indicação de oseltamivir devem manter adesão completa ao esquema antiviral.</li>
+                      </ul>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-5 text-lg">
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">

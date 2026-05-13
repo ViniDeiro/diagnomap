@@ -727,6 +727,124 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
     }
 
+    if (flowId === 'influenza') {
+      const severityData = safeParse(answers.influenza_sinais_gravidade) as {
+        sinaisGravidadeSelecionados?: string[]
+        classificadoComoSRAG?: boolean
+      } | null
+      const riskData = safeParse(answers.influenza_fatores_risco) as {
+        fatoresRiscoSelecionados?: string[]
+        sinaisPioraSelecionados?: string[]
+        indicarOseltamivir?: boolean
+      } | null
+      const icuData = safeParse(answers.influenza_criterios_uti) as {
+        criteriosUTISelecionados?: string[]
+        indicarUTI?: boolean
+      } | null
+
+      const severitySigns = uniqueItems(Array.isArray(severityData?.sinaisGravidadeSelecionados) ? severityData.sinaisGravidadeSelecionados : [])
+      const riskFactors = uniqueItems(Array.isArray(riskData?.fatoresRiscoSelecionados) ? riskData.fatoresRiscoSelecionados : [])
+      const worseningSigns = uniqueItems(Array.isArray(riskData?.sinaisPioraSelecionados) ? riskData.sinaisPioraSelecionados : [])
+      const icuCriteria = uniqueItems(Array.isArray(icuData?.criteriosUTISelecionados) ? icuData.criteriosUTISelecionados : [])
+
+      const classificationText = (() => {
+        switch (currentStep) {
+          case 'influenza_ambulatorial_sintomaticos':
+            return 'Síndrome gripal sem sinais de gravidade, sem fator de risco relevante e sem sinais documentados de piora clínica.'
+          case 'influenza_ambulatorial_oseltamivir':
+            return 'Síndrome gripal sem sinais de gravidade imediata, porém com fator de risco e/ou sinal de piora clínica, com indicação ambulatorial de oseltamivir.'
+          case 'influenza_internacao_enfermaria':
+            return 'Síndrome respiratória aguda grave (SRAG), sem critério imediato de terapia intensiva, com necessidade de internação em enfermaria.'
+          case 'influenza_internacao_uti':
+            return 'Síndrome respiratória aguda grave (SRAG) com critério de unidade intensiva.'
+          default:
+            return 'Quadro em avaliação dentro do protocolo institucional de influenza/síndrome gripal.'
+        }
+      })()
+
+      const historyText = [
+        `Paciente admitido em ${formatDate(patient.admission.date)} para avaliação de quadro respiratório compatível com síndrome gripal / influenza.`,
+        symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : 'Sem descrição estruturada suficiente dos sintomas na admissão.',
+        observations.length > 0 ? `Observações adicionais: ${observations.join('; ')}.` : null
+      ].filter(Boolean).join(' ')
+
+      const evaluationItems = uniqueItems([
+        severitySigns.length > 0 ? `Sinais de gravidade assinalados: ${severitySigns.join('; ')}.` : 'Sem sinais de gravidade registrados na etapa específica do fluxo.',
+        riskFactors.length > 0 ? `Fatores de risco documentados: ${riskFactors.join('; ')}.` : null,
+        worseningSigns.length > 0 ? `Sinais de piora clínica documentados: ${worseningSigns.join('; ')}.` : null,
+        icuCriteria.length > 0 ? `Critérios de UTI assinalados: ${icuCriteria.join('; ')}.` : null,
+        classificationText
+      ])
+
+      const conductItems = uniqueItems([
+        currentStep === 'influenza_ambulatorial_sintomaticos'
+          ? 'Definido manejo ambulatorial sintomático, com aumento da ingestão de líquidos e vigilância clínica.'
+          : null,
+        currentStep === 'influenza_ambulatorial_oseltamivir'
+          ? 'Definido manejo ambulatorial com oseltamivir, sintomáticos e retorno precoce.'
+          : null,
+        currentStep === 'influenza_internacao_enfermaria'
+          ? 'Indicada internação em enfermaria com antiviral, suporte clínico, exames radiográficos e complementares conforme necessidade.'
+          : null,
+        currentStep === 'influenza_internacao_uti'
+          ? 'Indicada internação em unidade intensiva com antiviral e suporte avançado conforme gravidade.'
+          : null,
+        prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
+      ])
+
+      const planItems = uniqueItems([
+        currentStep === 'influenza_ambulatorial_sintomaticos' || currentStep === 'influenza_ambulatorial_oseltamivir'
+          ? 'Orientado retorno em 48 a 72 horas ou antes em caso de piora clínica.'
+          : 'Manter reavaliação hospitalar seriada conforme estabilidade clínica e respiratória.',
+        'Orientado retorno imediato em dispneia, desconforto respiratório, queda da saturação, confusão, desidratação ou persistência/agravamento da febre.',
+        currentStep === 'influenza_ambulatorial_oseltamivir' || currentStep === 'influenza_internacao_enfermaria' || currentStep === 'influenza_internacao_uti'
+          ? 'Manter adesão ao esquema antiviral prescrito e ajustar dose em disfunção renal, quando aplicável.'
+          : null
+      ])
+
+      return {
+        title: 'PRONTUÁRIO MÉDICO – INFLUENZA / SÍNDROME GRIPAL',
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'Queixa Principal',
+            text: symptoms[0] || 'Síndrome gripal / quadro respiratório agudo em investigação.'
+          },
+          {
+            title: 'História da Doença Atual',
+            text: historyText
+          },
+          {
+            title: 'Sinais e Sintomas',
+            items: symptoms.length > 0 ? symptoms : ['Sem sinais e sintomas estruturados registrados no sistema.']
+          },
+          {
+            title: 'Exame Físico',
+            items: vitalItems.length > 0 ? vitalItems : ['Sem dados estruturados de exame físico ou sinais vitais no sistema.']
+          },
+          {
+            title: 'Avaliação Clínica',
+            items: evaluationItems
+          },
+          {
+            title: 'Exames Complementares',
+            items: labItems.length > 0 ? labItems : ['Sem exames complementares estruturados registrados no sistema.']
+          },
+          {
+            title: 'Conduta',
+            items: conductItems
+          },
+          {
+            title: 'Plano / Acompanhamento',
+            items: planItems
+          }
+        ]
+      }
+    }
+
     const groupInfo = getGroupInfo(patient.flowchartState.group)
     return {
       title: `PRONTUÁRIO MÉDICO – ${(flowchart?.name || flowId).toUpperCase()}`,

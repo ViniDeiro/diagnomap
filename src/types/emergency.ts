@@ -45,6 +45,7 @@ export type EmergencyType =
   | 'spider_bite' // Picada de Aranha
   | 'tvp'
   | 'dpoc_exacerbado'
+  | 'influenza'
 
 export interface EmergencyFlowchart {
   id: EmergencyType

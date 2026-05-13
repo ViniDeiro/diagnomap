@@ -21,10 +21,21 @@ import {
   Microscope,
   ArrowLeft,
   Info,
+  Clipboard,
+  ClipboardCheck,
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, EmergencyOption, EmergencyStep } from '@/types/emergency'
+import { patientService } from '@/services/patientService'
+import {
+  INFLUENZA_SEVERITY_SIGNS,
+  INFLUENZA_RISK_FACTORS,
+  INFLUENZA_WORSENING_SIGNS,
+  INFLUENZA_ICU_CRITERIA,
+  buildInfluenzaPrescriptionItems,
+  hasInfluenzaPrescriptionSet
+} from '@/lib/influenza'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
@@ -33,6 +44,12 @@ type TVPLegSide = 'left' | 'right' | 'other'
 type TVPPrescriptionPreview = {
   therapyId: string
   title: string
+  content: string[]
+}
+
+type InfluenzaPrescriptionPreview = {
+  title: string
+  includeOseltamivir: boolean
   content: string[]
 }
 
@@ -146,7 +163,6 @@ const tvpAlertSigns = [
 ]
 
 const tvpVascularSurgeryAlertSigns = tvpAlertSigns.slice(0, 4)
-const tvpMandatoryAdmissionInvestigationAlertSigns = [tvpAlertSigns[4]]
 const tvpRespiratoryTEPAlertSigns = [tvpAlertSigns[5]]
 
 const flegmasiaReferenceImages = [
@@ -472,6 +488,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpNoacInfoOpen, setTVPNoacInfoOpen] = useState<string | null>(null)
   const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
   const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
+  const [influenzaSeveritySigns, setInfluenzaSeveritySigns] = useState<string[]>([])
+  const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
+  const [influenzaWorseningSigns, setInfluenzaWorseningSigns] = useState<string[]>([])
+  const [influenzaICUCriteria, setInfluenzaICUCriteria] = useState<string[]>([])
+  const [influenzaPrescriptionPreview, setInfluenzaPrescriptionPreview] = useState<InfluenzaPrescriptionPreview | null>(null)
+  const [influenzaPrescriptionCopied, setInfluenzaPrescriptionCopied] = useState(false)
+  const [influenzaPrescriptionGeneratedSteps, setInfluenzaPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -586,6 +609,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isTVPWellsScore = flowchart.id === 'tvp' && currentStep === 'wells_score'
     const isTVPContraCheck = flowchart.id === 'tvp' && currentStep === 'checar_contra_anticoagulacao'
     const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStep === 'tratamento_inicial'
+    const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStep === 'influenza_sinais_gravidade'
+    const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStep === 'influenza_fatores_risco'
+    const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
     const legSelectionAnswer = JSON.stringify({
       decision: value || nextStep,
       selectedLeg: selectedTVPLeg,
@@ -615,6 +641,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       planoDuracaoSelecionado: selectedDurationPlan,
       solicitarAvaliacaoCirurgiaoVascular: true
     })
+    const influenzaSeverityAnswer = JSON.stringify({
+      decision: value || nextStep,
+      sinaisGravidadeSelecionados: influenzaSeveritySigns,
+      classificadoComoSRAG: influenzaSeveritySigns.length > 0
+    })
+    const influenzaRiskAnswer = JSON.stringify({
+      decision: value || nextStep,
+      fatoresRiscoSelecionados: influenzaRiskFactors,
+      sinaisPioraSelecionados: influenzaWorseningSigns,
+      indicarOseltamivir: influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+    })
+    const influenzaICUAnswer = JSON.stringify({
+      decision: value || nextStep,
+      criteriosUTISelecionados: influenzaICUCriteria,
+      indicarUTI: influenzaICUCriteria.length > 0
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -625,9 +667,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             ? wellsScoreAnswer
             : isTVPContraCheck
               ? contraCheckAnswer
-            : isTVPTreatmentInitial
-              ? treatmentAnswer
-              : value || nextStep
+              : isTVPTreatmentInitial
+                ? treatmentAnswer
+                : isInfluenzaSeverityStep
+                  ? influenzaSeverityAnswer
+                  : isInfluenzaRiskStep
+                    ? influenzaRiskAnswer
+                    : isInfluenzaICUStep
+                      ? influenzaICUAnswer
+                      : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -801,17 +849,57 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
   }, [patient.weight])
 
+  const buildInfluenzaPrescriptionPreview = useCallback((includeOseltamivir: boolean): InfluenzaPrescriptionPreview => {
+    const prescriptionItems = buildInfluenzaPrescriptionItems(patient, includeOseltamivir)
+    const content = [
+      includeOseltamivir
+        ? 'Esquema terapêutico ambulatorial para paciente com fatores de risco ou piora clínica, com indicação de oseltamivir.'
+        : 'Esquema sintomático ambulatorial para síndrome gripal sem sinal de gravidade e sem indicação imediata de antiviral.',
+      '',
+      ...prescriptionItems.flatMap((item, index) => [
+        `${index + 1}. ${item.medication}`,
+        `   Dosagem: ${item.dosage}`,
+        `   Frequência: ${item.frequency}`,
+        `   Duração: ${item.duration}`,
+        item.instructions ? `   Instruções: ${item.instructions}` : '',
+        ''
+      ]).filter(Boolean),
+      'Medidas não farmacológicas:',
+      '• Manter hidratação e alimentação adequadas.',
+      '• Reavaliar em 48 a 72 horas ou antes se houver piora clínica.',
+      '• Orientar retorno imediato em dispneia, desconforto respiratório, saturação baixa, confusão, vômitos persistentes ou sinais de desidratação.'
+    ]
+
+    return {
+      title: includeOseltamivir ? 'Prescrição - Influenza com Oseltamivir' : 'Prescrição - Tratamento Sintomático da Síndrome Gripal',
+      includeOseltamivir,
+      content
+    }
+  }, [patient])
+
+  const getPersistedInfluenzaPrescriptions = useCallback(() => {
+    const freshPatient = patientService.getPatientById(patient.id)
+    return (freshPatient?.treatment.prescriptions || patient.treatment.prescriptions || []).filter(
+      (item) => item.prescribedBy === 'Fluxograma Influenza'
+    )
+  }, [patient.id, patient.treatment.prescriptions])
+
   const goBack = () => {
     if (history.length > 0) {
       const previousStep = history[history.length - 1]
       const newHistory = history.slice(0, -1)
+      const validAnsweredSteps = new Set(newHistory)
+      const newAnswers = Object.fromEntries(
+        Object.entries(answers).filter(([stepId]) => validAnsweredSteps.has(stepId))
+      )
       const newProgress = calculateProgress(previousStep, newHistory)
 
       setCurrentStep(previousStep)
       setHistory(newHistory)
+      setAnswers(newAnswers)
       setProgress(newProgress)
 
-      onUpdate(patient.id, previousStep, newHistory, answers, newProgress)
+      onUpdate(patient.id, previousStep, newHistory, newAnswers, newProgress)
     }
   }
 
@@ -831,6 +919,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setTVPRiskBenefitGuideOpen(false)
     setTVPNoacInfoOpen(null)
     setVarfarinaDietInfoOpen(false)
+    setInfluenzaSeveritySigns([])
+    setInfluenzaRiskFactors([])
+    setInfluenzaWorseningSigns([])
+    setInfluenzaICUCriteria([])
+    setInfluenzaPrescriptionPreview(null)
+    setInfluenzaPrescriptionCopied(false)
+    setInfluenzaPrescriptionGeneratedSteps({})
     setGasometryDraft({
       ph: '',
       pco2: '',
@@ -888,10 +983,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => selectedClinicalFindings.some((item) => tvpVascularSurgeryAlertSigns.includes(item)),
     [selectedClinicalFindings]
   )
-  const hasTVPAdmissionInvestigationAlertSelected = useMemo(
-    () => selectedClinicalFindings.some((item) => tvpMandatoryAdmissionInvestigationAlertSigns.includes(item)),
-    [selectedClinicalFindings]
-  )
   const hasTVPRespiratoryAlertSelected = useMemo(
     () => selectedClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
     [selectedClinicalFindings]
@@ -931,7 +1022,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
   }, [
     hasTVPAlertSignSelected,
-    hasTVPAdmissionInvestigationAlertSelected,
     hasTVPVascularAlertSelected,
     hasTVPRespiratoryAlertSelected
   ])
@@ -951,11 +1041,67 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isGasometryFlow = flowchart.id === 'gasometria'
   const isAsthmaFlow = flowchart.id === 'asthma'
   const isAsthmaStartStep = flowchart.id === 'asthma' && currentStepData?.id === 'asma_tipo'
+  const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_sinais_gravidade'
+  const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_fatores_risco'
+  const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_criterios_uti'
+  const isInfluenzaAmbulatoryFinalStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
 
   const isDpocSinaisGravidade = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'sinais_gravidade'
   const isDpocAnthonisenAmbulatorial = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb'
   const isDpocAnthonisenHospitalar = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb_hospitalar'
   const isDpocAnthonisen = isDpocAnthonisenAmbulatorial || isDpocAnthonisenHospitalar
+  const hasInfluenzaPrescriptionForCurrentStep = useMemo(() => {
+    if (!isInfluenzaAmbulatoryFinalStep || !currentStepData) return false
+    const includeOseltamivir = currentStepData.id === 'influenza_ambulatorial_oseltamivir'
+    return influenzaPrescriptionGeneratedSteps[currentStepData.id]
+      || hasInfluenzaPrescriptionSet(getPersistedInfluenzaPrescriptions(), includeOseltamivir)
+  }, [currentStepData, getPersistedInfluenzaPrescriptions, influenzaPrescriptionGeneratedSteps, isInfluenzaAmbulatoryFinalStep])
+
+  const handleOpenInfluenzaPrescription = useCallback(() => {
+    if (!currentStepData || !isInfluenzaAmbulatoryFinalStep) return
+
+    const includeOseltamivir = currentStepData.id === 'influenza_ambulatorial_oseltamivir'
+    const draftItems = buildInfluenzaPrescriptionItems(patient, includeOseltamivir)
+    const persisted = getPersistedInfluenzaPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setInfluenzaPrescriptionGeneratedSteps((prev) => ({ ...prev, [currentStepData.id]: true }))
+    setInfluenzaPrescriptionPreview(buildInfluenzaPrescriptionPreview(includeOseltamivir))
+    setInfluenzaPrescriptionCopied(false)
+
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildInfluenzaPrescriptionPreview,
+    currentStep,
+    currentStepData,
+    getPersistedInfluenzaPrescriptions,
+    history,
+    isInfluenzaAmbulatoryFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyInfluenzaPrescriptionText = useCallback(async () => {
+    if (!influenzaPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(influenzaPrescriptionPreview.content.join('\n'))
+      setInfluenzaPrescriptionCopied(true)
+      setTimeout(() => setInfluenzaPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da influenza:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [influenzaPrescriptionPreview])
+
   const stepMentionsFlegmasia = (
     currentStepData?.title?.toLowerCase().includes('flegmasia') ||
     currentStepData?.description?.toLowerCase().includes('flegmasia') ||
@@ -1464,7 +1610,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSelectedTVPLeg('')
       return
     }
-    setSelectedTVPLeg(parseTVPSelectedLeg(answers[currentStep]))
+    const savedLeg = parseTVPSelectedLeg(answers[currentStep])
+    setSelectedTVPLeg(savedLeg === 'left' || savedLeg === 'right' ? savedLeg : '')
   }, [isTVPLegSelection, answers, currentStep])
 
   useEffect(() => {
@@ -1554,10 +1701,79 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [isTVPTreatmentInitial, answers, currentStep])
 
   useEffect(() => {
+    if (!isInfluenzaSeverityStep) {
+      setInfluenzaSeveritySigns([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setInfluenzaSeveritySigns([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const items = Array.isArray(parsed?.sinaisGravidadeSelecionados) ? parsed.sinaisGravidadeSelecionados : []
+      setInfluenzaSeveritySigns(items)
+    } catch {
+      setInfluenzaSeveritySigns([])
+    }
+  }, [isInfluenzaSeverityStep, answers, currentStep])
+
+  useEffect(() => {
+    if (!isInfluenzaRiskStep) {
+      setInfluenzaRiskFactors([])
+      setInfluenzaWorseningSigns([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setInfluenzaRiskFactors([])
+      setInfluenzaWorseningSigns([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const riskItems = Array.isArray(parsed?.fatoresRiscoSelecionados) ? parsed.fatoresRiscoSelecionados : []
+      const worseningItems = Array.isArray(parsed?.sinaisPioraSelecionados) ? parsed.sinaisPioraSelecionados : []
+      setInfluenzaRiskFactors(riskItems)
+      setInfluenzaWorseningSigns(worseningItems)
+    } catch {
+      setInfluenzaRiskFactors([])
+      setInfluenzaWorseningSigns([])
+    }
+  }, [isInfluenzaRiskStep, answers, currentStep])
+
+  useEffect(() => {
+    if (!isInfluenzaICUStep) {
+      setInfluenzaICUCriteria([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) {
+      setInfluenzaICUCriteria([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const items = Array.isArray(parsed?.criteriosUTISelecionados) ? parsed.criteriosUTISelecionados : []
+      setInfluenzaICUCriteria(items)
+    } catch {
+      setInfluenzaICUCriteria([])
+    }
+  }, [isInfluenzaICUStep, answers, currentStep])
+
+  useEffect(() => {
     if (!isAVCCincinnatiStep) {
       setCincinnatiInfoOpen(false)
     }
   }, [isAVCCincinnatiStep])
+
+  useEffect(() => {
+    if (!isInfluenzaAmbulatoryFinalStep) {
+      setInfluenzaPrescriptionPreview(null)
+      setInfluenzaPrescriptionCopied(false)
+    }
+  }, [isInfluenzaAmbulatoryFinalStep])
 
   useEffect(() => {
     if (isTVPClinicalEvaluation) {
@@ -2239,6 +2455,258 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isInfluenzaSeverityStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">
+                      Checklist de sinais de gravidade
+                    </h4>
+                    <span className={clsx(
+                      'rounded-lg px-2 py-1 text-xs font-semibold border',
+                      influenzaSeveritySigns.length > 0
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    )}>
+                      {influenzaSeveritySigns.length} marcado(s)
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50 to-red-50 p-4">
+                    <p className="mb-3 text-xs font-semibold text-amber-900">
+                      Marque os sinais presentes. Se houver qualquer item, o quadro segue como SRAG.
+                    </p>
+                    <div className="space-y-1.5">
+                      {INFLUENZA_SEVERITY_SIGNS.map((item) => {
+                        const checked = influenzaSeveritySigns.includes(item)
+                        return (
+                          <label
+                            key={item}
+                            className={clsx(
+                              'flex items-start gap-2 rounded-lg p-2 transition-colors cursor-pointer',
+                              checked ? 'bg-white shadow-sm ring-1 ring-amber-300' : 'hover:bg-white/70'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleSelection(setInfluenzaSeveritySigns, item)}
+                              className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                            />
+                            <span className={clsx('text-sm', checked ? 'font-medium text-amber-950' : 'text-slate-700')}>{item}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-4 text-sm',
+                    influenzaSeveritySigns.length > 0 ? 'border-red-200 bg-red-50 text-red-900' : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  )}>
+                    {influenzaSeveritySigns.length > 0
+                      ? 'Sinais de gravidade presentes: classificar como síndrome respiratória aguda grave (SRAG) e definir nível de internação.'
+                      : 'Sem sinais de gravidade neste momento: seguir avaliação de fatores de risco e sinais de piora clínica.'}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(
+                        influenzaSeveritySigns.length > 0 ? 'influenza_criterios_uti' : 'influenza_fatores_risco',
+                        influenzaSeveritySigns.length > 0 ? 'srag' : 'sindrome_gripal'
+                      )}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        influenzaSeveritySigns.length > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                      )}
+                    >
+                      {influenzaSeveritySigns.length > 0 ? 'Classificar como SRAG' : 'Seguir como síndrome gripal'}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isInfluenzaRiskStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">
+                      Fatores de risco e piora clínica
+                    </h4>
+                    <span className={clsx(
+                      'rounded-lg px-2 py-1 text-xs font-semibold border',
+                      influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                        ? 'border-amber-200 bg-amber-50 text-amber-700'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                    )}>
+                      {influenzaRiskFactors.length + influenzaWorseningSigns.length} marcado(s)
+                    </span>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-sky-900">Fatores de risco</h5>
+                      <div className="space-y-1.5">
+                        {INFLUENZA_RISK_FACTORS.map((item) => {
+                          const checked = influenzaRiskFactors.includes(item)
+                          return (
+                            <label
+                              key={item}
+                              className={clsx(
+                                'flex items-start gap-2 rounded-lg p-2 transition-colors cursor-pointer',
+                                checked ? 'bg-white shadow-sm ring-1 ring-sky-300' : 'hover:bg-white/70'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setInfluenzaRiskFactors, item)}
+                                className="mt-1 h-4 w-4 rounded border-sky-300 text-sky-600 focus:ring-sky-500"
+                              />
+                              <span className={clsx('text-sm', checked ? 'font-medium text-sky-950' : 'text-slate-700')}>{item}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-violet-900">Sinais de piora clínica</h5>
+                      <div className="space-y-1.5">
+                        {INFLUENZA_WORSENING_SIGNS.map((item) => {
+                          const checked = influenzaWorseningSigns.includes(item)
+                          return (
+                            <label
+                              key={item}
+                              className={clsx(
+                                'flex items-start gap-2 rounded-lg p-2 transition-colors cursor-pointer',
+                                checked ? 'bg-white shadow-sm ring-1 ring-violet-300' : 'hover:bg-white/70'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setInfluenzaWorseningSigns, item)}
+                                className="mt-1 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                              />
+                              <span className={clsx('text-sm', checked ? 'font-medium text-violet-950' : 'text-slate-700')}>{item}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-4 text-sm',
+                    influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                      ? 'border-amber-200 bg-amber-50 text-amber-900'
+                      : 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                  )}>
+                    {influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                      ? 'Há indicação de oseltamivir em manejo ambulatorial, com retorno precoce e vigilância mais estreita.'
+                      : 'Sem fator de risco ou piora clínica registrados: seguir com manejo sintomático ambulatorial.'}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(
+                        influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                          ? 'influenza_ambulatorial_oseltamivir'
+                          : 'influenza_ambulatorial_sintomaticos',
+                        influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                          ? 'ambulatorial_oseltamivir'
+                          : 'ambulatorial_sintomaticos'
+                      )}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                          ? 'bg-amber-600 hover:bg-amber-700'
+                          : 'bg-emerald-600 hover:bg-emerald-700'
+                      )}
+                    >
+                      {influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                        ? 'Indicar oseltamivir ambulatorial'
+                        : 'Seguir com tratamento sintomático'}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isInfluenzaICUStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">
+                      Critérios de UTI
+                    </h4>
+                    <span className={clsx(
+                      'rounded-lg px-2 py-1 text-xs font-semibold border',
+                      influenzaICUCriteria.length > 0
+                        ? 'border-red-200 bg-red-50 text-red-700'
+                        : 'border-orange-200 bg-orange-50 text-orange-700'
+                    )}>
+                      {influenzaICUCriteria.length} marcado(s)
+                    </span>
+                  </div>
+
+                  <div className="rounded-xl border border-rose-200 bg-gradient-to-r from-rose-50 to-red-50 p-4">
+                    <p className="mb-3 text-xs font-semibold text-rose-900">
+                      Marque os critérios presentes para definir necessidade de unidade intensiva.
+                    </p>
+                    <div className="space-y-1.5">
+                      {INFLUENZA_ICU_CRITERIA.map((item) => {
+                        const checked = influenzaICUCriteria.includes(item)
+                        return (
+                          <label
+                            key={item}
+                            className={clsx(
+                              'flex items-start gap-2 rounded-lg p-2 transition-colors cursor-pointer',
+                              checked ? 'bg-white shadow-sm ring-1 ring-rose-300' : 'hover:bg-white/70'
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleSelection(setInfluenzaICUCriteria, item)}
+                              className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                            />
+                            <span className={clsx('text-sm', checked ? 'font-medium text-rose-950' : 'text-slate-700')}>{item}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-4 text-sm',
+                    influenzaICUCriteria.length > 0 ? 'border-red-200 bg-red-50 text-red-900' : 'border-orange-200 bg-orange-50 text-orange-900'
+                  )}>
+                    {influenzaICUCriteria.length > 0
+                      ? 'Critério(s) de UTI presentes: priorizar internação em unidade intensiva.'
+                      : 'Sem critério imediato de UTI marcado: seguir com internação em enfermaria, mantendo reavaliação clínica.'}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(
+                        influenzaICUCriteria.length > 0 ? 'influenza_internacao_uti' : 'influenza_internacao_enfermaria',
+                        influenzaICUCriteria.length > 0 ? 'uti' : 'enfermaria'
+                      )}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        influenzaICUCriteria.length > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-orange-600 hover:bg-orange-700'
+                      )}
+                    >
+                      {influenzaICUCriteria.length > 0 ? 'Indicar UTI' : 'Indicar enfermaria'}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
               {isTVPClinicalEvaluation && (
                 <div className="mb-6 p-4 bg-white rounded-2xl border border-slate-200">
                   {tvpSelectedLegLabel && (
@@ -2411,6 +2879,27 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       { side: 'left' as TVPLegSide, label: 'Perna Esquerda' },
                       { side: 'other' as TVPLegSide, label: 'Outras localizações' }
                     ].map((item) => {
+                      if (item.side === 'other') {
+                        return (
+                          <div
+                            key={item.side}
+                            className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 text-left"
+                          >
+                            <div className="relative">
+                              <TVPLegIllustration side={item.side} selected={false} />
+                              <div className="mt-3 text-center">
+                                <div className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                                  {item.label}
+                                </div>
+                                <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                                  Imagem apenas informativa. Este fluxo segue a avaliacao de TVP em membro inferior.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      }
+
                       const selected = selectedTVPLeg === item.side
                       return (
                         <motion.button
@@ -2483,9 +2972,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                               ? 'Perna Esquerda'
                               : selectedTVPLeg === 'right'
                                 ? 'Perna Direita'
-                                : 'Outras localizações'
+                                : ''
                           }`
-                        : 'Selecione uma perna para avançar'}
+                        : 'Selecione uma perna para avancar'}
                     </span>
                     <motion.button
                       type="button"
@@ -3071,6 +3560,57 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {influenzaPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-cyan-700 to-sky-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{influenzaPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-cyan-50">
+                          Receituário rápido para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyInfluenzaPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            influenzaPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {influenzaPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {influenzaPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setInfluenzaPrescriptionPreview(null)
+                            setInfluenzaPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {influenzaPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {tvpPrescriptionPreview && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
@@ -3539,7 +4079,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       : isTVPClinicalEvaluation && tvpAlertInterruptionOption
                         ? [tvpAlertInterruptionOption]
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
@@ -3612,6 +4152,33 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
               {isAsthmaFlow && asthmaStepOptions !== null && asthmaStepOptions.length === 0 && currentStepData.id !== 'asma_avaliacao_inicial' && currentStepData.id !== 'asma_reavaliacao_1h' && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                   Nenhum critério foi atendido com os valores atuais para esta etapa. Revise os parâmetros de avaliação da asma.
+                </div>
+              )}
+
+              {isInfluenzaAmbulatoryFinalStep && (
+                <div className="mt-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-900">
+                        Prescrição ambulatorial da influenza
+                      </h4>
+                      <p className="mt-1 text-sm text-cyan-900">
+                        Gere a prescrição para visualizar, copiar e também deixar registrada no receituário do dashboard.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenInfluenzaPrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        hasInfluenzaPrescriptionForCurrentStep
+                          ? 'border border-cyan-300 bg-white text-cyan-800 hover:bg-cyan-100'
+                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                      )}
+                    >
+                      {hasInfluenzaPrescriptionForCurrentStep ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
                 </div>
               )}
 
