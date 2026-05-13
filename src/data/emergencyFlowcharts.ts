@@ -3914,6 +3914,425 @@ export const influenzaFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Pneumonia Adquirida na Comunidade (PAC)
+export const pneumoniaFlowchart: EmergencyFlowchart = {
+  id: 'pneumonia',
+  name: 'Pneumonia Adquirida na Comunidade (PAC)',
+  description: 'Manejo da PAC com triagem de gravidade, PSI preferencial, CURB-65 quando PSI não estiver disponível e antibioticoterapia por cenário clínico.',
+  category: 'infectious',
+  priority: 'high',
+  icon: 'stethoscope',
+  color: 'from-sky-600 to-cyan-700',
+  initialStep: 'pac_inicio',
+  finalSteps: [
+    'pac_estabilizacao_seguir_sepse',
+    'pac_internacao_limitacao',
+    'pac_psi_baixo',
+    'pac_psi_intermediario',
+    'pac_psi_alto',
+    'pac_curb_baixo',
+    'pac_curb_intermediario',
+    'pac_curb_alto'
+  ],
+  steps: {
+    pac_inicio: {
+      id: 'pac_inicio',
+      title: 'PAC - Avaliação Inicial',
+      description: 'Paciente com suspeita de pneumonia adquirida na comunidade.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Não deixar passar:</strong> febre persistente, FR &gt; 25 irpm, expectoração, FC &gt; 100 bpm, estertores, queda de sons respiratórios, mialgia e sudorese noturna.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Idosos podem ter apresentação atípica: declínio cognitivo, fraqueza, perda de funcionalidade ou alteração de consciência.</li>
+            <li>Radiografia de tórax é indicada em todos os pacientes, pois confirma diagnóstico e pesquisa derrame pleural/doença multilobar.</li>
+            <li>Use escore para decisão de tratamento ambulatorial ou hospitalar. O PSI é preferencial por maior acurácia.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar triagem de gravidade', nextStep: 'pac_sepse_insuficiencia', value: 'iniciar' }
+      ]
+    },
+    pac_sepse_insuficiencia: {
+      id: 'pac_sepse_insuficiencia',
+      title: 'Sinais de Sepse ou Insuficiência Respiratória Aguda?',
+      description: 'Identificar necessidade de estabilização clínica imediata.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>Se houver sepse, choque, hipoxemia importante, esforço respiratório, rebaixamento ou falência ventilatória, interrompa o fluxo de escore e estabilize.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - estabilizar e seguir protocolo de sepse/ficha laranja-vermelha', nextStep: 'pac_estabilizacao_seguir_sepse', value: 'sim', critical: true, requiresImmediateAction: true },
+        { text: 'Não - avaliar limitadores ambulatoriais', nextStep: 'pac_limitadores_ambulatoriais', value: 'nao' }
+      ]
+    },
+    pac_limitadores_ambulatoriais: {
+      id: 'pac_limitadores_ambulatoriais',
+      title: 'Condição Limitante ao Tratamento Ambulatorial?',
+      description: 'Via oral, vulnerabilidade social e doença mental limitante podem exigir internação independente do escore.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Internar independente do escore</strong> se houver impossibilidade de via oral, vulnerabilidade social ou doença mental limitante.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - internar para tratamento e suporte adequado', nextStep: 'pac_internacao_limitacao', value: 'sim', critical: true },
+        { text: 'Não - decidir escore', nextStep: 'pac_escore_psi_disponivel', value: 'nao' }
+      ]
+    },
+    pac_escore_psi_disponivel: {
+      id: 'pac_escore_psi_disponivel',
+      title: 'Escore PSI Disponível para Aplicação?',
+      description: 'PSI é a ferramenta preferencial; CURB-65 é opção mais simples quando o PSI não puder ser aplicado.',
+      type: 'question',
+      content: `
+        <div class="grid md:grid-cols-2 gap-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>PSI:</strong> preferencial por maior acurácia. Usa dados demográficos, comorbidades, exame físico e exames laboratoriais.</p>
+          </div>
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>CURB-65:</strong> simples e rápido à beira-leito, porém menos acurado.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Calcular PSI', nextStep: 'pac_calcular_psi', value: 'psi' },
+        { text: 'Calcular CURB-65', nextStep: 'pac_calcular_curb65', value: 'curb65' }
+      ]
+    },
+    pac_calcular_psi: {
+      id: 'pac_calcular_psi',
+      title: 'Calculadora PSI (Pneumonia Severity Index)',
+      description: 'Pontue fatores demográficos, comorbidades, exame físico e exames laboratoriais.',
+      type: 'question',
+      options: [
+        { text: 'Aplicar PSI', nextStep: 'pac_psi_baixo', value: 'psi' }
+      ]
+    },
+    pac_calcular_curb65: {
+      id: 'pac_calcular_curb65',
+      title: 'Calculadora CURB-65',
+      description: 'Pontue confusão, ureia, frequência respiratória, pressão arterial e idade.',
+      type: 'question',
+      options: [
+        { text: 'Aplicar CURB-65', nextStep: 'pac_curb_baixo', value: 'curb65' }
+      ]
+    },
+    pac_estabilizacao_seguir_sepse: {
+      id: 'pac_estabilizacao_seguir_sepse',
+      title: 'Estabilização Clínica Imediata',
+      description: 'Seguir protocolo de sepse/ficha laranja-vermelha.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> oxigênio conforme alvo, acesso venoso, monitorização, lactato/culturas quando indicado, antibiótico precoce e suporte hemodinâmico/ventilatório.</p>
+          </div>
+          <p>Após estabilização, definir local de internação e antibioticoterapia hospitalar conforme gravidade e risco de Pseudomonas.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_internacao_limitacao: {
+      id: 'pac_internacao_limitacao',
+      title: 'Internação por Limitador Ambulatorial',
+      description: 'Tratamento e suporte adequado independente do escore de risco.',
+      type: 'result',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Destino:</strong> internação para garantir via de administração, observação clínica, suporte social e adesão terapêutica.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_psi_baixo: {
+      id: 'pac_psi_baixo',
+      title: 'PSI Baixo - PORT I/II',
+      description: 'Tratamento ambulatorial se não houver limitadores ou instabilidade clínica.',
+      type: 'result',
+      group: 'PORT I/II',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> tratamento ambulatorial, retorno em 48 a 72 horas ou antes se piora.</p>
+          </div>
+          <p><strong>Antibioticoterapia:</strong> previamente hígidos podem receber beta-lactâmico ou macrolídeo; com comorbidades/ATB recente, preferir beta-lactâmico + macrolídeo ou quinolona.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_psi_intermediario: {
+      id: 'pac_psi_intermediario',
+      title: 'PSI Intermediário - PORT III/IV',
+      description: 'Internação em enfermaria.',
+      type: 'result',
+      group: 'PORT III/IV',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p><strong>Destino:</strong> internação em enfermaria.</p>
+          </div>
+          <p><strong>Sem risco para Pseudomonas:</strong> ceftriaxona + azitromicina ou claritromicina.</p>
+          <p><strong>Com risco para Pseudomonas:</strong> piperacilina-tazobactam associada a azitromicina, claritromicina ou levofloxacino.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_psi_alto: {
+      id: 'pac_psi_alto',
+      title: 'PSI Alto - PORT V',
+      description: 'Internação em terapia intensiva.',
+      type: 'result',
+      group: 'PORT V',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Destino:</strong> internação em terapia intensiva.</p>
+          </div>
+          <p>Definir antibioticoterapia hospitalar conforme risco de Pseudomonas e perfil local. Considerar corticoterapia na pneumonia grave conforme avaliação clínica e protocolo institucional.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_curb_baixo: {
+      id: 'pac_curb_baixo',
+      title: 'CURB-65 0 ou 1',
+      description: 'Tratamento ambulatorial.',
+      type: 'result',
+      group: 'CURB 0-1',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p><strong>Conduta:</strong> tratamento ambulatorial com retorno em 48 a 72 horas ou antes se piora.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_curb_intermediario: {
+      id: 'pac_curb_intermediario',
+      title: 'CURB-65 = 2',
+      description: 'Internação hospitalar.',
+      type: 'result',
+      group: 'CURB 2',
+      content: `
+        <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500 text-sm">
+          <p><strong>Conduta:</strong> internação hospitalar para antibioticoterapia e monitorização.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_curb_alto: {
+      id: 'pac_curb_alto',
+      title: 'CURB-65 3 a 5',
+      description: 'Internação hospitalar; considerar UTI se 4 ou 5 pontos.',
+      type: 'result',
+      group: 'CURB 3-5',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> internação hospitalar. Considerar UTI se escore 4 ou 5 ou se houver instabilidade clínica.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Rinossinusites (viral, alérgica e bacteriana)
+export const sinusitisFlowchart: EmergencyFlowchart = {
+  id: 'sinusite',
+  name: 'Rinossinusites Viral, Alérgica e Bacteriana',
+  description: 'Classificação prática das rinossinusites com foco em evitar antibiótico desnecessário e identificar critérios bacterianos.',
+  category: 'otorhinolaryngological',
+  priority: 'medium',
+  icon: 'stethoscope',
+  color: 'from-teal-600 to-cyan-700',
+  initialStep: 'rino_inicio',
+  finalSteps: [
+    'rino_internacao_alerta',
+    'rino_alergica',
+    'rino_viral',
+    'rino_bacteriana',
+    'rino_reavaliar_sem_antibiotico'
+  ],
+  steps: {
+    rino_inicio: {
+      id: 'rino_inicio',
+      title: 'Rinossinusite - Avaliação Inicial',
+      description: 'Paciente com congestão nasal, rinorreia, dor/pressão facial, tosse ou sintomas nasossinusais.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-500">
+            <p><strong>Essencial:</strong> as causas mais comuns são alergia e vírus respiratórios, responsáveis por mais de 80% dos casos.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Rinossinusites virais costumam melhorar espontaneamente em 7 a 10 dias.</li>
+            <li>Imagem geralmente não ajuda no manejo inicial; radiografia simples dos seios da face não é recomendada na rinossinusite aguda.</li>
+            <li>O tratamento sintomático se baseia em lavagem nasal, corticosteroide nasal e medicações para dor/febre.</li>
+            <li>Descongestionante nasal pode ajudar, mas não deve ser usado por mais de 5 a 10 dias pelo risco de rinite medicamentosa.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar classificação', nextStep: 'rino_sinais_internacao', value: 'iniciar' }
+      ]
+    },
+    rino_sinais_internacao: {
+      id: 'rino_sinais_internacao',
+      title: 'Há Sinais de Complicação ou Internação?',
+      description: 'Pesquisar sinais orbitários, neurológicos, sepse ou dor intensa refratária.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Internar/encaminhar imediatamente</strong> se houver diplopia, redução visual, alteração de mobilidade ocular, proptose, sinais meníngeos, alteração mental, sepse ou dor facial/cefaleia intensa sem resposta a medicação oral.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - indicar internação/avaliação urgente', nextStep: 'rino_internacao_alerta', value: 'internacao', critical: true, requiresImmediateAction: true },
+        { text: 'Não - seguir classificação etiológica', nextStep: 'rino_padrao_alergico', value: 'sem_alerta' }
+      ]
+    },
+    rino_padrao_alergico: {
+      id: 'rino_padrao_alergico',
+      title: 'Predomínio de Padrão Alérgico?',
+      description: 'Coriza hialina crônica, prurido/congestão ocular, espirros, sibilância ou história atópica.',
+      type: 'question',
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>Rinossinusites alérgicas costumam vir associadas a coriza hialina crônica, sibilância, congestão/prurido ocular e sintomas recorrentes com gatilhos.</p>
+          <p><strong>Antibiótico não é indicado</strong> quando o quadro é predominantemente alérgico e não há critérios bacterianos.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - rinossinusite alérgica', nextStep: 'rino_alergica', value: 'alergica' },
+        { text: 'Não - avaliar duração e piora', nextStep: 'rino_duracao_menor_10_sem_piora', value: 'nao_alergica' }
+      ]
+    },
+    rino_duracao_menor_10_sem_piora: {
+      id: 'rino_duracao_menor_10_sem_piora',
+      title: 'Sintomas por Menos de 10 Dias e Sem Sinais de Piora?',
+      description: 'Quadros virais costumam resolver espontaneamente, sem antibiótico.',
+      type: 'question',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p>Se sintomas duram menos de 10 dias e não há piora após fase inicial, a etiologia mais provável é viral. Não prescrever antibiótico.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - rinossinusite viral', nextStep: 'rino_viral', value: 'viral' },
+        { text: 'Não - pesquisar critérios bacterianos', nextStep: 'rino_criterios_bacterianos', value: 'avaliar_bacteriana' }
+      ]
+    },
+    rino_criterios_bacterianos: {
+      id: 'rino_criterios_bacterianos',
+      title: 'Mais de 10 Dias ou Piora Após o 5º Dia?',
+      description: 'A duração prolongada ou piora pós-viral favorece etiologia bacteriana.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Considere antibiótico</strong> se houver duração maior que 10 dias ou piora após o 5º dia, especialmente com rinorreia unilateral/purulenta, dor facial unilateral intensa ou febre.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Piora após fase inicial.</li>
+            <li>Rinorreia predominantemente unilateral.</li>
+            <li>Rinorreia posterior purulenta.</li>
+            <li>Dor facial unilateral intensa.</li>
+            <li>Febre ≥ 37,8°C.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - considerar antibiótico', nextStep: 'rino_bacteriana', value: 'bacteriana' },
+        { text: 'Não - sintomáticos e reavaliação', nextStep: 'rino_reavaliar_sem_antibiotico', value: 'sem_criterio_bacteriano' }
+      ]
+    },
+    rino_alergica: {
+      id: 'rino_alergica',
+      title: 'Rinossinusite Alérgica',
+      description: 'Manejo sem antibiótico, com foco em controle nasal e reavaliação.',
+      type: 'result',
+      group: 'Alérgica',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Conduta:</strong> não prescrever antibiótico. Usar lavagem nasal, corticosteroide nasal e sintomáticos para dor/febre quando necessário.</p>
+          </div>
+          <p>Anti-histamínicos não têm papel no tratamento da rinossinusite aguda; individualizar apenas se o quadro de rinite alérgica associada for predominante.</p>
+        </div>
+      `,
+      options: []
+    },
+    rino_viral: {
+      id: 'rino_viral',
+      title: 'Rinossinusite Viral',
+      description: 'Menos de 10 dias, sem sinais de piora: não usar antibiótico.',
+      type: 'result',
+      group: 'Viral',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> não prescrever antibiótico. A maioria resolve espontaneamente.</p>
+          </div>
+          <p>Orientar lavagem nasal, corticosteroide nasal, sintomáticos para dor/febre e retorno se febre persistente, piora clínica ou sinais orbitários/neurológicos.</p>
+        </div>
+      `,
+      options: []
+    },
+    rino_bacteriana: {
+      id: 'rino_bacteriana',
+      title: 'Rinossinusite Bacteriana',
+      description: 'Mais de 10 dias ou piora após o 5º dia, com critérios compatíveis.',
+      type: 'result',
+      group: 'Bacteriana',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> considerar antibiótico associado a tratamento sintomático.</p>
+          </div>
+          <p><strong>Antibióticos de escolha:</strong> amoxicilina 500 mg VO 8/8h por 5 a 7 dias; amoxicilina + clavulanato 875/125 mg VO 12/12h por 5 a 7 dias; cefuroxima 500 mg VO 12/12h por 5 a 7 dias; doxiciclina 100 mg VO 12/12h por 5 a 7 dias.</p>
+        </div>
+      `,
+      options: []
+    },
+    rino_reavaliar_sem_antibiotico: {
+      id: 'rino_reavaliar_sem_antibiotico',
+      title: 'Sem Critério Bacteriano Atual',
+      description: 'Tratamento sintomático e reavaliação clínica.',
+      type: 'result',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500 text-sm">
+          <p><strong>Conduta:</strong> não iniciar antibiótico neste momento. Tratar sintomas e orientar retorno se passar de 10 dias, piorar após o 5º dia ou surgirem sinais de complicação.</p>
+        </div>
+      `,
+      options: []
+    },
+    rino_internacao_alerta: {
+      id: 'rino_internacao_alerta',
+      title: 'Indicação de Internação/Avaliação Urgente',
+      description: 'Sinais de complicação orbitária, neurológica, sepse ou dor refratária.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> encaminhar para avaliação hospitalar/urgência, considerar imagem avançada e avaliação especializada conforme quadro.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -3927,6 +4346,8 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   tvp: tvpFlowchart,
   dpoc_exacerbado: dpocFlowchart,
   influenza: influenzaFlowchart,
+  pneumonia: pneumoniaFlowchart,
+  sinusite: sinusitisFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -3952,7 +4373,7 @@ export const allFlowcharts = [
   { id: 'ivas', name: 'Infecção de vias aéreas superiores (Gripe/Resfriado)', category: 'infectious', implemented: false },
   { id: 'itu', name: 'ITU', category: 'infectious', implemented: false },
   { id: 'meningite', name: 'Meningite', category: 'infectious', implemented: false },
-  { id: 'pneumonia', name: 'Pneumonia', category: 'infectious', implemented: false },
+  { id: 'pneumonia', name: 'Pneumonia', category: 'infectious', implemented: true },
   { id: 'sifilis', name: 'Sífilis', category: 'infectious', implemented: false },
   { id: 'uretrite', name: 'Uretrite', category: 'infectious', implemented: false },
 
@@ -4079,7 +4500,7 @@ export const allFlowcharts = [
   // Otorrinolaringológicos
   { id: 'otite', name: 'Otite', category: 'otorhinolaryngological', implemented: false },
   { id: 'rinite', name: 'Rinite', category: 'otorhinolaryngological', implemented: false },
-  { id: 'sinusite', name: 'Sinusite', category: 'otorhinolaryngological', implemented: false },
+  { id: 'sinusite', name: 'Rinossinusites Viral, Alérgica e Bacteriana', category: 'otorhinolaryngological', implemented: true },
 
   // Metabólicos
   { id: 'rabdomiolise', name: 'Rabdomiólise', category: 'metabolic', implemented: false },

@@ -36,6 +36,25 @@ import {
   buildInfluenzaPrescriptionItems,
   hasInfluenzaPrescriptionSet
 } from '@/lib/influenza'
+import {
+  PNEUMONIA_COMORBIDITIES_FOR_AMBULATORY_ATB,
+  PNEUMONIA_PSEUDOMONAS_RISK_FACTORS,
+  PneumoniaCurbFieldKey,
+  PneumoniaCurbValues,
+  PneumoniaPsiFieldKey,
+  PneumoniaPsiValues,
+  buildPneumoniaPrescriptionItems,
+  calculatePneumoniaCurb65,
+  calculatePneumoniaPsi,
+  defaultCurbValues,
+  defaultPsiValues,
+  hasPneumoniaPrescriptionSet
+} from '@/lib/pneumonia'
+import {
+  SinusitisEtiology,
+  buildSinusitisPrescriptionItems,
+  hasSinusitisPrescriptionSet
+} from '@/lib/sinusitis'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
@@ -50,6 +69,18 @@ type TVPPrescriptionPreview = {
 type InfluenzaPrescriptionPreview = {
   title: string
   includeOseltamivir: boolean
+  content: string[]
+}
+
+type PneumoniaPrescriptionPreview = {
+  title: string
+  hasComorbidityOrRecentAtb: boolean
+  content: string[]
+}
+
+type SinusitisPrescriptionPreview = {
+  title: string
+  etiology: SinusitisEtiology
   content: string[]
 }
 
@@ -127,6 +158,59 @@ const asthmaReevalInfo: Record<AsthmaReevalFieldKey, string[]> = {
   frRe: ['FR mantendo elevada sugere resposta parcial ou ruim.', 'Queda da FR com conforto respiratório sugere melhora.'],
   pfeRe: ['PFE >70% favorece alta assistida.', 'PFE 40–69%: resposta parcial; <40%: escalonar.']
 }
+
+const pneumoniaPsiSections: Array<{ title: string; tone: string; items: Array<{ key: PneumoniaPsiFieldKey; label: string; points: number | string }> }> = [
+  {
+    title: 'Fatores demográficos',
+    tone: 'border-sky-200 bg-sky-50',
+    items: [
+      { key: 'residenteCasaRepouso', label: 'Residente de casa de repouso', points: '+10' }
+    ]
+  },
+  {
+    title: 'Comorbidades',
+    tone: 'border-indigo-200 bg-indigo-50',
+    items: [
+      { key: 'neoplasiaAtiva', label: 'Neoplasia ativa', points: '+30' },
+      { key: 'doencaHepaticaCronica', label: 'Doença hepática crônica', points: '+20' },
+      { key: 'insuficienciaCardiaca', label: 'Insuficiência cardíaca', points: '+10' },
+      { key: 'doencaCerebrovascular', label: 'Doença cerebrovascular', points: '+10' },
+      { key: 'doencaRenalCronica', label: 'Doença renal crônica', points: '+10' }
+    ]
+  },
+  {
+    title: 'Exame físico',
+    tone: 'border-amber-200 bg-amber-50',
+    items: [
+      { key: 'estadoMentalAlterado', label: 'Estado mental alterado', points: '+20' },
+      { key: 'frMaior30', label: 'FR > 30 irpm', points: '+20' },
+      { key: 'pasMenor90', label: 'PAS < 90 mmHg', points: '+20' },
+      { key: 'temperaturaExtrema', label: 'Temperatura < 35°C ou > 40°C', points: '+15' },
+      { key: 'fcMaior125', label: 'FC > 125 bpm', points: '+10' }
+    ]
+  },
+  {
+    title: 'Exames laboratoriais e imagem',
+    tone: 'border-violet-200 bg-violet-50',
+    items: [
+      { key: 'phMenor735', label: 'pH < 7,35', points: '+30' },
+      { key: 'ureiaMaior30', label: 'Ureia > 30 mg/dL', points: '+20' },
+      { key: 'sodioMenor130', label: 'Sódio < 130 mEq/L', points: '+20' },
+      { key: 'glicoseMaior250', label: 'Glicose > 250 mg/dL', points: '+10' },
+      { key: 'hematocritoMenor30', label: 'Hematócrito < 30%', points: '+10' },
+      { key: 'hipoxemia', label: 'PaO2 < 60% ou SpO2 < 90%', points: '+10' },
+      { key: 'derramePleural', label: 'Derrame pleural', points: '+10' }
+    ]
+  }
+]
+
+const pneumoniaCurbItems: Array<{ key: PneumoniaCurbFieldKey; label: string }> = [
+  { key: 'confusaoMental', label: 'Confusão mental' },
+  { key: 'ureiaMaior43', label: 'Ureia > 43 mg/dL' },
+  { key: 'frMaior30', label: 'Frequência respiratória > 30 irpm' },
+  { key: 'paBaixa', label: 'PAS < 90 mmHg ou PAD < 60 mmHg' },
+  { key: 'idadeMaior65', label: 'Idade maior que 65 anos' }
+]
 
 const tvpClassicSigns = [
   'Dor unilateral na perna (panturrilha ou coxa), tipo peso/pressão, que piora ao deambular ou ao ficar em pé',
@@ -495,6 +579,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [influenzaPrescriptionPreview, setInfluenzaPrescriptionPreview] = useState<InfluenzaPrescriptionPreview | null>(null)
   const [influenzaPrescriptionCopied, setInfluenzaPrescriptionCopied] = useState(false)
   const [influenzaPrescriptionGeneratedSteps, setInfluenzaPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
+  const [pneumoniaPsiValues, setPneumoniaPsiValues] = useState<PneumoniaPsiValues>(() => defaultPsiValues(patient))
+  const [pneumoniaCurbValues, setPneumoniaCurbValues] = useState<PneumoniaCurbValues>(() => defaultCurbValues(patient))
+  const [pneumoniaComorbidities, setPneumoniaComorbidities] = useState<string[]>([])
+  const [pneumoniaPseudomonasRisk, setPneumoniaPseudomonasRisk] = useState<string[]>([])
+  const [pneumoniaPrescriptionPreview, setPneumoniaPrescriptionPreview] = useState<PneumoniaPrescriptionPreview | null>(null)
+  const [pneumoniaPrescriptionCopied, setPneumoniaPrescriptionCopied] = useState(false)
+  const [pneumoniaPrescriptionGenerated, setPneumoniaPrescriptionGenerated] = useState(false)
+  const [sinusitisPrescriptionPreview, setSinusitisPrescriptionPreview] = useState<SinusitisPrescriptionPreview | null>(null)
+  const [sinusitisPrescriptionCopied, setSinusitisPrescriptionCopied] = useState(false)
+  const [sinusitisPrescriptionGeneratedSteps, setSinusitisPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -612,6 +706,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStep === 'influenza_sinais_gravidade'
     const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStep === 'influenza_fatores_risco'
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
+    const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_psi'
+    const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_curb65'
+    const psiResult = calculatePneumoniaPsi(pneumoniaPsiValues, patient)
+    const curbResult = calculatePneumoniaCurb65(pneumoniaCurbValues)
     const legSelectionAnswer = JSON.stringify({
       decision: value || nextStep,
       selectedLeg: selectedTVPLeg,
@@ -657,6 +755,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       criteriosUTISelecionados: influenzaICUCriteria,
       indicarUTI: influenzaICUCriteria.length > 0
     })
+    const pneumoniaPsiAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: psiResult.score,
+      grupo: psiResult.group,
+      destino: psiResult.disposition,
+      criterios: pneumoniaPsiValues
+    })
+    const pneumoniaCurbAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: curbResult.score,
+      destino: curbResult.disposition,
+      criterios: pneumoniaCurbValues
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -675,7 +786,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     ? influenzaRiskAnswer
                     : isInfluenzaICUStep
                       ? influenzaICUAnswer
-                      : value || nextStep
+                      : isPneumoniaPsiStep
+                        ? pneumoniaPsiAnswer
+                        : isPneumoniaCurbStep
+                          ? pneumoniaCurbAnswer
+                          : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -1045,6 +1160,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_fatores_risco'
   const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_criterios_uti'
   const isInfluenzaAmbulatoryFinalStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
+  const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_psi'
+  const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
+  const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
+  const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
+  const sinusitisCurrentEtiology: SinusitisEtiology = currentStepData?.id === 'rino_bacteriana'
+    ? 'bacterial'
+    : currentStepData?.id === 'rino_alergica'
+      ? 'allergic'
+      : 'viral'
+  const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
+  const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
+  const hasPneumoniaComorbidityOrRecentAtb = pneumoniaComorbidities.length > 0
 
   const isDpocSinaisGravidade = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'sinais_gravidade'
   const isDpocAnthonisenAmbulatorial = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'indicacao_atb'
@@ -1101,6 +1228,162 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       alert('Não foi possível copiar a prescrição. Tente novamente.')
     }
   }, [influenzaPrescriptionPreview])
+
+  const buildPneumoniaPrescriptionPreview = useCallback((hasComorbidityOrRecentAtb: boolean): PneumoniaPrescriptionPreview => {
+    const items = buildPneumoniaPrescriptionItems(patient, hasComorbidityOrRecentAtb)
+    const content = [
+      hasComorbidityOrRecentAtb
+        ? 'ESQUEMA TERAPÊUTICO PARA PAC AMBULATORIAL COM COMORBIDADES/FATORES DE RISCO OU USO DE ATB NOS ÚLTIMOS 3 MESES'
+        : 'ESQUEMA TERAPÊUTICO PARA PAC AMBULATORIAL SEM COMORBIDADES E SEM USO DE ATB NOS ÚLTIMOS 3 MESES',
+      '',
+      'RECEITA MÉDICA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'ALÉM DAS MEDICAÇÕES, ORIENTE RETORNO EM CASO DE NÃO MELHORA E/OU PIORA DOS SINTOMAS EM 48 A 72 HORAS.',
+      'INGESTA HÍDRICA E ALIMENTAÇÃO ADEQUADA.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição ambulatorial da PAC',
+      hasComorbidityOrRecentAtb,
+      content
+    }
+  }, [patient])
+
+  const getPersistedPneumoniaPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Pneumonia')
+  }, [patient])
+
+  const handleOpenPneumoniaPrescription = useCallback(() => {
+    if (!isPneumoniaAmbulatoryFinalStep) return
+
+    const draftItems = buildPneumoniaPrescriptionItems(patient, hasPneumoniaComorbidityOrRecentAtb)
+    const persisted = getPersistedPneumoniaPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setPneumoniaPrescriptionGenerated(true)
+    setPneumoniaPrescriptionPreview(buildPneumoniaPrescriptionPreview(hasPneumoniaComorbidityOrRecentAtb))
+    setPneumoniaPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildPneumoniaPrescriptionPreview,
+    currentStep,
+    getPersistedPneumoniaPrescriptions,
+    hasPneumoniaComorbidityOrRecentAtb,
+    history,
+    isPneumoniaAmbulatoryFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyPneumoniaPrescriptionText = useCallback(async () => {
+    if (!pneumoniaPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(pneumoniaPrescriptionPreview.content.join('\n'))
+      setPneumoniaPrescriptionCopied(true)
+      setTimeout(() => setPneumoniaPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da pneumonia:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [pneumoniaPrescriptionPreview])
+
+  const buildSinusitisPrescriptionPreview = useCallback((etiology: SinusitisEtiology): SinusitisPrescriptionPreview => {
+    const items = buildSinusitisPrescriptionItems(etiology)
+    const titleByEtiology = {
+      viral: 'Prescrição para rinossinusite viral',
+      allergic: 'Prescrição para rinossinusite alérgica',
+      bacterial: 'Prescrição para rinossinusite bacteriana'
+    }
+    const content = [
+      titleByEtiology[etiology].toUpperCase(),
+      '',
+      'RECEITA MÉDICA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'ALÉM DAS MEDICAÇÕES, ORIENTE MEDIDAS NÃO FARMACOLÓGICAS.',
+      etiology === 'bacterial'
+        ? 'RETORNAR SE PIORA, FEBRE PERSISTENTE, SINAIS ORBITÁRIOS/NEUROLÓGICOS OU AUSÊNCIA DE RESPOSTA CLÍNICA.'
+        : 'A MAIORIA DOS QUADROS NÃO BACTERIANOS NÃO NECESSITA ANTIBIÓTICO E COSTUMA EVOLUIR COM MELHORA ESPONTÂNEA.',
+      'RETORNAR EM FEBRE PERSISTENTE, QUEDA DO ESTADO GERAL, TONTEIRA, DESMAIOS, VISÃO DUPLA OU DIMINUIÇÃO DA ACUIDADE VISUAL.'
+    ].filter(Boolean)
+
+    return {
+      title: titleByEtiology[etiology],
+      etiology,
+      content
+    }
+  }, [])
+
+  const getPersistedSinusitisPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Rinossinusite')
+  }, [patient])
+
+  const handleOpenSinusitisPrescription = useCallback(() => {
+    if (!currentStepData || !isSinusitisPrescriptionFinalStep) return
+
+    const etiology = sinusitisCurrentEtiology
+    const draftItems = buildSinusitisPrescriptionItems(etiology)
+    const persisted = getPersistedSinusitisPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setSinusitisPrescriptionGeneratedSteps((prev) => ({ ...prev, [currentStepData.id]: true }))
+    setSinusitisPrescriptionPreview(buildSinusitisPrescriptionPreview(etiology))
+    setSinusitisPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildSinusitisPrescriptionPreview,
+    currentStep,
+    currentStepData,
+    getPersistedSinusitisPrescriptions,
+    history,
+    isSinusitisPrescriptionFinalStep,
+    onUpdate,
+    patient,
+    progress,
+    sinusitisCurrentEtiology
+  ])
+
+  const copySinusitisPrescriptionText = useCallback(async () => {
+    if (!sinusitisPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(sinusitisPrescriptionPreview.content.join('\n'))
+      setSinusitisPrescriptionCopied(true)
+      setTimeout(() => setSinusitisPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da rinossinusite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [sinusitisPrescriptionPreview])
 
   const stepMentionsFlegmasia = (
     currentStepData?.title?.toLowerCase().includes('flegmasia') ||
@@ -1776,6 +2059,53 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [isInfluenzaAmbulatoryFinalStep])
 
   useEffect(() => {
+    if (!isPneumoniaPsiStep) {
+      setPneumoniaPsiValues(defaultPsiValues(patient))
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criterios) setPneumoniaPsiValues({ ...defaultPsiValues(patient), ...parsed.criterios })
+    } catch {
+      setPneumoniaPsiValues(defaultPsiValues(patient))
+    }
+  }, [answers, currentStep, isPneumoniaPsiStep, patient])
+
+  useEffect(() => {
+    if (!isPneumoniaCurbStep) {
+      setPneumoniaCurbValues(defaultCurbValues(patient))
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criterios) setPneumoniaCurbValues({ ...defaultCurbValues(patient), ...parsed.criterios })
+    } catch {
+      setPneumoniaCurbValues(defaultCurbValues(patient))
+    }
+  }, [answers, currentStep, isPneumoniaCurbStep, patient])
+
+  useEffect(() => {
+    if (!isPneumoniaAmbulatoryFinalStep) {
+      setPneumoniaComorbidities([])
+      setPneumoniaPseudomonasRisk([])
+      setPneumoniaPrescriptionPreview(null)
+      setPneumoniaPrescriptionCopied(false)
+      setPneumoniaPrescriptionGenerated(false)
+    }
+  }, [isPneumoniaAmbulatoryFinalStep])
+
+  useEffect(() => {
+    if (!isSinusitisPrescriptionFinalStep) {
+      setSinusitisPrescriptionPreview(null)
+      setSinusitisPrescriptionCopied(false)
+    }
+  }, [isSinusitisPrescriptionFinalStep])
+
+  useEffect(() => {
     if (isTVPClinicalEvaluation) {
       setSectionOpen({
         tvp_clinical_0: true,
@@ -1998,7 +2328,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
             {/* Conteúdo do Step */}
             <div className="p-6">
-              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && (
+              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">
@@ -2527,6 +2857,148 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isPneumoniaPsiStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">Calculadora PSI</h4>
+                      <p className="text-sm text-slate-600">PSI é preferencial para definir ambulatório, enfermaria ou UTI na PAC.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      pneumoniaPsiResult.score < 71 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' :
+                        pneumoniaPsiResult.score <= 130 ? 'border-yellow-200 bg-yellow-50 text-yellow-800' :
+                          'border-red-200 bg-red-50 text-red-800'
+                    )}>
+                      {pneumoniaPsiResult.score} pts · {pneumoniaPsiResult.group}
+                      <div className="text-xs font-semibold">{pneumoniaPsiResult.disposition}</div>
+                    </div>
+                  </div>
+
+                  <div className="mb-4 rounded-xl border border-sky-200 bg-sky-50 p-4">
+                    <label className="text-sm font-semibold text-slate-800">
+                      Idade para pontuação demográfica
+                    </label>
+                    <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <input
+                        type="number"
+                        min={0}
+                        max={120}
+                        value={typeof pneumoniaPsiValues.idade === 'number' || typeof pneumoniaPsiValues.idade === 'string' ? pneumoniaPsiValues.idade : ''}
+                        onChange={(e) => setPneumoniaPsiValues(prev => ({ ...prev, idade: e.target.value === '' ? '' : Number(e.target.value) }))}
+                        className="w-full sm:w-40 rounded-xl border border-sky-200 bg-white px-3 py-2.5 text-slate-800 outline-none focus:ring-2 focus:ring-sky-200"
+                      />
+                      <p className="text-xs text-sky-900">Homens: n. idade. Mulheres: n. idade - 10.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {pneumoniaPsiSections.map((section) => (
+                      <div key={section.title} className={clsx('rounded-xl border p-4', section.tone)}>
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-800">{section.title}</h5>
+                        <div className="space-y-1.5">
+                          {section.items.map((item) => {
+                            const checked = pneumoniaPsiValues[item.key] === true
+                            return (
+                              <label key={item.key} className={clsx(
+                                'flex cursor-pointer items-start justify-between gap-3 rounded-lg p-2 text-sm transition-colors',
+                                checked ? 'bg-white shadow-sm ring-1 ring-slate-200' : 'hover:bg-white/70'
+                              )}>
+                                <span className="flex items-start gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={(e) => setPneumoniaPsiValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                    className="mt-1 h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"
+                                  />
+                                  <span className={checked ? 'font-medium text-slate-950' : 'text-slate-700'}>{item.label}</span>
+                                </span>
+                                <span className="shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">{item.points}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(pneumoniaPsiResult.nextStep, pneumoniaPsiResult.value)}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        pneumoniaPsiResult.score < 71 ? 'bg-emerald-600 hover:bg-emerald-700' :
+                          pneumoniaPsiResult.score <= 130 ? 'bg-yellow-600 hover:bg-yellow-700' :
+                            'bg-red-600 hover:bg-red-700'
+                      )}
+                    >
+                      Aplicar PSI e definir destino
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaCurbStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">Calculadora CURB-65</h4>
+                      <p className="text-sm text-slate-600">Use quando o PSI não puder ser aplicado.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      pneumoniaCurbResult.score <= 1 ? 'border-emerald-200 bg-emerald-50 text-emerald-800' :
+                        pneumoniaCurbResult.score === 2 ? 'border-yellow-200 bg-yellow-50 text-yellow-800' :
+                          'border-red-200 bg-red-50 text-red-800'
+                    )}>
+                      CURB-65 {pneumoniaCurbResult.score}
+                      <div className="text-xs font-semibold">{pneumoniaCurbResult.disposition}</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                    <div className="space-y-1.5">
+                      {pneumoniaCurbItems.map((item) => {
+                        const checked = pneumoniaCurbValues[item.key]
+                        return (
+                          <label key={item.key} className={clsx(
+                            'flex cursor-pointer items-start gap-2 rounded-lg p-2 transition-colors',
+                            checked ? 'bg-white shadow-sm ring-1 ring-blue-300' : 'hover:bg-white/70'
+                          )}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => setPneumoniaCurbValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                              className="mt-1 h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                            />
+                            <span className={clsx('text-sm', checked ? 'font-medium text-blue-950' : 'text-slate-700')}>{item.label}</span>
+                            <span className="ml-auto rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+1</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(pneumoniaCurbResult.nextStep, pneumoniaCurbResult.value)}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        pneumoniaCurbResult.score <= 1 ? 'bg-emerald-600 hover:bg-emerald-700' :
+                          pneumoniaCurbResult.score === 2 ? 'bg-yellow-600 hover:bg-yellow-700' :
+                            'bg-red-600 hover:bg-red-700'
+                      )}
+                    >
+                      Aplicar CURB-65 e definir destino
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
               {isInfluenzaRiskStep && (
                 <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
                   <div className="flex items-center justify-between mb-4">
@@ -2703,6 +3175,86 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     >
                       {influenzaICUCriteria.length > 0 ? 'Indicar UTI' : 'Indicar enfermaria'}
                     </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaAmbulatoryFinalStep && (
+                <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-emerald-900">Antibioticoterapia Ambulatorial</h4>
+                      <p className="text-sm text-emerald-900">Marque comorbidades, fatores de risco ou uso de antibiótico nos últimos 3 meses para ajustar o esquema.</p>
+                    </div>
+                    <span className={clsx(
+                      'rounded-lg border px-2 py-1 text-xs font-semibold',
+                      hasPneumoniaComorbidityOrRecentAtb ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-emerald-200 bg-white text-emerald-700'
+                    )}>
+                      {hasPneumoniaComorbidityOrRecentAtb ? 'Beta-lactâmico + macrolídeo' : 'Previamente hígido'}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {PNEUMONIA_COMORBIDITIES_FOR_AMBULATORY_ATB.map((item) => {
+                      const checked = pneumoniaComorbidities.includes(item)
+                      return (
+                        <label key={item} className={clsx(
+                          'flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-sm',
+                          checked ? 'border-amber-200 bg-white text-amber-950 shadow-sm' : 'border-emerald-100 bg-white/70 text-slate-700 hover:bg-white'
+                        )}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSelection(setPneumoniaComorbidities, item)}
+                            className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <span>{item}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {flowchart.id === 'pneumonia' && ['pac_psi_intermediario', 'pac_psi_alto', 'pac_curb_intermediario', 'pac_curb_alto', 'pac_estabilizacao_seguir_sepse', 'pac_internacao_limitacao'].includes(currentStepData.id) && (
+                <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-rose-900">Risco de Pseudomonas sp.</h4>
+                      <p className="text-sm text-rose-900">A presença de risco muda o esquema hospitalar para cobertura antipseudomonas.</p>
+                    </div>
+                    <span className={clsx(
+                      'rounded-lg border px-2 py-1 text-xs font-semibold',
+                      pneumoniaPseudomonasRisk.length > 0 ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-white text-slate-700'
+                    )}>
+                      {pneumoniaPseudomonasRisk.length > 0 ? 'Com risco' : 'Sem risco marcado'}
+                    </span>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {PNEUMONIA_PSEUDOMONAS_RISK_FACTORS.map((item) => {
+                      const checked = pneumoniaPseudomonasRisk.includes(item)
+                      return (
+                        <label key={item} className={clsx(
+                          'flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-sm',
+                          checked ? 'border-red-200 bg-white text-red-950 shadow-sm' : 'border-rose-100 bg-white/70 text-slate-700 hover:bg-white'
+                        )}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSelection(setPneumoniaPseudomonasRisk, item)}
+                            className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                          />
+                          <span>{item}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    pneumoniaPseudomonasRisk.length > 0 ? 'border-red-200 bg-white text-red-900' : 'border-slate-200 bg-white text-slate-700'
+                  )}>
+                    {pneumoniaPseudomonasRisk.length > 0
+                      ? 'Esquema sugerido: piperacilina-tazobactam 4,5 g EV 6/6h por 7 a 10 dias, associado a azitromicina, claritromicina ou levofloxacino.'
+                      : 'Esquema sugerido: ceftriaxona 1 a 2 g EV 24/24h por 7 a 10 dias, associada a azitromicina ou claritromicina.'}
                   </div>
                 </div>
               )}
@@ -3611,6 +4163,108 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {pneumoniaPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{pneumoniaPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-emerald-50">
+                          Receituário rápido para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyPneumoniaPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            pneumoniaPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {pneumoniaPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {pneumoniaPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPneumoniaPrescriptionPreview(null)
+                            setPneumoniaPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {pneumoniaPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {sinusitisPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-teal-700 to-cyan-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{sinusitisPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-teal-50">
+                          Receituário rápido para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copySinusitisPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            sinusitisPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {sinusitisPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {sinusitisPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSinusitisPrescriptionPreview(null)
+                            setSinusitisPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {sinusitisPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {tvpPrescriptionPreview && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
@@ -4177,6 +4831,60 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     >
                       {hasInfluenzaPrescriptionForCurrentStep ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaAmbulatoryFinalStep && (
+                <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-emerald-900">
+                        Prescrição ambulatorial da PAC
+                      </h4>
+                      <p className="mt-1 text-sm text-emerald-900">
+                        Gera a receita conforme comorbidades marcadas e registra no receituário do dashboard.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenPneumoniaPrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        pneumoniaPrescriptionGenerated || hasPneumoniaPrescriptionSet(getPersistedPneumoniaPrescriptions(), hasPneumoniaComorbidityOrRecentAtb)
+                          ? 'border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                      )}
+                    >
+                      {pneumoniaPrescriptionGenerated || hasPneumoniaPrescriptionSet(getPersistedPneumoniaPrescriptions(), hasPneumoniaComorbidityOrRecentAtb) ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isSinusitisPrescriptionFinalStep && (
+                <div className="mt-6 rounded-2xl border border-teal-200 bg-teal-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-teal-900">
+                        Prescrição da rinossinusite
+                      </h4>
+                      <p className="mt-1 text-sm text-teal-900">
+                        Gera a receita conforme a classificação atual e registra no receituário do dashboard.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenSinusitisPrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        sinusitisPrescriptionGeneratedSteps[currentStepData.id] || hasSinusitisPrescriptionSet(getPersistedSinusitisPrescriptions(), sinusitisCurrentEtiology)
+                          ? 'border border-teal-300 bg-white text-teal-800 hover:bg-teal-100'
+                          : 'bg-teal-600 text-white hover:bg-teal-700'
+                      )}
+                    >
+                      {sinusitisPrescriptionGeneratedSteps[currentStepData.id] || hasSinusitisPrescriptionSet(getPersistedSinusitisPrescriptions(), sinusitisCurrentEtiology) ? 'Prescrição' : 'Gerar prescrição'}
                     </button>
                   </div>
                 </div>

@@ -46,6 +46,7 @@ export type EmergencyType =
   | 'tvp'
   | 'dpoc_exacerbado'
   | 'influenza'
+  | 'sinusite'
 
 export interface EmergencyFlowchart {
   id: EmergencyType

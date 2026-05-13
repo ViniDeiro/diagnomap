@@ -29,6 +29,8 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const livePatient = patientService.getPatientById(patient.id) || patient
   const isDengue = !livePatient.selectedFlowchart || livePatient.selectedFlowchart === 'dengue'
   const isInfluenza = livePatient.selectedFlowchart === 'influenza'
+  const isPneumonia = livePatient.selectedFlowchart === 'pneumonia'
+  const isSinusitis = livePatient.selectedFlowchart === 'sinusite'
   const flowName = getFlowchartById(livePatient.selectedFlowchart || '')?.name || (livePatient.selectedFlowchart ? livePatient.selectedFlowchart.toUpperCase() : 'DENGUE')
 
   const tvpPrescriptionTemplates: Record<string, Omit<Prescription, 'id' | 'prescribedAt' | 'prescribedBy'>> = {
@@ -224,7 +226,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
-    if (isInfluenza) {
+    if (isInfluenza || isPneumonia || isSinusitis) {
       const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
         const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
         return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
@@ -243,22 +245,34 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         `Data: ${new Date().toLocaleDateString('pt-BR')}`,
         '',
         `Diagnóstico: ${flowName}`,
-        `Classificação clínica: ${getInfluenzaDispositionLabel()}`,
+        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
         '',
         'Orientações:',
         '',
         '1. Medidas gerais',
         '• Manter boa hidratação e alimentação fracionada, conforme tolerância.',
         '• Priorizar repouso relativo e controle sintomático.',
-        '• Manter isolamento por gotículas e etiqueta respiratória enquanto sintomático.',
+        isInfluenza
+          ? '• Manter isolamento por gotículas e etiqueta respiratória enquanto sintomático.'
+          : isSinusitis
+            ? '• Realizar lavagem nasal e evitar uso prolongado de descongestionante nasal.'
+            : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
         '',
         '2. Retorno / reavaliação',
         '• Reavaliar em 48 a 72 horas, ou antes se houver piora do quadro.',
         '• Retornar imediatamente em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação, febre persistente ou agravamento geral.',
         '',
-        '3. Observações sobre antiviral',
-        '• Oseltamivir tem maior benefício quando iniciado precocemente, preferencialmente nas primeiras 48 horas.',
-        '• Ajustar dose em disfunção renal, quando aplicável.',
+        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : '3. Observações sobre pneumonia',
+        isInfluenza
+          ? '• Oseltamivir tem maior benefício quando iniciado precocemente, preferencialmente nas primeiras 48 horas.'
+          : isSinusitis
+            ? '• A maioria dos quadros é viral ou alérgica e não necessita antibiótico.'
+            : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
+        isInfluenza
+          ? '• Ajustar dose em disfunção renal, quando aplicável.'
+          : isSinusitis
+            ? '• Procurar atendimento se houver visão dupla, redução visual, proptose, sinais meníngeos, alteração mental, sepse ou dor facial intensa refratária.'
+            : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
         '',
         prescriptionsText + 'Assinatura do Médico:',
         '__________________________________________________',
@@ -545,6 +559,45 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                         <li>• Reavaliar em 48 a 72 horas ou antes se houver piora.</li>
                         <li>• Retorno imediato em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação ou febre persistente.</li>
                         <li>• Pacientes com indicação de oseltamivir devem manter adesão completa ao esquema antiviral.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isPneumonia ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <h3 className="font-bold text-emerald-900 mb-2">Cuidados gerais</h3>
+                      <ul className="space-y-1 text-emerald-900">
+                        <li>• Manter hidratação e alimentação conforme tolerância.</li>
+                        <li>• Usar antibiótico exatamente pelo tempo prescrito.</li>
+                        <li>• Evitar automedicação e revisar alergias antes do início do esquema.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <h3 className="font-bold text-amber-900 mb-2">Retorno e sinais de alerta</h3>
+                      <ul className="space-y-1 text-amber-900">
+                        <li>• Reavaliar em 48 a 72 horas, ou antes se houver piora.</li>
+                        <li>• Retornar imediatamente em dispneia, queda de saturação, confusão, hipotensão, dor torácica, vômitos persistentes ou intolerância à via oral.</li>
+                        <li>• Considerar nova imagem/investigação se não houver resposta clínica adequada.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isSinusitis ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                      <h3 className="font-bold text-teal-900 mb-2">Cuidados gerais</h3>
+                      <ul className="space-y-1 text-teal-900">
+                        <li>• Realizar lavagem nasal com soro fisiológico.</li>
+                        <li>• Usar corticosteroide nasal conforme prescrição.</li>
+                        <li>• Evitar descongestionante nasal por mais de 5 dias, pelo risco de rinite medicamentosa.</li>
+                        <li>• Não usar antibiótico quando o quadro for viral ou alérgico sem critérios bacterianos.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <h3 className="font-bold text-amber-900 mb-2">Retorno e sinais de alerta</h3>
+                      <ul className="space-y-1 text-amber-900">
+                        <li>• Retornar se sintomas durarem mais de 10 dias ou piorarem após o 5º dia.</li>
+                        <li>• Procurar atendimento imediato em visão dupla, redução visual, proptose, sinais meníngeos, alteração mental ou indícios de sepse.</li>
+                        <li>• Retornar se cefaleia ou dor facial intensa não responder à medicação oral.</li>
                       </ul>
                     </div>
                   </div>
