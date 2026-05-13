@@ -401,7 +401,7 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
   if (side === 'other') {
     return (
       <img
-        src="/WhatsApp Image 2026-04-21 at 18.38.32.jpeg"
+        src="/Trombose outras partes do corpo.png"
         alt="Trombose em outras localidades além de membros inferiores"
         className={clsx(
           'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
