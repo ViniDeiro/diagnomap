@@ -31,6 +31,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const isInfluenza = livePatient.selectedFlowchart === 'influenza'
   const isPneumonia = livePatient.selectedFlowchart === 'pneumonia'
   const isSinusitis = livePatient.selectedFlowchart === 'sinusite'
+  const isAnaphylaxis = livePatient.selectedFlowchart === 'anafilaxia'
   const flowName = getFlowchartById(livePatient.selectedFlowchart || '')?.name || (livePatient.selectedFlowchart ? livePatient.selectedFlowchart.toUpperCase() : 'DENGUE')
 
   const tvpPrescriptionTemplates: Record<string, Omit<Prescription, 'id' | 'prescribedAt' | 'prescribedBy'>> = {
@@ -226,7 +227,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
-    if (isInfluenza || isPneumonia || isSinusitis) {
+    if (isInfluenza || isPneumonia || isSinusitis || isAnaphylaxis) {
       const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
         const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
         return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
@@ -245,7 +246,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         `Data: ${new Date().toLocaleDateString('pt-BR')}`,
         '',
         `Diagnóstico: ${flowName}`,
-        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
+        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : isAnaphylaxis ? 'Anafilaxia em seguimento após estabilização/observação' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
         '',
         'Orientações:',
         '',
@@ -256,23 +257,29 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
           ? '• Manter isolamento por gotículas e etiqueta respiratória enquanto sintomático.'
           : isSinusitis
             ? '• Realizar lavagem nasal e evitar uso prolongado de descongestionante nasal.'
-            : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
+            : isAnaphylaxis
+              ? '• Evitar estritamente o fator causal suspeito ou conhecido até avaliação especializada.'
+              : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
         '',
         '2. Retorno / reavaliação',
         '• Reavaliar em 48 a 72 horas, ou antes se houver piora do quadro.',
         '• Retornar imediatamente em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação, febre persistente ou agravamento geral.',
         '',
-        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : '3. Observações sobre pneumonia',
+        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : isAnaphylaxis ? '3. Observações sobre anafilaxia' : '3. Observações sobre pneumonia',
         isInfluenza
           ? '• Oseltamivir tem maior benefício quando iniciado precocemente, preferencialmente nas primeiras 48 horas.'
           : isSinusitis
             ? '• A maioria dos quadros é viral ou alérgica e não necessita antibiótico.'
-            : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
+            : isAnaphylaxis
+              ? '• Observar possibilidade de recidiva dos sintomas em até 24 a 72 horas.'
+              : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
         isInfluenza
           ? '• Ajustar dose em disfunção renal, quando aplicável.'
           : isSinusitis
             ? '• Procurar atendimento se houver visão dupla, redução visual, proptose, sinais meníngeos, alteração mental, sepse ou dor facial intensa refratária.'
-            : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
+            : isAnaphylaxis
+              ? '• Retornar imediatamente se houver urticária difusa, angioedema, dispneia, sibilância, estridor, vômitos repetitivos, tontura ou síncope.'
+              : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
         '',
         prescriptionsText + 'Assinatura do Médico:',
         '__________________________________________________',
@@ -598,6 +605,25 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                         <li>• Retornar se sintomas durarem mais de 10 dias ou piorarem após o 5º dia.</li>
                         <li>• Procurar atendimento imediato em visão dupla, redução visual, proptose, sinais meníngeos, alteração mental ou indícios de sepse.</li>
                         <li>• Retornar se cefaleia ou dor facial intensa não responder à medicação oral.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isAnaphylaxis ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="font-bold text-red-900 mb-2">Cuidados após anafilaxia</h3>
+                      <ul className="space-y-1 text-red-900">
+                        <li>• Observar recidiva dos sintomas em até 24 a 72 horas.</li>
+                        <li>• Evitar o fator causal, se suspeito ou conhecido.</li>
+                        <li>• Encaminhar para especialista/alergologista para elucidar causa e plano de prevenção.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                      <h3 className="font-bold text-amber-900 mb-2">Retorno imediato</h3>
+                      <ul className="space-y-1 text-amber-900">
+                        <li>• Dispneia, sibilância, estridor ou sensação de fechamento de garganta.</li>
+                        <li>• Urticária difusa, angioedema, tontura, síncope ou hipotensão.</li>
+                        <li>• Dor abdominal importante, vômitos repetitivos ou piora do estado geral.</li>
                       </ul>
                     </div>
                   </div>

@@ -4333,6 +4333,178 @@ export const sinusitisFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de atendimento de emergência para Anafilaxia (WAO 2020)
+export const anaphylaxisFlowchart: EmergencyFlowchart = {
+  id: 'anafilaxia',
+  name: 'Anafilaxia',
+  description: 'Reconhecimento precoce pelos critérios WAO 2020, adrenalina IM imediata, tratamento adjunto por ABCDE e reavaliação em 5-10 minutos.',
+  category: 'allergic',
+  priority: 'high',
+  icon: 'zap',
+  color: 'from-red-600 to-rose-800',
+  initialStep: 'ana_inicio',
+  finalSteps: [
+    'ana_sem_criterios_observar',
+    'ana_observacao_alta',
+    'ana_repetir_adrenalina_internacao',
+    'ana_internacao_via_aerea_choque'
+  ],
+  steps: {
+    ana_inicio: {
+      id: 'ana_inicio',
+      title: 'Anafilaxia - Reconhecimento Imediato',
+      description: 'Início agudo em minutos ou poucas horas: não retardar adrenalina IM quando critérios são atendidos.',
+      type: 'question',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Anafilaxia = reconhecimento precoce + adrenalina IM sem atraso.</strong></p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>ABCDe primário imediatamente.</li>
+            <li>Retirar o agente causal se possível.</li>
+            <li>Posicionar em Trendelenburg/elevar pernas se hipotensão ou colapso.</li>
+            <li>Sintomas cutâneos podem estar ausentes durante hipotensão.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar critérios WAO 2020', nextStep: 'ana_criterios_wao', value: 'avaliar' }
+      ]
+    },
+    ana_criterios_wao: {
+      id: 'ana_criterios_wao',
+      title: 'Critérios Diagnósticos WAO 2020',
+      description: 'Definir se há anafilaxia provável e iniciar adrenalina IM.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <p><strong>Cenário 1:</strong> início agudo com pele/mucosas e pelo menos comprometimento respiratório, circulatório ou gastrointestinal grave.</p>
+          <p><strong>Cenário 2:</strong> alérgeno conhecido/suspeito com hipotensão, broncoespasmo ou envolvimento laríngeo, mesmo sem pele/mucosas.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Critérios preenchidos / alta suspeita', nextStep: 'ana_adrenalina_im', value: 'anafilaxia', critical: true, requiresImmediateAction: true },
+        { text: 'Critérios não preenchidos', nextStep: 'ana_sem_criterios_observar', value: 'sem_criterios' }
+      ]
+    },
+    ana_adrenalina_im: {
+      id: 'ana_adrenalina_im',
+      title: 'Adrenalina IM Imediata',
+      description: 'Aplicar no músculo vasto lateral da coxa. Repetir até 3 doses a cada 5-15 minutos se necessário.',
+      type: 'medication',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p><strong>Apresentação:</strong> adrenalina 1:1000 = 1 mg/mL.</p>
+            <p><strong>Local:</strong> intramuscular no vasto lateral da coxa.</p>
+          </div>
+          <p>Após adrenalina, realizar tratamento adjunto conforme ABCDE e manifestação clínica dominante.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Selecionar tratamento adjunto', nextStep: 'ana_tratamento_adjunto', value: 'adrenalina_aplicada', critical: true }
+      ]
+    },
+    ana_tratamento_adjunto: {
+      id: 'ana_tratamento_adjunto',
+      title: 'Tratamento Adjunto após Adrenalina',
+      description: 'Selecionar condutas conforme hipotensão, estridor, dispneia, urticária e vômitos.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500 text-sm">
+          <p>Tratamento adjunto nunca substitui adrenalina IM. Conduzir ABCDE, oxigênio, volume, broncodilatador, anti-histamínico/corticoide e antiemético conforme manifestação.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Reavaliar em 5-10 minutos', nextStep: 'ana_reavaliacao_5_10', value: 'adjunto' }
+      ]
+    },
+    ana_reavaliacao_5_10: {
+      id: 'ana_reavaliacao_5_10',
+      title: 'Reavaliação após 5-10 minutos',
+      description: 'Avaliar resposta clínica depois de adrenalina IM e tratamento adjunto.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p>Reavaliar via aérea, respiração, circulação, estado mental, urticária/angioedema e sintomas gastrointestinais.</p>
+          <p>Se sem resposta, repetir adrenalina IM e considerar adrenalina EV, glucagon em usuário de beta-bloqueador e manejo avançado de via aérea.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Resposta clínica adequada', nextStep: 'ana_observacao_alta', value: 'resposta' },
+        { text: 'Sem resposta / piora', nextStep: 'ana_repetir_adrenalina_internacao', value: 'sem_resposta', critical: true, requiresImmediateAction: true },
+        { text: 'Via aérea/choque crítico', nextStep: 'ana_internacao_via_aerea_choque', value: 'critico', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    ana_sem_criterios_observar: {
+      id: 'ana_sem_criterios_observar',
+      title: 'Sem Critérios de Anafilaxia no Momento',
+      description: 'Observar e reavaliar se progressão de sintomas.',
+      type: 'result',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500 text-sm">
+          <p><strong>Conduta:</strong> manter observação clínica, revisar exposição, orientar retorno imediato se surgirem sintomas respiratórios, circulatórios, laríngeos ou gastrointestinais graves.</p>
+        </div>
+      `,
+      options: []
+    },
+    ana_observacao_alta: {
+      id: 'ana_observacao_alta',
+      title: 'Observação em Emergência',
+      description: 'Manter observação por no mínimo 4 horas; alguns casos exigem 6-24 horas.',
+      type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> observar por no mínimo 4 horas após resolução. Considerar 6-24 horas se reação grave, necessidade de múltiplas doses de adrenalina, asma, hipotensão ou difícil acesso ao retorno.</p>
+          </div>
+          <p>Na alta: orientar recidiva em 24-72 horas, evitar fator causal e encaminhar ao especialista.</p>
+        </div>
+      `,
+      options: []
+    },
+    ana_repetir_adrenalina_internacao: {
+      id: 'ana_repetir_adrenalina_internacao',
+      title: 'Sem Resposta: Repetir Adrenalina IM',
+      description: 'Repetir adrenalina IM e preparar internação/suporte avançado.',
+      type: 'result',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> repetir adrenalina IM, manter ABCDE, oxigênio alto fluxo, expansão volêmica e monitorização.</p>
+          </div>
+          <p>Considerar adrenalina EV em ambiente monitorizado, glucagon se uso de beta-bloqueador, e internação.</p>
+        </div>
+      `,
+      options: []
+    },
+    ana_internacao_via_aerea_choque: {
+      id: 'ana_internacao_via_aerea_choque',
+      title: 'Anafilaxia Crítica: Via Aérea/Choque',
+      description: 'Manejo avançado imediato e internação.',
+      type: 'result',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> acionar equipe de via aérea/suporte avançado, considerar intubação precoce em edema laríngeo, adrenalina EV em ambiente monitorizado se choque refratário, volume agressivo e internação.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -4348,6 +4520,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   influenza: influenzaFlowchart,
   pneumonia: pneumoniaFlowchart,
   sinusite: sinusitisFlowchart,
+  anafilaxia: anaphylaxisFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -4506,6 +4679,7 @@ export const allFlowcharts = [
   { id: 'rabdomiolise', name: 'Rabdomiólise', category: 'metabolic', implemented: false },
 
   // Alérgicos/Imunológicos
+  { id: 'anafilaxia', name: 'Anafilaxia', category: 'allergic', implemented: true },
   { id: 'reacao_alergica', name: 'Reação alérgica', category: 'allergic', implemented: false }
 ]
 

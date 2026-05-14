@@ -55,6 +55,14 @@ import {
   buildSinusitisPrescriptionItems,
   hasSinusitisPrescriptionSet
 } from '@/lib/sinusitis'
+import {
+  ANAPHYLAXIS_ADJUNCT_CARDS,
+  ANAPHYLAXIS_HOME_ORIENTATIONS,
+  AnaphylaxisAdjunctKey,
+  buildAnaphylaxisDischargePrescriptionItems,
+  calculateAnaphylaxisAdrenalineDose,
+  hasAnaphylaxisDischargePrescriptionSet
+} from '@/lib/anaphylaxis'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
@@ -81,6 +89,11 @@ type PneumoniaPrescriptionPreview = {
 type SinusitisPrescriptionPreview = {
   title: string
   etiology: SinusitisEtiology
+  content: string[]
+}
+
+type AnaphylaxisPrescriptionPreview = {
+  title: string
   content: string[]
 }
 
@@ -210,6 +223,14 @@ const pneumoniaCurbItems: Array<{ key: PneumoniaCurbFieldKey; label: string }> =
   { key: 'frMaior30', label: 'Frequência respiratória > 30 irpm' },
   { key: 'paBaixa', label: 'PAS < 90 mmHg ou PAD < 60 mmHg' },
   { key: 'idadeMaior65', label: 'Idade maior que 65 anos' }
+]
+
+const anaphylaxisAdjunctOrder: AnaphylaxisAdjunctKey[] = [
+  'hypotension',
+  'stridor',
+  'dyspnea',
+  'urticaria',
+  'vomiting'
 ]
 
 const tvpClassicSigns = [
@@ -589,6 +610,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [sinusitisPrescriptionPreview, setSinusitisPrescriptionPreview] = useState<SinusitisPrescriptionPreview | null>(null)
   const [sinusitisPrescriptionCopied, setSinusitisPrescriptionCopied] = useState(false)
   const [sinusitisPrescriptionGeneratedSteps, setSinusitisPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
+  const [selectedAnaphylaxisAdjuncts, setSelectedAnaphylaxisAdjuncts] = useState<AnaphylaxisAdjunctKey[]>([])
+  const [anaphylaxisPrescriptionPreview, setAnaphylaxisPrescriptionPreview] = useState<AnaphylaxisPrescriptionPreview | null>(null)
+  const [anaphylaxisPrescriptionCopied, setAnaphylaxisPrescriptionCopied] = useState(false)
+  const [anaphylaxisPrescriptionGenerated, setAnaphylaxisPrescriptionGenerated] = useState(false)
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -708,6 +733,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
     const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_psi'
     const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_curb65'
+    const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_tratamento_adjunto'
     const psiResult = calculatePneumoniaPsi(pneumoniaPsiValues, patient)
     const curbResult = calculatePneumoniaCurb65(pneumoniaCurbValues)
     const legSelectionAnswer = JSON.stringify({
@@ -768,6 +794,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       destino: curbResult.disposition,
       criterios: pneumoniaCurbValues
     })
+    const anaphylaxisAdjunctAnswer = JSON.stringify({
+      decision: value || nextStep,
+      tratamentosAdjuntosSelecionados: selectedAnaphylaxisAdjuncts
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -790,7 +820,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         ? pneumoniaPsiAnswer
                         : isPneumoniaCurbStep
                           ? pneumoniaCurbAnswer
-                          : value || nextStep
+                          : isAnaphylaxisAdjunctStep
+                            ? anaphylaxisAdjunctAnswer
+                            : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -1164,6 +1196,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
   const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
+  const isAnaphylaxisAdrenalineStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_adrenalina_im'
+  const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_tratamento_adjunto'
+  const isAnaphylaxisDischargeStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_observacao_alta'
   const sinusitisCurrentEtiology: SinusitisEtiology = currentStepData?.id === 'rino_bacteriana'
     ? 'bacterial'
     : currentStepData?.id === 'rino_alergica'
@@ -1171,6 +1206,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       : 'viral'
   const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
   const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
+  const anaphylaxisAdrenalineDose = useMemo(() => calculateAnaphylaxisAdrenalineDose(patient), [patient])
   const hasPneumoniaComorbidityOrRecentAtb = pneumoniaComorbidities.length > 0
 
   const isDpocSinaisGravidade = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'sinais_gravidade'
@@ -1384,6 +1420,76 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       alert('Não foi possível copiar a prescrição. Tente novamente.')
     }
   }, [sinusitisPrescriptionPreview])
+
+  const buildAnaphylaxisPrescriptionPreview = useCallback((): AnaphylaxisPrescriptionPreview => {
+    const items = buildAnaphylaxisDischargePrescriptionItems(patient)
+    const content = [
+      'ORIENTAÇÕES E PRESCRIÇÃO DOMICILIAR APÓS ANAFILAXIA',
+      '',
+      'RECEITA MÉDICA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'ORIENTAÇÕES:',
+      ...ANAPHYLAXIS_HOME_ORIENTATIONS.map((item) => `- ${item}`)
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição pós-anafilaxia',
+      content
+    }
+  }, [patient])
+
+  const getPersistedAnaphylaxisPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Anafilaxia')
+  }, [patient])
+
+  const handleOpenAnaphylaxisPrescription = useCallback(() => {
+    if (!isAnaphylaxisDischargeStep) return
+
+    const draftItems = buildAnaphylaxisDischargePrescriptionItems(patient)
+    const persisted = getPersistedAnaphylaxisPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setAnaphylaxisPrescriptionGenerated(true)
+    setAnaphylaxisPrescriptionPreview(buildAnaphylaxisPrescriptionPreview())
+    setAnaphylaxisPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildAnaphylaxisPrescriptionPreview,
+    currentStep,
+    getPersistedAnaphylaxisPrescriptions,
+    history,
+    isAnaphylaxisDischargeStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyAnaphylaxisPrescriptionText = useCallback(async () => {
+    if (!anaphylaxisPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(anaphylaxisPrescriptionPreview.content.join('\n'))
+      setAnaphylaxisPrescriptionCopied(true)
+      setTimeout(() => setAnaphylaxisPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da anafilaxia:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [anaphylaxisPrescriptionPreview])
 
   const stepMentionsFlegmasia = (
     currentStepData?.title?.toLowerCase().includes('flegmasia') ||
@@ -2104,6 +2210,32 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSinusitisPrescriptionCopied(false)
     }
   }, [isSinusitisPrescriptionFinalStep])
+
+  useEffect(() => {
+    if (!isAnaphylaxisAdjunctStep) {
+      setSelectedAnaphylaxisAdjuncts([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      const items = Array.isArray(parsed?.tratamentosAdjuntosSelecionados)
+        ? parsed.tratamentosAdjuntosSelecionados.filter((item: string) => anaphylaxisAdjunctOrder.includes(item as AnaphylaxisAdjunctKey))
+        : []
+      setSelectedAnaphylaxisAdjuncts(items)
+    } catch {
+      setSelectedAnaphylaxisAdjuncts([])
+    }
+  }, [answers, currentStep, isAnaphylaxisAdjunctStep])
+
+  useEffect(() => {
+    if (!isAnaphylaxisDischargeStep) {
+      setAnaphylaxisPrescriptionPreview(null)
+      setAnaphylaxisPrescriptionCopied(false)
+      setAnaphylaxisPrescriptionGenerated(false)
+    }
+  }, [isAnaphylaxisDischargeStep])
 
   useEffect(() => {
     if (isTVPClinicalEvaluation) {
@@ -2994,6 +3126,105 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     >
                       Aplicar CURB-65 e definir destino
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isAnaphylaxisAdrenalineStep && (
+                <div className="mb-6 rounded-2xl border border-red-200 bg-red-50/70 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-red-900">Dose de adrenalina IM</h4>
+                      <p className="text-sm text-red-900">Apresentação 1:1000 = 1 mg/mL. Aplicar IM no vasto lateral da coxa.</p>
+                    </div>
+                    <div className="rounded-xl border border-red-300 bg-white px-4 py-3 text-red-900">
+                      <div className="text-xs font-bold uppercase tracking-wide">{anaphylaxisAdrenalineDose.label}</div>
+                      <div className="text-2xl font-extrabold">{anaphylaxisAdrenalineDose.doseMg} mg</div>
+                      <div className="text-sm font-semibold">{anaphylaxisAdrenalineDose.volumeMl} mL de 1 mg/mL</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-950">
+                      <h5 className="mb-2 font-extrabold uppercase tracking-wide">Regra utilizada</h5>
+                      <p>{anaphylaxisAdrenalineDose.rule}</p>
+                      <p className="mt-2">Repetir até 3 doses a cada 5-15 minutos se resposta insuficiente.</p>
+                    </div>
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
+                      <h5 className="mb-2 font-extrabold uppercase tracking-wide">ABCDE primário</h5>
+                      <ul className="list-disc space-y-1 pl-5">
+                        <li>A: verificar obstrução de via aérea, estridor e edema laríngeo.</li>
+                        <li>B: checar SaO2; se &lt; 94%, ofertar oxigênio suplementar.</li>
+                        <li>C: monitorar pressão arterial, perfusão e necessidade de fluidos.</li>
+                        <li>D: avaliar consciência, agitação ou letargia.</li>
+                        <li>E: buscar urticária/angioedema, lembrando que pele pode estar ausente na hipotensão.</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isAnaphylaxisAdjunctStep && (
+                <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50/50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-orange-900">Tratamento adjunto após adrenalina</h4>
+                      <p className="text-sm text-orange-900">Selecione as manifestações presentes. A reavaliação deve ocorrer em 5-10 minutos.</p>
+                    </div>
+                    <span className="rounded-lg border border-orange-200 bg-white px-2 py-1 text-xs font-semibold text-orange-800">
+                      {selectedAnaphylaxisAdjuncts.length} selecionado(s)
+                    </span>
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {anaphylaxisAdjunctOrder.map((key) => {
+                      const card = ANAPHYLAXIS_ADJUNCT_CARDS[key]
+                      const checked = selectedAnaphylaxisAdjuncts.includes(key)
+                      const tone = card.color === 'red'
+                        ? 'border-red-200 bg-red-50 text-red-950'
+                        : card.color === 'orange'
+                          ? 'border-orange-200 bg-orange-50 text-orange-950'
+                          : card.color === 'yellow'
+                            ? 'border-yellow-200 bg-yellow-50 text-yellow-950'
+                            : card.color === 'green'
+                              ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                              : 'border-blue-200 bg-blue-50 text-blue-950'
+                      return (
+                        <label key={key} className={clsx(
+                          'cursor-pointer rounded-xl border p-4 transition-all',
+                          checked ? `${tone} shadow-sm ring-2 ring-white` : 'border-slate-200 bg-white text-slate-700 hover:border-orange-200'
+                        )}>
+                          <div className="mb-2 flex items-start gap-2">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setSelectedAnaphylaxisAdjuncts(prev => prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key])
+                              }}
+                              className="mt-1 h-4 w-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                            />
+                            <div>
+                              <h5 className="text-sm font-extrabold uppercase tracking-wide">{card.title}</h5>
+                              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
+                                {card.bullets.map((bullet) => (
+                                  <li key={bullet}>{bullet}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer('ana_reavaliacao_5_10', 'adjunto_aplicado')}
+                      className="rounded-xl bg-orange-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-orange-700"
+                    >
+                      Reavaliar em 5-10 minutos
                     </motion.button>
                   </div>
                 </div>
@@ -4265,6 +4496,57 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {anaphylaxisPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-red-700 to-rose-800 text-white">
+                      <div>
+                        <h4 className="font-bold">{anaphylaxisPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-red-50">
+                          Orientações domiciliares apenas após estabilização e observação.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyAnaphylaxisPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            anaphylaxisPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {anaphylaxisPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {anaphylaxisPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAnaphylaxisPrescriptionPreview(null)
+                            setAnaphylaxisPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {anaphylaxisPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {tvpPrescriptionPreview && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
@@ -4733,7 +5015,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       : isTVPClinicalEvaluation && tvpAlertInterruptionOption
                         ? [tvpAlertInterruptionOption]
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisAdjunctStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
@@ -4885,6 +5167,33 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     >
                       {sinusitisPrescriptionGeneratedSteps[currentStepData.id] || hasSinusitisPrescriptionSet(getPersistedSinusitisPrescriptions(), sinusitisCurrentEtiology) ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isAnaphylaxisDischargeStep && (
+                <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-red-900">
+                        Orientações pós-anafilaxia
+                      </h4>
+                      <p className="mt-1 text-sm text-red-900">
+                        Gerar prescrição de alta apenas após estabilização e observação mínima.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAnaphylaxisPrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        anaphylaxisPrescriptionGenerated || hasAnaphylaxisDischargePrescriptionSet(getPersistedAnaphylaxisPrescriptions())
+                          ? 'border border-red-300 bg-white text-red-800 hover:bg-red-100'
+                          : 'bg-red-600 text-white hover:bg-red-700'
+                      )}
+                    >
+                      {anaphylaxisPrescriptionGenerated || hasAnaphylaxisDischargePrescriptionSet(getPersistedAnaphylaxisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
                     </button>
                   </div>
                 </div>
