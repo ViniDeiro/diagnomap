@@ -63,6 +63,63 @@ import {
   calculateAnaphylaxisAdrenalineDose,
   hasAnaphylaxisDischargePrescriptionSet
 } from '@/lib/anaphylaxis'
+import {
+  PANCREATITIS_ICU_CRITERIA,
+  PancreatitisBisapKey,
+  PancreatitisMarshallValues,
+  buildPancreatitisHospitalPrescriptionItems,
+  calculatePancreatitisBisap,
+  calculatePancreatitisMarshall,
+  defaultPancreatitisBisapValues,
+  defaultPancreatitisMarshallValues,
+  hasPancreatitisPrescriptionSet
+} from '@/lib/pancreatitis'
+import {
+  CHOLANGITIS_DIAGNOSIS_ITEMS,
+  CHOLANGITIS_MODERATE_CRITERIA,
+  CHOLANGITIS_SEVERE_CRITERIA,
+  CholangitisDiagnosisKey,
+  CholangitisSeverity,
+  CholangitisSeverityKey,
+  buildCholangitisPrescriptionItems,
+  calculateCholangitisDiagnosis,
+  calculateCholangitisSeverity,
+  defaultCholangitisDiagnosisValues,
+  defaultCholangitisSeverityValues,
+  getCholangitisAntibioticOptions,
+  hasCholangitisPrescriptionSet
+} from '@/lib/cholangitis'
+import {
+  CHOLECYSTITIS_MODERATE_CRITERIA,
+  CHOLECYSTITIS_SEVERE_CRITERIA,
+  CholecystitisAntibioticScheme,
+  CholecystitisSeverity,
+  CholecystitisSeverityKey,
+  buildCholecystitisPrescriptionItems,
+  calculateCholecystitisSeverity,
+  defaultCholecystitisSeverityValues,
+  getCholecystitisAntibioticOptions,
+  hasCholecystitisPrescriptionSet
+} from '@/lib/cholecystitis'
+import {
+  APPENDICITIS_ALVARADO_ITEMS,
+  AppendicitisAlvaradoKey,
+  AppendicitisAntibioticScheme,
+  buildAppendicitisPrescriptionItems,
+  buildAppendicitisLowRiskPrescriptionItems,
+  calculateAppendicitisAlvarado,
+  defaultAppendicitisAlvaradoValues,
+  getAppendicitisAntibioticOptions,
+  hasAppendicitisPrescriptionSet
+} from '@/lib/appendicitis'
+import {
+  LOMBALGIA_RISK_ITEMS,
+  LombalgiaRiskKey,
+  buildLombalgiaPrescriptionItems,
+  calculateLombalgiaDisposition,
+  defaultLombalgiaRiskValues,
+  hasLombalgiaPrescriptionSet
+} from '@/lib/lombalgia'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
@@ -93,6 +150,38 @@ type SinusitisPrescriptionPreview = {
 }
 
 type AnaphylaxisPrescriptionPreview = {
+  title: string
+  content: string[]
+}
+
+type PancreatitisPrescriptionPreview = {
+  title: string
+  includeAntibiotic: boolean
+  content: string[]
+}
+
+type CholangitisPrescriptionPreview = {
+  title: string
+  severity: CholangitisSeverity
+  antibioticScheme: 'cefepime_metronidazole' | 'piperacillin_tazobactam' | 'ceftriaxone_metronidazole'
+  content: string[]
+}
+
+type CholecystitisPrescriptionPreview = {
+  title: string
+  severity: CholecystitisSeverity
+  antibioticScheme: CholecystitisAntibioticScheme
+  content: string[]
+}
+
+type AppendicitisPrescriptionPreview = {
+  title: string
+  antibioticScheme: AppendicitisAntibioticScheme
+  includeAntibiotics: boolean
+  content: string[]
+}
+
+type LombalgiaPrescriptionPreview = {
   title: string
   content: string[]
 }
@@ -231,6 +320,50 @@ const anaphylaxisAdjunctOrder: AnaphylaxisAdjunctKey[] = [
   'dyspnea',
   'urticaria',
   'vomiting'
+]
+
+const pancreatitisBisapItems: Array<{ key: PancreatitisBisapKey; label: string }> = [
+  { key: 'bunMaior25', label: 'Ureia/BUN > 25 mg/dL' },
+  { key: 'alteracaoMental', label: 'Alteração do nível de consciência' },
+  { key: 'sirs', label: 'Dois ou mais critérios de SIRS' },
+  { key: 'idadeMaior60', label: 'Idade > 60 anos' },
+  { key: 'derramePleural', label: 'Derrame pleural' }
+]
+
+const pancreatitisMarshallSystems: Array<{ key: keyof Pick<PancreatitisMarshallValues, 'cardiovascular' | 'respiratory' | 'renal'>; title: string; options: string[] }> = [
+  {
+    key: 'cardiovascular',
+    title: 'Cardiovascular - PA sistólica',
+    options: [
+      '> 90 mmHg',
+      '< 90 responde a hidratação venosa',
+      '< 90 não responde a hidratação venosa',
+      '< 90 com pH < 7,3',
+      '< 90 com pH < 7,2'
+    ]
+  },
+  {
+    key: 'respiratory',
+    title: 'Respiratório - PaO2/FiO2',
+    options: [
+      '> 400',
+      '301 a 400',
+      '201 a 300',
+      '191 a 200',
+      '< 101'
+    ]
+  },
+  {
+    key: 'renal',
+    title: 'Renal - Creatinina',
+    options: [
+      '< 1,4 mg/dL',
+      '1,4 a 1,8 mg/dL',
+      '1,9 a 3,6 mg/dL',
+      '3,6 a 4,9 mg/dL',
+      '> 4,9 mg/dL'
+    ]
+  }
 ]
 
 const tvpClassicSigns = [
@@ -614,6 +747,34 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [anaphylaxisPrescriptionPreview, setAnaphylaxisPrescriptionPreview] = useState<AnaphylaxisPrescriptionPreview | null>(null)
   const [anaphylaxisPrescriptionCopied, setAnaphylaxisPrescriptionCopied] = useState(false)
   const [anaphylaxisPrescriptionGenerated, setAnaphylaxisPrescriptionGenerated] = useState(false)
+  const [pancreatitisBisapValues, setPancreatitisBisapValues] = useState<Record<PancreatitisBisapKey, boolean>>(() => defaultPancreatitisBisapValues(patient))
+  const [pancreatitisMarshallValues, setPancreatitisMarshallValues] = useState<PancreatitisMarshallValues>(() => defaultPancreatitisMarshallValues())
+  const [pancreatitisIcuCriteria, setPancreatitisIcuCriteria] = useState<string[]>([])
+  const [pancreatitisIncludeAntibiotic, setPancreatitisIncludeAntibiotic] = useState(false)
+  const [pancreatitisPrescriptionPreview, setPancreatitisPrescriptionPreview] = useState<PancreatitisPrescriptionPreview | null>(null)
+  const [pancreatitisPrescriptionCopied, setPancreatitisPrescriptionCopied] = useState(false)
+  const [pancreatitisPrescriptionGenerated, setPancreatitisPrescriptionGenerated] = useState(false)
+  const [cholangitisDiagnosisValues, setCholangitisDiagnosisValues] = useState<Record<CholangitisDiagnosisKey, boolean>>(() => defaultCholangitisDiagnosisValues())
+  const [cholangitisSeverityValues, setCholangitisSeverityValues] = useState<Record<CholangitisSeverityKey, boolean>>(() => defaultCholangitisSeverityValues(patient))
+  const [cholangitisAntibioticScheme, setCholangitisAntibioticScheme] = useState<CholangitisPrescriptionPreview['antibioticScheme']>('cefepime_metronidazole')
+  const [cholangitisPrescriptionPreview, setCholangitisPrescriptionPreview] = useState<CholangitisPrescriptionPreview | null>(null)
+  const [cholangitisPrescriptionCopied, setCholangitisPrescriptionCopied] = useState(false)
+  const [cholangitisPrescriptionGenerated, setCholangitisPrescriptionGenerated] = useState(false)
+  const [cholecystitisSeverityValues, setCholecystitisSeverityValues] = useState<Record<CholecystitisSeverityKey, boolean>>(() => defaultCholecystitisSeverityValues())
+  const [cholecystitisAntibioticScheme, setCholecystitisAntibioticScheme] = useState<CholecystitisAntibioticScheme>('ceftriaxone_metronidazole')
+  const [cholecystitisPrescriptionPreview, setCholecystitisPrescriptionPreview] = useState<CholecystitisPrescriptionPreview | null>(null)
+  const [cholecystitisPrescriptionCopied, setCholecystitisPrescriptionCopied] = useState(false)
+  const [cholecystitisPrescriptionGenerated, setCholecystitisPrescriptionGenerated] = useState(false)
+  const [appendicitisAlvaradoValues, setAppendicitisAlvaradoValues] = useState<Record<AppendicitisAlvaradoKey, boolean>>(() => defaultAppendicitisAlvaradoValues())
+  const [appendicitisAntibioticScheme, setAppendicitisAntibioticScheme] = useState<AppendicitisAntibioticScheme>('ceftriaxone_metronidazole')
+  const [appendicitisIncludeAntibiotics, setAppendicitisIncludeAntibiotics] = useState(true)
+  const [appendicitisPrescriptionPreview, setAppendicitisPrescriptionPreview] = useState<AppendicitisPrescriptionPreview | null>(null)
+  const [appendicitisPrescriptionCopied, setAppendicitisPrescriptionCopied] = useState(false)
+  const [appendicitisPrescriptionGenerated, setAppendicitisPrescriptionGenerated] = useState(false)
+  const [lombalgiaRiskValues, setLombalgiaRiskValues] = useState<Record<LombalgiaRiskKey, boolean>>(() => defaultLombalgiaRiskValues())
+  const [lombalgiaPrescriptionPreview, setLombalgiaPrescriptionPreview] = useState<LombalgiaPrescriptionPreview | null>(null)
+  const [lombalgiaPrescriptionCopied, setLombalgiaPrescriptionCopied] = useState(false)
+  const [lombalgiaPrescriptionGenerated, setLombalgiaPrescriptionGenerated] = useState(false)
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
@@ -734,8 +895,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_psi'
     const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_curb65'
     const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_tratamento_adjunto'
+    const isPancreatitisBisapStep = flowchart.id === 'pancreatitis' && currentStep === 'pan_bisap'
+    const isPancreatitisMarshallStep = flowchart.id === 'pancreatitis' && currentStep === 'pan_marshall_atlanta'
+    const isCholangitisDiagnosisStep = flowchart.id === 'cholangitis' && currentStep === 'colangite_tokyo_diagnostico'
+    const isCholangitisSeverityStep = flowchart.id === 'cholangitis' && currentStep === 'colangite_tokyo_gravidade'
+    const isCholecystitisSeverityStep = flowchart.id === 'cholecystitis' && currentStep === 'cole_tokyo_gravidade'
+    const isAppendicitisAlvaradoStep = flowchart.id === 'appendicitis' && currentStep === 'apend_alvarado'
+    const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStep === 'lomb_red_flags'
     const psiResult = calculatePneumoniaPsi(pneumoniaPsiValues, patient)
     const curbResult = calculatePneumoniaCurb65(pneumoniaCurbValues)
+    const pancreatitisBisapResult = calculatePancreatitisBisap(pancreatitisBisapValues)
+    const pancreatitisMarshallResult = calculatePancreatitisMarshall(pancreatitisMarshallValues)
+    const cholangitisDiagnosisResult = calculateCholangitisDiagnosis(cholangitisDiagnosisValues)
+    const cholangitisSeverityResult = calculateCholangitisSeverity(cholangitisSeverityValues)
+    const cholecystitisSeverityResult = calculateCholecystitisSeverity(cholecystitisSeverityValues)
+    const appendicitisAlvaradoResult = calculateAppendicitisAlvarado(appendicitisAlvaradoValues)
+    const lombalgiaDispositionResult = calculateLombalgiaDisposition(lombalgiaRiskValues)
     const legSelectionAnswer = JSON.stringify({
       decision: value || nextStep,
       selectedLeg: selectedTVPLeg,
@@ -798,6 +973,54 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       tratamentosAdjuntosSelecionados: selectedAnaphylaxisAdjuncts
     })
+    const pancreatitisBisapAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: pancreatitisBisapResult.score,
+      altoRisco: pancreatitisBisapResult.highRisk,
+      criteriosSelecionados: pancreatitisBisapValues
+    })
+    const pancreatitisMarshallAnswer = JSON.stringify({
+      decision: value || nextStep,
+      pontuacaoMaximaMarshall: pancreatitisMarshallResult.maxScore,
+      possuiFalenciaOrganica: pancreatitisMarshallResult.hasOrganFailure,
+      classificacaoAtlanta: pancreatitisMarshallResult.title,
+      valores: pancreatitisMarshallValues,
+      criteriosUTISelecionados: pancreatitisIcuCriteria
+    })
+    const cholangitisDiagnosisAnswer = JSON.stringify({
+      decision: value || nextStep,
+      status: cholangitisDiagnosisResult.status,
+      grupos: {
+        inflamacaoSistemica: cholangitisDiagnosisResult.hasA,
+        colestase: cholangitisDiagnosisResult.hasB,
+        imagem: cholangitisDiagnosisResult.hasC
+      },
+      criteriosSelecionados: cholangitisDiagnosisValues
+    })
+    const cholangitisSeverityAnswer = JSON.stringify({
+      decision: value || nextStep,
+      gravidade: cholangitisSeverityResult.severity,
+      tokyo: cholangitisSeverityResult.tokyo,
+      criteriosSelecionados: cholangitisSeverityValues
+    })
+    const cholecystitisSeverityAnswer = JSON.stringify({
+      decision: value || nextStep,
+      gravidade: cholecystitisSeverityResult.severity,
+      tokyo: cholecystitisSeverityResult.tokyo,
+      criteriosSelecionados: cholecystitisSeverityValues
+    })
+    const appendicitisAlvaradoAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: appendicitisAlvaradoResult.score,
+      risco: appendicitisAlvaradoResult.risk,
+      criteriosSelecionados: appendicitisAlvaradoValues
+    })
+    const lombalgiaRiskAnswer = JSON.stringify({
+      decision: value || nextStep,
+      destino: lombalgiaDispositionResult.category,
+      classificacao: lombalgiaDispositionResult.title,
+      criteriosSelecionados: lombalgiaRiskValues
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -822,7 +1045,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           ? pneumoniaCurbAnswer
                           : isAnaphylaxisAdjunctStep
                             ? anaphylaxisAdjunctAnswer
-                            : value || nextStep
+                            : isPancreatitisBisapStep
+                              ? pancreatitisBisapAnswer
+                              : isPancreatitisMarshallStep
+                                ? pancreatitisMarshallAnswer
+                                : isCholangitisDiagnosisStep
+                                  ? cholangitisDiagnosisAnswer
+                                  : isCholangitisSeverityStep
+                                    ? cholangitisSeverityAnswer
+                                    : isCholecystitisSeverityStep
+                                      ? cholecystitisSeverityAnswer
+                                      : isAppendicitisAlvaradoStep
+                                        ? appendicitisAlvaradoAnswer
+                                        : isLombalgiaRiskStep
+                                          ? lombalgiaRiskAnswer
+                                          : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -1199,6 +1436,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isAnaphylaxisAdrenalineStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_adrenalina_im'
   const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_tratamento_adjunto'
   const isAnaphylaxisDischargeStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_observacao_alta'
+  const isPancreatitisBisapStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_bisap'
+  const isPancreatitisMarshallStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_marshall_atlanta'
+  const isPancreatitisTreatmentFinalStep = flowchart.id === 'pancreatitis' && ['pan_leve', 'pan_moderada', 'pan_grave', 'pan_uti'].includes(currentStepData?.id || '')
+  const isCholangitisDiagnosisStep = flowchart.id === 'cholangitis' && currentStepData?.id === 'colangite_tokyo_diagnostico'
+  const isCholangitisSeverityStep = flowchart.id === 'cholangitis' && currentStepData?.id === 'colangite_tokyo_gravidade'
+  const isCholangitisTreatmentFinalStep = flowchart.id === 'cholangitis' && ['colangite_leve', 'colangite_moderada', 'colangite_grave', 'coledocolitiase_sem_colangite'].includes(currentStepData?.id || '')
+  const isCholecystitisSeverityStep = flowchart.id === 'cholecystitis' && currentStepData?.id === 'cole_tokyo_gravidade'
+  const isCholecystitisTreatmentFinalStep = flowchart.id === 'cholecystitis' && ['cole_leve', 'cole_moderada', 'cole_grave'].includes(currentStepData?.id || '')
+  const isAppendicitisAlvaradoStep = flowchart.id === 'appendicitis' && currentStepData?.id === 'apend_alvarado'
+  const isAppendicitisTreatmentFinalStep = flowchart.id === 'appendicitis' && ['apend_cirurgia_emergencia', 'apend_baixo_risco', 'apend_moderado_risco', 'apend_alto_risco'].includes(currentStepData?.id || '')
+  const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStepData?.id === 'lomb_red_flags'
+  const isLombalgiaConservativeFinalStep = flowchart.id === 'lombalgia' && currentStepData?.id === 'lomb_conservador'
   const sinusitisCurrentEtiology: SinusitisEtiology = currentStepData?.id === 'rino_bacteriana'
     ? 'bacterial'
     : currentStepData?.id === 'rino_alergica'
@@ -1207,6 +1456,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
   const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
   const anaphylaxisAdrenalineDose = useMemo(() => calculateAnaphylaxisAdrenalineDose(patient), [patient])
+  const pancreatitisBisapResult = useMemo(() => calculatePancreatitisBisap(pancreatitisBisapValues), [pancreatitisBisapValues])
+  const pancreatitisMarshallResult = useMemo(() => calculatePancreatitisMarshall(pancreatitisMarshallValues), [pancreatitisMarshallValues])
+  const cholangitisDiagnosisResult = useMemo(() => calculateCholangitisDiagnosis(cholangitisDiagnosisValues), [cholangitisDiagnosisValues])
+  const cholangitisSeverityResult = useMemo(() => calculateCholangitisSeverity(cholangitisSeverityValues), [cholangitisSeverityValues])
+  const cholecystitisSeverityResult = useMemo(() => calculateCholecystitisSeverity(cholecystitisSeverityValues), [cholecystitisSeverityValues])
+  const appendicitisAlvaradoResult = useMemo(() => calculateAppendicitisAlvarado(appendicitisAlvaradoValues), [appendicitisAlvaradoValues])
+  const lombalgiaDispositionResult = useMemo(() => calculateLombalgiaDisposition(lombalgiaRiskValues), [lombalgiaRiskValues])
   const hasPneumoniaComorbidityOrRecentAtb = pneumoniaComorbidities.length > 0
 
   const isDpocSinaisGravidade = flowchart.id === 'dpoc_exacerbado' && currentStepData?.id === 'sinais_gravidade'
@@ -1491,6 +1747,448 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
   }, [anaphylaxisPrescriptionPreview])
 
+  const buildPancreatitisPrescriptionPreview = useCallback((includeAntibiotic: boolean): PancreatitisPrescriptionPreview => {
+    const items = buildPancreatitisHospitalPrescriptionItems(patient, includeAntibiotic)
+    const content = [
+      'CUIDADOS E PRESCRIÇÃO HOSPITALAR NA PANCREATITE AGUDA',
+      '',
+      'DIETA',
+      '- Dieta zero inicialmente; iniciar dieta oral pobre em gorduras assim que houver melhora da dor e peristaltismo preservado, idealmente em até 24h.',
+      '- Preferir via oral/enteral; se não tolerar, considerar parenteral e manter via enteral mínima quando possível.',
+      '',
+      'PRESCRIÇÃO',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      includeAntibiotic
+        ? 'ANTIBIÓTICO: indicado por evidência de infecção sobreposta/necrose infectada.'
+        : 'ANTIBIÓTICOS: não recomendados como profilaxia; iniciar apenas se evidência de infecção sobreposta.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição hospitalar da pancreatite aguda',
+      includeAntibiotic,
+      content
+    }
+  }, [patient])
+
+  const getPersistedPancreatitisPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Pancreatite Aguda')
+  }, [patient])
+
+  const handleOpenPancreatitisPrescription = useCallback(() => {
+    if (!isPancreatitisTreatmentFinalStep) return
+
+    const draftItems = buildPancreatitisHospitalPrescriptionItems(patient, pancreatitisIncludeAntibiotic)
+    const persisted = getPersistedPancreatitisPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setPancreatitisPrescriptionGenerated(true)
+    setPancreatitisPrescriptionPreview(buildPancreatitisPrescriptionPreview(pancreatitisIncludeAntibiotic))
+    setPancreatitisPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildPancreatitisPrescriptionPreview,
+    currentStep,
+    getPersistedPancreatitisPrescriptions,
+    history,
+    isPancreatitisTreatmentFinalStep,
+    onUpdate,
+    pancreatitisIncludeAntibiotic,
+    patient,
+    progress
+  ])
+
+  const copyPancreatitisPrescriptionText = useCallback(async () => {
+    if (!pancreatitisPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(pancreatitisPrescriptionPreview.content.join('\n'))
+      setPancreatitisPrescriptionCopied(true)
+      setTimeout(() => setPancreatitisPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da pancreatite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [pancreatitisPrescriptionPreview])
+
+  const buildCholangitisPrescriptionPreview = useCallback((
+    severity: CholangitisSeverity,
+    antibioticScheme: CholangitisPrescriptionPreview['antibioticScheme'],
+    includeAntibiotics = true
+  ): CholangitisPrescriptionPreview => {
+    const items = buildCholangitisPrescriptionItems(severity, antibioticScheme, includeAntibiotics)
+    const content = [
+      severity === 'moderada'
+        ? 'SUGESTÃO DE PRESCRIÇÃO PARA PACIENTE ADULTO COM COLANGITE AGUDA GRAU II'
+        : severity === 'grave'
+          ? 'SUGESTÃO DE PRESCRIÇÃO PARA COLANGITE AGUDA GRAVE - TOKYO III'
+          : 'SUGESTÃO DE PRESCRIÇÃO PARA COLANGITE/COLEDOCOLITÍASE',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'NÃO ESQUEÇA',
+      '- Internação e/ou transferência para avaliação da cirurgia geral/endoscopia.',
+      '- Jejum até definição do procedimento.',
+      includeAntibiotics
+        ? severity === 'grave'
+          ? '- Drenagem biliar urgente, idealmente em 12-24 horas após estabilização.'
+          : severity === 'moderada'
+            ? '- Drenagem biliar precoce, preferencialmente em 24-48 horas.'
+            : '- Drenagem biliar se não houver resposta clínica adequada em até 48 horas.'
+        : '- Antibioticoterapia apenas se houver suspeita de colangite associada.',
+      '- Individualizar alergias, função renal, culturas, comorbidades e protocolo local.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição colangite / coledocolitíase',
+      severity,
+      antibioticScheme,
+      content
+    }
+  }, [])
+
+  const getPersistedCholangitisPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Colangite / Coledocolitíase')
+  }, [patient])
+
+  const handleOpenCholangitisPrescription = useCallback(() => {
+    if (!isCholangitisTreatmentFinalStep) return
+
+    const severity = currentStepData?.id === 'colangite_grave'
+      ? 'grave'
+      : currentStepData?.id === 'colangite_moderada'
+        ? 'moderada'
+        : 'leve'
+    const antibioticScheme = currentStepData?.id === 'colangite_grave'
+      ? 'piperacillin_tazobactam'
+      : currentStepData?.id === 'colangite_moderada'
+        ? cholangitisAntibioticScheme
+        : 'ceftriaxone_metronidazole'
+    const includeAntibiotics = currentStepData?.id !== 'coledocolitiase_sem_colangite'
+
+    const draftItems = buildCholangitisPrescriptionItems(severity, antibioticScheme, includeAntibiotics)
+    const persisted = getPersistedCholangitisPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setCholangitisPrescriptionGenerated(true)
+    setCholangitisPrescriptionPreview(buildCholangitisPrescriptionPreview(severity, antibioticScheme, includeAntibiotics))
+    setCholangitisPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildCholangitisPrescriptionPreview,
+    cholangitisAntibioticScheme,
+    currentStep,
+    currentStepData,
+    getPersistedCholangitisPrescriptions,
+    history,
+    isCholangitisTreatmentFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyCholangitisPrescriptionText = useCallback(async () => {
+    if (!cholangitisPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(cholangitisPrescriptionPreview.content.join('\n'))
+      setCholangitisPrescriptionCopied(true)
+      setTimeout(() => setCholangitisPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da colangite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [cholangitisPrescriptionPreview])
+
+  const buildCholecystitisPrescriptionPreview = useCallback((
+    severity: CholecystitisSeverity,
+    antibioticScheme: CholecystitisAntibioticScheme
+  ): CholecystitisPrescriptionPreview => {
+    const items = buildCholecystitisPrescriptionItems(severity, antibioticScheme)
+    const content = [
+      severity === 'moderada'
+        ? 'SUGESTÃO DE PRESCRIÇÃO PARA PACIENTE ADULTO COM COLECISTITE AGUDA GRAU II'
+        : severity === 'grave'
+          ? 'SUGESTÃO DE PRESCRIÇÃO PARA COLECISTITE AGUDA GRAVE - TOKYO III'
+          : 'SUGESTÃO DE PRESCRIÇÃO PARA COLECISTITE AGUDA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'NÃO ESQUEÇA',
+      '- Internação e/ou transferência para avaliação da cirurgia geral.',
+      '- Jejum até definição do procedimento.',
+      severity === 'grave'
+        ? '- Suporte intensivo, controle da disfunção e considerar drenagem percutânea e/ou colecistectomia.'
+        : severity === 'moderada'
+          ? '- Colecistectomia laparoscópica precoce; se alto risco cirúrgico, considerar drenagem percutânea.'
+          : '- Colecistectomia laparoscópica precoce, idealmente até 72 horas.',
+      '- Individualizar alergias, função renal, culturas, comorbidades e protocolo local.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição colecistite aguda',
+      severity,
+      antibioticScheme,
+      content
+    }
+  }, [])
+
+  const getPersistedCholecystitisPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Colecistite Aguda')
+  }, [patient])
+
+  const handleOpenCholecystitisPrescription = useCallback(() => {
+    if (!isCholecystitisTreatmentFinalStep) return
+
+    const severity = currentStepData?.id === 'cole_grave'
+      ? 'grave'
+      : currentStepData?.id === 'cole_moderada'
+        ? 'moderada'
+        : 'leve'
+    const antibioticScheme = currentStepData?.id === 'cole_grave'
+      ? cholecystitisAntibioticScheme
+      : currentStepData?.id === 'cole_moderada'
+        ? cholecystitisAntibioticScheme
+        : 'ceftriaxone_metronidazole'
+
+    const draftItems = buildCholecystitisPrescriptionItems(severity, antibioticScheme)
+    const persisted = getPersistedCholecystitisPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setCholecystitisPrescriptionGenerated(true)
+    setCholecystitisPrescriptionPreview(buildCholecystitisPrescriptionPreview(severity, antibioticScheme))
+    setCholecystitisPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildCholecystitisPrescriptionPreview,
+    cholecystitisAntibioticScheme,
+    currentStep,
+    currentStepData,
+    getPersistedCholecystitisPrescriptions,
+    history,
+    isCholecystitisTreatmentFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyCholecystitisPrescriptionText = useCallback(async () => {
+    if (!cholecystitisPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(cholecystitisPrescriptionPreview.content.join('\n'))
+      setCholecystitisPrescriptionCopied(true)
+      setTimeout(() => setCholecystitisPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da colecistite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [cholecystitisPrescriptionPreview])
+
+  const buildAppendicitisPrescriptionPreview = useCallback((
+    antibioticScheme: AppendicitisAntibioticScheme,
+    includeAntibiotics: boolean,
+    outpatient = false
+  ): AppendicitisPrescriptionPreview => {
+    const items = outpatient
+      ? buildAppendicitisLowRiskPrescriptionItems()
+      : buildAppendicitisPrescriptionItems(antibioticScheme, includeAntibiotics)
+    const content = [
+      outpatient
+        ? 'SUGESTÃO DE PRESCRIÇÃO SINTOMÁTICA - BAIXO RISCO PARA APENDICITE'
+        : 'SUGESTÃO DE PRESCRIÇÃO PARA PACIENTE ADULTO COM APENDICITE AGUDA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'NÃO ESQUEÇA',
+      outpatient
+        ? '- Orientar sinais de alarme e retorno imediato se piora clínica.'
+        : '- Internação e/ou transferência para avaliação da cirurgia geral.',
+      outpatient
+        ? '- Considerar diagnósticos alternativos e reavaliação se persistir dúvida.'
+        : '- Jejum até definição do procedimento.',
+      outpatient
+        ? '- Não usar antibiótico empírico se baixa probabilidade e sem sinais infecciosos relevantes.'
+        : includeAntibiotics
+          ? '- Manter antibioticoterapia venosa enquanto aguarda conduta cirúrgica ou manejo conservador inicial.'
+          : '- Se baixa probabilidade e alta, manter apenas sintomáticos e orientação de retorno.',
+      '- Individualizar alergias, função renal, culturas, comorbidades e protocolo local.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição apendicite aguda',
+      antibioticScheme,
+      includeAntibiotics,
+      content
+    }
+  }, [])
+
+  const getPersistedAppendicitisPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Apendicite Aguda')
+  }, [patient])
+
+  const handleOpenAppendicitisPrescription = useCallback(() => {
+    if (!isAppendicitisTreatmentFinalStep) return
+
+    const outpatient = currentStepData?.id === 'apend_baixo_risco'
+    const includeAntibiotics = !outpatient && appendicitisIncludeAntibiotics
+    const draftItems = outpatient
+      ? buildAppendicitisLowRiskPrescriptionItems()
+      : buildAppendicitisPrescriptionItems(appendicitisAntibioticScheme, includeAntibiotics)
+    const persisted = getPersistedAppendicitisPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setAppendicitisPrescriptionGenerated(true)
+    setAppendicitisPrescriptionPreview(buildAppendicitisPrescriptionPreview(appendicitisAntibioticScheme, includeAntibiotics, outpatient))
+    setAppendicitisPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    appendicitisAntibioticScheme,
+    appendicitisIncludeAntibiotics,
+    buildAppendicitisPrescriptionPreview,
+    currentStep,
+    currentStepData,
+    getPersistedAppendicitisPrescriptions,
+    history,
+    isAppendicitisTreatmentFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyAppendicitisPrescriptionText = useCallback(async () => {
+    if (!appendicitisPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(appendicitisPrescriptionPreview.content.join('\n'))
+      setAppendicitisPrescriptionCopied(true)
+      setTimeout(() => setAppendicitisPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da apendicite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [appendicitisPrescriptionPreview])
+
+  const buildLombalgiaPrescriptionPreview = useCallback((): LombalgiaPrescriptionPreview => {
+    const items = buildLombalgiaPrescriptionItems()
+    const content = [
+      'RECEITA MÉDICA - LOMBALGIA AGUDA',
+      '',
+      'USO ORAL',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'ALÉM DAS MEDICAÇÕES, ORIENTE MEDIDAS NÃO FARMACOLÓGICAS.',
+      '- Compressa com água morna de 8/8 horas na região acometida.',
+      '- Repouso por períodos curtos; retomar atividades e exercícios assim que possível.',
+      '- Retornar se não houver melhora, dor intensa, perda de força/sensibilidade, retenção urinária/incontinência fecal, desmaios ou febre alta.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Prescrição lombalgia',
+      content
+    }
+  }, [])
+
+  const getPersistedLombalgiaPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Lombalgia')
+  }, [patient])
+
+  const handleOpenLombalgiaPrescription = useCallback(() => {
+    if (!isLombalgiaConservativeFinalStep) return
+
+    const draftItems = buildLombalgiaPrescriptionItems()
+    const persisted = getPersistedLombalgiaPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setLombalgiaPrescriptionGenerated(true)
+    setLombalgiaPrescriptionPreview(buildLombalgiaPrescriptionPreview())
+    setLombalgiaPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildLombalgiaPrescriptionPreview,
+    currentStep,
+    getPersistedLombalgiaPrescriptions,
+    history,
+    isLombalgiaConservativeFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyLombalgiaPrescriptionText = useCallback(async () => {
+    if (!lombalgiaPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(lombalgiaPrescriptionPreview.content.join('\n'))
+      setLombalgiaPrescriptionCopied(true)
+      setTimeout(() => setLombalgiaPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da lombalgia:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [lombalgiaPrescriptionPreview])
+
   const stepMentionsFlegmasia = (
     currentStepData?.title?.toLowerCase().includes('flegmasia') ||
     currentStepData?.description?.toLowerCase().includes('flegmasia') ||
@@ -1687,7 +2385,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (currentStepData.id === 'ph_normal_checar' && pco2 !== null && hco3 !== null) {
       const normalAcidBase = pco2 >= 35 && pco2 <= 45 && hco3 >= 22 && hco3 <= 26
       const po2 = labs.po2 ?? null
-      
+
       if (normalAcidBase) {
         if (po2 !== null) {
            if (po2 < 40) return [pick('equilibrio_acido_base_com_hipoxemia_grave')].filter(Boolean) as EmergencyOption[]
@@ -1696,7 +2394,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         }
         return [pick('gasometria_normal')].filter(Boolean) as EmergencyOption[]
       }
-      
+
       return [pick('disturbio_misto_ph_normal')].filter(Boolean) as EmergencyOption[]
     }
     if (currentStepData.id === 'acidose_respiratoria_classificar' && pco2 !== null && hco3 !== null) {
@@ -2236,6 +2934,175 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setAnaphylaxisPrescriptionGenerated(false)
     }
   }, [isAnaphylaxisDischargeStep])
+
+  useEffect(() => {
+    if (!isPancreatitisBisapStep) {
+      setPancreatitisBisapValues(defaultPancreatitisBisapValues(patient))
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criteriosSelecionados) {
+        setPancreatitisBisapValues({ ...defaultPancreatitisBisapValues(patient), ...parsed.criteriosSelecionados })
+      }
+    } catch {
+      setPancreatitisBisapValues(defaultPancreatitisBisapValues(patient))
+    }
+  }, [answers, currentStep, isPancreatitisBisapStep, patient])
+
+  useEffect(() => {
+    if (!isPancreatitisMarshallStep) {
+      setPancreatitisMarshallValues(defaultPancreatitisMarshallValues())
+      setPancreatitisIcuCriteria([])
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.valores) {
+        setPancreatitisMarshallValues({ ...defaultPancreatitisMarshallValues(), ...parsed.valores })
+      }
+      if (Array.isArray(parsed?.criteriosUTISelecionados)) {
+        setPancreatitisIcuCriteria(parsed.criteriosUTISelecionados)
+      }
+    } catch {
+      setPancreatitisMarshallValues(defaultPancreatitisMarshallValues())
+      setPancreatitisIcuCriteria([])
+    }
+  }, [answers, currentStep, isPancreatitisMarshallStep])
+
+  useEffect(() => {
+    if (!isPancreatitisTreatmentFinalStep) {
+      setPancreatitisIncludeAntibiotic(false)
+      setPancreatitisPrescriptionPreview(null)
+      setPancreatitisPrescriptionCopied(false)
+      setPancreatitisPrescriptionGenerated(false)
+    }
+  }, [isPancreatitisTreatmentFinalStep])
+
+  useEffect(() => {
+    if (!isCholangitisDiagnosisStep) {
+      setCholangitisDiagnosisValues(defaultCholangitisDiagnosisValues())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criteriosSelecionados) {
+        setCholangitisDiagnosisValues({ ...defaultCholangitisDiagnosisValues(), ...parsed.criteriosSelecionados })
+      }
+    } catch {
+      setCholangitisDiagnosisValues(defaultCholangitisDiagnosisValues())
+    }
+  }, [answers, currentStep, isCholangitisDiagnosisStep])
+
+  useEffect(() => {
+    if (!isCholangitisSeverityStep) {
+      setCholangitisSeverityValues(defaultCholangitisSeverityValues(patient))
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criteriosSelecionados) {
+        setCholangitisSeverityValues({ ...defaultCholangitisSeverityValues(patient), ...parsed.criteriosSelecionados })
+      }
+    } catch {
+      setCholangitisSeverityValues(defaultCholangitisSeverityValues(patient))
+    }
+  }, [answers, currentStep, isCholangitisSeverityStep, patient])
+
+  useEffect(() => {
+    if (!isCholangitisTreatmentFinalStep) {
+      setCholangitisAntibioticScheme('cefepime_metronidazole')
+      setCholangitisPrescriptionPreview(null)
+      setCholangitisPrescriptionCopied(false)
+      setCholangitisPrescriptionGenerated(false)
+    }
+  }, [isCholangitisTreatmentFinalStep])
+
+  useEffect(() => {
+    if (!isCholecystitisSeverityStep) {
+      setCholecystitisSeverityValues(defaultCholecystitisSeverityValues())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criteriosSelecionados) {
+        setCholecystitisSeverityValues({ ...defaultCholecystitisSeverityValues(), ...parsed.criteriosSelecionados })
+      }
+    } catch {
+      setCholecystitisSeverityValues(defaultCholecystitisSeverityValues())
+    }
+  }, [answers, currentStep, isCholecystitisSeverityStep])
+
+  useEffect(() => {
+    if (!isCholecystitisTreatmentFinalStep) {
+      setCholecystitisAntibioticScheme('ceftriaxone_metronidazole')
+      setCholecystitisPrescriptionPreview(null)
+      setCholecystitisPrescriptionCopied(false)
+      setCholecystitisPrescriptionGenerated(false)
+    }
+  }, [isCholecystitisTreatmentFinalStep])
+
+  useEffect(() => {
+    if (!isAppendicitisAlvaradoStep) {
+      setAppendicitisAlvaradoValues(defaultAppendicitisAlvaradoValues())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criteriosSelecionados) {
+        setAppendicitisAlvaradoValues({ ...defaultAppendicitisAlvaradoValues(), ...parsed.criteriosSelecionados })
+      }
+    } catch {
+      setAppendicitisAlvaradoValues(defaultAppendicitisAlvaradoValues())
+    }
+  }, [answers, currentStep, isAppendicitisAlvaradoStep])
+
+  useEffect(() => {
+    if (!isAppendicitisTreatmentFinalStep) {
+      setAppendicitisAntibioticScheme('ceftriaxone_metronidazole')
+      setAppendicitisIncludeAntibiotics(true)
+      setAppendicitisPrescriptionPreview(null)
+      setAppendicitisPrescriptionCopied(false)
+      setAppendicitisPrescriptionGenerated(false)
+    }
+  }, [isAppendicitisTreatmentFinalStep])
+
+  useEffect(() => {
+    if (!isLombalgiaRiskStep) {
+      setLombalgiaRiskValues(defaultLombalgiaRiskValues())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.criteriosSelecionados) {
+        setLombalgiaRiskValues({ ...defaultLombalgiaRiskValues(), ...parsed.criteriosSelecionados })
+      }
+    } catch {
+      setLombalgiaRiskValues(defaultLombalgiaRiskValues())
+    }
+  }, [answers, currentStep, isLombalgiaRiskStep])
+
+  useEffect(() => {
+    if (!isLombalgiaConservativeFinalStep) {
+      setLombalgiaPrescriptionPreview(null)
+      setLombalgiaPrescriptionCopied(false)
+      setLombalgiaPrescriptionGenerated(false)
+    }
+  }, [isLombalgiaConservativeFinalStep])
 
   useEffect(() => {
     if (isTVPClinicalEvaluation) {
@@ -2820,7 +3687,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       })}
                     </div>
                   </div>
-                  
+
                   <div className="flex justify-end border-t border-slate-100 pt-4">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -2877,13 +3744,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       })}
                     </div>
                   </div>
-                  
+
                   {(() => {
                     const count = dpocAnthonisen.length
                     const type = count === 3 ? 'Tipo I (Grave)' : count === 2 ? 'Tipo II (Moderado)' : count === 1 ? 'Tipo III (Leve)' : 'Nenhum'
                     const hasPurulence = dpocAnthonisen.includes('Escarro purulento')
                     const requiresAtb = count === 3 || (count === 2 && hasPurulence)
-                    
+
                     return (
                       <div className="space-y-4">
                         <div className={clsx(
@@ -2893,7 +3760,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           <strong>Classificação:</strong> {type}.<br/>
                           {requiresAtb ? 'Indicação clara de Antibioticoterapia.' : 'Sem indicação formal de Antibiótico pelos critérios.'}
                         </div>
-                        
+
                         <div className="flex justify-end border-t border-slate-100 pt-4">
                           <motion.button
                             whileHover={{ scale: 1.02 }}
@@ -3225,6 +4092,654 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       className="rounded-xl bg-orange-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-orange-700"
                     >
                       Reavaliar em 5-10 minutos
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPancreatitisBisapStep && (
+                <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-orange-900">BISAP</h4>
+                      <p className="text-sm text-orange-900">Identificação precoce de paciente sob risco de pancreatite grave nas primeiras 24h.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      pancreatitisBisapResult.highRisk ? 'border-red-200 bg-red-50 text-red-800' : 'border-amber-200 bg-white text-amber-800'
+                    )}>
+                      BISAP {pancreatitisBisapResult.score}
+                      <div className="text-xs font-semibold">{pancreatitisBisapResult.label}</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {pancreatitisBisapItems.map((item) => {
+                      const checked = pancreatitisBisapValues[item.key]
+                      return (
+                        <label key={item.key} className={clsx(
+                          'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                          checked ? 'border-orange-300 bg-white text-orange-950 shadow-sm' : 'border-orange-100 bg-white/70 text-slate-700 hover:bg-white'
+                        )}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => setPancreatitisBisapValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                            className="mt-1 h-4 w-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                          />
+                          <span>{item.label}</span>
+                          <span className="ml-auto rounded-md bg-orange-100 px-2 py-0.5 text-xs font-bold text-orange-800">+1</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    pancreatitisBisapResult.highRisk ? 'border-red-200 bg-red-50 text-red-900' : 'border-amber-200 bg-white text-amber-900'
+                  )}>
+                    {pancreatitisBisapResult.note}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer('pan_marshall_atlanta', 'bisap_aplicado')}
+                      className="rounded-xl bg-orange-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-orange-700"
+                    >
+                      Seguir para Marshall / Atlanta
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPancreatitisMarshallStep && (
+                <div className="mb-6 rounded-2xl border border-red-200 bg-red-50/50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-red-900">Marshall Modificado / Atlanta 2012</h4>
+                      <p className="text-sm text-red-900">Marshall &gt;= 2 define falência orgânica. A duração da disfunção define moderada vs grave.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      pancreatitisMarshallResult.severity === 'grave' ? 'border-red-300 bg-red-100 text-red-900' :
+                        pancreatitisMarshallResult.severity === 'moderada' ? 'border-orange-200 bg-orange-50 text-orange-900' :
+                          'border-yellow-200 bg-white text-yellow-900'
+                    )}>
+                      {pancreatitisMarshallResult.title}
+                      <div className="text-xs font-semibold">Marshall máximo: {pancreatitisMarshallResult.maxScore}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    {pancreatitisMarshallSystems.map((system) => (
+                      <div key={system.key} className="rounded-xl border border-slate-200 bg-white p-4">
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-slate-800">{system.title}</h5>
+                        <div className="space-y-2">
+                          {system.options.map((label, score) => (
+                            <label key={label} className={clsx(
+                              'flex cursor-pointer items-center gap-2 rounded-lg border p-2 text-sm',
+                              pancreatitisMarshallValues[system.key] === score ? 'border-red-200 bg-red-50 text-red-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="radio"
+                                name={`marshall-${system.key}`}
+                                checked={pancreatitisMarshallValues[system.key] === score}
+                                onChange={() => setPancreatitisMarshallValues(prev => ({ ...prev, [system.key]: score }))}
+                                className="h-4 w-4 border-red-300 text-red-600 focus:ring-red-500"
+                              />
+                              <span>{label}</span>
+                              <span className="ml-auto rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">{score}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-orange-200 bg-white p-3 text-sm text-orange-950">
+                      <input
+                        type="checkbox"
+                        checked={pancreatitisMarshallValues.transientOrganFailure}
+                        onChange={(e) => setPancreatitisMarshallValues(prev => ({ ...prev, transientOrganFailure: e.target.checked }))}
+                        className="mt-1 h-4 w-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                      />
+                      <span>Disfunção orgânica transitória (até 48h) presente</span>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-red-200 bg-white p-3 text-sm text-red-950">
+                      <input
+                        type="checkbox"
+                        checked={pancreatitisMarshallValues.persistentOrganFailure}
+                        onChange={(e) => setPancreatitisMarshallValues(prev => ({ ...prev, persistentOrganFailure: e.target.checked }))}
+                        className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                      />
+                      <span>Disfunção orgânica sustentada por mais de 48h</span>
+                    </label>
+                    <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-amber-200 bg-white p-3 text-sm text-amber-950 md:col-span-2">
+                      <input
+                        type="checkbox"
+                        checked={pancreatitisMarshallValues.localOrSystemicComplication}
+                        onChange={(e) => setPancreatitisMarshallValues(prev => ({ ...prev, localOrSystemicComplication: e.target.checked }))}
+                        className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                      />
+                      <span>Complicações locais ou sistêmicas presentes</span>
+                    </label>
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-red-200 bg-white p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <h5 className="text-xs font-bold uppercase tracking-wide text-red-900">Critérios para UTI</h5>
+                      <span className="rounded-lg border border-red-200 bg-red-50 px-2 py-1 text-xs font-semibold text-red-800">
+                        {pancreatitisIcuCriteria.length} marcado(s)
+                      </span>
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {PANCREATITIS_ICU_CRITERIA.map((item) => {
+                        const checked = pancreatitisIcuCriteria.includes(item)
+                        return (
+                          <label key={item} className={clsx(
+                            'flex cursor-pointer items-start gap-2 rounded-lg border p-2 text-sm',
+                            checked ? 'border-red-200 bg-red-50 text-red-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                          )}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleSelection(setPancreatitisIcuCriteria, item)}
+                              className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                            />
+                            <span>{item}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        const target = pancreatitisIcuCriteria.length > 0 ? 'pan_uti' : pancreatitisMarshallResult.nextStep
+                        const value = pancreatitisIcuCriteria.length > 0 ? 'uti' : pancreatitisMarshallResult.value
+                        handleAnswer(target, value)
+                      }}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        pancreatitisIcuCriteria.length > 0 || pancreatitisMarshallResult.severity === 'grave'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : pancreatitisMarshallResult.severity === 'moderada'
+                            ? 'bg-orange-600 hover:bg-orange-700'
+                            : 'bg-yellow-600 hover:bg-yellow-700'
+                      )}
+                    >
+                      Aplicar classificação
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isCholangitisDiagnosisStep && (
+                <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-emerald-900">Tokyo 2018 - Diagnóstico</h4>
+                      <p className="text-sm text-emerald-900">Caso suspeito = A + B ou C. Caso confirmado = A + B + C.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      cholangitisDiagnosisResult.status === 'confirmado' ? 'border-emerald-300 bg-emerald-100 text-emerald-900' :
+                        cholangitisDiagnosisResult.status === 'suspeito' ? 'border-amber-200 bg-white text-amber-900' :
+                          'border-slate-200 bg-white text-slate-700'
+                    )}>
+                      {cholangitisDiagnosisResult.label}
+                      <div className="text-xs font-semibold">
+                        A {cholangitisDiagnosisResult.hasA ? 'sim' : 'não'} / B {cholangitisDiagnosisResult.hasB ? 'sim' : 'não'} / C {cholangitisDiagnosisResult.hasC ? 'sim' : 'não'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    {(['A', 'B', 'C'] as const).map((group) => (
+                      <div key={group} className="rounded-xl border border-emerald-100 bg-white p-4">
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-emerald-900">
+                          {group === 'A' ? 'A - Inflamação sistêmica' : group === 'B' ? 'B - Colestase' : 'C - Imagem'}
+                        </h5>
+                        <div className="space-y-2">
+                          {CHOLANGITIS_DIAGNOSIS_ITEMS.filter(item => item.group === group).map((item) => {
+                            const checked = cholangitisDiagnosisValues[item.key]
+                            return (
+                              <label key={item.key} className={clsx(
+                                'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                                checked ? 'border-emerald-300 bg-emerald-50 text-emerald-950 shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                              )}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => setCholangitisDiagnosisValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                  className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                                />
+                                <span>{item.label}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    cholangitisDiagnosisResult.status === 'insuficiente' ? 'border-slate-200 bg-white text-slate-800' : 'border-emerald-200 bg-white text-emerald-900'
+                  )}>
+                    {cholangitisDiagnosisResult.note}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        if (cholangitisDiagnosisResult.status === 'insuficiente') {
+                          handleAnswer('colangite_sem_criterios', 'criterios_insuficientes')
+                          return
+                        }
+                        handleAnswer('colangite_tokyo_gravidade', cholangitisDiagnosisResult.status)
+                      }}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        cholangitisDiagnosisResult.status === 'insuficiente'
+                          ? 'bg-slate-600 hover:bg-slate-700'
+                          : 'bg-emerald-600 hover:bg-emerald-700'
+                      )}
+                    >
+                      {cholangitisDiagnosisResult.status === 'insuficiente' ? 'Encerrar e reavaliar' : 'Classificar gravidade'}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isCholangitisSeverityStep && (
+                <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-amber-900">Tokyo 2018 - Gravidade</h4>
+                      <p className="text-sm text-amber-900">Marque critérios moderados e sinais de disfunção orgânica.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      cholangitisSeverityResult.severity === 'grave' ? 'border-red-300 bg-red-100 text-red-900' :
+                        cholangitisSeverityResult.severity === 'moderada' ? 'border-amber-300 bg-white text-amber-900' :
+                          'border-emerald-200 bg-white text-emerald-900'
+                    )}>
+                      {cholangitisSeverityResult.title}
+                      <div className="text-xs font-semibold">{cholangitisSeverityResult.tokyo}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-amber-200 bg-white p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-amber-900">Critérios para Tokyo II</h5>
+                      <div className="space-y-2">
+                        {CHOLANGITIS_MODERATE_CRITERIA.map((item) => {
+                          const checked = cholangitisSeverityValues[item.key]
+                          return (
+                            <label key={item.key} className={clsx(
+                              'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                              checked ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => setCholangitisSeverityValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-red-200 bg-white p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-red-900">Critérios para Tokyo III</h5>
+                      <div className="space-y-2">
+                        {CHOLANGITIS_SEVERE_CRITERIA.map((item) => {
+                          const checked = cholangitisSeverityValues[item.key]
+                          return (
+                            <label key={item.key} className={clsx(
+                              'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                              checked ? 'border-red-300 bg-red-50 text-red-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => setCholangitisSeverityValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    cholangitisSeverityResult.severity === 'grave' ? 'border-red-200 bg-red-50 text-red-900' :
+                      cholangitisSeverityResult.severity === 'moderada' ? 'border-amber-200 bg-white text-amber-900' :
+                        'border-emerald-200 bg-white text-emerald-900'
+                  )}>
+                    {cholangitisSeverityResult.note}
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <h5 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-800">Opções de antibiótico por gravidade</h5>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                      {getCholangitisAntibioticOptions(cholangitisSeverityResult.severity).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(cholangitisSeverityResult.nextStep, cholangitisSeverityResult.value)}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        cholangitisSeverityResult.severity === 'grave'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : cholangitisSeverityResult.severity === 'moderada'
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                      )}
+                    >
+                      Aplicar classificação
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isCholecystitisSeverityStep && (
+                <div className="mb-6 rounded-2xl border border-lime-200 bg-lime-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-lime-900">Tokyo 2018 - Gravidade</h4>
+                      <p className="text-sm text-lime-900">Marque critérios moderados e sinais de disfunção orgânica.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      cholecystitisSeverityResult.severity === 'grave' ? 'border-red-300 bg-red-100 text-red-900' :
+                        cholecystitisSeverityResult.severity === 'moderada' ? 'border-amber-300 bg-white text-amber-900' :
+                          'border-lime-200 bg-white text-lime-900'
+                    )}>
+                      {cholecystitisSeverityResult.title}
+                      <div className="text-xs font-semibold">{cholecystitisSeverityResult.tokyo}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <div className="rounded-xl border border-amber-200 bg-white p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-amber-900">Critérios para Tokyo II</h5>
+                      <div className="space-y-2">
+                        {CHOLECYSTITIS_MODERATE_CRITERIA.map((item) => {
+                          const checked = cholecystitisSeverityValues[item.key]
+                          return (
+                            <label key={item.key} className={clsx(
+                              'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                              checked ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => setCholecystitisSeverityValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                className="mt-1 h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-red-200 bg-white p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-red-900">Critérios para Tokyo III</h5>
+                      <div className="space-y-2">
+                        {CHOLECYSTITIS_SEVERE_CRITERIA.map((item) => {
+                          const checked = cholecystitisSeverityValues[item.key]
+                          return (
+                            <label key={item.key} className={clsx(
+                              'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                              checked ? 'border-red-300 bg-red-50 text-red-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={(e) => setCholecystitisSeverityValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                              />
+                              <span>{item.label}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    cholecystitisSeverityResult.severity === 'grave' ? 'border-red-200 bg-red-50 text-red-900' :
+                      cholecystitisSeverityResult.severity === 'moderada' ? 'border-amber-200 bg-white text-amber-900' :
+                        'border-lime-200 bg-white text-lime-900'
+                  )}>
+                    {cholecystitisSeverityResult.note}
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <h5 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-800">Opções de antibiótico por gravidade</h5>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                      {getCholecystitisAntibioticOptions(cholecystitisSeverityResult.severity).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(cholecystitisSeverityResult.nextStep, cholecystitisSeverityResult.value)}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        cholecystitisSeverityResult.severity === 'grave'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : cholecystitisSeverityResult.severity === 'moderada'
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-lime-600 hover:bg-lime-700'
+                      )}
+                    >
+                      Aplicar classificação
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isAppendicitisAlvaradoStep && (
+                <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/60 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-rose-900">Escore de Alvarado</h4>
+                      <p className="text-sm text-rose-900">Baixo risco 0-3, risco moderado 4-6, alto risco 7-10 pontos.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      appendicitisAlvaradoResult.risk === 'alto' ? 'border-red-300 bg-red-100 text-red-900' :
+                        appendicitisAlvaradoResult.risk === 'moderado' ? 'border-amber-300 bg-white text-amber-900' :
+                          'border-emerald-200 bg-white text-emerald-900'
+                    )}>
+                      Alvarado {appendicitisAlvaradoResult.score}
+                      <div className="text-xs font-semibold">{appendicitisAlvaradoResult.title}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    {(['Sintomas', 'Sinais', 'Laboratório'] as const).map((group) => (
+                      <div key={group} className="rounded-xl border border-rose-100 bg-white p-4">
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-rose-900">{group}</h5>
+                        <div className="space-y-2">
+                          {APPENDICITIS_ALVARADO_ITEMS.filter(item => item.group === group).map((item) => {
+                            const checked = appendicitisAlvaradoValues[item.key]
+                            return (
+                              <label key={item.key} className={clsx(
+                                'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                                checked ? 'border-rose-300 bg-rose-50 text-rose-950 shadow-sm' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                              )}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => setAppendicitisAlvaradoValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                  className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                                />
+                                <span>{item.label}</span>
+                                <span className="ml-auto rounded-md bg-white px-2 py-0.5 text-xs font-bold text-rose-800">+{item.points}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    appendicitisAlvaradoResult.risk === 'alto' ? 'border-red-200 bg-red-50 text-red-900' :
+                      appendicitisAlvaradoResult.risk === 'moderado' ? 'border-amber-200 bg-white text-amber-900' :
+                        'border-emerald-200 bg-white text-emerald-900'
+                  )}>
+                    {appendicitisAlvaradoResult.note}
+                  </div>
+
+                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <h5 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-800">Imagem e observações</h5>
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
+                      <li>Preferir TC de abdome e pelve com contraste quando disponível, especialmente para detectar apendicite complicada e diagnósticos diferenciais.</li>
+                      <li>USG de abdome é opção em gestantes e crianças; USG normal não exclui o diagnóstico se suspeita clínica persistir.</li>
+                      <li>Em mulheres em idade reprodutiva, beta-hCG é obrigatório para diferencial e escolha de imagem.</li>
+                    </ul>
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(appendicitisAlvaradoResult.nextStep, appendicitisAlvaradoResult.value)}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        appendicitisAlvaradoResult.risk === 'alto'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : appendicitisAlvaradoResult.risk === 'moderado'
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-emerald-600 hover:bg-emerald-700'
+                      )}
+                    >
+                      Aplicar escore
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isLombalgiaRiskStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-900">Sinais de Alarme na Lombalgia</h4>
+                      <p className="text-sm text-slate-700">Marque os achados presentes para definir imagem, internação ou tratamento conservador.</p>
+                    </div>
+                    <div className={clsx(
+                      'rounded-xl border px-4 py-3 text-sm font-bold',
+                      lombalgiaDispositionResult.category === 'cauda' ? 'border-red-300 bg-red-100 text-red-900' :
+                        lombalgiaDispositionResult.category === 'fratura' ? 'border-yellow-300 bg-yellow-50 text-yellow-900' :
+                          lombalgiaDispositionResult.category === 'conservador' ? 'border-emerald-200 bg-white text-emerald-900' :
+                            'border-amber-200 bg-white text-amber-900'
+                    )}>
+                      {lombalgiaDispositionResult.title}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {[
+                      { key: 'cauda' as const, title: 'Síndrome da cauda equina', tone: 'red' },
+                      { key: 'neoplasia' as const, title: 'Câncer / neoplasia', tone: 'amber' },
+                      { key: 'infeccao' as const, title: 'Infecção espinhal', tone: 'orange' },
+                      { key: 'fratura' as const, title: 'Fratura vertebral', tone: 'yellow' }
+                    ].map((group) => (
+                      <div key={group.key} className={clsx(
+                        'rounded-xl border bg-white p-4',
+                        group.tone === 'red' ? 'border-red-200' :
+                          group.tone === 'amber' ? 'border-amber-200' :
+                            group.tone === 'orange' ? 'border-orange-200' : 'border-yellow-200'
+                      )}>
+                        <h5 className={clsx(
+                          'mb-3 text-xs font-bold uppercase tracking-wide',
+                          group.tone === 'red' ? 'text-red-900' :
+                            group.tone === 'amber' ? 'text-amber-900' :
+                              group.tone === 'orange' ? 'text-orange-900' : 'text-yellow-900'
+                        )}>
+                          {group.title}
+                        </h5>
+                        <div className="space-y-2">
+                          {LOMBALGIA_RISK_ITEMS.filter(item => item.group === group.key).map((item) => {
+                            const checked = lombalgiaRiskValues[item.key]
+                            return (
+                              <label key={item.key} className={clsx(
+                                'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                                checked ? (
+                                  group.tone === 'red' ? 'border-red-300 bg-red-50 text-red-950' :
+                                    group.tone === 'amber' ? 'border-amber-300 bg-amber-50 text-amber-950' :
+                                      group.tone === 'orange' ? 'border-orange-300 bg-orange-50 text-orange-950' :
+                                        'border-yellow-300 bg-yellow-50 text-yellow-950'
+                                ) : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                              )}>
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => setLombalgiaRiskValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                                  className="mt-1 h-4 w-4 rounded border-slate-300 text-slate-700 focus:ring-slate-500"
+                                />
+                                <span>{item.label}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm',
+                    lombalgiaDispositionResult.category === 'cauda' ? 'border-red-200 bg-red-50 text-red-900' :
+                      lombalgiaDispositionResult.category === 'conservador' ? 'border-emerald-200 bg-white text-emerald-900' :
+                        'border-amber-200 bg-white text-amber-900'
+                  )}>
+                    {lombalgiaDispositionResult.note}
+                  </div>
+
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(lombalgiaDispositionResult.nextStep, lombalgiaDispositionResult.value)}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        lombalgiaDispositionResult.category === 'cauda'
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : lombalgiaDispositionResult.category === 'conservador'
+                            ? 'bg-emerald-600 hover:bg-emerald-700'
+                            : 'bg-amber-600 hover:bg-amber-700'
+                      )}
+                    >
+                      Aplicar conduta
                     </motion.button>
                   </div>
                 </div>
@@ -4547,6 +6062,261 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {pancreatitisPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-orange-700 to-red-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{pancreatitisPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-orange-50">
+                          Conduta hospitalar inicial conforme tabela de suporte.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyPancreatitisPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            pancreatitisPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {pancreatitisPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {pancreatitisPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPancreatitisPrescriptionPreview(null)
+                            setPancreatitisPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {pancreatitisPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {cholangitisPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-700 to-teal-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{cholangitisPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-emerald-50">
+                          Antibiótico precoce, suporte e avaliação para drenagem biliar.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyCholangitisPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            cholangitisPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {cholangitisPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {cholangitisPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCholangitisPrescriptionPreview(null)
+                            setCholangitisPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {cholangitisPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {cholecystitisPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-lime-700 to-emerald-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{cholecystitisPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-lime-50">
+                          Dieta zero, hidratação, analgesia, antibiótico e avaliação cirúrgica.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyCholecystitisPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            cholecystitisPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {cholecystitisPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {cholecystitisPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCholecystitisPrescriptionPreview(null)
+                            setCholecystitisPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {cholecystitisPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {appendicitisPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-rose-700 to-red-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{appendicitisPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-rose-50">
+                          Dieta zero, hidratação, analgesia, antibiótico e avaliação cirúrgica.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyAppendicitisPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            appendicitisPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {appendicitisPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {appendicitisPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAppendicitisPrescriptionPreview(null)
+                            setAppendicitisPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {appendicitisPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {lombalgiaPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-slate-700 to-zinc-800 text-white">
+                      <div>
+                        <h4 className="font-bold">{lombalgiaPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-slate-100">
+                          Analgesia, medidas não farmacológicas e sinais de retorno.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyLombalgiaPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            lombalgiaPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {lombalgiaPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {lombalgiaPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLombalgiaPrescriptionPreview(null)
+                            setLombalgiaPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {lombalgiaPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {tvpPrescriptionPreview && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
@@ -5015,7 +6785,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       : isTVPClinicalEvaluation && tvpAlertInterruptionOption
                         ? [tvpAlertInterruptionOption]
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisAdjunctStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
@@ -5194,6 +6964,259 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     >
                       {anaphylaxisPrescriptionGenerated || hasAnaphylaxisDischargePrescriptionSet(getPersistedAnaphylaxisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isPancreatitisTreatmentFinalStep && (
+                <div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wide text-orange-900">
+                          Prescrição hospitalar da pancreatite
+                        </h4>
+                        <p className="mt-1 text-sm text-orange-900">
+                          Suporte inicial: dieta, hidratação por metas, analgesia e antiemético. Antibiótico somente se infecção sobreposta.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenPancreatitisPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          pancreatitisPrescriptionGenerated || hasPancreatitisPrescriptionSet(getPersistedPancreatitisPrescriptions())
+                            ? 'border border-orange-300 bg-white text-orange-800 hover:bg-orange-100'
+                            : 'bg-orange-600 text-white hover:bg-orange-700'
+                        )}
+                      >
+                        {pancreatitisPrescriptionGenerated || hasPancreatitisPrescriptionSet(getPersistedPancreatitisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                      </button>
+                    </div>
+                    <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-red-200 bg-white p-3 text-sm text-red-950">
+                      <input
+                        type="checkbox"
+                        checked={pancreatitisIncludeAntibiotic}
+                        onChange={(e) => setPancreatitisIncludeAntibiotic(e.target.checked)}
+                        className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                      />
+                      <span>Incluir antibiótico por evidência de infecção sobreposta/necrose infectada</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {isCholangitisTreatmentFinalStep && (
+                <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wide text-emerald-900">
+                          Prescrição hospitalar da colangite/coledocolitíase
+                        </h4>
+                        <p className="mt-1 text-sm text-emerald-900">
+                          Dieta zero, hidratação, antibiótico precoce, analgesia e avaliação para drenagem/CPRE.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenCholangitisPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          cholangitisPrescriptionGenerated || hasCholangitisPrescriptionSet(getPersistedCholangitisPrescriptions())
+                            ? 'border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        )}
+                      >
+                        {cholangitisPrescriptionGenerated || hasCholangitisPrescriptionSet(getPersistedCholangitisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                      </button>
+                    </div>
+
+                    {currentStepData?.id === 'colangite_moderada' && (
+                      <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-emerald-900">Esquema antibiótico sugerido</h5>
+                        <div className="grid gap-2 md:grid-cols-2">
+                          {[
+                            { value: 'cefepime_metronidazole' as const, label: 'Cefepime + Metronidazol' },
+                            { value: 'piperacillin_tazobactam' as const, label: 'Piperacilina + Tazobactam' }
+                          ].map((option) => (
+                            <label key={option.value} className={clsx(
+                              'flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm',
+                              cholangitisAntibioticScheme === option.value ? 'border-emerald-300 bg-emerald-50 text-emerald-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="radio"
+                                name="cholangitis-antibiotic"
+                                checked={cholangitisAntibioticScheme === option.value}
+                                onChange={() => setCholangitisAntibioticScheme(option.value)}
+                                className="h-4 w-4 border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isCholecystitisTreatmentFinalStep && (
+                <div className="mt-6 rounded-2xl border border-lime-200 bg-lime-50 p-5">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wide text-lime-900">
+                          Prescrição hospitalar da colecistite
+                        </h4>
+                        <p className="mt-1 text-sm text-lime-900">
+                          Dieta zero, hidratação EV, analgesia, antibiótico e avaliação da cirurgia geral.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenCholecystitisPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          cholecystitisPrescriptionGenerated || hasCholecystitisPrescriptionSet(getPersistedCholecystitisPrescriptions())
+                            ? 'border border-lime-300 bg-white text-lime-800 hover:bg-lime-100'
+                            : 'bg-lime-600 text-white hover:bg-lime-700'
+                        )}
+                      >
+                        {cholecystitisPrescriptionGenerated || hasCholecystitisPrescriptionSet(getPersistedCholecystitisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                      </button>
+                    </div>
+
+                    {currentStepData?.id !== 'cole_leve' && (
+                      <div className="rounded-xl border border-lime-200 bg-white p-4">
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-lime-900">Esquema antibiótico sugerido</h5>
+                        <div className="grid gap-2 md:grid-cols-2">
+                          {[
+                            { value: 'ceftriaxone_metronidazole' as const, label: 'Ceftriaxona + Metronidazol' },
+                            { value: 'piperacillin_tazobactam' as const, label: 'Piperacilina + Tazobactam' },
+                            { value: 'cefepime_metronidazole' as const, label: 'Cefepime + Metronidazol' }
+                          ].map((option) => (
+                            <label key={option.value} className={clsx(
+                              'flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm',
+                              cholecystitisAntibioticScheme === option.value ? 'border-lime-300 bg-lime-50 text-lime-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
+                            )}>
+                              <input
+                                type="radio"
+                                name="cholecystitis-antibiotic"
+                                checked={cholecystitisAntibioticScheme === option.value}
+                                onChange={() => setCholecystitisAntibioticScheme(option.value)}
+                                className="h-4 w-4 border-lime-300 text-lime-600 focus:ring-lime-500"
+                              />
+                              <span>{option.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isAppendicitisTreatmentFinalStep && (
+                <div className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wide text-rose-900">
+                          Prescrição hospitalar da apendicite
+                        </h4>
+                        <p className="mt-1 text-sm text-rose-900">
+                          {currentStepData?.id === 'apend_baixo_risco'
+                            ? 'Baixo risco: sintomáticos, sinais de alarme e retorno.'
+                            : 'Dieta zero, hidratação EV, analgesia, antiemético e antibiótico quando houver suspeita/indicação cirúrgica.'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenAppendicitisPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          appendicitisPrescriptionGenerated || hasAppendicitisPrescriptionSet(getPersistedAppendicitisPrescriptions())
+                            ? 'border border-rose-300 bg-white text-rose-800 hover:bg-rose-100'
+                            : 'bg-rose-600 text-white hover:bg-rose-700'
+                        )}
+                      >
+                        {appendicitisPrescriptionGenerated || hasAppendicitisPrescriptionSet(getPersistedAppendicitisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                      </button>
+                    </div>
+
+                    {currentStepData?.id !== 'apend_baixo_risco' && (
+                    <div className="rounded-xl border border-rose-200 bg-white p-4">
+                      <div className="mb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                        <h5 className="text-xs font-bold uppercase tracking-wide text-rose-900">Esquema antibiótico sugerido</h5>
+                        <label className="flex cursor-pointer items-center gap-2 text-sm text-rose-900">
+                          <input
+                            type="checkbox"
+                            checked={appendicitisIncludeAntibiotics}
+                            onChange={(e) => setAppendicitisIncludeAntibiotics(e.target.checked)}
+                            className="h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                          />
+                          <span>Incluir antibiótico venoso</span>
+                        </label>
+                      </div>
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {[
+                          { value: 'ceftriaxone_metronidazole' as const, label: 'Ceftriaxona + Metronidazol' },
+                          { value: 'ciprofloxacin_metronidazole' as const, label: 'Ciprofloxacino + Metronidazol' },
+                          { value: 'ampicillin_sulbactam' as const, label: 'Amoxicilina + Sulbactam' },
+                          { value: 'piperacillin_tazobactam' as const, label: 'Piperacilina + Tazobactam' }
+                        ].map((option) => (
+                          <label key={option.value} className={clsx(
+                            'flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm',
+                            appendicitisAntibioticScheme === option.value ? 'border-rose-300 bg-rose-50 text-rose-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white',
+                            !appendicitisIncludeAntibiotics && 'opacity-50'
+                          )}>
+                            <input
+                              type="radio"
+                              name="appendicitis-antibiotic"
+                              checked={appendicitisAntibioticScheme === option.value}
+                              disabled={!appendicitisIncludeAntibiotics}
+                              onChange={() => setAppendicitisAntibioticScheme(option.value)}
+                              className="h-4 w-4 border-rose-300 text-rose-600 focus:ring-rose-500"
+                            />
+                            <span>{option.label}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                        {getAppendicitisAntibioticOptions().map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {isLombalgiaConservativeFinalStep && (
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-900">
+                        Prescrição para lombalgia sem red flags
+                      </h4>
+                      <p className="mt-1 text-sm text-slate-700">
+                        AINE como primeira linha, relaxante se contratura e opioide fraco apenas se dor intensa refratária.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenLombalgiaPrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        lombalgiaPrescriptionGenerated || hasLombalgiaPrescriptionSet(getPersistedLombalgiaPrescriptions())
+                          ? 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
+                          : 'bg-slate-800 text-white hover:bg-slate-900'
+                      )}
+                    >
+                      {lombalgiaPrescriptionGenerated || hasLombalgiaPrescriptionSet(getPersistedLombalgiaPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
                     </button>
                   </div>
                 </div>

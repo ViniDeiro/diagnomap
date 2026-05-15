@@ -32,6 +32,11 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const isPneumonia = livePatient.selectedFlowchart === 'pneumonia'
   const isSinusitis = livePatient.selectedFlowchart === 'sinusite'
   const isAnaphylaxis = livePatient.selectedFlowchart === 'anafilaxia'
+  const isPancreatitis = livePatient.selectedFlowchart === 'pancreatitis'
+  const isCholangitis = livePatient.selectedFlowchart === 'cholangitis'
+  const isCholecystitis = livePatient.selectedFlowchart === 'cholecystitis'
+  const isAppendicitis = livePatient.selectedFlowchart === 'appendicitis'
+  const isLombalgia = livePatient.selectedFlowchart === 'lombalgia'
   const flowName = getFlowchartById(livePatient.selectedFlowchart || '')?.name || (livePatient.selectedFlowchart ? livePatient.selectedFlowchart.toUpperCase() : 'DENGUE')
 
   const tvpPrescriptionTemplates: Record<string, Omit<Prescription, 'id' | 'prescribedAt' | 'prescribedBy'>> = {
@@ -227,7 +232,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
-    if (isInfluenza || isPneumonia || isSinusitis || isAnaphylaxis) {
+    if (isInfluenza || isPneumonia || isSinusitis || isAnaphylaxis || isPancreatitis || isCholangitis || isCholecystitis || isAppendicitis || isLombalgia) {
       const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
         const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
         return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
@@ -246,7 +251,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         `Data: ${new Date().toLocaleDateString('pt-BR')}`,
         '',
         `Diagnóstico: ${flowName}`,
-        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : isAnaphylaxis ? 'Anafilaxia em seguimento após estabilização/observação' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
+        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : isAnaphylaxis ? 'Anafilaxia em seguimento após estabilização/observação' : isPancreatitis ? 'Pancreatite aguda em manejo hospitalar conforme Atlanta 2012' : isCholangitis ? 'Colangite/coledocolitíase em manejo hospitalar conforme Tokyo 2018' : isCholecystitis ? 'Colecistite aguda em manejo hospitalar conforme Tokyo 2018' : isAppendicitis ? 'Apendicite aguda estratificada pelo escore de Alvarado' : isLombalgia ? 'Lombalgia aguda estratificada por sinais de alarme' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
         '',
         'Orientações:',
         '',
@@ -259,27 +264,57 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
             ? '• Realizar lavagem nasal e evitar uso prolongado de descongestionante nasal.'
             : isAnaphylaxis
               ? '• Evitar estritamente o fator causal suspeito ou conhecido até avaliação especializada.'
-              : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
+              : isPancreatitis
+                ? '• Manter manejo hospitalar com hidratação guiada por metas, analgesia e progressão alimentar conforme tolerância.'
+                : isCholangitis
+                  ? '• Manter dieta zero até definição do procedimento, hidratação venosa, analgesia e antibioticoterapia conforme gravidade.'
+                  : isCholecystitis
+                    ? '• Manter dieta zero, hidratação venosa, analgesia, antibiótico e avaliação da cirurgia geral.'
+                    : isAppendicitis
+                      ? '• Manter dieta zero até definição, hidratação venosa, analgesia, antiemético e avaliação da cirurgia geral quando indicado.'
+                      : isLombalgia
+                        ? '• Manter analgesia, compressa morna, repouso curto e retorno gradual às atividades conforme tolerância.'
+                : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
         '',
         '2. Retorno / reavaliação',
         '• Reavaliar em 48 a 72 horas, ou antes se houver piora do quadro.',
         '• Retornar imediatamente em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação, febre persistente ou agravamento geral.',
         '',
-        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : isAnaphylaxis ? '3. Observações sobre anafilaxia' : '3. Observações sobre pneumonia',
+        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : isAnaphylaxis ? '3. Observações sobre anafilaxia' : isPancreatitis ? '3. Observações sobre pancreatite aguda' : isCholangitis ? '3. Observações sobre colangite/coledocolitíase' : isCholecystitis ? '3. Observações sobre colecistite aguda' : isAppendicitis ? '3. Observações sobre apendicite aguda' : isLombalgia ? '3. Observações sobre lombalgia' : '3. Observações sobre pneumonia',
         isInfluenza
           ? '• Oseltamivir tem maior benefício quando iniciado precocemente, preferencialmente nas primeiras 48 horas.'
           : isSinusitis
             ? '• A maioria dos quadros é viral ou alérgica e não necessita antibiótico.'
             : isAnaphylaxis
               ? '• Observar possibilidade de recidiva dos sintomas em até 24 a 72 horas.'
-              : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
+              : isPancreatitis
+                ? '• Antibiótico não é profilático; usar apenas se houver evidência de infecção sobreposta ou necrose infectada.'
+                : isCholangitis
+                  ? '• Antibiótico deve ser precoce na suspeita de colangite e ajustado conforme culturas, função renal e protocolo local.'
+                  : isCholecystitis
+                    ? '• Antibiótico deve ser ajustado conforme gravidade, culturas, função renal e perfil institucional.'
+                    : isAppendicitis
+                      ? '• Antibiótico venoso é indicado quando houver suspeita cirúrgica, apendicite confirmada/complicada ou manejo conservador inicial.'
+                      : isLombalgia
+                        ? '• Não há necessidade de imagem inicial quando não há sinais de alarme; reavaliar se não houver melhora em 4 a 6 semanas.'
+                : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
         isInfluenza
           ? '• Ajustar dose em disfunção renal, quando aplicável.'
           : isSinusitis
             ? '• Procurar atendimento se houver visão dupla, redução visual, proptose, sinais meníngeos, alteração mental, sepse ou dor facial intensa refratária.'
             : isAnaphylaxis
               ? '• Retornar imediatamente se houver urticária difusa, angioedema, dispneia, sibilância, estridor, vômitos repetitivos, tontura ou síncope.'
-              : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
+              : isPancreatitis
+                ? '• Considerar TC com contraste após 72 horas se suspeita de complicação; considerar CPRE se colangite ou obstrução biliar.'
+                : isCholangitis
+                  ? '• Avaliar drenagem biliar por CPRE: urgente na grave, precoce na moderada e se falha clínica na leve.'
+                  : isCholecystitis
+                    ? '• Colecistectomia laparoscópica precoce é preferencial; se alto risco cirúrgico, considerar drenagem percutânea.'
+                    : isAppendicitis
+                      ? '• TC com contraste é preferencial quando disponível; USG é opção em gestantes e crianças, mas exame normal não exclui o diagnóstico.'
+                      : isLombalgia
+                        ? '• Retornar imediatamente se retenção/incontinência urinária, incontinência fecal, anestesia em sela, febre, perda de força ou perda de sensibilidade.'
+                : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
         '',
         prescriptionsText + 'Assinatura do Médico:',
         '__________________________________________________',
@@ -624,6 +659,101 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                         <li>• Dispneia, sibilância, estridor ou sensação de fechamento de garganta.</li>
                         <li>• Urticária difusa, angioedema, tontura, síncope ou hipotensão.</li>
                         <li>• Dor abdominal importante, vômitos repetitivos ou piora do estado geral.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isLombalgia ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <h3 className="font-bold text-slate-900 mb-2">Manejo conservador</h3>
+                      <ul className="space-y-1 text-slate-800">
+                        <li>• AINEs e analgésicos comuns são primeira linha.</li>
+                        <li>• Compressa morna, repouso por períodos curtos e retorno gradual às atividades.</li>
+                        <li>• Tratamento conservador por 4 a 6 semanas se não houver sinais de alarme.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="font-bold text-red-900 mb-2">Sinais de retorno imediato</h3>
+                      <ul className="space-y-1 text-red-900">
+                        <li>• Retenção/incontinência urinária, incontinência fecal ou anestesia em sela.</li>
+                        <li>• Febre persistente, imunossupressão, perda de peso ou histórico de neoplasia.</li>
+                        <li>• Perda de força/sensibilidade, trauma significativo ou suspeita de fratura.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isAppendicitis ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                      <h3 className="font-bold text-rose-900 mb-2">Manejo hospitalar</h3>
+                      <ul className="space-y-1 text-rose-900">
+                        <li>• Dieta zero até definição diagnóstica e avaliação da cirurgia geral.</li>
+                        <li>• Hidratação venosa, analgesia adequada, antiemético e antibioticoterapia quando indicada.</li>
+                        <li>• Beta-hCG em mulheres em idade reprodutiva e EAS para diferencial com ITU.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="font-bold text-red-900 mb-2">Risco e imagem</h3>
+                      <ul className="space-y-1 text-red-900">
+                        <li>• Alvarado 0-3: baixo risco, considerar diagnósticos alternativos e alta se estável.</li>
+                        <li>• Alvarado 4-6: solicitar TC ou USG; se apendicite, acionar cirurgia.</li>
+                        <li>• Alvarado 7-10: imagem para confirmar ou conduta cirúrgica direta conforme avaliação.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isCholecystitis ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-lime-200 bg-lime-50 p-4">
+                      <h3 className="font-bold text-lime-900 mb-2">Manejo hospitalar</h3>
+                      <ul className="space-y-1 text-lime-900">
+                        <li>• Dieta zero até definição do procedimento e avaliação cirúrgica.</li>
+                        <li>• Hidratação EV, analgesia adequada, antiemético e antibioticoterapia.</li>
+                        <li>• USG abdominal para avaliar parede vesicular, cálculo impactado e Murphy ultrassonográfico.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="font-bold text-red-900 mb-2">Cirurgia e gravidade</h3>
+                      <ul className="space-y-1 text-red-900">
+                        <li>• Tokyo I: colecistectomia laparoscópica precoce, idealmente até 72 horas.</li>
+                        <li>• Tokyo II: colecistectomia precoce; se alto risco cirúrgico, considerar drenagem percutânea.</li>
+                        <li>• Tokyo III: suporte intensivo, controle da disfunção e drenagem/colecistectomia conforme estabilidade.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isCholangitis ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <h3 className="font-bold text-emerald-900 mb-2">Manejo hospitalar</h3>
+                      <ul className="space-y-1 text-emerald-900">
+                        <li>• Dieta zero até definição do procedimento e estabilização clínica.</li>
+                        <li>• Hidratação venosa, analgesia, antiemético e antibioticoterapia precoce se colangite.</li>
+                        <li>• Solicitar avaliação da cirurgia geral/endoscopia para remoção do cálculo ou drenagem biliar.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="font-bold text-red-900 mb-2">Drenagem e gravidade</h3>
+                      <ul className="space-y-1 text-red-900">
+                        <li>• Tokyo III: suporte intensivo e drenagem biliar urgente, idealmente em 12-24 horas.</li>
+                        <li>• Tokyo II: drenagem precoce, preferencialmente em 24-48 horas.</li>
+                        <li>• Tokyo I: drenar se não houver resposta clínica adequada em até 48 horas.</li>
+                      </ul>
+                    </div>
+                  </div>
+                ) : isPancreatitis ? (
+                  <div className="space-y-5 text-lg">
+                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                      <h3 className="font-bold text-orange-900 mb-2">Manejo hospitalar</h3>
+                      <ul className="space-y-1 text-orange-900">
+                        <li>• Dieta zero inicialmente e progressão para dieta oral pobre em gorduras assim que possível.</li>
+                        <li>• Hidratação guiada por metas, preferindo Ringer Lactato quando disponível.</li>
+                        <li>• Analgesia adequada, correção hidroeletrolítica e avaliação da cirurgia geral.</li>
+                      </ul>
+                    </div>
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="font-bold text-red-900 mb-2">Vigilância de gravidade</h3>
+                      <ul className="space-y-1 text-red-900">
+                        <li>• Monitorar disfunção orgânica por Marshall e evolução após 48 horas.</li>
+                        <li>• Antibiótico apenas se houver evidência de infecção sobreposta ou necrose infectada.</li>
+                        <li>• Considerar TC com contraste após 72 horas e CPRE se colangite/obstrução biliar.</li>
                       </ul>
                     </div>
                   </div>

@@ -4505,6 +4505,867 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Lombalgia
+export const lombalgiaFlowchart: EmergencyFlowchart = {
+  id: 'lombalgia',
+  name: 'Lombalgia',
+  description: 'Estratificação de sinais de alarme, indicação de imagem e tratamento conservador da lombalgia aguda.',
+  category: 'musculoskeletal',
+  priority: 'medium',
+  icon: 'activity',
+  color: 'from-slate-600 to-zinc-800',
+  initialStep: 'lomb_inicio',
+  finalSteps: [
+    'lomb_cauda_equina',
+    'lomb_imagem_neoplasia',
+    'lomb_imagem_infeccao',
+    'lomb_radiografia_fratura',
+    'lomb_conservador'
+  ],
+  steps: {
+    lomb_inicio: {
+      id: 'lomb_inicio',
+      title: 'Lombalgia Aguda sem Trauma Evidente',
+      description: 'Avaliar sinais de alarme para decidir imagem, internação ou tratamento conservador.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-slate-50 p-3 rounded border-l-4 border-slate-500">
+            <p><strong>Lombalgia aguda:</strong> dor lombar com duração inferior a 4 semanas. Na maioria dos casos não há causa específica identificável e há melhora com medidas conservadoras.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Imagem é necessária quando há sinais de alarme ou ausência de melhora após 4 a 6 semanas.</li>
+            <li>Ressonância magnética é preferencial para suspeita de causas graves.</li>
+            <li>Radiografia é indicada para suspeita de fratura, especialmente em idosos, mesmo sem trauma evidente.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar sinais de alarme', nextStep: 'lomb_red_flags', value: 'avaliar' }
+      ]
+    },
+    lomb_red_flags: {
+      id: 'lomb_red_flags',
+      title: 'Indico ou não exame de imagem?',
+      description: 'Cauda equina, neoplasia, infecção espinhal e risco de fratura vertebral.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Cauda equina:</strong> nova retenção/incontinência urinária, incontinência fecal ou anestesia em sela.</p>
+          <p><strong>Red flags:</strong> neoplasia, infecção espinhal e risco de fratura de compressão mudam a conduta inicial.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar triagem', nextStep: 'lomb_conservador', value: 'triagem' }
+      ]
+    },
+    lomb_cauda_equina: {
+      id: 'lomb_cauda_equina',
+      title: 'Suspeita de Síndrome da Cauda Equina',
+      description: 'Urgência neurológica.',
+      type: 'result',
+      group: 'Urgência',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> internação hospitalar, ressonância magnética e avaliação de neurocirurgia de urgência.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Não atrasar avaliação especializada se houver retenção/incontinência urinária, incontinência fecal ou anestesia em sela.</li>
+            <li>Monitorar força, sensibilidade, reflexos, dor e função esfincteriana.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    lomb_imagem_neoplasia: {
+      id: 'lomb_imagem_neoplasia',
+      title: 'Imagem Indicada - Suspeita de Neoplasia',
+      description: 'Histórico de câncer atual/passado ou alta suspeita clínica.',
+      type: 'result',
+      group: 'Imagem',
+      requiresSpecialist: true,
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Conduta:</strong> exame de imagem está indicado, preferindo ressonância magnética quando disponível; investigar neoplasia/metástase conforme quadro.</p>
+        </div>
+      `,
+      options: []
+    },
+    lomb_imagem_infeccao: {
+      id: 'lomb_imagem_infeccao',
+      title: 'Imagem Indicada - Risco de Infecção Espinhal',
+      description: 'Febre, imunossupressão, hemodiálise, drogas injetáveis, endocardite ou bacteremia.',
+      type: 'result',
+      group: 'Imagem',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Conduta:</strong> exame de imagem está indicado, preferindo ressonância magnética. Investigar infecção espinhal e considerar avaliação hospitalar conforme gravidade.</p>
+        </div>
+      `,
+      options: []
+    },
+    lomb_radiografia_fratura: {
+      id: 'lomb_radiografia_fratura',
+      title: 'Radiografia de Coluna Indicada',
+      description: 'Risco de fratura vertebral de compressão.',
+      type: 'result',
+      group: 'Radiografia',
+      content: `
+        <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500 text-sm">
+          <p><strong>Conduta:</strong> solicitar radiografia de coluna em suspeita de fratura, especialmente em idosos, osteoporose, uso crônico de corticosteroides ou trauma significativo.</p>
+        </div>
+      `,
+      options: []
+    },
+    lomb_conservador: {
+      id: 'lomb_conservador',
+      title: 'Sem Necessidade Inicial de Imagem',
+      description: 'Sem red flags para câncer, infecção, fratura ou lesões neurológicas graves.',
+      type: 'result',
+      group: 'Conservador',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> tratamento conservador por 4 a 6 semanas.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>AINEs e analgésicos comuns são primeira linha.</li>
+            <li>Opioides fracos podem ser considerados em dor intensa ou refratária.</li>
+            <li>Orientar repouso curto e retorno gradual às atividades assim que possível.</li>
+            <li>Retornar se piora, déficit neurológico, febre alta ou alteração esfincteriana.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Apendicite Aguda
+export const appendicitisFlowchart: EmergencyFlowchart = {
+  id: 'appendicitis',
+  name: 'Apendicite Aguda',
+  description: 'Manejo inicial, escore de Alvarado, estratificação de risco, imagem e conduta cirúrgica.',
+  category: 'gastrointestinal',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-rose-600 to-red-700',
+  initialStep: 'apend_inicio',
+  finalSteps: [
+    'apend_cirurgia_emergencia',
+    'apend_baixo_risco',
+    'apend_moderado_risco',
+    'apend_alto_risco'
+  ],
+  steps: {
+    apend_inicio: {
+      id: 'apend_inicio',
+      title: 'Suspeita de Apendicite Aguda no PS',
+      description: 'Dor abdominal periumbilical que migra para FID, associada a náuseas/vômitos, febre e anorexia.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-rose-50 p-3 rounded border-l-4 border-rose-500">
+            <p><strong>Quadro típico:</strong> dor inicialmente periumbilical que evolui para dor intensa localizada em fossa ilíaca direita, associada a anorexia, náuseas/vômitos e febre.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Blumberg:</strong> dor à descompressão súbita no ponto de McBurney.</li>
+            <li><strong>Psoas:</strong> dor na hiperextensão passiva ou flexão ativa do MID em decúbito lateral esquerdo.</li>
+            <li><strong>Obturador:</strong> dor hipogástrica à flexão e rotação interna do quadril.</li>
+            <li>Em mulheres em idade reprodutiva, sempre solicitar beta-hCG e considerar diferenciais ginecológicos/urinários.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar medidas no pronto-socorro', nextStep: 'apend_medidas_iniciais', value: 'suspeita_apendicite' }
+      ]
+    },
+    apend_medidas_iniciais: {
+      id: 'apend_medidas_iniciais',
+      title: 'Medidas Iniciais',
+      description: 'Coleta de exames, dieta zero, ABCDE, hidratação e acesso venoso.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="grid gap-3 md:grid-cols-2 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Exames iniciais:</strong> hemograma completo, PCR, EAS, função renal, beta-hCG em mulheres férteis e outros conforme contexto/investigação.</p>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Suporte:</strong> dieta zero até definição, estabilização clínica ABCDE, hidratação adequada e acesso venoso.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 md:col-span-2">
+            <p>A hidratação venosa e analgesia devem ser realizadas antes do diagnóstico definitivo e antes da avaliação da cirurgia geral, mantendo jejum até definição.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Instabilidade ou sinais de gravidade', nextStep: 'apend_cirurgia_emergencia', value: 'instavel', critical: true, requiresImmediateAction: true },
+        { text: 'Paciente estável - aplicar Alvarado', nextStep: 'apend_alvarado', value: 'estavel' }
+      ]
+    },
+    apend_alvarado: {
+      id: 'apend_alvarado',
+      title: 'Escore de Alvarado',
+      description: 'Baixo risco 0-3, moderado 4-6, alto 7-10 pontos.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Sintomas:</strong> dor migratória, anorexia, náuseas/vômitos.</p>
+          <p><strong>Sinais:</strong> defesa em FID, dor à descompressão e febre.</p>
+          <p><strong>Laboratório:</strong> leucocitose e desvio à esquerda.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar escore', nextStep: 'apend_baixo_risco', value: 'alvarado' }
+      ]
+    },
+    apend_cirurgia_emergencia: {
+      id: 'apend_cirurgia_emergencia',
+      title: 'Cirurgia de Emergência',
+      description: 'Instabilidade ou sinais de gravidade.',
+      type: 'result',
+      group: 'Emergência',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> acionar cirurgia geral imediatamente para exploração cirúrgica e apendicectomia.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Manter dieta zero, acesso venoso, hidratação e analgesia.</li>
+            <li>Iniciar antibioticoterapia venosa.</li>
+            <li>Avaliar sepse, peritonite, perfuração, abscesso e necessidade de suporte intensivo.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    apend_baixo_risco: {
+      id: 'apend_baixo_risco',
+      title: 'Baixo Risco - Alvarado 0 a 3',
+      description: 'Probabilidade baixa de apendicite.',
+      type: 'result',
+      group: 'Baixo risco',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> tratamento extra-hospitalar se estável, prescrever sintomáticos e orientar sinais de alarme/retorno.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Considerar diagnósticos alternativos; probabilidade de apendicite é baixa.</li>
+            <li>Retorno imediato se piora da dor, febre, vômitos persistentes, queda do estado geral ou sinais peritoneais.</li>
+            <li>Reavaliar se persistir dúvida diagnóstica.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    apend_moderado_risco: {
+      id: 'apend_moderado_risco',
+      title: 'Risco Moderado - Alvarado 4 a 6',
+      description: 'Solicitar imagem e decidir conforme achados.',
+      type: 'result',
+      group: 'Risco moderado',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> exame de imagem, preferencialmente TC de abdome e pelve com contraste; USG em gestantes e crianças.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Se imagem normal e paciente estável, considerar alta com orientações.</li>
+            <li>Se apendicite, acionar cirurgia geral e seguir conduta cirúrgica.</li>
+            <li>USG normal não exclui apendicite quando suspeita clínica persiste.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    apend_alto_risco: {
+      id: 'apend_alto_risco',
+      title: 'Alto Risco - Alvarado 7 a 10',
+      description: 'Alta probabilidade de apendicite.',
+      type: 'result',
+      group: 'Alto risco',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> exame de imagem para confirmar, quando disponível, ou encaminhar diretamente para conduta cirúrgica conforme avaliação.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Se apendicite, acionar cirurgia geral e iniciar antibioticoterapia venosa.</li>
+            <li>Apendicectomia, preferencialmente laparoscópica, é o padrão-ouro, especialmente em apendicite complicada.</li>
+            <li>Avaliar perfuração, abscesso, peritonite, sepse e necessidade de suporte intensivo.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Colecistite Aguda
+export const cholecystitisFlowchart: EmergencyFlowchart = {
+  id: 'cholecystitis',
+  name: 'Colecistite Aguda',
+  description: 'Manejo inicial, critérios de gravidade Tokyo 2018, indicação de colecistectomia precoce e antibioticoterapia.',
+  category: 'gastrointestinal',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-lime-600 to-emerald-700',
+  initialStep: 'cole_inicio',
+  finalSteps: [
+    'cole_leve',
+    'cole_moderada',
+    'cole_grave'
+  ],
+  steps: {
+    cole_inicio: {
+      id: 'cole_inicio',
+      title: 'Suspeita de Colecistite Aguda no PS',
+      description: 'Dor em hipocôndrio direito associada a náuseas/vômitos, febre e anorexia.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-lime-50 p-3 rounded border-l-4 border-lime-500">
+            <p><strong>Quadro típico:</strong> dor abdominal em hipocôndrio direito, geralmente associada a náuseas/vômitos, febre e anorexia.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Solicitar USG abdominal para avaliar cálculo impactado, espessamento da parede vesicular e sinais inflamatórios.</li>
+            <li><strong>Murphy ultrassonográfico:</strong> dor quando a sonda comprime a parede abdominal no ponto da vesícula; associado a cálculos, tem alta positividade diagnóstica.</li>
+            <li>Manter acesso venoso, dieta zero, hidratação, analgesia e avaliação cirúrgica.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar medidas no pronto-socorro', nextStep: 'cole_medidas_iniciais', value: 'suspeita_colecistite' }
+      ]
+    },
+    cole_medidas_iniciais: {
+      id: 'cole_medidas_iniciais',
+      title: 'Medidas Iniciais',
+      description: 'Coleta de exames, dieta zero, ABCDE, hidratação e acesso venoso.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="grid gap-3 md:grid-cols-2 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Exames iniciais:</strong> hemograma completo, PCR, EAS, função renal, beta-hCG se aplicável, TGO/TGP, FA/GGT, bilirrubina total e frações, amilase/lipase e coagulograma.</p>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Suporte:</strong> dieta zero até definição, estabilização clínica ABCDE, hidratação adequada e acesso venoso.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 md:col-span-2">
+            <p>Se houver instabilidade ou sinais de gravidade, priorizar suporte intensivo, antibióticos e drenagem percutânea e/ou colecistectomia.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar critérios de gravidade Tokyo 2018', nextStep: 'cole_tokyo_gravidade', value: 'medidas_iniciais' }
+      ]
+    },
+    cole_tokyo_gravidade: {
+      id: 'cole_tokyo_gravidade',
+      title: 'Classificação de Gravidade Tokyo 2018',
+      description: 'Tokyo I leve, Tokyo II moderada e Tokyo III grave por disfunção orgânica.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Tokyo I:</strong> sem critérios para quadro moderado ou grave.</p>
+          <p><strong>Tokyo II:</strong> leucocitose importante, massa dolorosa em HD, duração > 72h ou inflamação local importante.</p>
+          <p><strong>Tokyo III:</strong> disfunção cardiovascular, neurológica, respiratória, renal, hepática ou hematológica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar classificação', nextStep: 'cole_leve', value: 'classificar' }
+      ]
+    },
+    cole_leve: {
+      id: 'cole_leve',
+      title: 'Colecistite Aguda Leve - Tokyo I',
+      description: 'Sem critérios de moderada ou grave.',
+      type: 'result',
+      group: 'Tokyo I',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-lime-50 p-3 rounded border-l-4 border-lime-500">
+            <p><strong>Conduta:</strong> colecistectomia laparoscópica precoce, idealmente até 72 horas.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Hidratação EV.</li>
+            <li>Analgesia adequada.</li>
+            <li>Antibióticos.</li>
+            <li>Internação e avaliação da cirurgia geral.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    cole_moderada: {
+      id: 'cole_moderada',
+      title: 'Colecistite Aguda Moderada - Tokyo II',
+      description: 'Pelo menos um critério moderado.',
+      type: 'result',
+      group: 'Tokyo II',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> colecistectomia laparoscópica precoce quando factível.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Em alto risco cirúrgico, considerar drenagem percutânea da vesícula biliar como ponte para cirurgia ou tratamento definitivo.</li>
+            <li>Hidratação EV, analgesia adequada e antibióticos.</li>
+            <li>Internação e avaliação da cirurgia geral.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    cole_grave: {
+      id: 'cole_grave',
+      title: 'Colecistite Aguda Grave - Tokyo III',
+      description: 'Disfunção orgânica ou instabilidade clínica.',
+      type: 'result',
+      group: 'Tokyo III',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> suporte intensivo, controle da disfunção orgânica, antibióticos e drenagem percutânea e/ou colecistectomia.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Estabilização clínica deve preceder procedimento definitivo quando necessário.</li>
+            <li>Acionar cirurgia geral e considerar UTI conforme disfunções.</li>
+            <li>Escolher antibiótico conforme perfil de suscetibilidade, culturas, função renal e discussão com CCIH.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Colangite / Coledocolitíase
+export const cholangitisFlowchart: EmergencyFlowchart = {
+  id: 'cholangitis',
+  name: 'Colangite / Coledocolitíase',
+  description: 'Diagnóstico de colangite por critérios de Tokyo 2018, estratificação Tokyo I/II/III e abordagem da coledocolitíase aguda.',
+  category: 'gastrointestinal',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-emerald-600 to-teal-700',
+  initialStep: 'colangite_inicio',
+  finalSteps: [
+    'colangite_sem_criterios',
+    'coledocolitiase_sem_colangite',
+    'colangite_leve',
+    'colangite_moderada',
+    'colangite_grave'
+  ],
+  steps: {
+    colangite_inicio: {
+      id: 'colangite_inicio',
+      title: 'Suspeita de Colangite / Coledocolitíase no PS',
+      description: 'Dor em hipocôndrio direito, icterícia, febre ou sinais de obstrução biliar.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Colangite aguda:</strong> infecção do trato biliar geralmente secundária à obstrução, sendo coledocolitíase a causa mais frequente.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Tríade de Charcot:</strong> febre, dor abdominal e icterícia.</li>
+            <li><strong>Pêntade de Reynolds:</strong> tríade + hipotensão e alteração do estado mental.</li>
+            <li><strong>Coledocolitíase:</strong> dor em hipocôndrio direito, icterícia, colúria, acolia fecal e prurido; febre sugere colangite associada.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Há suspeita de colangite aguda', nextStep: 'colangite_medidas_iniciais', value: 'suspeita_colangite', critical: true },
+        { text: 'Quadro sugere coledocolitíase sem febre/sepse', nextStep: 'coledocolitiase_sem_colangite', value: 'coledocolitiase' }
+      ]
+    },
+    colangite_medidas_iniciais: {
+      id: 'colangite_medidas_iniciais',
+      title: 'Medidas Iniciais',
+      description: 'Coleta de exames, dieta zero, ABCDE, hidratação e antibiótico precoce.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="grid gap-3 md:grid-cols-2 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Exames iniciais:</strong> hemograma completo, hemoculturas, EAS, PCR, função renal, beta-hCG se aplicável, TGO/TGP, FA/GGT, bilirrubina total e frações, amilase/lipase, coagulograma e albumina.</p>
+          </div>
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
+            <p><strong>Suporte imediato:</strong> dieta zero até definição, estabilização ABCDE, hidratação adequada e antibiótico precoce de amplo espectro.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 md:col-span-2">
+            <p>A estabilização clínica com ressuscitação volêmica e antibioticoterapia deve preceder a intervenção endoscópica quando necessária.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar critérios diagnósticos de Tokyo 2018', nextStep: 'colangite_tokyo_diagnostico', value: 'medidas_iniciais' }
+      ]
+    },
+    colangite_tokyo_diagnostico: {
+      id: 'colangite_tokyo_diagnostico',
+      title: 'Critérios Diagnósticos de Tokyo 2018',
+      description: 'Caso suspeito = A + B ou C. Caso confirmado = A + B + C.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>A - Inflamação sistêmica:</strong> febre/calafrios ou leucócitos/PCR compatíveis.</p>
+          <p><strong>B - Colestase:</strong> icterícia/bilirrubina >= 2 mg/dL ou enzimas hepáticas/colestáticas elevadas.</p>
+          <p><strong>C - Imagem:</strong> dilatação de via biliar ou evidência de cálculo, estenose, stent ou outra etiologia.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Classificar gravidade', nextStep: 'colangite_tokyo_gravidade', value: 'diagnostico_tokyo' }
+      ]
+    },
+    colangite_tokyo_gravidade: {
+      id: 'colangite_tokyo_gravidade',
+      title: 'Classificação de Gravidade Tokyo 2018',
+      description: 'Tokyo I leve, Tokyo II moderada, Tokyo III grave por disfunção orgânica.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Tokyo I:</strong> sem critérios de moderada ou grave.</p>
+          <p><strong>Tokyo II:</strong> pelo menos um critério moderado.</p>
+          <p><strong>Tokyo III:</strong> pelo menos uma disfunção orgânica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar classificação', nextStep: 'colangite_leve', value: 'classificar' }
+      ]
+    },
+    colangite_leve: {
+      id: 'colangite_leve',
+      title: 'Colangite Aguda Leve - Tokyo I',
+      description: 'Sem critérios de moderada ou grave.',
+      type: 'result',
+      group: 'Tokyo I',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> antibióticos e suporte clínico.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Drenagem biliar se não houver resposta clínica adequada em até 48 horas.</li>
+            <li>Avaliar colecistectomia durante a internação se colelitíase associada.</li>
+            <li>Escalonar/descalonar antibiótico conforme culturas e microbiologia local.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    colangite_moderada: {
+      id: 'colangite_moderada',
+      title: 'Colangite Aguda Moderada - Tokyo II',
+      description: 'Pelo menos um critério moderado.',
+      type: 'result',
+      group: 'Tokyo II',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> iniciar antibióticos e suporte clínico.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Drenagem biliar precoce, preferencialmente em 24-48 horas.</li>
+            <li>Associada a menor mortalidade e menor tempo de internação.</li>
+            <li>Avaliar colecistectomia na internação se colelitíase associada.</li>
+            <li>Internação e/ou transferência para avaliação da cirurgia geral/endoscopia.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    colangite_grave: {
+      id: 'colangite_grave',
+      title: 'Colangite Aguda Grave - Tokyo III',
+      description: 'Disfunção orgânica presente.',
+      type: 'result',
+      group: 'Tokyo III',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> antibióticos, suporte intensivo em CTI, estabilização hemodinâmica e ventilatória.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Drenagem biliar urgente, idealmente em 12-24 horas.</li>
+            <li>Priorizar em presença de disfunção orgânica.</li>
+            <li>Avaliar colecistectomia na internação se colelitíase associada.</li>
+            <li>Considerar CPRE como via preferencial; drenagem percutânea/cirurgia se via endoscópica indisponível ou impossível.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    coledocolitiase_sem_colangite: {
+      id: 'coledocolitiase_sem_colangite',
+      title: 'Coledocolitíase Aguda sem Colangite Evidente',
+      description: 'Obstrução biliar por cálculo sem critérios infecciosos suficientes.',
+      type: 'result',
+      group: 'Coledocolitíase',
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>Conduta:</strong> internação hospitalar, hidratação venosa, analgesia, sintomáticos e contato com cirurgia geral/endoscopia.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>USG abdominal é o exame inicial recomendado.</li>
+            <li>TC com contraste pode ser opção se USG não disponível ou inconclusivo.</li>
+            <li>CPRM/colangiorressonância é o exame não invasivo mais sensível e específico, quando disponível.</li>
+            <li>Tratamento definitivo: remoção dos cálculos, preferencialmente por CPRE.</li>
+            <li>Antibioticoterapia se suspeita de colangite associada.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    colangite_sem_criterios: {
+      id: 'colangite_sem_criterios',
+      title: 'Critérios Insuficientes para Colangite',
+      description: 'Reavaliar diagnóstico diferencial e investigar outras causas de dor abdominal/icterícia.',
+      type: 'result',
+      content: `
+        <div class="bg-slate-50 p-3 rounded border-l-4 border-slate-400 text-sm">
+          <p><strong>Conduta:</strong> manter reavaliação clínica, completar exames laboratoriais e imagem, e retornar ao fluxo se surgirem inflamação sistêmica, colestase ou achados de obstrução biliar.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Pancreatite Aguda
+export const pancreatitisFlowchart: EmergencyFlowchart = {
+  id: 'pancreatitis',
+  name: 'Pancreatite Aguda',
+  description: 'Diagnóstico, coleta inicial, pesquisa etiológica, BISAP, Marshall/Atlanta 2012 e manejo hospitalar da pancreatite aguda.',
+  category: 'gastrointestinal',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-orange-600 to-red-700',
+  initialStep: 'pan_inicio',
+  finalSteps: [
+    'pan_sem_diagnostico',
+    'pan_leve',
+    'pan_moderada',
+    'pan_grave',
+    'pan_uti'
+  ],
+  steps: {
+    pan_inicio: {
+      id: 'pan_inicio',
+      title: 'Suspeita de Pancreatite Aguda no PS',
+      description: 'Dor em abdome superior, intensa, frequentemente irradiada para dorso em barra.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+            <p><strong>Quadro típico:</strong> dor abdominal superior constante, forte, em barra, associada a náuseas e vômitos.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Pancreatite biliar: dor bem localizada de início súbito.</li>
+            <li>Pancreatite alcoólica/metabólica: dor mal localizada de início gradual.</li>
+            <li>Exame físico varia com gravidade: distensão, sinais de SIRS, peritonite ou alteração de consciência sugerem gravidade.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Checar critérios diagnósticos', nextStep: 'pan_diagnostico', value: 'iniciar' }
+      ]
+    },
+    pan_diagnostico: {
+      id: 'pan_diagnostico',
+      title: 'Critérios Diagnósticos',
+      description: 'O diagnóstico exige 2 de 3 critérios: dor típica, enzimas > 3x LSN ou imagem compatível.',
+      type: 'question',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500 text-sm">
+          <p><strong>Critérios:</strong> 1) dor abdominal típica; 2) lipase ou amilase acima de 3 vezes o limite superior; 3) achados de imagem compatíveis.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Dois ou mais critérios presentes', nextStep: 'pan_medidas_iniciais', value: 'diagnostico_confirmado' },
+        { text: 'Menos de dois critérios', nextStep: 'pan_sem_diagnostico', value: 'sem_diagnostico' }
+      ]
+    },
+    pan_medidas_iniciais: {
+      id: 'pan_medidas_iniciais',
+      title: 'Medidas Iniciais no PS',
+      description: 'Coleta de exames, dieta zero, estabilização ABCDE, hidratação e etiologia.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="grid gap-3 md:grid-cols-2 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Coletar exames iniciais:</strong> hemograma, PCR, gasometria/lactato, amilase/lipase, TGO/TGP, FA/GGT, ureia/creatinina, eletrólitos, EAS, USG e triglicérides.</p>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Suporte:</strong> dieta zero até definição, ABCDE, hidratação adequada guiada por metas e analgesia precoce.</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 md:col-span-2">
+            <p><strong>Etiologia:</strong> pesquisar alcoolismo, colelitíase, CPRE recente, hipertrigliceridemia, fármacos e hipercalcemia.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar BISAP à beira-leito', nextStep: 'pan_bisap', value: 'medidas_iniciais' }
+      ]
+    },
+    pan_bisap: {
+      id: 'pan_bisap',
+      title: 'BISAP - Identificação Precoce de Risco',
+      description: 'Aplicável nas primeiras 24 horas, à beira-leito.',
+      type: 'question',
+      content: `
+        <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500 text-sm">
+          <p>Cada item pontua 1. BISAP &gt;= 3 sugere alta mortalidade e necessidade de vigilância intensiva.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Classificar por Atlanta/Marshall', nextStep: 'pan_marshall_atlanta', value: 'bisap' }
+      ]
+    },
+    pan_marshall_atlanta: {
+      id: 'pan_marshall_atlanta',
+      title: 'Marshall Modificado e Atlanta 2012',
+      description: 'Disfunção orgânica se Marshall >= 2 em cardiovascular, respiratório ou renal.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-2 text-sm">
+          <p><strong>Atlanta 2012:</strong> leve sem disfunção orgânica/complicações; moderadamente grave com disfunção transitória ou complicações; grave com disfunção sustentada por mais de 48h.</p>
+          <p><strong>Marshall:</strong> 2 ou mais pontos definem falência orgânica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Aplicar classificação', nextStep: 'pan_leve', value: 'classificar' }
+      ]
+    },
+    pan_leve: {
+      id: 'pan_leve',
+      title: 'Pancreatite Aguda Leve',
+      description: 'Sem disfunção orgânica e sem complicações locais/sistêmicas.',
+      type: 'result',
+      group: 'Leve',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p><strong>Manejo:</strong> hospitalar em enfermaria.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Jejum inicial e progressão para dieta oral assim que possível.</li>
+            <li>Reposição volêmica guiada por metas.</li>
+            <li>Correção de distúrbios hidroeletrolíticos.</li>
+            <li>Analgesia adequada.</li>
+            <li>Avaliação da cirurgia geral.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    pan_moderada: {
+      id: 'pan_moderada',
+      title: 'Pancreatite Aguda Moderadamente Grave',
+      description: 'Disfunção orgânica transitória ou complicações locais/sistêmicas.',
+      type: 'result',
+      group: 'Moderadamente grave',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+            <p><strong>Manejo:</strong> hospitalar em enfermaria com vigilância estreita; considerar terapia intensiva conforme evolução.</p>
+          </div>
+          <p>O manejo inicial é semelhante ao da forma grave nas primeiras 48 horas: jejum inicial, hidratação guiada por metas, analgesia, correção hidroeletrolítica e avaliação da cirurgia geral.</p>
+          <p><strong>Imagem:</strong> considerar TC com contraste após 72 horas do início dos sintomas, ou antes se dúvida diagnóstica/complicação.</p>
+        </div>
+      `,
+      options: []
+    },
+    pan_grave: {
+      id: 'pan_grave',
+      title: 'Pancreatite Aguda Grave',
+      description: 'Disfunção orgânica sustentada por mais de 48 horas.',
+      type: 'result',
+      group: 'Grave',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Manejo:</strong> terapia intensiva ou unidade de alta vigilância, com suporte orgânico conforme necessidade.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Reposição volêmica guiada por metas, preferir Ringer Lactato.</li>
+            <li>Analgesia otimizada e antiemético.</li>
+            <li>Antibiótico somente se evidência de infecção/necrose infectada.</li>
+            <li>Considerar TC com contraste após 72 horas.</li>
+            <li>Considerar CPRE se colangite associada ou obstrução biliar.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    pan_uti: {
+      id: 'pan_uti',
+      title: 'Critérios de UTI Presentes',
+      description: 'Instabilidade fisiológica com necessidade de terapia intensiva.',
+      type: 'result',
+      group: 'UTI',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> acionar UTI/suporte avançado, monitorização contínua, metas hemodinâmicas, suporte respiratório/renal conforme necessidade e investigação de complicações.</p>
+        </div>
+      `,
+      options: []
+    },
+    pan_sem_diagnostico: {
+      id: 'pan_sem_diagnostico',
+      title: 'Critérios Insuficientes para Pancreatite Aguda',
+      description: 'Reavaliar diagnóstico diferencial e repetir exames se evolução compatível.',
+      type: 'result',
+      content: `
+        <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500 text-sm">
+          <p><strong>Conduta:</strong> investigar diagnósticos diferenciais de dor abdominal, manter reavaliação clínica e repetir enzimas/imagem se persistir suspeita.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -4520,7 +5381,12 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   influenza: influenzaFlowchart,
   pneumonia: pneumoniaFlowchart,
   sinusite: sinusitisFlowchart,
+  lombalgia: lombalgiaFlowchart,
   anafilaxia: anaphylaxisFlowchart,
+  appendicitis: appendicitisFlowchart,
+  cholecystitis: cholecystitisFlowchart,
+  cholangitis: cholangitisFlowchart,
+  pancreatitis: pancreatitisFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -4552,7 +5418,7 @@ export const allFlowcharts = [
 
   // Musculoesqueléticos
   { id: 'artralgia', name: 'Artralgia', category: 'musculoskeletal', implemented: false },
-  { id: 'lombalgia', name: 'Lombalgia', category: 'musculoskeletal', implemented: false },
+  { id: 'lombalgia', name: 'Lombalgia', category: 'musculoskeletal', implemented: true },
   { id: 'mialgia', name: 'Mialgia', category: 'musculoskeletal', implemented: false },
 
   // Neurológicos
@@ -4576,15 +5442,17 @@ export const allFlowcharts = [
   { id: 'hipoglicemia', name: 'Hipoglicemia', category: 'endocrine', implemented: false },
 
   // Gastrointestinais
-  { id: 'colecistite', name: 'Colecistite', category: 'gastrointestinal', implemented: false },
+  { id: 'appendicitis', name: 'Apendicite Aguda', category: 'gastrointestinal', implemented: true },
+  { id: 'cholecystitis', name: 'Colecistite Aguda', category: 'gastrointestinal', implemented: true },
   { id: 'colelitiase', name: 'Colelitíase', category: 'gastrointestinal', implemented: false },
+  { id: 'cholangitis', name: 'Colangite / Coledocolitíase', category: 'gastrointestinal', implemented: true },
   { id: 'diarreia', name: 'Diarreia', category: 'gastrointestinal', implemented: true },
   { id: 'disfagia', name: 'Disfagia', category: 'gastrointestinal', implemented: false },
   { id: 'doenca_hemorroidaria', name: 'Doença hemorroidária', category: 'gastrointestinal', implemented: false },
   { id: 'dor_abdominal', name: 'Dor abdominal', category: 'gastrointestinal', implemented: false },
   { id: 'epigastralgia', name: 'Epigastralgia', category: 'gastrointestinal', implemented: false },
   { id: 'hemorragia_digestiva_alta', name: 'Hemorragia Digestiva Alta', category: 'gastrointestinal', implemented: false },
-  { id: 'pancreatite_aguda', name: 'Pancreatite Aguda', category: 'gastrointestinal', implemented: false },
+  { id: 'pancreatitis', name: 'Pancreatite Aguda', category: 'gastrointestinal', implemented: true },
   { id: 'vomitos', name: 'Vômitos', category: 'gastrointestinal', implemented: false },
 
   // Renais/Urológicos

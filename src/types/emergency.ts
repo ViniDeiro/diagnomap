@@ -22,6 +22,7 @@ export type EmergencyType =
   | 'meningitis'
   | 'appendicitis'
   | 'cholecystitis'
+  | 'cholangitis'
   | 'pancreatitis'
   | 'gastrointestinal_bleeding'
   | 'renal_colic'
@@ -47,6 +48,7 @@ export type EmergencyType =
   | 'dpoc_exacerbado'
   | 'influenza'
   | 'sinusite'
+  | 'lombalgia'
   | 'anafilaxia'
 
 export interface EmergencyFlowchart {
