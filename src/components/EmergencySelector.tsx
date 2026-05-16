@@ -55,6 +55,8 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
 
     // Usar todos os fluxogramas (incluindo os não implementados)
     const allAvailableFlowcharts = allFlowcharts
+    const implementedFlowchartsCount = allAvailableFlowcharts.filter(flowchart => flowchart.implemented).length
+    const totalFlowchartsCount = allAvailableFlowcharts.length
 
     const clinicalProtocols: Array<{ id: string; name: string; category: string; implemented: boolean }> = [
         { id: 'sepse_protocolo', name: 'Sepse Grave (Protocolo Clínico)', category: 'infectious', implemented: false },
@@ -178,9 +180,15 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-700 mb-1">
                             Protocolos de Emergência
                         </h1>
-                        <p className="text-slate-500 font-medium">
-                            Selecione o protocolo apropriado para iniciar o atendimento
-                        </p>
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                            <p className="text-slate-500 font-medium">
+                                Selecione o protocolo apropriado para iniciar o atendimento
+                            </p>
+                            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
+                                <Activity className="h-4 w-4" />
+                                {implementedFlowchartsCount} de {totalFlowchartsCount} fluxogramas implementados
+                            </span>
+                        </div>
                     </div>
 
                     <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex">
