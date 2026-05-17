@@ -56,6 +56,30 @@ import {
   hasSinusitisPrescriptionSet
 } from '@/lib/sinusitis'
 import {
+  FaringoamigdaliteDisposition,
+  buildFaringoamigdalitePrescriptionItems,
+  getFaringoamigdaliteAntibioticAlternatives,
+  hasFaringoamigdalitePrescriptionSet
+} from '@/lib/faringoamigdalite'
+import {
+  MonoartriteDisposition,
+  buildMonoartritePrescriptionItems,
+  getMonoartriteGoutAlternatives,
+  MONOARTRITE_SEPTIC_ANTIBIOTIC_OPTIONS,
+  hasMonoartritePrescriptionSet
+} from '@/lib/monoartrite'
+import {
+  buildAnsiedadePrescriptionItems,
+  getAnsiedadeMedicationAlternatives,
+  hasAnsiedadePrescriptionSet
+} from '@/lib/ansiedade'
+import {
+  VertigemDisposition,
+  buildVertigemPrescriptionItems,
+  getVertigemAntivertigoAlternatives,
+  hasVertigemPrescriptionSet
+} from '@/lib/vertigem'
+import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
   AnaphylaxisAdjunctKey,
@@ -146,6 +170,29 @@ type PneumoniaPrescriptionPreview = {
 type SinusitisPrescriptionPreview = {
   title: string
   etiology: SinusitisEtiology
+  content: string[]
+}
+
+type FaringoamigdalitePrescriptionPreview = {
+  title: string
+  disposition: FaringoamigdaliteDisposition
+  content: string[]
+}
+
+type MonoartritePrescriptionPreview = {
+  title: string
+  disposition: MonoartriteDisposition
+  content: string[]
+}
+
+type AnsiedadePrescriptionPreview = {
+  title: string
+  content: string[]
+}
+
+type VertigemPrescriptionPreview = {
+  title: string
+  disposition: VertigemDisposition
   content: string[]
 }
 
@@ -743,6 +790,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [sinusitisPrescriptionPreview, setSinusitisPrescriptionPreview] = useState<SinusitisPrescriptionPreview | null>(null)
   const [sinusitisPrescriptionCopied, setSinusitisPrescriptionCopied] = useState(false)
   const [sinusitisPrescriptionGeneratedSteps, setSinusitisPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
+  const [faringoamigdalitePrescriptionPreview, setFaringoamigdalitePrescriptionPreview] = useState<FaringoamigdalitePrescriptionPreview | null>(null)
+  const [faringoamigdalitePrescriptionCopied, setFaringoamigdalitePrescriptionCopied] = useState(false)
+  const [faringoamigdalitePrescriptionGeneratedSteps, setFaringoamigdalitePrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
+  const [monoartritePrescriptionPreview, setMonoartritePrescriptionPreview] = useState<MonoartritePrescriptionPreview | null>(null)
+  const [monoartritePrescriptionCopied, setMonoartritePrescriptionCopied] = useState(false)
+  const [monoartritePrescriptionGeneratedSteps, setMonoartritePrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
+  const [ansiedadePrescriptionPreview, setAnsiedadePrescriptionPreview] = useState<AnsiedadePrescriptionPreview | null>(null)
+  const [ansiedadePrescriptionCopied, setAnsiedadePrescriptionCopied] = useState(false)
+  const [ansiedadePrescriptionGenerated, setAnsiedadePrescriptionGenerated] = useState(false)
+  const [vertigemPrescriptionPreview, setVertigemPrescriptionPreview] = useState<VertigemPrescriptionPreview | null>(null)
+  const [vertigemPrescriptionCopied, setVertigemPrescriptionCopied] = useState(false)
+  const [vertigemPrescriptionGeneratedSteps, setVertigemPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
   const [selectedAnaphylaxisAdjuncts, setSelectedAnaphylaxisAdjuncts] = useState<AnaphylaxisAdjunctKey[]>([])
   const [anaphylaxisPrescriptionPreview, setAnaphylaxisPrescriptionPreview] = useState<AnaphylaxisPrescriptionPreview | null>(null)
   const [anaphylaxisPrescriptionCopied, setAnaphylaxisPrescriptionCopied] = useState(false)
@@ -1433,6 +1492,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
   const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
+  const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
+  const isMonoartritePrescriptionFinalStep = flowchart.id === 'monoartrite' && ['mono_gota_tratamento', 'mono_artrite_septica_internacao'].includes(currentStepData?.id || '')
+  const isAnsiedadeMedicationStep = flowchart.id === 'crise_ansiedade' && currentStepData?.id === 'ansiedade_medicamentosa'
+  const isVertigemPrescriptionFinalStep = flowchart.id === 'sindrome_vertiginosa' && ['vertigem_neurite_vestibular', 'vertigem_vppb_hipotensao'].includes(currentStepData?.id || '')
   const isAnaphylaxisAdrenalineStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_adrenalina_im'
   const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_tratamento_adjunto'
   const isAnaphylaxisDischargeStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_observacao_alta'
@@ -1453,6 +1516,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : currentStepData?.id === 'rino_alergica'
       ? 'allergic'
       : 'viral'
+  const faringoamigdaliteCurrentDisposition: FaringoamigdaliteDisposition = currentStepData?.id === 'faringo_bacteriana_antibiotico'
+    ? 'bacterial'
+    : currentStepData?.id === 'faringo_considerar_antibiotico'
+      ? 'consider_antibiotic'
+      : 'symptomatic'
+  const monoartriteCurrentDisposition: MonoartriteDisposition = currentStepData?.id === 'mono_artrite_septica_internacao'
+    ? 'septic'
+    : 'gout'
+  const vertigemCurrentDisposition: VertigemDisposition = currentStepData?.id === 'vertigem_neurite_vestibular'
+    ? 'neurite'
+    : 'vppb'
   const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
   const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
   const anaphylaxisAdrenalineDose = useMemo(() => calculateAnaphylaxisAdrenalineDose(patient), [patient])
@@ -1676,6 +1750,347 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       alert('Não foi possível copiar a prescrição. Tente novamente.')
     }
   }, [sinusitisPrescriptionPreview])
+
+  const buildFaringoamigdalitePrescriptionPreview = useCallback((disposition: FaringoamigdaliteDisposition): FaringoamigdalitePrescriptionPreview => {
+    const items = buildFaringoamigdalitePrescriptionItems(disposition)
+    const titleByDisposition = {
+      symptomatic: 'Prescrição sintomática para faringoamigdalite',
+      consider_antibiotic: 'Prescrição para faringoamigdalite bacteriana provável',
+      bacterial: 'Prescrição para faringoamigdalite bacteriana'
+    }
+    const content = [
+      titleByDisposition[disposition].toUpperCase(),
+      '',
+      'RECEITA MÉDICA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'ALÉM DAS MEDICAÇÕES, ORIENTE MEDIDAS NÃO FARMACOLÓGICAS.',
+      '- Gargarejo com água morna e sal e chás podem aliviar sintomas.',
+      '- Repouso e hidratação adequada.',
+      '- Retornar se febre persistente apesar das medicações, dificuldade de falar, inchaço intenso no pescoço ou queda intensa do estado geral.',
+      ...(disposition === 'symptomatic'
+        ? []
+        : [
+            '',
+            'OUTRAS OPÇÕES DE ANTIBIOTICOTERAPIA:',
+            ...getFaringoamigdaliteAntibioticAlternatives().map((item) => `- ${item}`)
+          ])
+    ].filter(Boolean)
+
+    return {
+      title: titleByDisposition[disposition],
+      disposition,
+      content
+    }
+  }, [])
+
+  const getPersistedFaringoamigdalitePrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Faringoamigdalite')
+  }, [patient])
+
+  const handleOpenFaringoamigdalitePrescription = useCallback(() => {
+    if (!currentStepData || !isFaringoamigdalitePrescriptionFinalStep) return
+
+    const disposition = faringoamigdaliteCurrentDisposition
+    const draftItems = buildFaringoamigdalitePrescriptionItems(disposition)
+    const persisted = getPersistedFaringoamigdalitePrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setFaringoamigdalitePrescriptionGeneratedSteps((prev) => ({ ...prev, [currentStepData.id]: true }))
+    setFaringoamigdalitePrescriptionPreview(buildFaringoamigdalitePrescriptionPreview(disposition))
+    setFaringoamigdalitePrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildFaringoamigdalitePrescriptionPreview,
+    currentStep,
+    currentStepData,
+    faringoamigdaliteCurrentDisposition,
+    getPersistedFaringoamigdalitePrescriptions,
+    history,
+    isFaringoamigdalitePrescriptionFinalStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyFaringoamigdalitePrescriptionText = useCallback(async () => {
+    if (!faringoamigdalitePrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(faringoamigdalitePrescriptionPreview.content.join('\n'))
+      setFaringoamigdalitePrescriptionCopied(true)
+      setTimeout(() => setFaringoamigdalitePrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da faringoamigdalite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [faringoamigdalitePrescriptionPreview])
+
+  const buildMonoartritePrescriptionPreview = useCallback((disposition: MonoartriteDisposition): MonoartritePrescriptionPreview => {
+    const items = buildMonoartritePrescriptionItems(disposition)
+    const titleByDisposition = {
+      gout: 'Prescrição para crise de gota',
+      septic: 'Conduta inicial para artrite séptica'
+    }
+    const content = [
+      titleByDisposition[disposition].toUpperCase(),
+      '',
+      disposition === 'septic'
+        ? 'INTERNAÇÃO E ANTIBIOTICOTERAPIA EV'
+        : 'PRESCRIÇÃO NA PRÁTICA NO PRONTO-SOCORRO',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      ...(disposition === 'gout'
+        ? [
+            'OUTRAS OPÇÕES PARA GOTA:',
+            ...getMonoartriteGoutAlternatives().map((item) => `- ${item}`),
+            '',
+            'ORIENTAÇÃO:',
+            '- Se dor de difícil controle, febre, calafrios, queda do estado geral ou suspeita infecciosa, reavaliar imediatamente e considerar artrocentese.'
+          ]
+        : [
+            'ESQUEMAS CONFORME GRAM / PERFIL CLÍNICO:',
+            ...MONOARTRITE_SEPTIC_ANTIBIOTIC_OPTIONS.map((item) => `- ${item}`),
+            '',
+            'ORIENTAÇÃO:',
+            '- Todo paciente com suspeita de artrite séptica deve ser internado para coleta de líquido sinovial, antibioticoterapia EV e ajuste conforme culturas.'
+          ])
+    ].filter(Boolean)
+
+    return {
+      title: titleByDisposition[disposition],
+      disposition,
+      content
+    }
+  }, [])
+
+  const getPersistedMonoartritePrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Monoartrite')
+  }, [patient])
+
+  const handleOpenMonoartritePrescription = useCallback(() => {
+    if (!currentStepData || !isMonoartritePrescriptionFinalStep) return
+
+    const disposition = monoartriteCurrentDisposition
+    const draftItems = buildMonoartritePrescriptionItems(disposition)
+    const persisted = getPersistedMonoartritePrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setMonoartritePrescriptionGeneratedSteps((prev) => ({ ...prev, [currentStepData.id]: true }))
+    setMonoartritePrescriptionPreview(buildMonoartritePrescriptionPreview(disposition))
+    setMonoartritePrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildMonoartritePrescriptionPreview,
+    currentStep,
+    currentStepData,
+    getPersistedMonoartritePrescriptions,
+    history,
+    isMonoartritePrescriptionFinalStep,
+    monoartriteCurrentDisposition,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyMonoartritePrescriptionText = useCallback(async () => {
+    if (!monoartritePrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(monoartritePrescriptionPreview.content.join('\n'))
+      setMonoartritePrescriptionCopied(true)
+      setTimeout(() => setMonoartritePrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da monoartrite:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [monoartritePrescriptionPreview])
+
+  const buildAnsiedadePrescriptionPreview = useCallback((): AnsiedadePrescriptionPreview => {
+    const items = buildAnsiedadePrescriptionItems()
+    const content = [
+      'ABORDAGEM MEDICAMENTOSA NA CRISE DE ANSIEDADE',
+      '',
+      'PRESCRIÇÃO NA PRÁTICA NO PRONTO-SOCORRO',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'OUTRAS OPÇÕES:',
+      ...getAnsiedadeMedicationAlternatives().map((item) => `- ${item}`),
+      '',
+      'ORIENTAÇÃO:',
+      '- Reavaliar resposta clínica, nível de sedação e segurança respiratória.',
+      '- Solicitar avaliação psicológica/psiquiátrica quando disponível ou encaminhar seguimento ambulatorial conforme caso.',
+      '- Retornar imediatamente se dor torácica, dispneia, síncope, déficit neurológico, confusão, ideação suicida ou piora importante.'
+    ].filter(Boolean)
+
+    return {
+      title: 'Conduta medicamentosa da crise de ansiedade',
+      content
+    }
+  }, [])
+
+  const getPersistedAnsiedadePrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Crise de Ansiedade')
+  }, [patient])
+
+  const handleOpenAnsiedadePrescription = useCallback(() => {
+    if (!isAnsiedadeMedicationStep) return
+
+    const draftItems = buildAnsiedadePrescriptionItems()
+    const persisted = getPersistedAnsiedadePrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setAnsiedadePrescriptionGenerated(true)
+    setAnsiedadePrescriptionPreview(buildAnsiedadePrescriptionPreview())
+    setAnsiedadePrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildAnsiedadePrescriptionPreview,
+    currentStep,
+    getPersistedAnsiedadePrescriptions,
+    history,
+    isAnsiedadeMedicationStep,
+    onUpdate,
+    patient,
+    progress
+  ])
+
+  const copyAnsiedadePrescriptionText = useCallback(async () => {
+    if (!ansiedadePrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(ansiedadePrescriptionPreview.content.join('\n'))
+      setAnsiedadePrescriptionCopied(true)
+      setTimeout(() => setAnsiedadePrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar conduta da crise de ansiedade:', error)
+      alert('Não foi possível copiar a conduta. Tente novamente.')
+    }
+  }, [ansiedadePrescriptionPreview])
+
+  const buildVertigemPrescriptionPreview = useCallback((disposition: VertigemDisposition): VertigemPrescriptionPreview => {
+    const items = buildVertigemPrescriptionItems(disposition)
+    const titleByDisposition = {
+      neurite: 'Receita para neurite vestibular',
+      vppb: 'Receita sintomática para VPPB'
+    }
+    const content = [
+      titleByDisposition[disposition].toUpperCase(),
+      '',
+      'RECEITA MÉDICA',
+      '',
+      ...items.flatMap((item, index) => [
+        `${index + 1}) ${item.medication} ${item.dosage}`,
+        `- ${item.frequency.toUpperCase()}, ${item.duration.toUpperCase()}.`,
+        item.instructions ? `- ${item.instructions}` : '',
+        ''
+      ]),
+      'OUTRAS OPÇÕES ANTIVERTIGINOSAS NO PS:',
+      ...getVertigemAntivertigoAlternatives().map((item) => `- ${item}`),
+      '',
+      'ORIENTAÇÕES:',
+      '- Usar sintomáticos vestibulares apenas pelo menor tempo possível, preferencialmente até 3 dias.',
+      disposition === 'vppb'
+        ? '- Agendar/realizar manobras de reposicionamento canalicular, como Epley ou Semont, conforme lado acometido.'
+        : '- Orientar reabilitação vestibular e retorno se surgirem sintomas neurológicos ou piora importante.',
+      '- Retornar imediatamente em tontura persistente e agravante, fraqueza, dormência, turvação visual, dificuldade de fala, alteração visual, cefaleia intensa, vômitos contínuos, desmaio, queda ou trauma.'
+    ].filter(Boolean)
+
+    return {
+      title: titleByDisposition[disposition],
+      disposition,
+      content
+    }
+  }, [])
+
+  const getPersistedVertigemPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Síndrome Vertiginosa')
+  }, [patient])
+
+  const handleOpenVertigemPrescription = useCallback(() => {
+    if (!currentStepData || !isVertigemPrescriptionFinalStep) return
+
+    const disposition = vertigemCurrentDisposition
+    const draftItems = buildVertigemPrescriptionItems(disposition)
+    const persisted = getPersistedVertigemPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    draftItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setVertigemPrescriptionGeneratedSteps((prev) => ({ ...prev, [currentStepData.id]: true }))
+    setVertigemPrescriptionPreview(buildVertigemPrescriptionPreview(disposition))
+    setVertigemPrescriptionCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [
+    answers,
+    buildVertigemPrescriptionPreview,
+    currentStep,
+    currentStepData,
+    getPersistedVertigemPrescriptions,
+    history,
+    isVertigemPrescriptionFinalStep,
+    onUpdate,
+    patient,
+    progress,
+    vertigemCurrentDisposition
+  ])
+
+  const copyVertigemPrescriptionText = useCallback(async () => {
+    if (!vertigemPrescriptionPreview) return
+    try {
+      await navigator.clipboard.writeText(vertigemPrescriptionPreview.content.join('\n'))
+      setVertigemPrescriptionCopied(true)
+      setTimeout(() => setVertigemPrescriptionCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar prescrição da síndrome vertiginosa:', error)
+      alert('Não foi possível copiar a prescrição. Tente novamente.')
+    }
+  }, [vertigemPrescriptionPreview])
 
   const buildAnaphylaxisPrescriptionPreview = useCallback((): AnaphylaxisPrescriptionPreview => {
     const items = buildAnaphylaxisDischargePrescriptionItems(patient)
@@ -2908,6 +3323,35 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSinusitisPrescriptionCopied(false)
     }
   }, [isSinusitisPrescriptionFinalStep])
+
+  useEffect(() => {
+    if (!isFaringoamigdalitePrescriptionFinalStep) {
+      setFaringoamigdalitePrescriptionPreview(null)
+      setFaringoamigdalitePrescriptionCopied(false)
+    }
+  }, [isFaringoamigdalitePrescriptionFinalStep])
+
+  useEffect(() => {
+    if (!isMonoartritePrescriptionFinalStep) {
+      setMonoartritePrescriptionPreview(null)
+      setMonoartritePrescriptionCopied(false)
+    }
+  }, [isMonoartritePrescriptionFinalStep])
+
+  useEffect(() => {
+    if (!isAnsiedadeMedicationStep) {
+      setAnsiedadePrescriptionPreview(null)
+      setAnsiedadePrescriptionCopied(false)
+      setAnsiedadePrescriptionGenerated(false)
+    }
+  }, [isAnsiedadeMedicationStep])
+
+  useEffect(() => {
+    if (!isVertigemPrescriptionFinalStep) {
+      setVertigemPrescriptionPreview(null)
+      setVertigemPrescriptionCopied(false)
+    }
+  }, [isVertigemPrescriptionFinalStep])
 
   useEffect(() => {
     if (!isAnaphylaxisAdjunctStep) {
@@ -6011,6 +6455,215 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {faringoamigdalitePrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-sky-700 to-blue-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{faringoamigdalitePrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-sky-50">
+                          Receituário rápido para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyFaringoamigdalitePrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            faringoamigdalitePrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {faringoamigdalitePrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {faringoamigdalitePrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFaringoamigdalitePrescriptionPreview(null)
+                            setFaringoamigdalitePrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {faringoamigdalitePrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {monoartritePrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className={clsx(
+                      'flex items-center justify-between px-5 py-4 text-white',
+                      monoartritePrescriptionPreview.disposition === 'septic'
+                        ? 'bg-gradient-to-r from-red-700 to-rose-800'
+                        : 'bg-gradient-to-r from-slate-700 to-zinc-800'
+                    )}>
+                      <div>
+                        <h4 className="font-bold">{monoartritePrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-white/85">
+                          Conduta rápida para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyMonoartritePrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            monoartritePrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar conduta"
+                        >
+                          {monoartritePrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {monoartritePrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setMonoartritePrescriptionPreview(null)
+                            setMonoartritePrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {monoartritePrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {ansiedadePrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
+                      <div>
+                        <h4 className="font-bold">{ansiedadePrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-blue-50">
+                          Conduta rápida para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyAnsiedadePrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            ansiedadePrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar conduta"
+                        >
+                          {ansiedadePrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {ansiedadePrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAnsiedadePrescriptionPreview(null)
+                            setAnsiedadePrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {ansiedadePrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {vertigemPrescriptionPreview && (
+                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-cyan-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{vertigemPrescriptionPreview.title}</h4>
+                        <p className="mt-1 text-sm text-blue-50">
+                          Receita rápida para visualização durante o fluxo.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyVertigemPrescriptionText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            vertigemPrescriptionCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar prescrição"
+                        >
+                          {vertigemPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {vertigemPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setVertigemPrescriptionPreview(null)
+                            setVertigemPrescriptionCopied(false)
+                          }}
+                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Fechar"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {vertigemPrescriptionPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {anaphylaxisPrescriptionPreview && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
@@ -6937,6 +7590,128 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}
                     >
                       {sinusitisPrescriptionGeneratedSteps[currentStepData.id] || hasSinusitisPrescriptionSet(getPersistedSinusitisPrescriptions(), sinusitisCurrentEtiology) ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isFaringoamigdalitePrescriptionFinalStep && (
+                <div className="mt-6 rounded-2xl border border-sky-200 bg-sky-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-sky-900">
+                        Prescrição da faringoamigdalite
+                      </h4>
+                      <p className="mt-1 text-sm text-sky-900">
+                        Gera a receita conforme a faixa do Centor Modificado e registra no receituário do dashboard.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenFaringoamigdalitePrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        faringoamigdalitePrescriptionGeneratedSteps[currentStepData.id] || hasFaringoamigdalitePrescriptionSet(getPersistedFaringoamigdalitePrescriptions(), faringoamigdaliteCurrentDisposition)
+                          ? 'border border-sky-300 bg-white text-sky-800 hover:bg-sky-100'
+                          : 'bg-sky-600 text-white hover:bg-sky-700'
+                      )}
+                    >
+                      {faringoamigdalitePrescriptionGeneratedSteps[currentStepData.id] || hasFaringoamigdalitePrescriptionSet(getPersistedFaringoamigdalitePrescriptions(), faringoamigdaliteCurrentDisposition) ? 'Prescrição' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isMonoartritePrescriptionFinalStep && (
+                <div className={clsx(
+                  'mt-6 rounded-2xl border p-5',
+                  monoartriteCurrentDisposition === 'septic'
+                    ? 'border-red-200 bg-red-50'
+                    : 'border-slate-200 bg-slate-50'
+                )}>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className={clsx(
+                        'text-sm font-bold uppercase tracking-wide',
+                        monoartriteCurrentDisposition === 'septic' ? 'text-red-900' : 'text-slate-900'
+                      )}>
+                        {monoartriteCurrentDisposition === 'septic' ? 'Conduta da artrite séptica' : 'Prescrição da gota'}
+                      </h4>
+                      <p className={clsx('mt-1 text-sm', monoartriteCurrentDisposition === 'septic' ? 'text-red-900' : 'text-slate-800')}>
+                        {monoartriteCurrentDisposition === 'septic'
+                          ? 'Gera a conduta inicial com antibiótico EV e registra no receituário do dashboard.'
+                          : 'Gera a prescrição prática para crise de gota e registra no receituário do dashboard.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenMonoartritePrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        monoartritePrescriptionGeneratedSteps[currentStepData.id] || hasMonoartritePrescriptionSet(getPersistedMonoartritePrescriptions(), monoartriteCurrentDisposition)
+                          ? monoartriteCurrentDisposition === 'septic'
+                            ? 'border border-red-300 bg-white text-red-800 hover:bg-red-100'
+                            : 'border border-slate-300 bg-white text-slate-800 hover:bg-slate-100'
+                          : monoartriteCurrentDisposition === 'septic'
+                            ? 'bg-red-600 text-white hover:bg-red-700'
+                            : 'bg-slate-700 text-white hover:bg-slate-800'
+                      )}
+                    >
+                      {monoartritePrescriptionGeneratedSteps[currentStepData.id] || hasMonoartritePrescriptionSet(getPersistedMonoartritePrescriptions(), monoartriteCurrentDisposition) ? 'Conduta' : 'Gerar conduta'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isAnsiedadeMedicationStep && (
+                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-blue-900">
+                        Conduta medicamentosa da ansiedade
+                      </h4>
+                      <p className="mt-1 text-sm text-blue-900">
+                        Gera a conduta medicamentosa, registra no receituário do dashboard e permite copiar para uso rápido.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAnsiedadePrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        ansiedadePrescriptionGenerated || hasAnsiedadePrescriptionSet(getPersistedAnsiedadePrescriptions())
+                          ? 'border border-blue-300 bg-white text-blue-800 hover:bg-blue-100'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      )}
+                    >
+                      {ansiedadePrescriptionGenerated || hasAnsiedadePrescriptionSet(getPersistedAnsiedadePrescriptions()) ? 'Conduta' : 'Gerar conduta'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isVertigemPrescriptionFinalStep && (
+                <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-blue-900">
+                        Receita da síndrome vertiginosa
+                      </h4>
+                      <p className="mt-1 text-sm text-blue-900">
+                        Gera a receita sintomática e registra no receituário do dashboard. As manobras/imagens podem ser adicionadas depois no bloco visual do fluxo.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenVertigemPrescription}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                        vertigemPrescriptionGeneratedSteps[currentStepData.id] || hasVertigemPrescriptionSet(getPersistedVertigemPrescriptions(), vertigemCurrentDisposition)
+                          ? 'border border-blue-300 bg-white text-blue-800 hover:bg-blue-100'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      )}
+                    >
+                      {vertigemPrescriptionGeneratedSteps[currentStepData.id] || hasVertigemPrescriptionSet(getPersistedVertigemPrescriptions(), vertigemCurrentDisposition) ? 'Receita' : 'Gerar receita'}
                     </button>
                   </div>
                 </div>

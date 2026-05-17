@@ -4333,6 +4333,821 @@ export const sinusitisFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Faringoamigdalites
+export const faringoamigdaliteFlowchart: EmergencyFlowchart = {
+  id: 'faringoamigdalite',
+  name: 'Faringoamigdalites',
+  description: 'Estratificação pelo Escore de Centor Modificado para evitar antibiótico desnecessário e identificar provável etiologia bacteriana.',
+  category: 'otorhinolaryngological',
+  priority: 'medium',
+  icon: 'stethoscope',
+  color: 'from-sky-600 to-blue-700',
+  initialStep: 'faringo_inicio',
+  finalSteps: [
+    'faringo_internacao_avaliacao',
+    'faringo_alta_sintomatica',
+    'faringo_considerar_antibiotico',
+    'faringo_bacteriana_antibiotico'
+  ],
+  steps: {
+    faringo_inicio: {
+      id: 'faringo_inicio',
+      title: 'Faringoamigdalite - Avaliação Inicial',
+      description: 'Paciente com dor de garganta, febre, odinofagia, faringalgia ou otalgia reflexa.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+            <p><strong>Quadro clássico:</strong> febre, queda do estado geral, prostração/inapetência, queimação faríngea, faringalgia, odinofagia e otalgia reflexa.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>A maioria dos quadros é viral.</li>
+            <li>Em crianças e adolescentes de 5 a 15 anos, faringite estreptocócica pode representar parcela relevante dos casos.</li>
+            <li>Coriza, conjuntivite e tosse sugerem etiologia viral.</li>
+            <li>Secreção purulenta em tonsilas palatinas não confirma necessariamente infecção bacteriana.</li>
+            <li>Prescrever ou não antibiótico deve ser guiado pelo Escore de Centor Modificado.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar avaliação', nextStep: 'faringo_complicacoes', value: 'iniciar' }
+      ]
+    },
+    faringo_complicacoes: {
+      id: 'faringo_complicacoes',
+      title: 'Há Complicação Supurativa ou Toxemia?',
+      description: 'Pesquisar abscesso, toxemia, dificuldade respiratória ou incapacidade de hidratação oral.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Internar/avaliar urgência</strong> se houver complicações supurativas, como abscesso retrofaríngeo ou tonsilar, ou toxemia significativa por provável infecção bacteriana.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - internar/avaliar urgência', nextStep: 'faringo_internacao_avaliacao', value: 'complicacao', critical: true, requiresImmediateAction: true },
+        { text: 'Não - avaliar etiologia viral', nextStep: 'faringo_sinais_virais', value: 'sem_complicacao' }
+      ]
+    },
+    faringo_sinais_virais: {
+      id: 'faringo_sinais_virais',
+      title: 'Há Sinais Concomitantes de Etiologia Viral?',
+      description: 'Coriza, conjuntivite e tosse reduzem a probabilidade de faringoamigdalite bacteriana.',
+      type: 'question',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p><strong>Sugere viral:</strong> presença concomitante de coriza, conjuntivite e tosse. Nesses casos, priorizar tratamento sintomático e evitar antibiótico.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - quadro sugere viral', nextStep: 'faringo_alta_sintomatica', value: 'viral' },
+        { text: 'Não - calcular Centor Modificado', nextStep: 'faringo_centor', value: 'avaliar_centor' }
+      ]
+    },
+    faringo_centor: {
+      id: 'faringo_centor',
+      title: 'Escore de Centor Modificado',
+      description: 'Some os critérios e escolha a faixa de pontuação.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="overflow-hidden rounded-lg border border-slate-300">
+            <table class="w-full text-left">
+              <thead class="bg-sky-100 text-slate-900">
+                <tr>
+                  <th class="px-3 py-2 font-bold">Critério</th>
+                  <th class="px-3 py-2 font-bold">Pontuação</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="px-3 py-2">Febre &gt; 38°C</td><td class="px-3 py-2">+1</td></tr>
+                <tr><td class="px-3 py-2">Adenopatia cervical anterior</td><td class="px-3 py-2">+1</td></tr>
+                <tr><td class="px-3 py-2">Exsudato ou edema amigdaliano</td><td class="px-3 py-2">+1</td></tr>
+                <tr><td class="px-3 py-2">Ausência de tosse</td><td class="px-3 py-2">+1</td></tr>
+                <tr><td class="px-3 py-2">Idade entre 3 e 14 anos</td><td class="px-3 py-2">+1</td></tr>
+                <tr><td class="px-3 py-2">Idade entre 15 e 44 anos</td><td class="px-3 py-2">0</td></tr>
+                <tr><td class="px-3 py-2">Idade &gt; 45 anos</td><td class="px-3 py-2">-1</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Interpretação:</strong> ≤ 1 ponto: não prescrever antibiótico; 2 a 3 pontos: considerar antibiótico se sinais e sintomas sugerirem infecção bacteriana; ≥ 4 pontos: prescrever antibiótico.</p>
+        </div>
+      `,
+      options: [
+        { text: '≤ 1 ponto', nextStep: 'faringo_alta_sintomatica', value: 'centor_0_1' },
+        { text: 'Entre 2 e 3 pontos', nextStep: 'faringo_sugestivo_bacteriano', value: 'centor_2_3' },
+        { text: '≥ 4 pontos', nextStep: 'faringo_bacteriana_antibiotico', value: 'centor_4_mais' }
+      ]
+    },
+    faringo_sugestivo_bacteriano: {
+      id: 'faringo_sugestivo_bacteriano',
+      title: 'Centor 2-3: Há Sinais Sugestivos de Infecção Bacteriana?',
+      description: 'Decidir se o paciente intermediário deve receber antibiótico.',
+      type: 'question',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p>Com 2 a 3 pontos, considerar antibiótico quando o conjunto clínico for sugestivo de infecção bacteriana, especialmente febre, odinofagia importante, adenopatia anterior dolorosa, exsudato/edema amigdaliano e ausência de sintomas virais.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - considerar antibiótico', nextStep: 'faringo_considerar_antibiotico', value: 'bacteriana_sugestiva' },
+        { text: 'Não - sintomáticos e orientação', nextStep: 'faringo_alta_sintomatica', value: 'sem_sugestao_bacteriana' }
+      ]
+    },
+    faringo_alta_sintomatica: {
+      id: 'faringo_alta_sintomatica',
+      title: 'Alta com Tratamento Sintomático',
+      description: 'Baixa probabilidade bacteriana ou quadro viral.',
+      type: 'result',
+      group: 'Sintomático',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> não prescrever antibiótico. Tratamento sintomático e medidas não farmacológicas.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Gargarejo com água morna e sal e chás podem aliviar sintomas.</li>
+            <li>Repouso e hidratação adequada.</li>
+            <li>Retornar se febre persistente apesar das medicações, dificuldade de falar, inchaço intenso no pescoço ou queda intensa do estado geral.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    faringo_considerar_antibiotico: {
+      id: 'faringo_considerar_antibiotico',
+      title: 'Considerar Antibiótico',
+      description: 'Centor 2-3 com sinais sugestivos de infecção bacteriana.',
+      type: 'result',
+      group: 'Considerar ATB',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> considerar antibiótico associado a sintomáticos, conforme avaliação clínica e perfil do paciente.</p>
+          </div>
+          <p><strong>Opções:</strong> penicilina G benzatina IM dose única, amoxicilina por 10 dias ou penicilina V por 10 dias. Se alergia a penicilina, considerar azitromicina, cefalexina ou cefuroxima conforme risco individual.</p>
+        </div>
+      `,
+      options: []
+    },
+    faringo_bacteriana_antibiotico: {
+      id: 'faringo_bacteriana_antibiotico',
+      title: 'Provável Faringoamigdalite Bacteriana',
+      description: 'Centor Modificado ≥ 4 pontos.',
+      type: 'result',
+      group: 'Bacteriana',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>Conduta:</strong> prescrever antibiótico e sintomáticos.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Penicilina G benzatina 1.200.000 UI IM em dose única.</li>
+            <li>Amoxicilina 500 mg VO de 8/8 horas por 10 dias.</li>
+            <li>Penicilina V 500 mg VO de 8/8 horas por 10 dias.</li>
+            <li>Se alergia: azitromicina, cefalexina ou cefuroxima conforme perfil clínico.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    faringo_internacao_avaliacao: {
+      id: 'faringo_internacao_avaliacao',
+      title: 'Internação/Avaliação Urgente',
+      description: 'Complicação supurativa ou toxemia significativa.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> internar para antibioticoterapia parenteral, suporte clínico e avaliação cirúrgica quando houver suspeita de abscesso ou outra complicação supurativa.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Monoartrites Agudas
+export const monoartriteFlowchart: EmergencyFlowchart = {
+  id: 'monoartrite',
+  name: 'Monoartrites Agudas',
+  description: 'Abordagem da monoartrite aguda no pronto-socorro com prioridade para artrocentese, exclusão de artrite séptica e estratificação de gota pelo Escore de Janssens.',
+  category: 'musculoskeletal',
+  priority: 'high',
+  icon: 'activity',
+  color: 'from-slate-600 to-zinc-700',
+  initialStep: 'mono_inicio',
+  finalSteps: [
+    'mono_gota_tratamento',
+    'mono_artrite_septica_internacao',
+    'mono_inconclusivo_investigar',
+    'mono_outro_diagnostico'
+  ],
+  steps: {
+    mono_inicio: {
+      id: 'mono_inicio',
+      title: 'Monoartrite Aguda na Emergência',
+      description: 'Paciente com dor, calor, edema ou limitação em uma articulação.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Atenção imediata:</strong> a principal preocupação no pronto-socorro é artrite séptica. O quadro pode cursar com dor intensa, calor local, edema, limitação dos movimentos, febre e calafrios, mas febre pode não estar presente.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Idealmente, todo paciente com monoartrite aguda deve realizar artrocentese.</li>
+            <li>Gota geralmente tem dor intensa, noturna, com pico nas primeiras 12 horas e pode acometer a 1ª metatarsofalangeana.</li>
+            <li>Artrite séptica gonocócica pode se manifestar como tríade de tenossinovite, poliartralgias e dermatite, ou como artrite purulenta isolada.</li>
+            <li>Ácido úrico tem pouca utilidade imediata isoladamente; cristais no líquido sinovial confirmam gota.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar abordagem', nextStep: 'mono_artrocentese_disponivel', value: 'iniciar' }
+      ]
+    },
+    mono_artrocentese_disponivel: {
+      id: 'mono_artrocentese_disponivel',
+      title: 'Artrocentese Disponível?',
+      description: 'A artrocentese é o caminho ideal para monoartrite aguda.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Cenário ideal:</strong> a artrocentese deve ser realizada em todo paciente com monoartrite aguda, quando tecnicamente viável e disponível.</p>
+          </div>
+          <p>Se houver limitação técnica ou de recurso, use o Escore de Janssens como apoio, mantendo suspeita ativa para artrite séptica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - realizar artrocentese', nextStep: 'mono_resultado_liquido', value: 'artrocentese_sim' },
+        { text: 'Não - usar Escore de Janssens', nextStep: 'mono_janssens', value: 'artrocentese_nao' }
+      ]
+    },
+    mono_resultado_liquido: {
+      id: 'mono_resultado_liquido',
+      title: 'Interpretação do Líquido Sinovial',
+      description: 'Classifique o líquido sinovial para orientar conduta.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="overflow-hidden rounded-lg border border-slate-300">
+            <table class="w-full text-left">
+              <thead class="bg-slate-200 text-slate-900">
+                <tr>
+                  <th class="px-3 py-2 font-bold">Característica</th>
+                  <th class="px-3 py-2 font-bold">Normal</th>
+                  <th class="px-3 py-2 font-bold">Não inflamatório</th>
+                  <th class="px-3 py-2 font-bold">Gota</th>
+                  <th class="px-3 py-2 font-bold">Artrite séptica</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="px-3 py-2">Aparência</td><td class="px-3 py-2">Transparente</td><td class="px-3 py-2">Transparente</td><td class="px-3 py-2">Translúcido</td><td class="px-3 py-2">Opaco</td></tr>
+                <tr><td class="px-3 py-2">Coloração</td><td class="px-3 py-2">Clara</td><td class="px-3 py-2">Amarelada</td><td class="px-3 py-2">Amarelada</td><td class="px-3 py-2">Amarelada</td></tr>
+                <tr><td class="px-3 py-2">Viscosidade</td><td class="px-3 py-2">Alta</td><td class="px-3 py-2">Alta</td><td class="px-3 py-2">Baixa</td><td class="px-3 py-2">Variável</td></tr>
+                <tr><td class="px-3 py-2">Leucócitos</td><td class="px-3 py-2">&lt; 200/mm³</td><td class="px-3 py-2">0 a 200/mm³</td><td class="px-3 py-2">2.000 a 50.000/mm³</td><td class="px-3 py-2">&gt; 50.000/mm³</td></tr>
+                <tr><td class="px-3 py-2">PMN</td><td class="px-3 py-2">&lt; 25%</td><td class="px-3 py-2">25 a 50%</td><td class="px-3 py-2">&gt; 50%</td><td class="px-3 py-2">&gt; 75%</td></tr>
+                <tr><td class="px-3 py-2">Cultura</td><td class="px-3 py-2">Negativa</td><td class="px-3 py-2">Negativa</td><td class="px-3 py-2">Negativa</td><td class="px-3 py-2">Positiva</td></tr>
+                <tr><td class="px-3 py-2">Cristais</td><td class="px-3 py-2">Negativa</td><td class="px-3 py-2">Negativa</td><td class="px-3 py-2">Positiva</td><td class="px-3 py-2">Negativa</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p><strong>Conduta:</strong> interpretar e tratar conforme análise. Todo paciente com artrite séptica deve ser internado.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Cristais positivos / compatível com gota', nextStep: 'mono_gota_tratamento', value: 'gota' },
+        { text: 'Cultura positiva, líquido opaco ou forte suspeita séptica', nextStep: 'mono_artrite_septica_internacao', value: 'septica', critical: true, requiresImmediateAction: true },
+        { text: 'Não inflamatório ou outro diagnóstico', nextStep: 'mono_outro_diagnostico', value: 'outro' }
+      ]
+    },
+    mono_janssens: {
+      id: 'mono_janssens',
+      title: 'Escore de Janssens',
+      description: 'Escore preditivo de gota quando artrocentese não está disponível.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="overflow-hidden rounded-lg border border-slate-300">
+            <table class="w-full text-left">
+              <thead class="bg-slate-200 text-slate-900">
+                <tr><th class="px-3 py-2 font-bold">Dado clínico</th><th class="px-3 py-2 font-bold">Pontuação</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="px-3 py-2">Homem</td><td class="px-3 py-2">+2</td></tr>
+                <tr><td class="px-3 py-2">Artrite prévia relatada pelo paciente</td><td class="px-3 py-2">+2</td></tr>
+                <tr><td class="px-3 py-2">Início agudo, máxima intensidade em 24h</td><td class="px-3 py-2">+0,5</td></tr>
+                <tr><td class="px-3 py-2">Vermelhidão da articulação</td><td class="px-3 py-2">+1</td></tr>
+                <tr><td class="px-3 py-2">Acometimento da 1ª metatarsofalangeana</td><td class="px-3 py-2">+2,5</td></tr>
+                <tr><td class="px-3 py-2">Ácido úrico &gt; 5,88 mg/dL</td><td class="px-3 py-2">+3,5</td></tr>
+                <tr><td class="px-3 py-2">Hipertensão, angina, IAM, ICC, doença cerebrovascular ou DAP</td><td class="px-3 py-2">+1,5</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Interpretação:</strong> ≥ 8 sugere gota; 5 a 7 é inconclusivo; ≤ 4 torna gota improvável e exige considerar diagnósticos diferenciais, principalmente artrite séptica.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: '≤ 4 pontos', nextStep: 'mono_artrite_septica_internacao', value: 'janssens_4_menos', critical: true, requiresImmediateAction: true },
+        { text: '5 a 7 pontos', nextStep: 'mono_inconclusivo_investigar', value: 'janssens_5_7' },
+        { text: '≥ 8 pontos', nextStep: 'mono_gota_tratamento', value: 'janssens_8_mais' }
+      ]
+    },
+    mono_gota_tratamento: {
+      id: 'mono_gota_tratamento',
+      title: 'Considerar Como Gota',
+      description: 'Escore de Janssens ≥ 8 ou cristais compatíveis no líquido sinovial.',
+      type: 'result',
+      group: 'Gota',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> iniciar tratamento de gota, mantendo artrocentese se disponível ou se houver suspeita forte de artrite séptica.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>AINEs são primeira linha: cetorolaco, tenoxicam ou cetoprofeno.</li>
+            <li>Se contraindicação a AINE, considerar prednisona 40 mg VO.</li>
+            <li>Colchicina 0,5 mg: fazer 1 mg, seguido de 0,5 mg após 1 hora, total de 1,5 mg no primeiro dia.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    mono_artrite_septica_internacao: {
+      id: 'mono_artrite_septica_internacao',
+      title: 'Considerar Artrite Séptica',
+      description: 'Internação, artrocentese e antibiótico EV empiricamente.',
+      type: 'result',
+      critical: true,
+      group: 'Artrite séptica',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> internar para realizar artrocentese, colher líquido sinovial para análise e iniciar antibiótico EV empiricamente após coleta, quando possível.</p>
+          </div>
+          <p><strong>Tratamento mínimo:</strong> internação obrigatória nos casos de artrite séptica, com antibioticoterapia e reavaliação conforme culturas.</p>
+        </div>
+      `,
+      options: []
+    },
+    mono_inconclusivo_investigar: {
+      id: 'mono_inconclusivo_investigar',
+      title: 'Diagnóstico Inconclusivo',
+      description: 'Janssens 5 a 7: decisão baseada em outros exames e julgamento clínico.',
+      type: 'result',
+      group: 'Inconclusivo',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> diagnóstico incerto. Considerar imagem, exames complementares e artrocentese assim que possível.</p>
+          </div>
+          <p>Se houver febre, calafrios, toxemia, imunossupressão, prótese articular, bacteremia suspeita ou limitação intensa, conduzir como possível artrite séptica.</p>
+        </div>
+      `,
+      options: []
+    },
+    mono_outro_diagnostico: {
+      id: 'mono_outro_diagnostico',
+      title: 'Outro Diagnóstico / Líquido Não Inflamatório',
+      description: 'Resultado não compatível com gota nem artrite séptica.',
+      type: 'result',
+      content: `
+        <div class="bg-slate-50 p-3 rounded border-l-4 border-slate-500 text-sm">
+          <p><strong>Conduta:</strong> investigar diagnósticos diferenciais conforme história, exame físico, trauma, imagem e exames laboratoriais. Reavaliar se houver piora clínica.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Crise de Ansiedade / Ataque de Pânico
+export const ansiedadeFlowchart: EmergencyFlowchart = {
+  id: 'crise_ansiedade',
+  name: 'Crise de Ansiedade',
+  description: 'Abordagem sistematizada do ataque de pânico no pronto-socorro, com exclusão inicial de causas orgânicas e manejo escalonado.',
+  category: 'psychiatric',
+  priority: 'medium',
+  icon: 'brain',
+  color: 'from-blue-600 to-indigo-700',
+  initialStep: 'ansiedade_inicio',
+  finalSteps: [
+    'ansiedade_causa_organica',
+    'ansiedade_alta_orientada',
+    'ansiedade_avaliacao_psiquiatrica'
+  ],
+  steps: {
+    ansiedade_inicio: {
+      id: 'ansiedade_inicio',
+      title: 'Crise de Ansiedade na Emergência',
+      description: 'Episódio súbito de medo ou desconforto intenso com sintomas físicos e/ou cognitivos.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>Termo técnico:</strong> segundo o DSM-5, o termo correto para episódios súbitos de ansiedade intensa é ataque de pânico.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Eventos súbitos e abruptos de medo e desconforto intenso.</li>
+            <li>Podem vir com taquicardia, sudorese, tremores, náuseas, asfixia, dor precordial, tontura, formigamento e parestesias.</li>
+            <li>Também podem ocorrer medo excessivo da morte, despersonalização, desrealização e sensação de perda de controle.</li>
+            <li>A crise costuma ser comum, passageira e durar entre 10 e 30 minutos.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar abordagem', nextStep: 'ansiedade_excluir_organico', value: 'iniciar' }
+      ]
+    },
+    ansiedade_excluir_organico: {
+      id: 'ansiedade_excluir_organico',
+      title: 'Excluir Causa Orgânica',
+      description: 'Antes de concluir ansiedade, pesquisar diagnósticos potencialmente graves.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Não atribuir automaticamente à ansiedade:</strong> excluir rapidamente causas orgânicas que podem simular crise de pânico.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Dor precordial → considerar SCA.</li>
+            <li>Taquicardia → considerar arritmias.</li>
+            <li>Parestesias ou queixas neurológicas → procurar sinais focais compatíveis com AVC.</li>
+            <li>Dispneia → considerar exacerbação de DPOC, broncoespasmo, hipoxemia ou outra causa respiratória.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Há suspeita de causa orgânica', nextStep: 'ansiedade_causa_organica', value: 'organico', critical: true, requiresImmediateAction: true },
+        { text: 'Sem sinais de causa orgânica após avaliação', nextStep: 'ansiedade_abordagem_nao_medicamentosa', value: 'sem_organico' }
+      ]
+    },
+    ansiedade_abordagem_nao_medicamentosa: {
+      id: 'ansiedade_abordagem_nao_medicamentosa',
+      title: '1ª Linha: Abordagem Não Medicamentosa',
+      description: 'Acolhimento, validação e respiração diafragmática.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Acolhimento:</strong> tranquilize o paciente explicando que os sintomas vêm da crise de ansiedade e não representam risco de morte após exclusão de causas orgânicas. Mostre empatia e valide as sensações como reais.</p>
+          </div>
+          <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-500">
+            <p><strong>Respiração diafragmática:</strong> instruir o paciente a respirar com o diafragma e limitar a utilização da musculatura intercostal.</p>
+          </div>
+          <p>Pergunte sobre fatores de estresse e explique que a crise é comum, passageira e dura entre 10 e 30 minutos.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Melhorou com abordagem não medicamentosa', nextStep: 'ansiedade_alta_orientada', value: 'melhorou' },
+        { text: 'Sintomas persistentes / sofrimento importante', nextStep: 'ansiedade_medicamentosa', value: 'persistente' }
+      ]
+    },
+    ansiedade_medicamentosa: {
+      id: 'ansiedade_medicamentosa',
+      title: '2ª Linha: Abordagem Medicamentosa',
+      description: 'Benzodiazepínico em dose baixa e reavaliação.',
+      type: 'question',
+      group: 'Medicamentosa',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Conduta:</strong> considerar benzodiazepínico em dose baixa e reavaliar resposta clínica, sedação e segurança respiratória.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Clonazepam 0,25 ou 0,5 mg VO e reavaliar.</li>
+            <li>Clonazepam solução oral 2 mg/mL: 5 a 10 gotas e reavaliar.</li>
+            <li>Diazepam 5 mg VO e reavaliar.</li>
+            <li>Alprazolam 0,25 ou 0,5 mg VO e reavaliar.</li>
+          </ul>
+          <p>Evitar benzodiazepínicos em intoxicação por álcool/outros depressores, sedação excessiva, risco respiratório ou contraindicação clínica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para avaliação psicológica/psiquiátrica', nextStep: 'ansiedade_avaliacao_psiquiatrica', value: 'avaliacao_saude_mental' }
+      ]
+    },
+    ansiedade_alta_orientada: {
+      id: 'ansiedade_alta_orientada',
+      title: 'Alta Orientada',
+      description: 'Melhora clínica após acolhimento e respiração diafragmática.',
+      type: 'result',
+      group: 'Alta',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> alta com orientações, sinais de retorno e encaminhamento ambulatorial quando indicado.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Reforçar que causas orgânicas graves foram avaliadas conforme quadro clínico.</li>
+            <li>Ensinar respiração diafragmática e estratégias de aterramento.</li>
+            <li>Orientar retorno se dor torácica, dispneia, síncope, déficit neurológico, confusão, ideação suicida ou piora importante.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    ansiedade_avaliacao_psiquiatrica: {
+      id: 'ansiedade_avaliacao_psiquiatrica',
+      title: 'Avaliação Psicológica / Psiquiátrica',
+      description: 'Solicitar avaliação quando disponível no pronto-socorro ou seguimento ambulatorial.',
+      type: 'result',
+      group: 'Saúde mental',
+      content: `
+        <div class="bg-rose-50 p-3 rounded border-l-4 border-rose-500 text-sm">
+          <p><strong>Conduta:</strong> se serviço disponível no pronto-socorro, solicitar avaliação psicológica/psiquiátrica. Programar seguimento ambulatorial conforme caso, recorrência, sofrimento funcional, risco psicossocial ou ideação suicida.</p>
+        </div>
+      `,
+      options: []
+    },
+    ansiedade_causa_organica: {
+      id: 'ansiedade_causa_organica',
+      title: 'Investigar Causa Orgânica',
+      description: 'Sinais de alerta exigem investigação direcionada antes de tratar como ansiedade.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> conduzir investigação conforme suspeita clínica: ECG/troponina se dor torácica, monitorização e ECG se taquiarritmia, avaliação neurológica se sinais focais, oximetria/gasometria/broncoespasmo se dispneia, além de glicemia e causas tóxico-metabólicas quando indicado.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Síndrome Vertiginosa Aguda
+export const sindromeVertiginosaFlowchart: EmergencyFlowchart = {
+  id: 'sindrome_vertiginosa',
+  name: 'Síndrome Vertiginosa Aguda',
+  description: 'Abordagem da vertigem/tontura no pronto-socorro com foco em diferenciar AVC de fossa posterior de causas periféricas como neurite vestibular e VPPB.',
+  category: 'neurological',
+  priority: 'high',
+  icon: 'brain',
+  color: 'from-blue-700 to-cyan-700',
+  initialStep: 'vertigem_inicio',
+  finalSteps: [
+    'vertigem_central_investigar',
+    'vertigem_neurite_vestibular',
+    'vertigem_vppb_hipotensao',
+    'vertigem_recorrente_outros',
+    'vertigem_nao_vertiginosa',
+    'vertigem_hints_nao_aplicavel'
+  ],
+  steps: {
+    vertigem_inicio: {
+      id: 'vertigem_inicio',
+      title: 'Paciente com Síndrome Vertiginosa Aguda',
+      description: 'Paciente com queixa de vertigem ou tontura na emergência.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-600">
+            <p><strong>Desafio diagnóstico:</strong> a síndrome vertiginosa aguda pode ter origem periférica, como neurite vestibular ou VPPB, ou central, como AVC de fossa posterior.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>A TC de crânio tem papel limitado na abordagem da tontura e pode dar falsa segurança.</li>
+            <li>A principal causa central é AVC isquêmico; a principal causa periférica de síndrome vestibular aguda é neurite vestibular.</li>
+            <li>O HINTS deve ser aplicado apenas em pacientes com tontura contínua associada a nistagmo.</li>
+            <li>Queixas de tontura não vertiginosa podem ser sistêmicas, cardiovasculares, neurológicas ou medicamentosas.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar abordagem', nextStep: 'vertigem_e_realmente_aguda', value: 'iniciar' }
+      ]
+    },
+    vertigem_e_realmente_aguda: {
+      id: 'vertigem_e_realmente_aguda',
+      title: 'É Realmente uma Vertigem Aguda?',
+      description: 'Separar vertigem de desequilíbrio, pré-síncope e tontura inespecífica.',
+      type: 'question',
+      content: `
+        <div class="grid gap-3 text-sm md:grid-cols-2">
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+            <p class="font-bold text-blue-950">Vertigem</p>
+            <p>Tontura rotatória, ambiente girando, associada a instabilidade, náuseas e vômitos. Ocorre mesmo em repouso.</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p class="font-bold text-slate-950">Não vertiginosa</p>
+            <p>Desequilíbrio, pré-síncope, quase desmaio ou mal-estar vago podem apontar para causas neurológicas, sistêmicas, cardiovasculares ou medicamentosas.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Vertigem verdadeira', nextStep: 'vertigem_episodio_unico_prolongado', value: 'vertigem' },
+        { text: 'Tontura não vertiginosa / pré-síncope / desequilíbrio isolado', nextStep: 'vertigem_nao_vertiginosa', value: 'nao_vertiginosa' }
+      ]
+    },
+    vertigem_episodio_unico_prolongado: {
+      id: 'vertigem_episodio_unico_prolongado',
+      title: 'Episódio Único e Prolongado?',
+      description: 'Síndrome vestibular aguda pode durar dias a semanas.',
+      type: 'question',
+      content: `
+        <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-500 text-sm">
+          <p><strong>Vertigem aguda contínua:</strong> episódio único, prolongado, com sintomas persistentes por horas a dias. Este é o cenário em que o HINTS pode ajudar se houver nistagmo.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - episódio único/prolongado', nextStep: 'vertigem_sinal_focal', value: 'unico_prolongado' },
+        { text: 'Não - episódios breves/recorrentes', nextStep: 'vertigem_fator_desencadeante', value: 'recorrente' }
+      ]
+    },
+    vertigem_fator_desencadeante: {
+      id: 'vertigem_fator_desencadeante',
+      title: 'Há Fator Desencadeante?',
+      description: 'Posição, sons altos ou Valsalva favorecem causas episódicas específicas.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Desencadeantes típicos:</strong> mudança de posição da cabeça, levantar-se, sons altos ou manobra de Valsalva.</p>
+          </div>
+          <p>Vertigem posicional com duração de segundos até no máximo 1 minuto sugere VPPB. Pré-síncope ao levantar sugere hipotensão postural.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - posição/sons/Valsalva/postura', nextStep: 'vertigem_vppb_hipotensao', value: 'desencadeada' },
+        { text: 'Não - recorrente sem gatilho claro', nextStep: 'vertigem_recorrente_outros', value: 'sem_gatilho' }
+      ]
+    },
+    vertigem_sinal_focal: {
+      id: 'vertigem_sinal_focal',
+      title: 'Algum Outro Sinal Neurológico Focal?',
+      description: 'Buscar ataxia, diplopia, disartria, disfagia, déficit motor/sensitivo ou cefaleia intensa.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Sinais centrais:</strong> déficit neurológico focal, ataxia importante, incapacidade de marcha, diplopia, disartria, disfagia, fraqueza, alteração sensitiva ou cefaleia intensa apontam para investigação de AVC de fossa posterior.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - investigar causa central', nextStep: 'vertigem_central_investigar', value: 'focal', critical: true, requiresImmediateAction: true },
+        { text: 'Não - avaliar nistagmo', nextStep: 'vertigem_nistagmo_exame', value: 'sem_focal' }
+      ]
+    },
+    vertigem_nistagmo_exame: {
+      id: 'vertigem_nistagmo_exame',
+      title: 'Paciente com Nistagmo ao Exame?',
+      description: 'O HINTS só deve ser aplicado se houver nistagmo em vertigem contínua.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Regra prática:</strong> o paciente deve apresentar sintomas contínuos e nistagmo ao exame para o HINTS poder ser aplicado.</p>
+          </div>
+          <p>Se não há nistagmo detectável, realize avaliação cuidadosa do equilíbrio e da marcha; o HINTS não é aplicável nesse cenário.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - aplicar HINTS', nextStep: 'vertigem_hints', value: 'nistagmo' },
+        { text: 'Não - HINTS não aplicável', nextStep: 'vertigem_hints_nao_aplicavel', value: 'sem_nistagmo' }
+      ]
+    },
+    vertigem_hints: {
+      id: 'vertigem_hints',
+      title: 'Aplicar HINTS',
+      description: 'Head impulse, nystagmus e test of skew.',
+      type: 'question',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <p class="font-bold text-blue-950">Espaço reservado para imagens/vídeo do HINTS</p>
+            <p>Depois, inserir aqui as figuras do Head Impulse, Nystagmus e Test of Skew ou um vídeo demonstrativo.</p>
+          </div>
+          <div class="grid gap-3 md:grid-cols-3">
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
+              <p class="font-bold">Head impulse</p>
+              <p>VOR normal/preservado em paciente sintomático é sinal central. Sacada corretiva sugere causa periférica.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
+              <p class="font-bold">Nistagmo</p>
+              <p>Nistagmo que muda de direção conforme olhar sugere causa central.</p>
+            </div>
+            <div class="rounded-lg border border-slate-200 bg-white p-3">
+              <p class="font-bold">Test of skew</p>
+              <p>Desvio vertical ou diagonal ao cobrir/descobrir os olhos sugere causa central.</p>
+            </div>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'HINTS central: VOR normal e/ou nistagmo muda direção e/ou skew presente', nextStep: 'vertigem_central_investigar', value: 'hints_central', critical: true, requiresImmediateAction: true },
+        { text: 'HINTS benigno/periférico', nextStep: 'vertigem_neurite_vestibular', value: 'hints_periferico' }
+      ]
+    },
+    vertigem_neurite_vestibular: {
+      id: 'vertigem_neurite_vestibular',
+      title: 'Neurite Vestibular',
+      description: 'Síndrome vertiginosa aguda periférica após exclusão de causa central.',
+      type: 'result',
+      group: 'Neurite vestibular',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Diagnóstico:</strong> clínico, após exclusão do principal diagnóstico diferencial: AVC de fossa posterior.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Quadro pode durar dias, com náuseas, vômitos, oscilopsia e desequilíbrio.</li>
+            <li>Sintomas auditivos, como perda de audição ou zumbido, não são comuns.</li>
+            <li>Tratamento: reabilitação vestibular, sintomáticos apenas nos 3 primeiros dias e corticoide sem comprovação forte.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    vertigem_vppb_hipotensao: {
+      id: 'vertigem_vppb_hipotensao',
+      title: 'VPPB / Hipotensão Postural',
+      description: 'Vertigem desencadeada por posição ou sintomas posturais.',
+      type: 'result',
+      group: 'VPPB / postural',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>VPPB:</strong> vertigem desencadeada por mudanças de posição da cabeça, duração de segundos até no máximo 1 minuto e sem outros sintomas neurológicos.</p>
+          </div>
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <p class="font-bold text-blue-950">Espaço reservado para imagens/vídeos das manobras</p>
+            <p>Depois, inserir aqui as imagens ou vídeo da manobra de Epley e da manobra de Semont.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Confirmar VPPB com nistagmo após manobra provocadora, como Dix-Hallpike.</li>
+            <li>Tratamento padrão-ouro: manobras de reposicionamento canalicular, como Epley ou Semont.</li>
+            <li>Se sintomas forem de pré-síncope ao levantar, investigar hipotensão postural e causas cardiovasculares/sistêmicas.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    vertigem_recorrente_outros: {
+      id: 'vertigem_recorrente_outros',
+      title: 'Vertigem Recorrente Sem Gatilho Claro',
+      description: 'Considerar migrânea vestibular, doença de Ménière e outras causas.',
+      type: 'result',
+      group: 'Recorrente',
+      content: `
+        <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-500 text-sm">
+          <p><strong>Conduta:</strong> considerar migrânea vestibular, doença de Ménière e outras etiologias recorrentes. Avaliar sintomas auditivos, cefaleia migranosa, duração das crises, gatilhos e necessidade de seguimento com otorrinolaringologia/neurologia.</p>
+        </div>
+      `,
+      options: []
+    },
+    vertigem_nao_vertiginosa: {
+      id: 'vertigem_nao_vertiginosa',
+      title: 'Tontura Não Vertiginosa',
+      description: 'Investigar causas neurológicas, sistêmicas, cardiovasculares ou medicamentosas.',
+      type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-slate-50 p-3 rounded border-l-4 border-slate-500">
+            <p><strong>Conduta:</strong> não conduzir como HINTS. Investigar causas conforme quadro clínico.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Neurológicas: ataxia, parkinsonismo.</li>
+            <li>Sistêmicas: medicações, desidratação, anemia, distúrbios hidroeletrolíticos, disfunção renal ou hepática.</li>
+            <li>Cardiovasculares: hipotensão postural, arritmias.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    vertigem_hints_nao_aplicavel: {
+      id: 'vertigem_hints_nao_aplicavel',
+      title: 'HINTS Não Aplicável',
+      description: 'Sem nistagmo detectável no exame físico.',
+      type: 'result',
+      content: `
+        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Conduta:</strong> realizar avaliação cuidadosa do equilíbrio e da marcha. Se houver incapacidade de marcha, ataxia importante ou qualquer sinal neurológico, investigar causa central. Se não houver alerta, direcionar investigação conforme duração, gatilhos, sintomas auditivos e causas sistêmicas.</p>
+        </div>
+      `,
+      options: []
+    },
+    vertigem_central_investigar: {
+      id: 'vertigem_central_investigar',
+      title: 'Investigar Causa Central / AVC de Fossa Posterior',
+      description: 'HINTS central, sinais focais ou alta suspeita clínica.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> tratar como possível AVC de fossa posterior. Acionar protocolo neurológico conforme serviço, avaliar janela terapêutica, monitorização, neuroimagem adequada e internação/observação. Não usar TC normal como exclusão segura quando a suspeita clínica permanece alta.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 // Fluxograma de atendimento de emergência para Anafilaxia (WAO 2020)
 export const anaphylaxisFlowchart: EmergencyFlowchart = {
   id: 'anafilaxia',
@@ -5381,6 +6196,10 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   influenza: influenzaFlowchart,
   pneumonia: pneumoniaFlowchart,
   sinusite: sinusitisFlowchart,
+  faringoamigdalite: faringoamigdaliteFlowchart,
+  monoartrite: monoartriteFlowchart,
+  crise_ansiedade: ansiedadeFlowchart,
+  sindrome_vertiginosa: sindromeVertiginosaFlowchart,
   lombalgia: lombalgiaFlowchart,
   anafilaxia: anaphylaxisFlowchart,
   appendicitis: appendicitisFlowchart,
@@ -5420,6 +6239,7 @@ export const allFlowcharts = [
   { id: 'artralgia', name: 'Artralgia', category: 'musculoskeletal', implemented: false },
   { id: 'lombalgia', name: 'Lombalgia', category: 'musculoskeletal', implemented: true },
   { id: 'mialgia', name: 'Mialgia', category: 'musculoskeletal', implemented: false },
+  { id: 'monoartrite', name: 'Monoartrites Agudas', category: 'musculoskeletal', implemented: true },
 
   // Neurológicos
   { id: 'avc', name: 'AVC (Agudo)', category: 'neurological', implemented: true },
@@ -5429,6 +6249,7 @@ export const allFlowcharts = [
   { id: 'crise_convulsiva', name: 'Crise convulsiva', category: 'neurological', implemented: false },
   { id: 'delirium', name: 'Delirium', category: 'neurological', implemented: false },
   { id: 'rebaixamento_consciencia', name: 'Rebaixamento do nível de consciência', category: 'neurological', implemented: false },
+  { id: 'sindrome_vertiginosa', name: 'Síndrome Vertiginosa Aguda', category: 'neurological', implemented: true },
   { id: 'sindrome_guillain_barre', name: 'Síndrome de Guillain-Barré', category: 'neurological', implemented: false },
   { id: 'tce', name: 'TCE', category: 'neurological', implemented: false },
 
@@ -5473,7 +6294,7 @@ export const allFlowcharts = [
   { id: 'tosse', name: 'Tosse', category: 'respiratory', implemented: false },
 
   // Psiquiátricos
-  { id: 'crise_ansiedade', name: 'Crise de ansiedade', category: 'psychiatric', implemented: false },
+  { id: 'crise_ansiedade', name: 'Crise de ansiedade', category: 'psychiatric', implemented: true },
   { id: 'surto_psicotico', name: 'Surto psicótico', category: 'psychiatric', implemented: false },
 
   // Cardiovasculares
@@ -5541,6 +6362,7 @@ export const allFlowcharts = [
   // Otorrinolaringológicos
   { id: 'otite', name: 'Otite', category: 'otorhinolaryngological', implemented: false },
   { id: 'rinite', name: 'Rinite', category: 'otorhinolaryngological', implemented: false },
+  { id: 'faringoamigdalite', name: 'Faringoamigdalites', category: 'otorhinolaryngological', implemented: true },
   { id: 'sinusite', name: 'Rinossinusites Viral, Alérgica e Bacteriana', category: 'otorhinolaryngological', implemented: true },
 
   // Metabólicos

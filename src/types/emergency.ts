@@ -48,6 +48,10 @@ export type EmergencyType =
   | 'dpoc_exacerbado'
   | 'influenza'
   | 'sinusite'
+  | 'faringoamigdalite'
+  | 'monoartrite'
+  | 'crise_ansiedade'
+  | 'sindrome_vertiginosa'
   | 'lombalgia'
   | 'anafilaxia'
 
