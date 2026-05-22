@@ -1666,7 +1666,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isAnaphylaxisDischargeStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_observacao_alta'
   const isAnaphylaxisRepeatAdrenalineFinalStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_repetir_adrenalina_internacao'
   const isAnaphylaxisCriticalAirwayFinalStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_internacao_via_aerea_choque'
-  const shouldHideGenericFinalMessage = isAnaphylaxisRepeatAdrenalineFinalStep || isAnaphylaxisCriticalAirwayFinalStep
   const isPancreatitisBisapStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_bisap'
   const isPancreatitisMarshallStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_marshall_atlanta'
   const isPancreatitisTreatmentFinalStep = flowchart.id === 'pancreatitis' && ['pan_leve', 'pan_moderada', 'pan_grave', 'pan_uti'].includes(currentStepData?.id || '')
@@ -6879,16 +6878,44 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <div className="mx-auto max-w-lg py-4 text-center text-slate-950">
-                      <p className="text-lg font-extrabold leading-relaxed">
-                        🚨 Atenção — Manejo da Anafilaxia:
-                      </p>
-                      <div className="mt-6 space-y-2 text-lg leading-relaxed">
-                        <p><strong>Monitorização contínua:</strong> cardíaca + oximetria</p>
-                        <p><strong>Acesso venoso</strong> imediato</p>
-                        <p><strong>Oxigênio se indicado</strong> (considerar IOT precoce / cricotireoidostomia)</p>
-                        <p><strong>Infusão de fluidos</strong> se PAS &lt; 90 mmHg ou ↓ &gt; 30% da PAM</p>
-                        <p>Hipotensão refratária: considerar <strong>noradrenalina, vasopressina ou dopamina</strong> conforme protocolo institucional.</p>
+                    <div className="py-2 pr-8 text-slate-950">
+                      <div className="mb-5 flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red-100 text-lg">
+                          🚨
+                        </span>
+                        <div>
+                          <h4 className="text-xl font-extrabold leading-tight text-slate-950">
+                            Atenção — Manejo da Anafilaxia
+                          </h4>
+                          <p className="mt-1 text-sm text-slate-700">
+                            Medidas imediatas antes de selecionar o tratamento adjunto.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded-xl border border-amber-200 bg-white p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Monitorização contínua</p>
+                          <p className="mt-1 text-sm text-slate-800">Cardíaca + oximetria.</p>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-white p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Acesso venoso</p>
+                          <p className="mt-1 text-sm text-slate-800">Imediato.</p>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-white p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Oxigênio</p>
+                          <p className="mt-1 text-sm text-slate-800">Se indicado; considerar IOT precoce/cricotireoidostomia.</p>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-white p-3">
+                          <p className="text-xs font-bold uppercase tracking-wide text-amber-900">Infusão de fluidos</p>
+                          <p className="mt-1 text-sm text-slate-800">Se PAS &lt; 90 mmHg ou queda &gt; 30% da PAM.</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+                        <p className="text-sm leading-relaxed text-red-950">
+                          <strong>Hipotensão refratária:</strong> considerar <strong>noradrenalina, vasopressina ou dopamina</strong> conforme protocolo institucional.
+                        </p>
                       </div>
                     </div>
                     <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
@@ -9313,18 +9340,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       )}>
                         {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? 'Distúrbio Misto Identificado' : 'Fluxograma Concluído'}
                       </h3>
-                      {!shouldHideGenericFinalMessage && (
-                        <p className={clsx(
-                          "mt-1",
-                          isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
-                            ? 'text-amber-700'
-                            : 'text-green-700'
-                        )}>
-                          {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
-                            ? 'Este resultado não é benigno por definição: indica combinação de distúrbios ácido-base e requer correlação clínica e conduta direcionada.'
-                            : 'Protocolo finalizado com sucesso. O paciente pode ser liberado ou encaminhado conforme decisão clínica.'}
-                        </p>
-                      )}
                     </div>
                     <button
                       onClick={onComplete}
