@@ -255,22 +255,22 @@ type AnaphylaxisCriteriaInfo = {
 
 const ANAPHYLAXIS_REFERENCE_IMAGES = {
   skin: {
-    src: '/Anafilaxia%20pele%20e%20mucosas.png',
+    src: '/anaphylaxis-skin-mucosa.png',
     alt: 'Anafilaxia com acometimento de pele e mucosas',
     caption: 'Pele e mucosas: prurido, urticária, angioedema de lábios, língua ou úvula.'
   },
   respiratory: {
-    src: '/Anafilaxia%20falta%20de%20ar.png',
+    src: '/anaphylaxis-respiratory.png',
     alt: 'Anafilaxia com comprometimento respiratório',
     caption: 'Respiração: dispneia, broncoespasmo, hipoxemia ou desconforto respiratório.'
   },
   gastrointestinal: {
-    src: '/Anafilaxia%20dor%20abdominal%20e%20vo%CC%82mitos.png',
+    src: '/anaphylaxis-gi-vomiting.png',
     alt: 'Anafilaxia com dor abdominal e vômitos',
     caption: 'Gastrointestinal: dor abdominal forte, vômitos ou sintomas persistentes.'
   },
   hypotension: {
-    src: '/Anafilaxia%20-%20hipotensa%CC%83o%20e%20incontine%CC%82ncia.png',
+    src: '/anaphylaxis-hypotension-incontinence.png',
     alt: 'Anafilaxia com hipotensão, síncope e incontinência',
     caption: 'Circulação/neurológico: queda de pressão, síncope, má perfusão ou incontinência.'
   }
@@ -576,9 +576,9 @@ const tvpVascularSurgeryAlertSigns = tvpAlertSigns.slice(0, 4)
 const tvpRespiratoryTEPAlertSigns = [tvpAlertSigns[5]]
 
 const flegmasiaReferenceImages = [
-  '/flegmasia 1.jpg',
-  '/flegmasia 3.jpeg',
-  '/flegmasia 4.jpg'
+  '/flegmasia-1.jpg',
+  '/flegmasia-3.jpeg',
+  '/flegmasia-4.jpg'
 ]
 
 const dpocSinaisGravidadeItems = [
@@ -827,7 +827,7 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
   if (side === 'other') {
     return (
       <img
-        src="/Trombose outras partes do corpo.png"
+        src="/tvp-other-sites.png"
         alt="Trombose em outras localidades além de membros inferiores"
         className={clsx(
           'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
@@ -842,8 +842,8 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
     <img
       src={
         side === 'left'
-          ? '/Trombose venosa profunda membro inferior esquerdo .png'
-          : '/Trombose Venosa em membro inferior direito .png'
+          ? '/tvp-left-leg.png'
+          : '/tvp-right-leg.png'
       }
       alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
       className={clsx(
@@ -7124,7 +7124,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           playsInline
                           className="w-full rounded-lg border border-slate-200 bg-black"
                         >
-                          <source src="/videos/Vídeo_Simulando_AVC_com_Legenda.mp4" type="video/mp4" />
+                          <source src="/videos/avc-simulado-legenda.mp4" type="video/mp4" />
                           Seu navegador não suporta vídeo HTML5.
                         </video>
                       </div>
@@ -9351,7 +9351,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
         {anaphylaxisCriteriaInfo && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-            <div className="flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
               <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                 <div>
                   <h4 className="text-base font-extrabold text-slate-950">{anaphylaxisCriteriaInfo.title}</h4>
@@ -9366,16 +9366,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="overflow-y-auto p-5">
-                <div className="grid gap-4 md:grid-cols-2">
+              <div className="overflow-y-auto p-4">
+                <div className="grid gap-3 md:grid-cols-2">
                   {anaphylaxisCriteriaInfo.images.map((image) => (
-                    <figure key={image.src} className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                    <figure key={image.src} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
                       <img
                         src={image.src}
                         alt={image.alt}
-                        className="h-72 w-full object-cover"
+                        className="h-44 w-full bg-slate-50 object-contain p-2"
                       />
-                      <figcaption className="p-3 text-sm leading-relaxed text-slate-700">
+                      <figcaption className="border-t border-slate-100 bg-slate-50 p-3 text-sm leading-relaxed text-slate-700">
                         {image.caption}
                       </figcaption>
                     </figure>

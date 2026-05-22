@@ -172,10 +172,10 @@ export const avcFlowchart: EmergencyFlowchart = {
             <summary class="cursor-pointer font-medium text-slate-700">ⓘ Ver demonstração em vídeo (Veo 3)</summary>
             <div class="mt-3">
               <video controls preload="metadata" class="w-full rounded-lg border border-slate-200">
-                <source src="/videos/Vídeo_Simulando_AVC_com_Legenda.mp4" type="video/mp4" />
+                <source src="/videos/avc-simulado-legenda.mp4" type="video/mp4" />
                 Seu navegador não suporta vídeo HTML5.
               </video>
-              <p class="text-xs text-slate-500 mt-2">Arquivo esperado: <strong>/public/videos/Vídeo_Simulando_AVC_com_Legenda.mp4</strong></p>
+              <p class="text-xs text-slate-500 mt-2">Arquivo esperado: <strong>/public/videos/avc-simulado-legenda.mp4</strong></p>
             </div>
           </details>
         </div>
@@ -6093,9 +6093,9 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <img
-            src="/ABCDE%20%2B%20posic%CC%A7a%CC%83o%20de%20trendelemburg.png"
+            src="/abcde-trendelenburg-anafilaxia.png"
             alt="ABCDE e posição de Trendelenburg na anafilaxia"
-            class="w-full rounded-lg border border-slate-200 object-cover shadow-sm"
+            class="mx-auto w-full max-w-2xl max-h-[420px] rounded-lg border border-slate-200 object-contain shadow-sm"
           />
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
             <p><strong>Anafilaxia = reconhecimento precoce + adrenalina IM sem atraso.</strong></p>

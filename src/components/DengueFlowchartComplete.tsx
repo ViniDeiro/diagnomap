@@ -1702,7 +1702,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
                             .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#dc2626,#db2777)}
                           </style>
                           <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
-                            <img src="/prova%20de%20la%C3%A7o.png" alt="Prova do laço - técnica ilustrada" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
+                            <img src="/prova-do-laco.png" alt="Prova do laço - técnica ilustrada" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                           </div>
                           <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                             <h3 class="font-bold text-blue-800 mb-3 flex items-center">
