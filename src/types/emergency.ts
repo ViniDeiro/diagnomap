@@ -49,9 +49,13 @@ export type EmergencyType =
   | 'influenza'
   | 'sinusite'
   | 'faringoamigdalite'
+  | 'epistaxe'
   | 'monoartrite'
   | 'crise_ansiedade'
   | 'sindrome_vertiginosa'
+  | 'cefaleia'
+  | 'agitacao_psicomotora'
+  | 'pep_hiv'
   | 'lombalgia'
   | 'anafilaxia'
 

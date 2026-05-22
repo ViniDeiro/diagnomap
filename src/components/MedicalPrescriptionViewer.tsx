@@ -32,9 +32,13 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const isPneumonia = livePatient.selectedFlowchart === 'pneumonia'
   const isSinusitis = livePatient.selectedFlowchart === 'sinusite'
   const isFaringoamigdalite = livePatient.selectedFlowchart === 'faringoamigdalite'
+  const isEpistaxe = livePatient.selectedFlowchart === 'epistaxe'
   const isMonoartrite = livePatient.selectedFlowchart === 'monoartrite'
   const isAnsiedade = livePatient.selectedFlowchart === 'crise_ansiedade'
   const isVertigem = livePatient.selectedFlowchart === 'sindrome_vertiginosa'
+  const isCefaleia = livePatient.selectedFlowchart === 'cefaleia'
+  const isAgitacao = livePatient.selectedFlowchart === 'agitacao_psicomotora'
+  const isPepHiv = livePatient.selectedFlowchart === 'pep_hiv'
   const isAnaphylaxis = livePatient.selectedFlowchart === 'anafilaxia'
   const isPancreatitis = livePatient.selectedFlowchart === 'pancreatitis'
   const isCholangitis = livePatient.selectedFlowchart === 'cholangitis'
@@ -236,7 +240,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
-    if (isInfluenza || isPneumonia || isSinusitis || isAnaphylaxis || isPancreatitis || isCholangitis || isCholecystitis || isAppendicitis || isLombalgia) {
+    if (isInfluenza || isPneumonia || isSinusitis || isFaringoamigdalite || isEpistaxe || isMonoartrite || isAnsiedade || isVertigem || isCefaleia || isAgitacao || isPepHiv || isAnaphylaxis || isPancreatitis || isCholangitis || isCholecystitis || isAppendicitis || isLombalgia) {
       const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
         const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
         return `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}\n   ${instructionsLine}`
@@ -255,7 +259,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         `Data: ${new Date().toLocaleDateString('pt-BR')}`,
         '',
         `Diagnóstico: ${flowName}`,
-        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : isFaringoamigdalite ? 'Faringoamigdalite estratificada pelo Escore de Centor Modificado' : isMonoartrite ? 'Monoartrite aguda estratificada por artrocentese/Janssens' : isAnsiedade ? 'Crise de ansiedade após exclusão de sinais de causa orgânica' : isVertigem ? 'Síndrome vertiginosa estratificada por sinais centrais/HINTS' : isAnaphylaxis ? 'Anafilaxia em seguimento após estabilização/observação' : isPancreatitis ? 'Pancreatite aguda em manejo hospitalar conforme Atlanta 2012' : isCholangitis ? 'Colangite/coledocolitíase em manejo hospitalar conforme Tokyo 2018' : isCholecystitis ? 'Colecistite aguda em manejo hospitalar conforme Tokyo 2018' : isAppendicitis ? 'Apendicite aguda estratificada pelo escore de Alvarado' : isLombalgia ? 'Lombalgia aguda estratificada por sinais de alarme' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
+        `Classificação clínica: ${isInfluenza ? getInfluenzaDispositionLabel() : isSinusitis ? 'Rinossinusite classificada conforme critérios clínicos' : isFaringoamigdalite ? 'Faringoamigdalite estratificada pelo Escore de Centor Modificado' : isEpistaxe ? 'Epistaxe estratificada por estabilidade, controle local e suspeita de origem posterior' : isMonoartrite ? 'Monoartrite aguda estratificada por artrocentese/Janssens' : isAnsiedade ? 'Crise de ansiedade após exclusão de sinais de causa orgânica' : isVertigem ? 'Síndrome vertiginosa estratificada por sinais centrais/HINTS' : isCefaleia ? 'Cefaleia estratificada por sinais de alarme e fenótipo primário' : isAgitacao ? 'Agitação psicomotora classificada por gravidade e etiologia provável' : isPepHiv ? 'PEP ao HIV estratificada por exposição de risco, janela de 72 horas e status sorológico' : isAnaphylaxis ? 'Anafilaxia em seguimento após estabilização/observação' : isPancreatitis ? 'Pancreatite aguda em manejo hospitalar conforme Atlanta 2012' : isCholangitis ? 'Colangite/coledocolitíase em manejo hospitalar conforme Tokyo 2018' : isCholecystitis ? 'Colecistite aguda em manejo hospitalar conforme Tokyo 2018' : isAppendicitis ? 'Apendicite aguda estratificada pelo escore de Alvarado' : isLombalgia ? 'Lombalgia aguda estratificada por sinais de alarme' : 'Pneumonia adquirida na comunidade em seguimento conforme escore de gravidade'}`,
         '',
         'Orientações:',
         '',
@@ -268,81 +272,105 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
             ? '• Realizar lavagem nasal e evitar uso prolongado de descongestionante nasal.'
             : isFaringoamigdalite
               ? '• Manter hidratação, repouso e medidas locais como gargarejo com água morna e sal, se tolerado.'
+              : isEpistaxe
+                ? '• Evitar manipulação interna da cavidade nasal, esforços físicos intensos, banhos muito quentes e saunas nos próximos dias.'
               : isMonoartrite
                 ? '• Priorizar repouso da articulação, analgesia e reavaliação estreita; artrocentese é o exame-chave quando disponível.'
                 : isAnsiedade
                   ? '• Reforçar acolhimento, respiração diafragmática, redução de estímulos e reavaliação após a intervenção.'
                   : isVertigem
                     ? '• Evitar movimentos bruscos, orientar segurança contra quedas e usar sintomáticos pelo menor tempo possível.'
+                    : isCefaleia
+                      ? '• Manter repouso em ambiente tranquilo, hidratação, sono regular e evitar álcool, drogas e gatilhos reconhecidos.'
+                      : isAgitacao
+                        ? '• Manter ambiente seguro, reduzir estímulos, abordagem verbal calma e investigação de causa clínica/toxicológica/traumática.'
+                        : isPepHiv
+                          ? '• Iniciar a PEP o quanto antes quando indicada, manter por 28 dias e garantir acompanhamento sorológico.'
               : isAnaphylaxis
-                      ? '• Evitar estritamente o fator causal suspeito ou conhecido até avaliação especializada.'
-                      : isPancreatitis
-                        ? '• Manter manejo hospitalar com hidratação guiada por metas, analgesia e progressão alimentar conforme tolerância.'
-                        : isCholangitis
-                          ? '• Manter dieta zero até definição do procedimento, hidratação venosa, analgesia e antibioticoterapia conforme gravidade.'
-                          : isCholecystitis
-                            ? '• Manter dieta zero, hidratação venosa, analgesia, antibiótico e avaliação da cirurgia geral.'
-                            : isAppendicitis
-                              ? '• Manter dieta zero até definição, hidratação venosa, analgesia, antiemético e avaliação da cirurgia geral quando indicado.'
-                              : isLombalgia
-                                ? '• Manter analgesia, compressa morna, repouso curto e retorno gradual às atividades conforme tolerância.'
-                        : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
+                          ? '• Evitar estritamente o fator causal suspeito ou conhecido até avaliação especializada.'
+                          : isPancreatitis
+                            ? '• Manter manejo hospitalar com hidratação guiada por metas, analgesia e progressão alimentar conforme tolerância.'
+                            : isCholangitis
+                              ? '• Manter dieta zero até definição do procedimento, hidratação venosa, analgesia e antibioticoterapia conforme gravidade.'
+                              : isCholecystitis
+                                ? '• Manter dieta zero, hidratação venosa, analgesia, antibiótico e avaliação da cirurgia geral.'
+                                : isAppendicitis
+                                  ? '• Manter dieta zero até definição, hidratação venosa, analgesia, antiemético e avaliação da cirurgia geral quando indicado.'
+                                  : isLombalgia
+                                    ? '• Manter analgesia, compressa morna, repouso curto e retorno gradual às atividades conforme tolerância.'
+                            : '• Tomar antibiótico exatamente pelo tempo prescrito, mesmo se houver melhora inicial.',
         '',
         '2. Retorno / reavaliação',
         '• Reavaliar em 48 a 72 horas, ou antes se houver piora do quadro.',
         '• Retornar imediatamente em dispneia, desconforto respiratório, saturação baixa, confusão, desidratação, febre persistente ou agravamento geral.',
         '',
-        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : isFaringoamigdalite ? '3. Observações sobre faringoamigdalite' : isMonoartrite ? '3. Observações sobre monoartrite' : isAnsiedade ? '3. Observações sobre crise de ansiedade' : isVertigem ? '3. Observações sobre síndrome vertiginosa' : isAnaphylaxis ? '3. Observações sobre anafilaxia' : isPancreatitis ? '3. Observações sobre pancreatite aguda' : isCholangitis ? '3. Observações sobre colangite/coledocolitíase' : isCholecystitis ? '3. Observações sobre colecistite aguda' : isAppendicitis ? '3. Observações sobre apendicite aguda' : isLombalgia ? '3. Observações sobre lombalgia' : '3. Observações sobre pneumonia',
+        isInfluenza ? '3. Observações sobre antiviral' : isSinusitis ? '3. Observações sobre rinossinusite' : isFaringoamigdalite ? '3. Observações sobre faringoamigdalite' : isEpistaxe ? '3. Observações sobre epistaxe' : isMonoartrite ? '3. Observações sobre monoartrite' : isAnsiedade ? '3. Observações sobre crise de ansiedade' : isVertigem ? '3. Observações sobre síndrome vertiginosa' : isCefaleia ? '3. Observações sobre cefaleia' : isAgitacao ? '3. Observações sobre agitação psicomotora' : isPepHiv ? '3. Observações sobre PEP ao HIV' : isAnaphylaxis ? '3. Observações sobre anafilaxia' : isPancreatitis ? '3. Observações sobre pancreatite aguda' : isCholangitis ? '3. Observações sobre colangite/coledocolitíase' : isCholecystitis ? '3. Observações sobre colecistite aguda' : isAppendicitis ? '3. Observações sobre apendicite aguda' : isLombalgia ? '3. Observações sobre lombalgia' : '3. Observações sobre pneumonia',
         isInfluenza
           ? '• Oseltamivir tem maior benefício quando iniciado precocemente, preferencialmente nas primeiras 48 horas.'
           : isSinusitis
             ? '• A maioria dos quadros é viral ou alérgica e não necessita antibiótico.'
             : isFaringoamigdalite
               ? '• Coriza, conjuntivite e tosse sugerem etiologia viral; antibiótico deve seguir a estratificação clínica.'
+              : isEpistaxe
+                ? '• Se houver tampão nasal anterior, reavaliar em cerca de 48 horas para retirada; epistaxe posterior ou sangramento persistente exige avaliação otorrinolaringológica.'
               : isMonoartrite
                 ? '• Gota não deve afastar artrite séptica se houver febre, toxemia, imunossupressão, bacteremia suspeita ou líquido sinovial compatível.'
                 : isAnsiedade
                   ? '• Atribuir o quadro à ansiedade somente após avaliação clínica dos sinais de alerta orgânicos.'
                   : isVertigem
                     ? '• HINTS só é aplicável em vertigem contínua com nistagmo; sinais centrais exigem investigação de AVC de fossa posterior.'
+                    : isCefaleia
+                      ? '• A presença de qualquer sinal de alarme deve direcionar investigação de cefaleia secundária; não usar opioides para cefaleia primária.'
+                      : isAgitacao
+                        ? '• Agitação não é diagnóstico; tratar imediatamente hipóxia, hipoglicemia, hipertermia e hipovolemia quando presentes.'
+                        : isPepHiv
+                          ? '• A PEP deve ser iniciada até 72 horas após a exposição; após esse período, manter acompanhamento sorológico quando indicado.'
               : isAnaphylaxis
-                      ? '• Observar possibilidade de recidiva dos sintomas em até 24 a 72 horas.'
-                      : isPancreatitis
-                        ? '• Antibiótico não é profilático; usar apenas se houver evidência de infecção sobreposta ou necrose infectada.'
-                        : isCholangitis
-                          ? '• Antibiótico deve ser precoce na suspeita de colangite e ajustado conforme culturas, função renal e protocolo local.'
-                          : isCholecystitis
-                            ? '• Antibiótico deve ser ajustado conforme gravidade, culturas, função renal e perfil institucional.'
-                            : isAppendicitis
-                              ? '• Antibiótico venoso é indicado quando houver suspeita cirúrgica, apendicite confirmada/complicada ou manejo conservador inicial.'
-                              : isLombalgia
-                                ? '• Não há necessidade de imagem inicial quando não há sinais de alarme; reavaliar se não houver melhora em 4 a 6 semanas.'
-                        : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
+                          ? '• Observar possibilidade de recidiva dos sintomas em até 24 a 72 horas.'
+                          : isPancreatitis
+                            ? '• Antibiótico não é profilático; usar apenas se houver evidência de infecção sobreposta ou necrose infectada.'
+                            : isCholangitis
+                              ? '• Antibiótico deve ser precoce na suspeita de colangite e ajustado conforme culturas, função renal e protocolo local.'
+                              : isCholecystitis
+                                ? '• Antibiótico deve ser ajustado conforme gravidade, culturas, função renal e perfil institucional.'
+                                : isAppendicitis
+                                  ? '• Antibiótico venoso é indicado quando houver suspeita cirúrgica, apendicite confirmada/complicada ou manejo conservador inicial.'
+                                  : isLombalgia
+                                    ? '• Não há necessidade de imagem inicial quando não há sinais de alarme; reavaliar se não houver melhora em 4 a 6 semanas.'
+                            : '• Radiografia de tórax e reavaliação clínica devem orientar investigação de complicações quando houver piora ou ausência de resposta.',
         isInfluenza
           ? '• Ajustar dose em disfunção renal, quando aplicável.'
           : isSinusitis
             ? '• Procurar atendimento se houver visão dupla, redução visual, proptose, sinais meníngeos, alteração mental, sepse ou dor facial intensa refratária.'
             : isFaringoamigdalite
               ? '• Retornar imediatamente em dificuldade de falar, inchaço intenso no pescoço, queda importante do estado geral, dispneia ou intolerância à via oral.'
+              : isEpistaxe
+                ? '• Retornar imediatamente se sangramento recorrente ou volumoso, tontura, desmaio, fraqueza, palidez, falta de ar, vômitos com sangue ou piora do estado geral.'
               : isMonoartrite
                 ? '• Retornar imediatamente em febre, calafrios, piora da dor, aumento do edema, incapacidade de mobilizar a articulação ou queda do estado geral.'
                 : isAnsiedade
                   ? '• Retornar imediatamente se dor torácica, dispneia, síncope, déficit neurológico, confusão, intoxicação suspeita, ideação suicida ou piora importante.'
                   : isVertigem
                     ? '• Retornar imediatamente em tontura persistente e agravante, fraqueza, dormência, turvação visual, dificuldade de fala, alteração visual, cefaleia intensa, vômitos contínuos, desmaio, queda ou trauma.'
+                    : isCefaleia
+                      ? '• Retornar imediatamente se dor intensa sem melhora, desmaios, fraqueza súbita, perda de visão ou fala, febre alta, rigidez de nuca, vômitos persistentes ou novo déficit neurológico.'
+                      : isAgitacao
+                        ? '• Reavaliar imediatamente se piora do comportamento, rebaixamento, febre, intoxicação, trauma, hipoglicemia, hipóxia ou risco para si/equipe.'
+                        : isPepHiv
+                          ? '• Retornar imediatamente se toxicidade grave, rash extenso, icterícia, vômitos persistentes, intolerância medicamentosa importante ou nova exposição.'
               : isAnaphylaxis
-                      ? '• Retornar imediatamente se houver urticária difusa, angioedema, dispneia, sibilância, estridor, vômitos repetitivos, tontura ou síncope.'
-                      : isPancreatitis
-                        ? '• Considerar TC com contraste após 72 horas se suspeita de complicação; considerar CPRE se colangite ou obstrução biliar.'
-                        : isCholangitis
-                          ? '• Avaliar drenagem biliar por CPRE: urgente na grave, precoce na moderada e se falha clínica na leve.'
-                          : isCholecystitis
-                            ? '• Colecistectomia laparoscópica precoce é preferencial; se alto risco cirúrgico, considerar drenagem percutânea.'
-                            : isAppendicitis
-                              ? '• TC com contraste é preferencial quando disponível; USG é opção em gestantes e crianças, mas exame normal não exclui o diagnóstico.'
-                              : isLombalgia
-                                ? '• Retornar imediatamente se retenção/incontinência urinária, incontinência fecal, anestesia em sela, febre, perda de força ou perda de sensibilidade.'
-                        : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
+                          ? '• Retornar imediatamente se houver urticária difusa, angioedema, dispneia, sibilância, estridor, vômitos repetitivos, tontura ou síncope.'
+                          : isPancreatitis
+                            ? '• Considerar TC com contraste após 72 horas se suspeita de complicação; considerar CPRE se colangite ou obstrução biliar.'
+                            : isCholangitis
+                              ? '• Avaliar drenagem biliar por CPRE: urgente na grave, precoce na moderada e se falha clínica na leve.'
+                              : isCholecystitis
+                                ? '• Colecistectomia laparoscópica precoce é preferencial; se alto risco cirúrgico, considerar drenagem percutânea.'
+                                : isAppendicitis
+                                  ? '• TC com contraste é preferencial quando disponível; USG é opção em gestantes e crianças, mas exame normal não exclui o diagnóstico.'
+                                  : isLombalgia
+                                    ? '• Retornar imediatamente se retenção/incontinência urinária, incontinência fecal, anestesia em sela, febre, perda de força ou perda de sensibilidade.'
+                            : '• Procurar atendimento antes do retorno programado se surgirem dor torácica, confusão mental, cianose, hipotensão ou intolerância à via oral.',
         '',
         prescriptionsText + 'Assinatura do Médico:',
         '__________________________________________________',

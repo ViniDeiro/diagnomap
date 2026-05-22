@@ -4527,6 +4527,229 @@ export const faringoamigdaliteFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Epistaxe no Pronto Socorro
+export const epistaxeFlowchart: EmergencyFlowchart = {
+  id: 'epistaxe',
+  name: 'Epistaxe',
+  description: 'Abordagem inicial da epistaxe no pronto-socorro, com estabilização, compressão, vasoconstrictor, tamponamento e critérios de internação.',
+  category: 'otorhinolaryngological',
+  priority: 'medium',
+  icon: 'droplets',
+  color: 'from-yellow-500 to-red-600',
+  initialStep: 'epistaxe_inicio',
+  finalSteps: [
+    'epistaxe_observacao_alta',
+    'epistaxe_internacao_otorrino',
+    'epistaxe_cirurgia_endoscopica'
+  ],
+  steps: {
+    epistaxe_inicio: {
+      id: 'epistaxe_inicio',
+      title: 'Paciente com Epistaxe no Pronto Socorro',
+      description: 'Sangramento proveniente da cavidade nasal, geralmente anterior, mas podendo ser posterior e grave.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p><strong>Essencial:</strong> iniciar com proteção de via aérea e estabilidade hemodinâmica. A epistaxe anterior corresponde a 90-95% dos casos; a posterior é menos frequente, mas mais grave.</p>
+          </div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p class="font-bold text-slate-900">Anamnese direcionada</p>
+              <ul class="mt-2 list-disc pl-5 space-y-1">
+                <li>Hipertensão prévia</li>
+                <li>Corpo estranho</li>
+                <li>Quadros prévios</li>
+                <li>Rinite ou sinusite</li>
+                <li>Uso de cocaína</li>
+                <li>Uso de anticoagulantes</li>
+              </ul>
+            </div>
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <p class="font-bold text-blue-950">Posicionamento</p>
+              <p class="mt-2">Manter paciente sentado, com flexão cervical anterior. Evitar deitar ou inclinar a cabeça para trás.</p>
+            </div>
+          </div>
+          <p>Quando possível, identificar local e causa do sangramento com rinoscopia nasal anterior.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Paciente posicionado e ABC avaliado', nextStep: 'epistaxe_choque_instabilidade', value: 'abc_ok' }
+      ]
+    },
+    epistaxe_choque_instabilidade: {
+      id: 'epistaxe_choque_instabilidade',
+      title: 'Há Sinais de Choque ou Instabilidade?',
+      description: 'Avaliar hipotensão, taquicardia, rebaixamento, sangramento volumoso ou comprometimento de via aérea.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Instabilidade:</strong> priorizar medidas de ressuscitação, controle de via aérea quando necessário e reversão de anticoagulação conforme contexto.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Monitorização contínua</li>
+            <li>Dois acessos venosos calibrosos</li>
+            <li>Cristaloides</li>
+            <li>Considerar hemotransfusão</li>
+            <li>Reversão de anticoagulação quando indicada</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - iniciar ressuscitação', nextStep: 'epistaxe_ressuscitacao', value: 'instavel', critical: true, requiresImmediateAction: true },
+        { text: 'Não - seguir controle local', nextStep: 'epistaxe_compressao_vasoconstrictor', value: 'estavel' }
+      ]
+    },
+    epistaxe_ressuscitacao: {
+      id: 'epistaxe_ressuscitacao',
+      title: 'Medidas de Ressuscitação',
+      description: 'Estabilizar antes e durante medidas locais de controle.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta imediata:</strong> monitorização, dois acessos venosos calibrosos, cristaloides, considerar hemotransfusão e reverter anticoagulação quando apropriado. Acionar otorrinolaringologia se sangramento volumoso, posterior ou falha de controle.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Paciente estabilizado - controle local', nextStep: 'epistaxe_compressao_vasoconstrictor', value: 'estabilizado' },
+        { text: 'Instabilidade persistente / via aérea ameaçada', nextStep: 'epistaxe_internacao_otorrino', value: 'instabilidade_persistente', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    epistaxe_compressao_vasoconstrictor: {
+      id: 'epistaxe_compressao_vasoconstrictor',
+      title: 'Compressão Digital + Vasoconstrictor Nasal',
+      description: 'Primeira medida local: compressão no terço inferior do nariz por 5 a 10 minutos.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Compressão digital:</strong> comprimir o terço inferior do nariz por 5 a 10 minutos. Gelo no dorso nasal pode auxiliar.</p>
+          </div>
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>Lavagem + vasoconstrictor:</strong> soro fisiológico 0,9% gelado e vasoconstrictor tópico, como oximetazolina, adrenalina ou ácido tranexâmico tópico, conforme disponibilidade e protocolo local.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Houve controle', nextStep: 'epistaxe_observacao_alta', value: 'controle' },
+        { text: 'Não houve controle', nextStep: 'epistaxe_tamponamento_anterior', value: 'sem_controle' }
+      ]
+    },
+    epistaxe_tamponamento_anterior: {
+      id: 'epistaxe_tamponamento_anterior',
+      title: 'Tamponamento Anterior e/ou Cauterização',
+      description: 'Quando falha compressão/vasoconstrictor; cauterizar apenas se local visível, idealmente pelo otorrino.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p><strong>Cauterização:</strong> se local do sangramento estiver visível. Pode ser química ou elétrica, idealmente pelo otorrinolaringologista.</p>
+          </div>
+          <div class="rounded-lg border border-slate-300 bg-slate-50 p-3">
+            <p class="font-bold">Tamponamento nasal anterior</p>
+            <ul class="mt-2 list-disc pl-5 space-y-1">
+              <li>Método com dedo de luva/gaze estéril dobrada ou dispositivo comercial conforme disponibilidade.</li>
+              <li>Lubrificar e inserir com cuidado, respeitando limites anatômicos.</li>
+              <li>Fixar externamente para permitir remoção posterior.</li>
+              <li>Reavaliar orofaringe, pois persistência de sangramento posterior torna o tamponamento anterior inviável.</li>
+              <li>Tempo habitual de permanência: cerca de 48 horas, com reavaliação para retirada.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Houve controle', nextStep: 'epistaxe_observacao_alta', value: 'controle' },
+        { text: 'Não houve controle / suspeita posterior', nextStep: 'epistaxe_tamponamento_posterior', value: 'sem_controle', critical: true }
+      ]
+    },
+    epistaxe_tamponamento_posterior: {
+      id: 'epistaxe_tamponamento_posterior',
+      title: 'Tamponamento Posterior',
+      description: 'Gaze ou sonda Foley; preferencialmente com otorrino e geralmente com internação.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Epistaxe posterior:</strong> geralmente precisa de internação e avaliação de otorrinolaringologista.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Tamponamento posterior com gaze ou sonda Foley, preferencialmente por profissional experiente.</li>
+            <li>Frequentemente feito em dupla.</li>
+            <li>Costuma permanecer por cerca de 48 horas.</li>
+            <li>Associar tamponamento anterior.</li>
+            <li>Considerar antibioticoterapia conforme protocolo local para reduzir risco de infecção.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Houve controle', nextStep: 'epistaxe_internacao_otorrino', value: 'controle', critical: true },
+        { text: 'Não houve controle', nextStep: 'epistaxe_cirurgia_endoscopica', value: 'sem_controle', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    epistaxe_observacao_alta: {
+      id: 'epistaxe_observacao_alta',
+      title: 'Observação e Alta',
+      description: 'Controle obtido, paciente estável e sem critérios de internação imediata.',
+      type: 'result',
+      group: 'Alta',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> observação no pronto-socorro e alta se mantiver controle do sangramento e estabilidade clínica.</p>
+          </div>
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p class="font-bold">Orientações pós-alta</p>
+            <ul class="mt-2 list-disc pl-5 space-y-1">
+              <li>Evitar manipulação interna da cavidade nasal nos próximos dias.</li>
+              <li>Evitar medicações nasais não prescritas pelo médico.</li>
+              <li>Evitar atividades físicas muito intensas.</li>
+              <li>Evitar banhos muito quentes e saunas.</li>
+              <li>Retornar se sangramento recorrente, volumoso, tontura, fraqueza, palidez, dispneia ou piora clínica.</li>
+            </ul>
+          </div>
+          <p>Epistaxes anteriores podem ter alta com tampão se sangramento estiver controlado, com reavaliação em 48 horas para retirada.</p>
+        </div>
+      `,
+      options: []
+    },
+    epistaxe_internacao_otorrino: {
+      id: 'epistaxe_internacao_otorrino',
+      title: 'Internação e Avaliação do Otorrinolaringologista',
+      description: 'Indicado em epistaxe posterior, instabilidade, falha de controle ou necessidade de tamponamento posterior.',
+      type: 'result',
+      critical: true,
+      requiresSpecialist: true,
+      group: 'Internação',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> internar e solicitar avaliação de otorrinolaringologia. Monitorar sangramento, via aérea, hemodinâmica, necessidade transfusional e reversão de anticoagulação quando aplicável.</p>
+        </div>
+      `,
+      options: []
+    },
+    epistaxe_cirurgia_endoscopica: {
+      id: 'epistaxe_cirurgia_endoscopica',
+      title: 'Cirurgia e/ou Terapia Endoscópica',
+      description: 'Falha de tamponamento posterior ou sangramento persistente importante.',
+      type: 'result',
+      critical: true,
+      requiresSpecialist: true,
+      group: 'Falha de controle',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> acionar otorrinolaringologia para controle cirúrgico/endoscópico. Manter ressuscitação, monitorização, controle de via aérea e suporte transfusional conforme necessidade.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 // Fluxograma de Monoartrites Agudas
 export const monoartriteFlowchart: EmergencyFlowchart = {
   id: 'monoartrite',
@@ -5148,6 +5371,701 @@ export const sindromeVertiginosaFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Cefaleias no Pronto Socorro
+export const cefaleiaFlowchart: EmergencyFlowchart = {
+  id: 'cefaleia',
+  name: 'Cefaleias',
+  description: 'Triagem de cefaleia no pronto-socorro com identificação de sinais de alarme, investigação de causas secundárias e manejo de cefaleias primárias.',
+  category: 'neurological',
+  priority: 'high',
+  icon: 'brain',
+  color: 'from-blue-700 to-indigo-800',
+  initialStep: 'cefaleia_inicio',
+  finalSteps: [
+    'cefaleia_secundaria_investigar',
+    'cefaleia_secundaria_tratar_causa',
+    'cefaleia_hsa_puncao',
+    'cefaleia_tensional',
+    'cefaleia_migranea',
+    'cefaleia_salvas'
+  ],
+  steps: {
+    cefaleia_inicio: {
+      id: 'cefaleia_inicio',
+      title: 'Paciente com Cefaleia no Pronto-Socorro',
+      description: 'Cefaleia pode representar doença primária benigna ou condição secundária potencialmente letal.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-600">
+            <p><strong>Essencial:</strong> cefaleia é queixa comum no pronto atendimento e pode se originar de doenças graves, potencialmente letais, ou de doenças crônicas sem risco de letalidade.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>HSA por rompimento aneurismático e trombose venosa cerebral podem se apresentar com cefaleia como primeiro ou único sintoma.</li>
+            <li>História e exame físico são fundamentais para levantar suspeita de cefaleia secundária.</li>
+            <li>As cefaleias primárias mais comuns são enxaqueca, cefaleia tipo tensão e cefaleias trigêmino-autonômicas, como cefaleia em salvas.</li>
+            <li>Intensidade da dor e resposta ao sintomático são maus preditores de causas secundárias.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar avaliação', nextStep: 'cefaleia_sinais_alarme', value: 'iniciar' }
+      ]
+    },
+    cefaleia_sinais_alarme: {
+      id: 'cefaleia_sinais_alarme',
+      title: 'Presença de Sinais de Alarme?',
+      description: 'Identificar sinais que indicam investigação de causa secundária.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Sinais de alarme:</strong> thunderclap/trovoada, cefaleia nova e forte, idade &gt; 50 anos, trauma craniano recente, febre, imunocomprometimento, papiledema, irritação meníngea, gravidez/pós-parto &lt; 6 semanas, anticoagulantes/corticoides, drogas ilícitas, intoxicação exógena ou novo déficit neurológico.</p>
+          </div>
+          <p>A presença de qualquer sinal de alarme deve direcionar investigação de cefaleia secundária.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - investigar causa secundária', nextStep: 'cefaleia_secundaria_investigar', value: 'alarme', critical: true, requiresImmediateAction: true },
+        { text: 'Não - avaliar sinais verdes/cefaleia primária', nextStep: 'cefaleia_sinais_verdes', value: 'sem_alarme' }
+      ]
+    },
+    cefaleia_sinais_verdes: {
+      id: 'cefaleia_sinais_verdes',
+      title: 'Sinais Verdes para Cefaleia Primária',
+      description: 'Ajudam a reforçar probabilidade pré-teste de cefaleia primária quando não há alarme.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Sinais verdes:</strong> dor recorrente desde a infância, dias livres de dor entre crises, crises semelhantes próximas ao período menstrual, história familiar com mesmo fenótipo, cefaleia iniciou ou terminou há mais de uma semana.</p>
+          </div>
+          <p>A ausência de sinais de alarme associada à presença de sinais verdes reforça a probabilidade de cefaleia primária, sem necessidade de investigação complementar imediata.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Fenótipo primário provável', nextStep: 'cefaleia_classificar_primaria', value: 'primaria' },
+        { text: 'Dúvida diagnóstica / sem sinais verdes claros', nextStep: 'cefaleia_classificar_primaria', value: 'duvida_sem_alarme' }
+      ]
+    },
+    cefaleia_classificar_primaria: {
+      id: 'cefaleia_classificar_primaria',
+      title: 'Classificar Cefaleia Primária',
+      description: 'Diferenciar cefaleia tensional, migrânea e cefaleia em salvas.',
+      type: 'question',
+      content: `
+        <div class="grid gap-3 text-sm lg:grid-cols-3">
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p class="font-bold text-emerald-950">Tensional</p>
+            <ul class="list-disc pl-5">
+              <li>Leve a moderada</li>
+              <li>Bilateral ou holocraniana</li>
+              <li>Não pulsátil</li>
+              <li>Sem sintomas associados</li>
+              <li>Não piora com esforço</li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
+            <p class="font-bold text-rose-950">Migrânea</p>
+            <ul class="list-disc pl-5">
+              <li>Dor unilateral, pulsátil, moderada a forte</li>
+              <li>Foto/fonofobia</li>
+              <li>Náuseas e vômitos</li>
+              <li>Piora com esforço</li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p class="font-bold text-amber-950">Cefaleia em salvas</p>
+            <ul class="list-disc pl-5">
+              <li>Homens, 30-50 anos</li>
+              <li>Intensa, unilateral, periorbitária/temporal</li>
+              <li>15 a 180 minutos</li>
+              <li>Hiperemia conjuntival, lacrimejamento, ptose, congestão nasal ou rubor facial</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Cefaleia tensional', nextStep: 'cefaleia_tensional', value: 'tensional' },
+        { text: 'Cefaleia migrânea', nextStep: 'cefaleia_migranea', value: 'migranea' },
+        { text: 'Cefaleia em salvas', nextStep: 'cefaleia_salvas', value: 'salvas' },
+        { text: 'Não parece primária / reavaliar investigação', nextStep: 'cefaleia_secundaria_investigar', value: 'reavaliar_secundaria', critical: true }
+      ]
+    },
+    cefaleia_secundaria_investigar: {
+      id: 'cefaleia_secundaria_investigar',
+      title: 'Investigar Causas Secundárias',
+      description: 'Primeiro exame: TC de crânio sem contraste.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta inicial:</strong> solicitar TC de crânio sem contraste. Considerar angio-TC de crânio se suspeita de etiologia vascular, como dissecção, aneurisma roto, malformação arteriovenosa ou trombose venosa cerebral.</p>
+          </div>
+          <p>Causas possíveis: HSA, AVC hemorrágico/isquêmico, trombose venosa cerebral, hematoma subdural/extradural, neoplasia intracraniana, meningite/encefalite/abscesso, vasculite de SNC e síndrome de vasoconstrição cerebral reversível.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Exames com alterações', nextStep: 'cefaleia_secundaria_tratar_causa', value: 'alterado', critical: true, requiresImmediateAction: true },
+        { text: 'Exames sem alterações, mas alta suspeita de HSA', nextStep: 'cefaleia_hsa_puncao', value: 'hsa_suspeita', critical: true, requiresImmediateAction: true },
+        { text: 'Exames sem alterações e baixa suspeita secundária', nextStep: 'cefaleia_classificar_primaria', value: 'sem_alteracao' }
+      ]
+    },
+    cefaleia_secundaria_tratar_causa: {
+      id: 'cefaleia_secundaria_tratar_causa',
+      title: 'Tratamento Conforme Causa Específica',
+      description: 'Exames alterados ou diagnóstico secundário provável.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> tratar de acordo com a causa específica e acionar especialidade/protocolo apropriado. Considerar neurologia/neurocirurgia/infectologia conforme suspeita, monitorização e internação.</p>
+        </div>
+      `,
+      options: []
+    },
+    cefaleia_hsa_puncao: {
+      id: 'cefaleia_hsa_puncao',
+      title: 'Alta Suspeita de HSA',
+      description: 'Considerar punção liquórica quando exames iniciais não excluem HSA.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Conduta:</strong> considerar punção liquórica e investigação complementar conforme protocolo local, principalmente em cefaleia thunderclap com alta suspeita de HSA e imagem inicial sem confirmação.</p>
+        </div>
+      `,
+      options: []
+    },
+    cefaleia_tensional: {
+      id: 'cefaleia_tensional',
+      title: 'Cefaleia Tensional',
+      description: 'Cefaleia primária de leve a moderada intensidade, bilateral/holocraniana e sem sintomas associados.',
+      type: 'result',
+      group: 'Tensional',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Tratamento:</strong> analgésicos comuns e AINEs. Não usar opioide.</p>
+          </div>
+          <p>Orientar sono regular, redução de estresse, evitar álcool/drogas e retorno se surgirem sinais de alarme.</p>
+        </div>
+      `,
+      options: []
+    },
+    cefaleia_migranea: {
+      id: 'cefaleia_migranea',
+      title: 'Cefaleia Migrânea',
+      description: 'Enxaqueca com dor moderada/forte, pulsátil, associada a foto/fonofobia e náuseas/vômitos.',
+      type: 'result',
+      group: 'Migrânea',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-rose-50 p-3 rounded border-l-4 border-rose-500">
+            <p><strong>Tratamento:</strong> 1ª linha com triptanos e AINEs; 2ª linha com corticoide, metoclopramida, valproato ou clorpromazina conforme contexto. Não usar opioide.</p>
+          </div>
+          <p>Em todos os casos, deixar paciente em repouso sob penumbra, em ambiente tranquilo e silencioso quando possível.</p>
+        </div>
+      `,
+      options: []
+    },
+    cefaleia_salvas: {
+      id: 'cefaleia_salvas',
+      title: 'Cefaleia em Salvas',
+      description: 'Dor intensa unilateral periorbitária/temporal com sintomas autonômicos.',
+      type: 'result',
+      group: 'Salvas',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Tratamento:</strong> oxigênio em máscara não reinalante 8 a 15 L/min por 15 minutos como primeira linha; triptano intranasal/subcutâneo quando disponível.</p>
+          </div>
+          <p>Avaliar encaminhamento para seguimento especializado e profilaxia se crises recorrentes.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Agitação Psicomotora no Pronto Socorro
+export const agitacaoPsicomotoraFlowchart: EmergencyFlowchart = {
+  id: 'agitacao_psicomotora',
+  name: 'Agitação Psicomotora',
+  description: 'Classificação de gravidade, segurança da equipe/paciente, investigação etiológica e linhas de tratamento da agitação psicomotora no pronto-socorro.',
+  category: 'psychiatric',
+  priority: 'high',
+  icon: 'brain',
+  color: 'from-blue-700 to-slate-800',
+  initialStep: 'agitacao_inicio',
+  finalSteps: [
+    'agitacao_causa_clinica_investigar',
+    'agitacao_leve_nao_farmacologico',
+    'agitacao_moderada_medicacao_oral',
+    'agitacao_grave_contencao_quimica'
+  ],
+  steps: {
+    agitacao_inicio: {
+      id: 'agitacao_inicio',
+      title: 'Paciente com Agitação Psicomotora',
+      description: 'Agitação não é diagnóstico, é sintoma de patologia clínica, psiquiátrica, toxicológica ou traumática.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-600">
+            <p><strong>Essencial:</strong> agitação não é diagnóstico. É sintoma de uma patologia clínica, psiquiátrica, toxicológica ou traumática.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Primeiro estabeleça segurança do paciente, da equipe e do ambiente.</li>
+            <li>Imediatamente após segurança, realize diagnóstico etiológico.</li>
+            <li>Sempre considere origem clínica, especialmente delirium, hipoglicemia, hipóxia, intoxicação, sepse, hipertireoidismo e TCE.</li>
+            <li>Exames complementares são indicados quando a agitação decorre de condição médica não psiquiátrica ou quando houver dúvida clínica.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar classificação', nextStep: 'agitacao_classificar_gravidade', value: 'iniciar' }
+      ]
+    },
+    agitacao_classificar_gravidade: {
+      id: 'agitacao_classificar_gravidade',
+      title: 'Classificar Gravidade da Agitação',
+      description: 'Definir risco imediato e capacidade de colaboração.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="grid gap-3 text-sm md:grid-cols-3">
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+            <p class="font-bold text-emerald-950">Leve</p>
+            <p>Capaz de conversar e colaborar com propostas terapêuticas.</p>
+          </div>
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p class="font-bold text-amber-950">Moderada</p>
+            <p>Disruptivo, porém sem perigo iminente à equipe e a si mesmo.</p>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+            <p class="font-bold text-red-950">Grave</p>
+            <p>Paciente combativo, com perigo à equipe e a si mesmo.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Leve - conversa e colabora', nextStep: 'agitacao_4hs', value: 'leve' },
+        { text: 'Moderada - disruptivo sem perigo iminente', nextStep: 'agitacao_4hs', value: 'moderada' },
+        { text: 'Grave - combativo / risco imediato', nextStep: 'agitacao_grave_seguranca', value: 'grave', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    agitacao_4hs: {
+      id: 'agitacao_4hs',
+      title: 'Investigar 4 Hs Emergenciais',
+      description: 'Hipóxia, hipoglicemia, hipertermia e hipovolemia podem cursar com agitação.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Antes de rotular como psiquiátrico:</strong> investigar e tratar hipóxia, hipoglicemia, hipertermia e hipovolemia.</p>
+          </div>
+          <div class="overflow-hidden rounded-lg border border-slate-300">
+            <table class="w-full text-left">
+              <thead class="bg-blue-100 text-slate-900">
+                <tr><th class="px-3 py-2 font-bold">Categoria</th><th class="px-3 py-2 font-bold">Principais causas</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="px-3 py-2 font-bold">Clínicas</td><td class="px-3 py-2">Delirium; distúrbios metabólicos; hipertireoidismo; meningite, encefalite e sepse.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Toxicológicas</td><td class="px-3 py-2">Síndrome de abstinência; intoxicação por álcool e drogas ilícitas.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Psiquiátricas</td><td class="px-3 py-2">Bipolaridade, esquizofrenia, transtornos de personalidade e dissociativos.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Traumáticas</td><td class="px-3 py-2">TCE.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Iatrogênicas</td><td class="px-3 py-2">Longo tempo de espera e percepção de tratamento ineficaz.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Suspeita de condição clínica/toxicológica/traumática', nextStep: 'agitacao_causa_clinica_investigar', value: 'clinica', critical: true },
+        { text: 'Sem emergência clínica aparente - agitação leve', nextStep: 'agitacao_leve_nao_farmacologico', value: 'leve' },
+        { text: 'Sem emergência clínica aparente - agitação moderada', nextStep: 'agitacao_moderada_abordagem', value: 'moderada' }
+      ]
+    },
+    agitacao_moderada_abordagem: {
+      id: 'agitacao_moderada_abordagem',
+      title: '1ª Linha: Abordagem Não Medicamentosa',
+      description: 'Desescalonamento verbal e ambiente seguro.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Abordagem não medicamentosa:</strong> respeitar espaço individual, observar linguagem corporal, usar linguagem clara e tom calmo, evitar movimentos bruscos e comentários provocativos.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Identificar causas da agressividade.</li>
+            <li>Ouvir atentamente e evitar discordar.</li>
+            <li>Estabelecer regras e limites claros.</li>
+            <li>Demonstrar preocupação com bem-estar, oferecendo água, comida ou cobertor quando apropriado.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Melhorou / colaborou', nextStep: 'agitacao_leve_nao_farmacologico', value: 'melhorou' },
+        { text: 'Persistente - considerar medicação VO', nextStep: 'agitacao_moderada_medicacao_oral', value: 'medicacao_oral' }
+      ]
+    },
+    agitacao_grave_seguranca: {
+      id: 'agitacao_grave_seguranca',
+      title: 'Agitação Grave: Segurança e Contenção',
+      description: 'Paciente combativo com risco imediato.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Prioridade:</strong> proteger paciente e equipe. Usar contenção física apenas se necessária e pelo menor tempo possível, como ponte até a contenção química.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Idealmente, cinco profissionais: quatro imobilizam membros e um estabiliza a cabeça.</li>
+            <li>Avisar o paciente sobre o procedimento.</li>
+            <li>Usar faixas adequadas, sem comprometer vasos ou nervos.</li>
+            <li>Manter em posição dorsal com cabeceira elevada.</li>
+            <li>Monitorar sinais vitais a cada 15-30 minutos e reavaliação psiquiátrica pelo menos a cada 30 minutos.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para contenção química', nextStep: 'agitacao_grave_contencao_quimica', value: 'contencao_quimica', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    agitacao_leve_nao_farmacologico: {
+      id: 'agitacao_leve_nao_farmacologico',
+      title: 'Agitação Leve: Manejo Não Farmacológico',
+      description: 'Paciente colabora com propostas terapêuticas.',
+      type: 'result',
+      group: 'Leve',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p><strong>Conduta:</strong> manter abordagem verbal, ambiente calmo, investigação etiológica conforme clínica e reavaliação seriada. Evitar contenção desnecessária.</p>
+        </div>
+      `,
+      options: []
+    },
+    agitacao_moderada_medicacao_oral: {
+      id: 'agitacao_moderada_medicacao_oral',
+      title: 'Agitação Moderada: Medicação VO',
+      description: 'Via oral é preferencial quando o paciente aceita colaborar.',
+      type: 'result',
+      group: 'Moderada',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>3ª linha, se necessário:</strong> contenção química. Via oral é preferencial quando o paciente aceita.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Diazepam 5 mg ou 10 mg VO; máximo 20 mg/dia.</li>
+            <li>Clonazepam 0,25 mg, 0,5 mg ou 2 mg VO; máximo diário 4 a 6 mg/dia.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    agitacao_grave_contencao_quimica: {
+      id: 'agitacao_grave_contencao_quimica',
+      title: 'Agitação Grave: Contenção Química',
+      description: 'Medicação IM/EV com monitorização e atenção para depressão respiratória.',
+      type: 'result',
+      critical: true,
+      group: 'Grave',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+            <p><strong>Conduta:</strong> contenção química com monitorização de sinais vitais, segurança de via aérea e reavaliação frequente.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Haloperidol 5 mg/mL: 1 mL IM a cada 30 minutos até dose máxima de 30 mg/dia.</li>
+            <li>Prometazina 50 mg/2 mL: 2 mL IM.</li>
+            <li>Midazolam 5 mg/mL: 5 mL IM ou EV em bolus lento, com atenção para depressão respiratória.</li>
+            <li>Diazepam 10 mg/2 mL: 10 mg EV em bolus lento.</li>
+          </ul>
+          <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500">
+            <p><strong>Álcool:</strong> se suspeita ou confirmação de abuso/intoxicação por álcool, não usar prometazina e benzodiazepínicos; prefira haloperidol.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    agitacao_causa_clinica_investigar: {
+      id: 'agitacao_causa_clinica_investigar',
+      title: 'Investigar Causa Clínica / Toxicológica / Traumática',
+      description: 'Exames complementares conforme quadro clínico.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-600">
+            <p><strong>Exames sugeridos conforme clínica:</strong> glicemia, eletrólitos, rastreio infeccioso, ureia/creatinina, função tireoidiana, ECG, toxicológico e neuroimagem quando indicado.</p>
+          </div>
+          <p>Tratar imediatamente hipóxia, hipoglicemia, hipertermia e hipovolemia. Considerar delirium, sepse, intoxicação/abstinência, TCE e outras causas clínicas antes de atribuir à etiologia psiquiátrica.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
+// Fluxograma de Profilaxia Pos-exposicao (PEP) ao HIV no Pronto Socorro
+export const pepHivFlowchart: EmergencyFlowchart = {
+  id: 'pep_hiv',
+  name: 'Profilaxia Pos-exposicao (PEP) ao HIV',
+  description: 'Decisao de indicacao de PEP ao HIV apos exposicao, com janela de 72 horas, avaliacao da pessoa exposta e status da pessoa fonte.',
+  category: 'infectious',
+  priority: 'high',
+  icon: 'shield',
+  color: 'from-cyan-600 to-blue-800',
+  initialStep: 'pep_inicio',
+  finalSteps: [
+    'pep_sem_material_risco',
+    'pep_sem_exposicao_risco',
+    'pep_fora_janela',
+    'pep_exposta_hiv_positivo',
+    'pep_iniciar',
+    'pep_nao_indicada_fonte_sem_risco'
+  ],
+  steps: {
+    pep_inicio: {
+      id: 'pep_inicio',
+      title: 'Situacao de Exposicao ao HIV',
+      description: 'A primeira abordagem apos exposicao de risco ao HIV e uma urgencia medica.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-600">
+            <p><strong>PEP:</strong> deve ser iniciada em ate 72 horas apos a exposicao, com maior beneficio quanto mais precoce for administrada.</p>
+          </div>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Quando o status sorologico da pessoa fonte e desconhecido, indicar PEP em penetracao vaginal e/ou anal, com ou sem sexo oral.</li>
+            <li>Em violencia sexual com sexo oral exclusivo, mesmo com ejaculacao na cavidade oral, avaliar caso a caso.</li>
+            <li>Nao indicar se houve uso correto de preservativo durante todo o ato sexual.</li>
+            <li>Nao indicar em exposicao cronica e repetida ao mesmo agressor, devendo avaliar acompanhamento especializado.</li>
+            <li>Toda exposicao ao HIV tambem deve ser considerada risco para outras ISTs.</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar avaliacao da exposicao', nextStep: 'pep_material_risco', value: 'iniciar' }
+      ]
+    },
+    pep_material_risco: {
+      id: 'pep_material_risco',
+      title: 'Material Biologico com Risco?',
+      description: 'Sangue, semen, fluidos vaginais, liquidos de serosas, liquido amniotico ou liquor.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
+          <p class="font-bold text-red-900">Materiais biologicos com risco</p>
+          <ul class="mt-2 list-disc pl-5 space-y-1">
+            <li>Sangue</li>
+            <li>Semen</li>
+            <li>Fluidos vaginais</li>
+            <li>Liquidos de serosas: peritoneal, pleural ou pericardico</li>
+            <li>Liquido amniotico</li>
+            <li>Liquor</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - houve material com risco', nextStep: 'pep_tipo_exposicao', value: 'material_risco' },
+        { text: 'Nao - sem material de risco', nextStep: 'pep_sem_material_risco', value: 'sem_material' }
+      ]
+    },
+    pep_tipo_exposicao: {
+      id: 'pep_tipo_exposicao',
+      title: 'Tipo de Exposicao com Risco?',
+      description: 'Percutanea, mucosa, sexual desprotegida, pele nao integra ou mordedura com sangue.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm">
+          <p class="font-bold text-orange-950">Tipos de exposicao com risco</p>
+          <ul class="mt-2 list-disc pl-5 space-y-1">
+            <li>Percutanea</li>
+            <li>Membranas mucosas</li>
+            <li>Exposicao sexual desprotegida</li>
+            <li>Cutanea em pele nao integra</li>
+            <li>Mordedura com presenca de sangue</li>
+          </ul>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - exposicao com risco', nextStep: 'pep_janela_72h', value: 'risco' },
+        { text: 'Nao - exposicao sem risco', nextStep: 'pep_sem_exposicao_risco', value: 'sem_risco' }
+      ]
+    },
+    pep_janela_72h: {
+      id: 'pep_janela_72h',
+      title: 'Atendimento em Ate 72 Horas?',
+      description: 'A PEP deve ser iniciada no maximo ate 72 horas apos a exposicao.',
+      type: 'question',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500 text-sm">
+          <p><strong>Janela de oportunidade:</strong> apos 72 horas, nao ha beneficio comprovado para iniciar PEP. Manter acompanhamento sorologico da pessoa exposta.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - ate 72 horas', nextStep: 'pep_exposta_hiv', value: 'ate_72h', critical: true },
+        { text: 'Nao - mais de 72 horas', nextStep: 'pep_fora_janela', value: 'fora_72h' }
+      ]
+    },
+    pep_exposta_hiv: {
+      id: 'pep_exposta_hiv',
+      title: 'Pessoa Exposta: HIV Positivo ou Reagente?',
+      description: 'Testagem da pessoa exposta antes de decidir PEP.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-600">
+            <p><strong>Teste da pessoa exposta:</strong> se HIV positivo ou reagente, PEP nao esta indicada. Encaminhar para acompanhamento clinico especializado.</p>
+          </div>
+          <p>Se teste nao reagente, seguir avaliacao da pessoa fonte.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - positivo/reagente', nextStep: 'pep_exposta_hiv_positivo', value: 'exposta_positivo', critical: true },
+        { text: 'Nao - negativo/nao reagente', nextStep: 'pep_fonte_hiv', value: 'exposta_negativo' }
+      ]
+    },
+    pep_fonte_hiv: {
+      id: 'pep_fonte_hiv',
+      title: 'Pessoa Fonte: HIV Positivo, Reagente ou Desconhecido?',
+      description: 'Fonte positiva, reagente ou desconhecida indica iniciar PEP.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p><strong>Indicar PEP:</strong> fonte com HIV positivo, teste reagente ou status desconhecido no contexto de exposicao de risco dentro da janela de 72 horas.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - positiva/reagente/desconhecida', nextStep: 'pep_iniciar', value: 'fonte_indica', critical: true, requiresImmediateAction: true },
+        { text: 'Nao - fonte HIV negativa', nextStep: 'pep_fonte_risco_30d', value: 'fonte_negativa' }
+      ]
+    },
+    pep_fonte_risco_30d: {
+      id: 'pep_fonte_risco_30d',
+      title: 'Pessoa Fonte Teve Exposicao de Risco nos Ultimos 30 Dias?',
+      description: 'Risco recente pode representar janela imunologica.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500 text-sm">
+          <p><strong>Janela imunologica:</strong> se a fonte teve exposicao de risco nos ultimos 30 dias, iniciar PEP e encaminhar para acompanhamento sorologico.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim - risco nos ultimos 30 dias', nextStep: 'pep_iniciar', value: 'risco_30d', critical: true, requiresImmediateAction: true },
+        { text: 'Nao - sem risco recente', nextStep: 'pep_nao_indicada_fonte_sem_risco', value: 'sem_risco_30d' }
+      ]
+    },
+    pep_iniciar: {
+      id: 'pep_iniciar',
+      title: 'Iniciar PEP',
+      description: 'Iniciar PEP e encaminhar para acompanhamento sorologico.',
+      type: 'result',
+      critical: true,
+      group: 'PEP indicada',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p><strong>Conduta:</strong> iniciar PEP imediatamente e encaminhar para acompanhamento sorologico.</p>
+          </div>
+          <div class="overflow-hidden rounded-lg border border-slate-300">
+            <table class="w-full text-left">
+              <thead class="bg-yellow-100 text-slate-900">
+                <tr><th class="px-3 py-2 font-bold">Situacao</th><th class="px-3 py-2 font-bold">Esquema</th><th class="px-3 py-2 font-bold">Posologia</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="px-3 py-2 font-bold">Preferencial</td><td class="px-3 py-2">Tenofovir + Lamivudina + Dolutegravir</td><td class="px-3 py-2">TDF/3TC 300/300 mg 1 cp VO 1x/dia + DTG 50 mg 1 cp VO 1x/dia, por 28 dias.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Sem tenofovir</td><td class="px-3 py-2">Zidovudina/lamivudina + Dolutegravir</td><td class="px-3 py-2">AZT/3TC 300/150 mg 12/12h + DTG 50 mg 1x/dia, por 28 dias.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Sem dolutegravir</td><td class="px-3 py-2">Tenofovir/lamivudina + Darunavir/ritonavir</td><td class="px-3 py-2">TDF/3TC 1x/dia + DRV 800 mg + RTV 100 mg 1x/dia, por 28 dias.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>Orientar sinais de toxicidade e repetir testagem para HIV 30 dias apos a exposicao.</p>
+        </div>
+      `,
+      options: []
+    },
+    pep_sem_material_risco: {
+      id: 'pep_sem_material_risco',
+      title: 'PEP Nao Indicada',
+      description: 'Nao houve exposicao a material biologico com risco de transmissao do HIV.',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
+          <p><strong>Conduta:</strong> PEP nao esta indicada. Acompanhamento sorologico nao e necessario para HIV por esta exposicao.</p>
+        </div>
+      `,
+      options: []
+    },
+    pep_sem_exposicao_risco: {
+      id: 'pep_sem_exposicao_risco',
+      title: 'PEP Nao Indicada',
+      description: 'Nao houve tipo de exposicao com risco de transmissao do HIV.',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
+          <p><strong>Conduta:</strong> PEP nao esta indicada. Acompanhamento sorologico nao e necessario para HIV por esta exposicao.</p>
+        </div>
+      `,
+      options: []
+    },
+    pep_fora_janela: {
+      id: 'pep_fora_janela',
+      title: 'PEP Nao Indicada: Fora da Janela',
+      description: 'Atendimento apos 72 horas da exposicao.',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
+          <p><strong>Conduta:</strong> PEP nao esta indicada apos 72 horas. Manter acompanhamento sorologico da pessoa exposta.</p>
+        </div>
+      `,
+      options: []
+    },
+    pep_exposta_hiv_positivo: {
+      id: 'pep_exposta_hiv_positivo',
+      title: 'Pessoa Exposta com HIV Positivo/Reagente',
+      description: 'PEP nao indicada; encaminhar para cuidado especializado.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
+          <p><strong>Conduta:</strong> PEP nao esta indicada. Encaminhar para acompanhamento clinico especializado.</p>
+        </div>
+      `,
+      options: []
+    },
+    pep_nao_indicada_fonte_sem_risco: {
+      id: 'pep_nao_indicada_fonte_sem_risco',
+      title: 'PEP Nao Indicada',
+      description: 'Pessoa fonte HIV negativa e sem exposicao de risco recente.',
+      type: 'result',
+      content: `
+        <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
+          <p><strong>Conduta:</strong> PEP nao esta indicada. Acompanhamento sorologico nao e necessario para HIV por esta exposicao.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 // Fluxograma de atendimento de emergência para Anafilaxia (WAO 2020)
 export const anaphylaxisFlowchart: EmergencyFlowchart = {
   id: 'anafilaxia',
@@ -5174,6 +6092,11 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
       timeSensitive: true,
       content: `
         <div class="space-y-3 text-sm">
+          <img
+            src="/ABCDE%20%2B%20posic%CC%A7a%CC%83o%20de%20trendelemburg.png"
+            alt="ABCDE e posição de Trendelenburg na anafilaxia"
+            class="w-full rounded-lg border border-slate-200 object-cover shadow-sm"
+          />
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
             <p><strong>Anafilaxia = reconhecimento precoce + adrenalina IM sem atraso.</strong></p>
           </div>
@@ -5186,7 +6109,7 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Aplicar critérios WAO 2020', nextStep: 'ana_criterios_wao', value: 'avaliar' }
+        { text: 'Verificar presença de critérios diagnósticos', nextStep: 'ana_criterios_wao', value: 'avaliar' }
       ]
     },
     ana_criterios_wao: {
@@ -5197,8 +6120,8 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
       critical: true,
       content: `
         <div class="space-y-3 text-sm">
-          <p><strong>Cenário 1:</strong> início agudo com pele/mucosas e pelo menos comprometimento respiratório, circulatório ou gastrointestinal grave.</p>
-          <p><strong>Cenário 2:</strong> alérgeno conhecido/suspeito com hipotensão, broncoespasmo ou envolvimento laríngeo, mesmo sem pele/mucosas.</p>
+          <p><strong>A anafilaxia é identificada</strong> quando surgem rapidamente sintomas cutâneos/mucosos associados a sinais respiratórios, gastrointestinais, cardiovasculares ou neurológicos após contato com possível desencadeante.</p>
+          <p>Marque abaixo se algum dos três critérios diagnósticos está presente. <strong>Qualquer um deles já caracteriza anafilaxia provável</strong> e deve levar ao tratamento imediato.</p>
         </div>
       `,
       options: [
@@ -5223,7 +6146,7 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Selecionar tratamento adjunto', nextStep: 'ana_tratamento_adjunto', value: 'adrenalina_aplicada', critical: true }
+        { text: 'Selecionar tratamento adjunto após adrenalina', nextStep: 'ana_tratamento_adjunto', value: 'adrenalina_aplicada', critical: true }
       ]
     },
     ana_tratamento_adjunto: {
@@ -6197,9 +7120,13 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   pneumonia: pneumoniaFlowchart,
   sinusite: sinusitisFlowchart,
   faringoamigdalite: faringoamigdaliteFlowchart,
+  epistaxe: epistaxeFlowchart,
   monoartrite: monoartriteFlowchart,
   crise_ansiedade: ansiedadeFlowchart,
   sindrome_vertiginosa: sindromeVertiginosaFlowchart,
+  cefaleia: cefaleiaFlowchart,
+  agitacao_psicomotora: agitacaoPsicomotoraFlowchart,
+  pep_hiv: pepHivFlowchart,
   lombalgia: lombalgiaFlowchart,
   anafilaxia: anaphylaxisFlowchart,
   appendicitis: appendicitisFlowchart,
@@ -6231,6 +7158,7 @@ export const allFlowcharts = [
   { id: 'ivas', name: 'Infecção de vias aéreas superiores (Gripe/Resfriado)', category: 'infectious', implemented: false },
   { id: 'itu', name: 'ITU', category: 'infectious', implemented: false },
   { id: 'meningite', name: 'Meningite', category: 'infectious', implemented: false },
+  { id: 'pep_hiv', name: 'PEP ao HIV', category: 'infectious', implemented: true },
   { id: 'pneumonia', name: 'Pneumonia', category: 'infectious', implemented: true },
   { id: 'sifilis', name: 'Sífilis', category: 'infectious', implemented: false },
   { id: 'uretrite', name: 'Uretrite', category: 'infectious', implemented: false },
@@ -6245,7 +7173,7 @@ export const allFlowcharts = [
   { id: 'avc', name: 'AVC (Agudo)', category: 'neurological', implemented: true },
   { id: 'avc_hemorragico', name: 'AVC hemorrágico', category: 'neurological', implemented: false },
   { id: 'avci', name: 'AVCi', category: 'neurological', implemented: false },
-  { id: 'cefaleia', name: 'Cefaléia', category: 'neurological', implemented: false },
+  { id: 'cefaleia', name: 'Cefaleias', category: 'neurological', implemented: true },
   { id: 'crise_convulsiva', name: 'Crise convulsiva', category: 'neurological', implemented: false },
   { id: 'delirium', name: 'Delirium', category: 'neurological', implemented: false },
   { id: 'rebaixamento_consciencia', name: 'Rebaixamento do nível de consciência', category: 'neurological', implemented: false },
@@ -6294,6 +7222,7 @@ export const allFlowcharts = [
   { id: 'tosse', name: 'Tosse', category: 'respiratory', implemented: false },
 
   // Psiquiátricos
+  { id: 'agitacao_psicomotora', name: 'Agitação Psicomotora', category: 'psychiatric', implemented: true },
   { id: 'crise_ansiedade', name: 'Crise de ansiedade', category: 'psychiatric', implemented: true },
   { id: 'surto_psicotico', name: 'Surto psicótico', category: 'psychiatric', implemented: false },
 
@@ -6362,6 +7291,7 @@ export const allFlowcharts = [
   // Otorrinolaringológicos
   { id: 'otite', name: 'Otite', category: 'otorhinolaryngological', implemented: false },
   { id: 'rinite', name: 'Rinite', category: 'otorhinolaryngological', implemented: false },
+  { id: 'epistaxe', name: 'Epistaxe', category: 'otorhinolaryngological', implemented: true },
   { id: 'faringoamigdalite', name: 'Faringoamigdalites', category: 'otorhinolaryngological', implemented: true },
   { id: 'sinusite', name: 'Rinossinusites Viral, Alérgica e Bacteriana', category: 'otorhinolaryngological', implemented: true },
 
