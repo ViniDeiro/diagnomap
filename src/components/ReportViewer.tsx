@@ -13,6 +13,11 @@ import {
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
+import {
+  ANAPHYLAXIS_ADJUNCT_CARDS,
+  ANAPHYLAXIS_HOME_ORIENTATIONS,
+  calculateAnaphylaxisAdrenalineDose
+} from '@/lib/anaphylaxis'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -101,6 +106,18 @@ const TVP_DURATION_PLAN_LABELS: Record<string, string> = {
   duracao_nao_provocada: 'Considerar anticoagulação estendida ou indefinida em caso não provocado/trombofilia persistente.',
   duracao_cancer: 'Manter anticoagulação enquanto houver câncer ativo ou tratamento oncológico em curso.',
   duracao_gravidez: 'Manter HBPM durante a gestação e até 6 semanas pós-parto, com mínimo total de 3 meses.'
+}
+
+const ANAPHYLAXIS_DIAGNOSTIC_CRITERIA_LABELS: Record<string, string> = {
+  skin_plus_system: 'Pele/mucosa associada a comprometimento respiratório ou cardiovascular',
+  two_systems_after_exposure: 'Dois ou mais sistemas acometidos após provável exposição a alérgeno',
+  known_allergen_hypotension: 'Hipotensão após exposição a alérgeno sabidamente conhecido'
+}
+
+const ANAPHYLAXIS_RESPONSE_LABELS: Record<string, string> = {
+  resposta: 'resposta clínica adequada',
+  sem_resposta: 'ausência de melhora / piora clínica',
+  critico: 'via aérea/choque crítico'
 }
 
 const DENGUE_ALARM_SIGN_LABELS: Record<string, string> = {
@@ -553,6 +570,132 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Plano / Acompanhamento',
             items: planItems
+          }
+        ]
+      }
+    }
+
+    if (flowId === 'anafilaxia') {
+      const criteriaData = safeParse(answers.ana_criterios_wao) as {
+        criteriosSelecionados?: string[]
+        diagnosticoProvavel?: boolean
+      } | null
+      const adjunctData = safeParse(answers.ana_tratamento_adjunto) as {
+        tratamentosAdjuntosSelecionados?: string[]
+      } | null
+
+      const selectedCriteria = uniqueItems(
+        (Array.isArray(criteriaData?.criteriosSelecionados) ? criteriaData.criteriosSelecionados : [])
+          .map((item) => ANAPHYLAXIS_DIAGNOSTIC_CRITERIA_LABELS[item] || item)
+      )
+      const selectedAdjuncts = uniqueItems(
+        (Array.isArray(adjunctData?.tratamentosAdjuntosSelecionados) ? adjunctData.tratamentosAdjuntosSelecionados : [])
+          .map((item) => ANAPHYLAXIS_ADJUNCT_CARDS[item as keyof typeof ANAPHYLAXIS_ADJUNCT_CARDS]?.title || item)
+      )
+      const responseValue = answers.ana_reavaliacao_5_10 || ''
+      const responseText = ANAPHYLAXIS_RESPONSE_LABELS[responseValue] || 'resposta clínica ainda não registrada no fluxo'
+      const adrenalineDose = calculateAnaphylaxisAdrenalineDose(patient)
+      const doseMg = String(adrenalineDose.doseMg).replace('.', ',')
+      const anaphylaxisPrescriptions = uniqueItems(
+        patient.treatment.prescriptions
+          .filter((item) => item.prescribedBy === 'Fluxograma Anafilaxia')
+          .map((item) => [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean).join(' - '))
+      )
+
+      const confirmedAnaphylaxis = Boolean(criteriaData?.diagnosticoProvavel || selectedCriteria.length > 0)
+      const criticalOutcome = currentStep === 'ana_repetir_adrenalina_internacao' || currentStep === 'ana_internacao_via_aerea_choque'
+      const adequateResponse = currentStep === 'ana_observacao_alta' || responseValue === 'resposta'
+      const noCriteria = currentStep === 'ana_sem_criterios_observar'
+
+      const historyText = [
+        `Paciente admitido em ${formatDate(patient.admission.date)} com quadro clínico suspeito de anafilaxia.`,
+        symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : null,
+        observations.length > 0 ? `Observações clínicas adicionais: ${observations.join('; ')}.` : null
+      ].filter(Boolean).join(' ')
+
+      const diagnosticText = noCriteria
+        ? 'Verificados os critérios clínicos diagnósticos, sem preenchimento de critério de anafilaxia no momento. Mantida observação clínica e orientação de reavaliação se houver progressão dos sintomas.'
+        : confirmedAnaphylaxis
+          ? `Verificados os critérios clínicos diagnósticos e confirmado quadro de anafilaxia, pois o paciente apresentava critério diagnóstico selecionado${selectedCriteria.length > 0 ? `: ${selectedCriteria.join('; ')}` : ''}.`
+          : 'Critérios diagnósticos de anafilaxia ainda não foram registrados de forma estruturada no fluxo.'
+
+      const initialManagementItems = noCriteria
+        ? ['Mantida observação clínica, revisão da exposição e orientação de retorno imediato se surgirem sintomas respiratórios, circulatórios, laríngeos ou gastrointestinais graves.']
+        : uniqueItems([
+          'Paciente encaminhado imediatamente para a Sala de Emergência.',
+          `Aplicada a medicação adrenalina (1:1000 = 1 mg/mL) ${doseMg} mg IM, conforme protocolo institucional.`,
+          'Realizado o ABCDE primário e colocado o paciente em posição de Trendelenburg quando indicado.',
+          'Solicitada monitorização contínua (cardíaca + oximetria) e acesso venoso periférico imediato.'
+        ])
+
+      const adjunctItems = noCriteria
+        ? ['Tratamento adjunto não indicado no fluxo por ausência de critérios de anafilaxia no momento.']
+        : uniqueItems([
+          selectedAdjuncts.length > 0
+            ? `Após as medidas iniciais, verificou-se necessidade de tratamento adjunto devido à presença dos seguintes sinais: ${selectedAdjuncts.join('; ')}.`
+            : 'Após as medidas iniciais, não foram registrados sinais específicos para tratamento adjunto no fluxo.',
+          anaphylaxisPrescriptions.length > 0
+            ? `Sendo prescrita a medicação: ${anaphylaxisPrescriptions.join('; ')}.`
+            : 'Sendo prescrita a medicação: __________________________ (campo livre para prescrição médica).'
+        ])
+
+      const reevaluationItems = noCriteria
+        ? ['Paciente mantido em observação clínica, com orientação de reavaliação se houver progressão de sintomas.']
+        : uniqueItems([
+          `Paciente reavaliado e apresentava: ${responseText}.`,
+          adequateResponse ? 'Realizada observação por 4 horas após estabilização clínica.' : null,
+          responseValue === 'sem_resposta' ? 'Devido à ausência de melhora, indicada repetição de adrenalina IM e preparo para internação/suporte avançado.' : null,
+          responseValue === 'critico' ? 'Devido a via aérea/choque crítico, indicado manejo avançado imediato e internação.' : null,
+          criticalOutcome ? 'Paciente não deve ser considerado para liberação ambulatorial nesta etapa do fluxo.' : null
+        ])
+
+      const dischargeItems = adequateResponse
+        ? uniqueItems([
+          'Prescritas orientações/prescrições pós-alta.',
+          ...ANAPHYLAXIS_HOME_ORIENTATIONS,
+          anaphylaxisPrescriptions.length > 0 ? `Sugestões de prescrição pós-alta registradas: ${anaphylaxisPrescriptions.join('; ')}.` : null
+        ])
+        : uniqueItems([
+          criticalOutcome
+            ? 'Sem indicação de alta nesta etapa; manter internação, monitorização e suporte conforme evolução clínica.'
+            : 'Orientações pós-alta ficam condicionadas à estabilização clínica e observação adequada.',
+          ...ANAPHYLAXIS_HOME_ORIENTATIONS
+        ])
+
+      return {
+        title: 'PRONTUÁRIO MÉDICO – EVOLUÇÃO CLÍNICA DE ANAFILAXIA',
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'História Clínica',
+            text: historyText
+          },
+          {
+            title: 'Critérios Diagnósticos',
+            text: diagnosticText
+          },
+          {
+            title: 'Medidas Iniciais',
+            items: initialManagementItems
+          },
+          {
+            title: 'Tratamento Adjunto e Prescrição',
+            items: adjunctItems
+          },
+          {
+            title: 'Reavaliação Clínica',
+            items: reevaluationItems
+          },
+          {
+            title: 'Observação e Orientações Pós-Alta',
+            items: dischargeItems
+          },
+          {
+            title: 'Sinais Vitais / Exame Físico',
+            items: vitalItems.length > 0 ? vitalItems : ['Sem sinais vitais estruturados registrados no sistema.']
           }
         ]
       }

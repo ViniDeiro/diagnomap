@@ -25,8 +25,6 @@ import { clsx } from 'clsx'
 import EmergencySelector from './EmergencySelector'
 import PhysicalExamForm, { PhysicalExamData } from './PhysicalExamForm'
 import SeverityAlertModal from './SeverityAlertModal'
-import AllergySelector from './AllergySelector'
-import { supabase } from '@/services/supabaseClient'
 
 interface PatientFormProps {
   onSubmit: (data: PatientFormData) => void
@@ -320,7 +318,6 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
   // Controle de texto da data de nascimento em formato pt-BR (dd/mm/aaaa)
   const [birthDateText, setBirthDateText] = useState<string>('')
   const [bpText, setBpText] = useState<string>('')
-  const [doctorMunicipalityId, setDoctorMunicipalityId] = useState<number | null>(null)
   const [physicalExam, setPhysicalExam] = useState<PhysicalExamData>({
     generalState: 'bom',
     coloration: { status: 'corado' },
@@ -344,27 +341,6 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
     const year = String(d.getFullYear()).padStart(4, '0')
     return `${day}/${month}/${year}`
   }
-
-  // Buscar municipality_id do médico logado para alimentar o seletor de alergias
-  useEffect(() => {
-    let cancelled = false
-    async function loadDoctorMunicipality() {
-      try {
-        const { data: userRes } = await supabase.auth.getUser()
-        const authId = userRes?.user?.id
-        if (!authId) return
-        const { data, error } = await supabase
-          .from('doctors')
-          .select('municipality_id')
-          .eq('auth_user_id', authId)
-          .single()
-        if (error) return
-        if (!cancelled) setDoctorMunicipalityId(data?.municipality_id ?? null)
-      } catch {}
-    }
-    loadDoctorMunicipality()
-    return () => { cancelled = true }
-  }, [])
 
   const parseDateBR = (text: string): Date | null => {
     const m = /^([0-9]{2})\/([0-9]{2})\/([0-9]{4})$/.exec(text)
@@ -996,29 +972,6 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                         step="0.1"
                       />
                     </div>
-                  </div>
-
-                  {/* Alergias */}
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
-                      Alergias (selecione da lista)
-                    </label>
-                    <AllergySelector
-                      value={formData.allergies || []}
-                      onChange={(list) => setFormData(prev => ({ ...prev, allergies: list }))}
-                      municipalityId={doctorMunicipalityId ?? undefined}
-                      placeholder="Buscar medicamento por nome"
-                      allowedNames={isDengueFlow ? ['paracetamol', 'dipirona'] : undefined}
-                    />
-                    {formData.allergies && formData.allergies.length > 0 && (
-                      <div className="mt-2 flex flex-wrap gap-2">
-                        {formData.allergies.map((a, i) => (
-                          <span key={`${a}-${i}`} className="px-2 py-1 text-xs rounded-lg bg-red-100 text-red-700 border border-red-200">
-                            {a}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
 
                   {/* ID do Paciente */}

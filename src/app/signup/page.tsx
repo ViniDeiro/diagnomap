@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { UserPlus, Mail, Lock, MapPin } from 'lucide-react'
+import { UserPlus, Mail, Lock, MapPin, FileText, Building2, Briefcase } from 'lucide-react'
 import { signUpDoctor, signInDoctor, createDoctorProfile } from '@/services/doctorRepo'
 import { supabase } from '@/services/supabaseClient'
+import MedicalResponsibilityTerm, { MedicalTermDoctorInfo } from '@/components/MedicalResponsibilityTerm'
 
 type Municipality = { id: number; name: string; uf?: string }
 
@@ -14,6 +15,12 @@ export default function SignupPage() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [crmUf, setCrmUf] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [unit, setUnit] = useState('')
+  const [company, setCompany] = useState('')
+  const [pendingTermDoctor, setPendingTermDoctor] = useState<MedicalTermDoctorInfo | null>(null)
+  const [termLoading, setTermLoading] = useState(false)
   const [municipalities, setMunicipalities] = useState<Municipality[]>([])
   const [ufs, setUfs] = useState<string[]>([])
   const [selectedUf, setSelectedUf] = useState<string>('')
@@ -235,12 +242,20 @@ export default function SignupPage() {
       const authUserId = signed.user.id
       await createDoctorProfile({
         name,
+        crm: crmUf,
         municipality_id: municipalityId ?? null,
         status: 'active',
         email,
         auth_user_id: authUserId
       })
-      router.push('/')
+      setPendingTermDoctor({
+        name,
+        crmUf,
+        cpf,
+        unit,
+        company,
+        email
+      })
     } catch (err: any) {
       setError(err?.message || 'Erro ao cadastrar')
     } finally {
@@ -248,9 +263,51 @@ export default function SignupPage() {
     }
   }
 
+  const handleAcceptTerm = async () => {
+    if (!pendingTermDoctor) return
+    setError(null)
+    setTermLoading(true)
+    try {
+      const acceptedAt = new Date().toISOString()
+      const termPayload = {
+        version: '2026-05-25',
+        acceptedAt,
+        signature: pendingTermDoctor.name,
+        name: pendingTermDoctor.name,
+        crmUf: pendingTermDoctor.crmUf || null,
+        cpf: pendingTermDoctor.cpf || null,
+        unit: pendingTermDoctor.unit || null,
+        company: pendingTermDoctor.company || null
+      }
+      await supabase.auth.updateUser({
+        data: {
+          medical_responsibility_term: termPayload
+        }
+      })
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('medical_responsibility_term', JSON.stringify(termPayload))
+      }
+      router.push('/')
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao registrar aceite do termo')
+    } finally {
+      setTermLoading(false)
+    }
+  }
+
+  if (pendingTermDoctor) {
+    return (
+      <MedicalResponsibilityTerm
+        doctor={pendingTermDoctor}
+        loading={termLoading}
+        onAccept={handleAcceptTerm}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 max-w-md w-full">
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200/60 p-8 max-w-xl w-full">
         <div className="flex items-center space-x-3 mb-6">
           <div className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center">
             <UserPlus className="w-6 h-6" />
@@ -311,6 +368,66 @@ export default function SignupPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full bg-transparent py-3 outline-none"
                 placeholder="••••••••"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">CRM/UF</label>
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
+              <FileText className="w-5 h-5 text-slate-400 mr-2" />
+              <input
+                type="text"
+                value={crmUf}
+                onChange={(e) => setCrmUf(e.target.value)}
+                className="w-full bg-transparent py-3 outline-none"
+                placeholder="Ex.: CRM-SP 123456"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">CPF</label>
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
+              <FileText className="w-5 h-5 text-slate-400 mr-2" />
+              <input
+                type="text"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+                className="w-full bg-transparent py-3 outline-none"
+                placeholder="000.000.000-00"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Unidade de atuação</label>
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
+              <Building2 className="w-5 h-5 text-slate-400 mr-2" />
+              <input
+                type="text"
+                value={unit}
+                onChange={(e) => setUnit(e.target.value)}
+                className="w-full bg-transparent py-3 outline-none"
+                placeholder="Ex.: UPA Centro"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Empresa/Contratante</label>
+            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl px-3">
+              <Briefcase className="w-5 h-5 text-slate-400 mr-2" />
+              <input
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full bg-transparent py-3 outline-none"
+                placeholder="Nome da instituição/empresa"
                 required
               />
             </div>

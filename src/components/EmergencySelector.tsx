@@ -27,7 +27,8 @@ import {
     Ear,
     ChevronLeft,
     ChevronRight,
-    ArrowRight
+    ArrowRight,
+    CheckCircle
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { EmergencyFlowchart, EmergencyCategory } from '@/types/emergency'
@@ -47,7 +48,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedCategory, setSelectedCategory] = useState<string>('all')
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-    const [activeTab, setActiveTab] = useState<'flowcharts' | 'protocols'>('flowcharts')
+    const [activeTab, setActiveTab] = useState<'flowcharts' | 'finished' | 'protocols'>('flowcharts')
     const [showDevelopmentModal, setShowDevelopmentModal] = useState(false)
     const [selectedProtocol, setSelectedProtocol] = useState<{ name: string; category: string } | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
@@ -57,6 +58,8 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     const allAvailableFlowcharts = allFlowcharts
     const implementedFlowchartsCount = allAvailableFlowcharts.filter(flowchart => flowchart.implemented).length
     const totalFlowchartsCount = allAvailableFlowcharts.length
+    const finishedFlowchartIds = ['tvp', 'anafilaxia']
+    const finishedFlowchartsCount = finishedFlowchartIds.length
 
     const clinicalProtocols: Array<{ id: string; name: string; category: string; implemented: boolean }> = [
         { id: 'sepse_protocolo', name: 'Sepse Grave (Protocolo Clínico)', category: 'infectious', implemented: false },
@@ -71,7 +74,11 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
             .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase()
 
-    const filteredFlowcharts = allAvailableFlowcharts.filter(flowchart => {
+    const visibleFlowcharts = activeTab === 'finished'
+        ? allAvailableFlowcharts.filter(flowchart => finishedFlowchartIds.includes(flowchart.id))
+        : allAvailableFlowcharts
+
+    const filteredFlowcharts = visibleFlowcharts.filter(flowchart => {
         const normalizedSearch = normalizeText(searchTerm.trim())
         const searchable = `${flowchart.name} ${flowchart.id}`
         const matchesSearch = normalizeText(searchable).includes(normalizedSearch)
@@ -90,7 +97,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     // Resetar página quando filtros mudarem
     useEffect(() => {
         setCurrentPage(1)
-    }, [searchTerm, selectedCategory])
+    }, [searchTerm, selectedCategory, activeTab])
 
     const getCategoryIcon = (category: EmergencyCategory) => {
         switch (category) {
@@ -188,6 +195,10 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                 <Activity className="h-4 w-4" />
                                 {implementedFlowchartsCount} de {totalFlowchartsCount} fluxogramas implementados
                             </span>
+                            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
+                                <CheckCircle className="h-4 w-4" />
+                                {finishedFlowchartsCount} finalizados
+                            </span>
                         </div>
                     </div>
 
@@ -202,6 +213,17 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                             )}
                         >
                             Fluxogramas
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('finished')}
+                            className={clsx(
+                                "px-6 py-2.5 text-sm font-bold rounded-lg transition-all duration-300",
+                                activeTab === 'finished'
+                                    ? "bg-slate-100 text-slate-800 shadow-sm"
+                                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                            )}
+                        >
+                            Finalizados
                         </button>
                         <button
                             onClick={() => setActiveTab('protocols')}
@@ -231,10 +253,10 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                     />
                 </div>
 
-                {activeTab === 'flowcharts' && (
+                {(activeTab === 'flowcharts' || activeTab === 'finished') && (
                 <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     {/* Filtros */}
-                    <div className="flex flex-wrap items-center gap-3">
+                    <div className={clsx("flex flex-wrap items-center gap-3", activeTab === 'finished' && "hidden")}>
                         <div className="flex items-center space-x-2 mr-2">
                             <Filter className="w-4 h-4 text-slate-400" />
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Filtros</span>
@@ -299,7 +321,21 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                 </div>
                 )}
 
-                {activeTab === 'flowcharts' && (
+                {activeTab === 'finished' && (
+                  <div className="mb-8 rounded-2xl border border-blue-100 bg-blue-50 p-5">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle className="mt-0.5 h-5 w-5 text-blue-700" />
+                      <div>
+                        <h2 className="text-sm font-extrabold uppercase tracking-wide text-blue-900">Fluxogramas finalizados</h2>
+                        <p className="mt-1 text-sm text-blue-800">
+                          Estes fluxogramas já estão com interface, lógica clínica e relatório médico padronizado.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {(activeTab === 'flowcharts' || activeTab === 'finished') && (
                 <>
                 {filteredFlowcharts.length === 0 ? (
                     <motion.div

@@ -33,6 +33,7 @@ import {
   INFLUENZA_RISK_FACTORS,
   INFLUENZA_WORSENING_SIGNS,
   INFLUENZA_ICU_CRITERIA,
+  INFLUENZA_ICU_CRITERIA_INFO,
   buildInfluenzaPrescriptionItems,
   hasInfluenzaPrescriptionSet
 } from '@/lib/influenza'
@@ -902,6 +903,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
   const [influenzaWorseningSigns, setInfluenzaWorseningSigns] = useState<string[]>([])
   const [influenzaICUCriteria, setInfluenzaICUCriteria] = useState<string[]>([])
+  const [influenzaICUInfoOpen, setInfluenzaICUInfoOpen] = useState<string | null>(null)
   const [influenzaPrescriptionPreview, setInfluenzaPrescriptionPreview] = useState<InfluenzaPrescriptionPreview | null>(null)
   const [influenzaPrescriptionCopied, setInfluenzaPrescriptionCopied] = useState(false)
   const [influenzaPrescriptionGeneratedSteps, setInfluenzaPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
@@ -6095,21 +6097,31 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       {INFLUENZA_ICU_CRITERIA.map((item) => {
                         const checked = influenzaICUCriteria.includes(item)
                         return (
-                          <label
+                          <div
                             key={item}
                             className={clsx(
-                              'flex items-start gap-2 rounded-lg p-2 transition-colors cursor-pointer',
+                              'flex items-start justify-between gap-3 rounded-lg p-2 transition-colors',
                               checked ? 'bg-white shadow-sm ring-1 ring-rose-300' : 'hover:bg-white/70'
                             )}
                           >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleSelection(setInfluenzaICUCriteria, item)}
-                              className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
-                            />
-                            <span className={clsx('text-sm', checked ? 'font-medium text-rose-950' : 'text-slate-700')}>{item}</span>
-                          </label>
+                            <label className="flex flex-1 cursor-pointer items-start gap-2">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setInfluenzaICUCriteria, item)}
+                                className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                              />
+                              <span className={clsx('text-sm', checked ? 'font-medium text-rose-950' : 'text-slate-700')}>{item}</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => setInfluenzaICUInfoOpen(item)}
+                              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-rose-200 bg-white text-rose-700 shadow-sm transition-colors hover:bg-rose-50"
+                              title={`Ver explicação sobre ${item}`}
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
                         )
                       })}
                     </div>
@@ -7220,6 +7232,48 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         </div>
                       </div>
                     </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {influenzaICUInfoOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+                  <div className="w-full max-w-2xl overflow-hidden rounded-2xl border border-rose-200 bg-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 bg-gradient-to-r from-rose-700 to-red-700 px-5 py-4 text-white">
+                      <div className="flex items-start gap-3">
+                        <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                          <Info className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-[0.16em] text-rose-100">Critério de UTI</p>
+                          <h4 className="mt-1 text-lg font-extrabold">{influenzaICUInfoOpen}</h4>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setInfluenzaICUInfoOpen(null)}
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/15 transition-colors hover:bg-white/25"
+                        title="Fechar"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="p-5">
+                      <div className="rounded-xl border border-rose-100 bg-rose-50 p-4">
+                        <p className="text-base leading-relaxed text-slate-800">
+                          {INFLUENZA_ICU_CRITERIA_INFO[influenzaICUInfoOpen]}
+                        </p>
+                      </div>
+                      <div className="mt-4 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setInfluenzaICUInfoOpen(null)}
+                          className="rounded-xl bg-rose-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-rose-800"
+                        >
+                          Entendi
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -9341,6 +9395,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? 'Distúrbio Misto Identificado' : 'Fluxograma Concluído'}
                       </h3>
                     </div>
+                    {flowchart.id === 'anafilaxia' && ['ana_observacao_alta', 'ana_internacao_via_aerea_choque'].includes(currentStep) && (
+                      <figure className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <img
+                          src={currentStep === 'ana_observacao_alta' ? '/alta-apos-melhora.png' : '/paciente-critico.png'}
+                          alt={currentStep === 'ana_observacao_alta' ? 'Alta após melhora clínica da anafilaxia' : 'Paciente crítico em manejo avançado'}
+                          className="h-44 w-full object-contain sm:h-52"
+                        />
+                      </figure>
+                    )}
                     <button
                       onClick={onComplete}
                       className={clsx(

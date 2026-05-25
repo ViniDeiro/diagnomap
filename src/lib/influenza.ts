@@ -3,10 +3,10 @@ import type { Patient, Prescription } from '@/types/patient'
 type PrescriptionDraft = Omit<Prescription, 'id' | 'prescribedAt'>
 
 export const INFLUENZA_SEVERITY_SIGNS = [
+  'SpO2 < 95% em ar ambiente',
+  'Desconforto / insuficiência respiratória',
   'Dispneia',
-  'Desconforto respiratório',
-  'SatO2 < 95% em ar ambiente',
-  'Exacerbação de doença de base'
+  'Exacerbação de doenças pré-existentes'
 ]
 
 export const INFLUENZA_RISK_FACTORS = [
@@ -34,6 +34,17 @@ export const INFLUENZA_ICU_CRITERIA = [
   'Insuficiência respiratória',
   'Instabilidade hemodinâmica'
 ]
+
+export const INFLUENZA_ICU_CRITERIA_INFO: Record<string, string> = {
+  'Choque':
+    'Choque é uma síndrome de falência circulatória aguda em que a oferta e/ou utilização de oxigênio tornam-se insuficientes para sustentar o metabolismo celular, levando à hipoperfusão tecidual, disfunção orgânica progressiva e risco de morte.',
+  'Disfunção de órgãos vitais':
+    'Disfunção de órgãos vitais é o comprometimento agudo ou progressivo da função de órgãos essenciais à homeostase sistêmica, com incapacidade parcial ou completa de sustentar suas funções fisiológicas, podendo evoluir para falência orgânica multissistêmica.',
+  'Insuficiência respiratória':
+    'Insuficiência respiratória é a incapacidade do sistema respiratório de manter trocas gasosas adequadas às demandas metabólicas, por falha de ventilação, difusão, relação ventilação/perfusão, mecânica respiratória ou controle neuromuscular, resultando em hipoxemia, hipercapnia ou ambas.',
+  'Instabilidade hemodinâmica':
+    'Instabilidade hemodinâmica é a incapacidade do sistema cardiovascular de manter perfusão tecidual adequada e sustentada, com hipoperfusão sistêmica, variabilidade pressórica significativa, deterioração orgânica progressiva e possível necessidade de suporte volêmico, vasoativo ou circulatório.'
+}
 
 const INFLUENZA_PRESCRIPTION_MEDICATIONS = [
   'Fosfato de Oseltamivir',

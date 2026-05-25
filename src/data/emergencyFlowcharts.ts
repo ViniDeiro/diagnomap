@@ -3756,21 +3756,23 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
-            <p><strong>Síndrome gripal:</strong> na ausência de outro diagnóstico específico, considerar em paciente com <strong>febre</strong> (mesmo que referida) associada a <strong>tosse</strong> ou <strong>dor de garganta</strong>, somada a pelo menos um dos seguintes sintomas: <strong>mialgia</strong>, <strong>cefaleia</strong> ou <strong>artralgia</strong>.</p>
+            <p><strong>Síndrome gripal:</strong> deve ser considerada frente a paciente com sintomas característicos e sem outro diagnóstico definido. O quadro é sugerido por <strong>febre</strong> (inclusive se somente relatada), com <strong>tosse</strong> ou <strong>dor de garganta</strong>, juntamente com pelo menos um dos demais sintomas: <strong>artralgia</strong>, <strong>cefaleia</strong> ou <strong>mialgia</strong>.</p>
           </div>
           <div class="rounded-xl border border-red-200 bg-red-50 p-4">
             <p class="font-semibold text-red-800">Notificação e cuidados iniciais importantes</p>
             <ul class="list-disc pl-5 mt-2 space-y-1 text-red-900">
               <li>Considerar isolamento por gotículas e máscara cirúrgica para o paciente.</li>
-              <li>Influenza A e B têm maior importância clínica em humanos.</li>
+              <li>No Brasil, a maior relevância clínica e epidemiológica é dos vírus influenza A, especialmente A(H1N1)pdm09 e A(H3N2), e também do influenza B, sobretudo linhagem Victoria.</li>
               <li>Oseltamivir deve ser priorizado em pacientes hospitalizados ou com fatores de risco para complicações.</li>
             </ul>
           </div>
           <details class="rounded-xl border border-slate-200 bg-white p-4">
             <summary class="cursor-pointer font-semibold text-slate-800">Ver pontos que não podem passar despercebidos</summary>
             <div class="mt-3 space-y-2 text-slate-700">
-              <p>A influenza acomete vias aéreas superiores e inferiores e pode evoluir com <strong>síndrome respiratória aguda</strong>.</p>
-              <p>O subtipo H1N1 mantém maior relevância clínica no Brasil, com incubação de <strong>1 a 7 dias</strong>.</p>
+              <p>A influenza acomete vias aéreas superiores e inferiores e pode evoluir com <strong>síndrome respiratória aguda grave (SRAG)</strong>.</p>
+              <p>Apesar da incubação clássica de 1 a 4 dias, muitos pacientes iniciam sintomas de forma abrupta cerca de 48 horas após exposição significativa.</p>
+              <p>No Brasil, a sazonalidade varia por região: Sul e Sudeste têm pico mais clássico entre outono e inverno; Norte e Nordeste podem ter circulação mais prolongada e associada ao período chuvoso.</p>
+              <p>H1N1 costuma chamar atenção por SDRA viral primária; H3N2 por descompensar pacientes frágeis e favorecer coinfecção bacteriana; influenza B tende a ser mais branda, mas pode causar complicações, especialmente em jovens.</p>
               <p>A principal complicação é a <strong>pneumonia viral</strong>, podendo haver coinfecção bacteriana associada.</p>
               <p>O tratamento antiviral indicado inclui <strong>oseltamivir</strong> ou <strong>zanamivir</strong>, com maior benefício quando iniciado nas primeiras 48 horas.</p>
               <p>Pacientes graves com pneumonia podem necessitar de <strong>antibioticoterapia de amplo espectro</strong> conforme avaliação clínica.</p>
@@ -3802,10 +3804,10 @@ export const influenzaFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p class="font-semibold text-amber-900">Considerar gravidade quando houver:</p>
             <ul class="list-disc pl-5 mt-2 space-y-1 text-amber-900">
+              <li>SpO2 &lt; 95% em ar ambiente</li>
+              <li>Desconforto / insuficiência respiratória</li>
               <li>Dispneia</li>
-              <li>Desconforto respiratório</li>
-              <li>SatO2 menor que 95% em ar ambiente</li>
-              <li>Exacerbação de doença de base</li>
+              <li>Exacerbação de doenças pré-existentes</li>
             </ul>
           </div>
         </div>

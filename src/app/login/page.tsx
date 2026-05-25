@@ -4,7 +4,9 @@ import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { LogIn, Mail, Lock } from 'lucide-react'
-import { signInDoctor } from '@/services/doctorRepo'
+import { getCurrentDoctor, signInDoctor } from '@/services/doctorRepo'
+import { supabase } from '@/services/supabaseClient'
+import MedicalResponsibilityTerm, { MedicalTermDoctorInfo } from '@/components/MedicalResponsibilityTerm'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -12,19 +14,73 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pendingTermDoctor, setPendingTermDoctor] = useState<MedicalTermDoctorInfo | null>(null)
+  const [termLoading, setTermLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
     setLoading(true)
     try {
-      await signInDoctor(email, password)
+      const signed = await signInDoctor(email, password)
+      const accepted = Boolean(signed.user?.user_metadata?.medical_responsibility_term?.acceptedAt)
+      if (!accepted) {
+        const doctor = await getCurrentDoctor()
+        setPendingTermDoctor({
+          name: doctor?.name || signed.user?.user_metadata?.name || signed.user?.email || '',
+          crmUf: doctor?.crm || null,
+          email: signed.user?.email || email
+        })
+        return
+      }
       router.push('/')
     } catch (err: any) {
       setError(err?.message || 'Erro ao fazer login')
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleAcceptTerm = async () => {
+    if (!pendingTermDoctor) return
+    setError(null)
+    setTermLoading(true)
+    try {
+      const acceptedAt = new Date().toISOString()
+      const termPayload = {
+        version: '2026-05-25',
+        acceptedAt,
+        signature: pendingTermDoctor.name,
+        name: pendingTermDoctor.name,
+        crmUf: pendingTermDoctor.crmUf || null,
+        cpf: pendingTermDoctor.cpf || null,
+        unit: pendingTermDoctor.unit || null,
+        company: pendingTermDoctor.company || null
+      }
+      await supabase.auth.updateUser({
+        data: {
+          medical_responsibility_term: termPayload
+        }
+      })
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('medical_responsibility_term', JSON.stringify(termPayload))
+      }
+      router.push('/')
+    } catch (err: any) {
+      setError(err?.message || 'Erro ao registrar aceite do termo')
+    } finally {
+      setTermLoading(false)
+    }
+  }
+
+  if (pendingTermDoctor) {
+    return (
+      <MedicalResponsibilityTerm
+        doctor={pendingTermDoctor}
+        loading={termLoading}
+        onAccept={handleAcceptTerm}
+      />
+    )
   }
 
   return (
@@ -91,4 +147,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
