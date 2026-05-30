@@ -7331,7 +7331,9 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
       content: `
         <div class="grid gap-5 text-sm lg:grid-cols-[1fr_0.85fr] lg:items-start">
           <div class="space-y-4">
-            <img src="/paralisia%20de%20bell/tratamento%20clinico.png" alt="Tratamento clínico da Paralisia de Bell" class="w-full rounded-lg object-contain" />
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <img src="/paralisia%20de%20bell/tratamento%20clinico.png" alt="Tratamento clínico da Paralisia de Bell" class="mx-auto max-h-72 w-full max-w-xl rounded-lg object-contain" />
+            </div>
             <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
               <p><strong>O tratamento deve ser iniciado o mais precocemente possível</strong>, idealmente nas primeiras <strong>72 horas</strong> do início dos sintomas, para melhorar o prognóstico.</p>
             </div>
