@@ -4500,17 +4500,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
               )}
 
               {isBellHouseStep && (
-                <div className="mb-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
-                  <div className="grid gap-6 xl:grid-cols-[1fr_0.72fr] xl:items-start">
-                    <div className="space-y-4">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-sm leading-relaxed text-slate-800 sm:text-base">
+                <div className="mb-8 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.62fr)] lg:items-start">
+                    <div className="space-y-3">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <p className="text-xs leading-relaxed text-slate-800 sm:text-sm">
                           A <strong>Escala de House-Brackmann</strong> classifica a gravidade da paralisia facial periférica.
                           Selecione o grau compatível com o exame; a escolha ficará marcada e liberará a próxima etapa.
                         </p>
                       </div>
 
-                      <div className="space-y-3">
+                      <div className="grid gap-2 md:grid-cols-2">
                         {[
                           { value: 'house_i', label: 'Grau I', description: 'Função facial normal.' },
                           { value: 'house_ii', label: 'Grau II', description: 'Fraqueza leve; simetria normal em repouso e fechamento ocular completo sem esforço.' },
@@ -4526,7 +4526,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                               type="button"
                               onClick={() => setSelectedBellHouseGrade(grade.value)}
                               className={clsx(
-                                'flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-all',
+                                'flex min-h-[86px] w-full items-start gap-2.5 rounded-xl border p-3 text-left transition-all',
                                 selected
                                   ? 'border-cyan-500 bg-cyan-50 shadow-sm'
                                   : 'border-slate-200 bg-white hover:border-cyan-300 hover:bg-cyan-50/40'
@@ -4534,18 +4534,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                             >
                               <span
                                 className={clsx(
-                                  'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 transition-colors',
+                                  'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors',
                                   selected
                                     ? 'border-cyan-600 bg-cyan-600 text-white'
                                     : 'border-slate-300 bg-white text-transparent'
                                 )}
                                 aria-hidden="true"
                               >
-                                <CheckCircle className="h-4 w-4" />
+                                <CheckCircle className="h-3.5 w-3.5" />
                               </span>
                               <span>
-                                <span className="block text-base font-extrabold text-slate-950">{grade.label}</span>
-                                <span className="mt-1 block text-sm leading-relaxed text-slate-700">{grade.description}</span>
+                                <span className="block text-sm font-extrabold text-slate-950">{grade.label}</span>
+                                <span className="mt-0.5 block text-xs leading-snug text-slate-700">{grade.description}</span>
                               </span>
                             </button>
                           )
@@ -4557,7 +4557,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <img
                         src="/paralisia%20de%20bell/escala%20de%20house.png"
                         alt="Escala de House-Brackmann"
-                        className="mx-auto max-h-[320px] w-full rounded-xl object-contain"
+                        className="mx-auto max-h-[260px] w-full rounded-xl object-contain sm:max-h-[300px] lg:max-h-[360px]"
                       />
                     </div>
                   </div>
