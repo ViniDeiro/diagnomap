@@ -987,6 +987,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellFacialNerveOpen, setBellFacialNerveOpen] = useState(false)
   const [bellCranioOpen, setBellCranioOpen] = useState(false)
   const [pendingBellSide, setPendingBellSide] = useState<{ label: string; value: string } | null>(null)
+  const [selectedBellHouseGrade, setSelectedBellHouseGrade] = useState('')
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
     pco2: '',
@@ -1573,6 +1574,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     setDpocSinaisGravidade([])
     setDpocAnthonisen([])
+    setSelectedBellHouseGrade('')
     onUpdate(patient.id, flowchart.initialStep, [], {}, 0)
   }
 
@@ -1582,6 +1584,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isBellSideSelection = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_inicio'
   const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_criterios_obrigatorios'
+  const isBellHouseStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_house_brackmann'
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
@@ -4409,8 +4412,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             <div className="p-6">
               {isBellSideSelection && (
                 <div className="mb-8 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
-                  <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
-                    <div className="flex flex-col justify-between bg-gradient-to-br from-blue-950 via-blue-900 to-cyan-800 p-6 text-white sm:p-8">
+                  <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
+                    <div className="flex flex-col justify-between bg-gradient-to-br from-blue-950 via-blue-900 to-cyan-800 p-5 text-white sm:p-7">
                       <div>
                         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-50">
                           <Brain className="h-4 w-4" />
@@ -4443,7 +4446,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       </div>
                     </div>
 
-                    <div className="bg-slate-50 p-5 sm:p-6">
+                    <div className="bg-slate-50 p-4 sm:p-5">
                       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                           <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
@@ -4454,7 +4457,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           </p>
                         </div>
                       </div>
-                      <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="grid gap-5 sm:grid-cols-2">
                         {[
                           {
                             label: 'Lado direito',
@@ -4478,9 +4481,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                             <img
                               src={item.src}
                               alt={`Paralisia facial do ${item.label.toLowerCase()}`}
-                              className="aspect-[4/3] w-full bg-slate-100 object-cover object-top transition-transform duration-300 group-hover:scale-[1.03]"
+                              className="aspect-[3/4] w-full bg-slate-100 object-cover object-top transition-transform duration-300 group-hover:scale-[1.03]"
                             />
-                            <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-4">
+                            <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-4 sm:p-5">
                               <span className="text-base font-extrabold text-slate-950 sm:text-lg">
                                 {item.label}
                               </span>
@@ -4496,7 +4499,97 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {isBellHouseStep && (
+                <div className="mb-8 rounded-2xl border border-blue-100 bg-white p-5 shadow-sm">
+                  <div className="grid gap-6 xl:grid-cols-[1fr_0.72fr] xl:items-start">
+                    <div className="space-y-4">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <p className="text-sm leading-relaxed text-slate-800 sm:text-base">
+                          A <strong>Escala de House-Brackmann</strong> classifica a gravidade da paralisia facial periférica.
+                          Selecione o grau compatível com o exame; a escolha ficará marcada e liberará a próxima etapa.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        {[
+                          { value: 'house_i', label: 'Grau I', description: 'Função facial normal.' },
+                          { value: 'house_ii', label: 'Grau II', description: 'Fraqueza leve; simetria normal em repouso e fechamento ocular completo sem esforço.' },
+                          { value: 'house_iii', label: 'Grau III', description: 'Disfunção moderada; fechamento ocular completo e boa movimentação da testa com esforço.' },
+                          { value: 'house_iv', label: 'Grau IV', description: 'Disfunção grave; fechamento ocular incompleto, testa sem movimento e boca assimétrica.' },
+                          { value: 'house_v', label: 'Grau V', description: 'Movimento mínimo; pouca capacidade de sorrir, franzir a testa ou fechar completamente o olho.' },
+                          { value: 'house_vi', label: 'Grau VI', description: 'Ausência de movimentos faciais.' }
+                        ].map((grade) => {
+                          const selected = selectedBellHouseGrade === grade.value
+                          return (
+                            <button
+                              key={grade.value}
+                              type="button"
+                              onClick={() => setSelectedBellHouseGrade(grade.value)}
+                              className={clsx(
+                                'flex w-full items-start gap-3 rounded-xl border p-4 text-left transition-all',
+                                selected
+                                  ? 'border-cyan-500 bg-cyan-50 shadow-sm'
+                                  : 'border-slate-200 bg-white hover:border-cyan-300 hover:bg-cyan-50/40'
+                              )}
+                            >
+                              <span
+                                className={clsx(
+                                  'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 transition-colors',
+                                  selected
+                                    ? 'border-cyan-600 bg-cyan-600 text-white'
+                                    : 'border-slate-300 bg-white text-transparent'
+                                )}
+                                aria-hidden="true"
+                              >
+                                <CheckCircle className="h-4 w-4" />
+                              </span>
+                              <span>
+                                <span className="block text-base font-extrabold text-slate-950">{grade.label}</span>
+                                <span className="mt-1 block text-sm leading-relaxed text-slate-700">{grade.description}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                      <img
+                        src="/paralisia%20de%20bell/escala%20de%20house.png"
+                        alt="Escala de House-Brackmann"
+                        className="mx-auto max-h-[320px] w-full rounded-xl object-contain"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span className={clsx('text-sm font-medium', selectedBellHouseGrade ? 'text-emerald-700' : 'text-amber-700')}>
+                      {selectedBellHouseGrade
+                        ? `Selecionado: ${currentStepData.options?.find((option) => option.value === selectedBellHouseGrade)?.text || 'grau definido'}`
+                        : 'Selecione um grau para avançar'}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={!selectedBellHouseGrade}
+                      onClick={() => {
+                        if (!selectedBellHouseGrade) return
+                        handleAnswer('bell_tratamento_clinico', selectedBellHouseGrade)
+                      }}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold transition-colors',
+                        selectedBellHouseGrade
+                          ? 'bg-cyan-600 text-white hover:bg-cyan-700'
+                          : 'cursor-not-allowed bg-slate-100 text-slate-400'
+                      )}
+                    >
+                      Seguir para Tratamento Clínico
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {currentStepData.content && !isBellSideSelection && !isBellHouseStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">
@@ -7272,12 +7365,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
               )}
 
               {isBellSideSelection && pendingBellSide && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto p-4">
                   <div
                     className="absolute inset-0 bg-slate-900/45"
                     onClick={() => setPendingBellSide(null)}
                   />
-                  <div className="relative w-full max-w-5xl rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-2xl sm:p-6">
+                  <div className="relative flex max-h-[86vh] w-full max-w-3xl flex-col rounded-2xl border border-amber-200 bg-amber-50 p-4 shadow-2xl sm:p-5">
                     <button
                       type="button"
                       onClick={() => setPendingBellSide(null)}
@@ -7287,7 +7380,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <X className="h-4 w-4" />
                     </button>
 
-                    <div className="pr-9">
+                    <div className="shrink-0 pr-9">
                       <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
                         {pendingBellSide.label} selecionado
                       </p>
@@ -7299,15 +7392,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       </p>
                     </div>
 
-                    <div className="mt-4 overflow-hidden rounded-xl border border-amber-100 bg-white p-2">
+                    <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-amber-100 bg-white p-2">
                       <img
                         src="/paralisia%20de%20bell/Epidemiologia%20Paralisia%20de%20Bell.jpg"
                         alt="Epidemiologia da Paralisia de Bell"
-                        className="mx-auto max-h-[62vh] w-full rounded-lg object-contain"
+                        className="mx-auto w-full max-w-2xl rounded-lg object-contain"
                       />
                     </div>
 
-                    <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <div className="mt-4 flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                       <button
                         type="button"
                         onClick={() => setPendingBellSide(null)}
@@ -8863,7 +8956,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       : isTVPClinicalEvaluation && tvpAlertInterruptionOption
                         ? [tvpAlertInterruptionOption]
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellHouseStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
