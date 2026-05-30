@@ -7106,6 +7106,347 @@ export const pancreatitisFlowchart: EmergencyFlowchart = {
   }
 }
 
+// Fluxograma de Paralisia de Bell
+export const paralisiaBellFlowchart: EmergencyFlowchart = {
+  id: 'paralisia_bell',
+  name: 'Paralisia de Bell',
+  description: 'Avaliação de paralisia facial periférica aguda, critérios diagnósticos, diferenciais, red flags, House-Brackmann e tratamento inicial.',
+  category: 'neurological',
+  priority: 'medium',
+  icon: 'brain',
+  color: 'from-amber-500 to-orange-600',
+  initialStep: 'bell_inicio',
+  finalSteps: [
+    'bell_criterios_nao_preenchidos',
+    'bell_red_flags_investigar',
+    'bell_prescricao_cuidados',
+    'bell_encaminhamento_neuro',
+    'bell_encaminhamento_otorrino',
+    'bell_finalizado'
+  ],
+  steps: {
+    bell_inicio: {
+      id: 'bell_inicio',
+      title: 'Paralisia de Bell',
+      description: 'Neuropatia periférica aguda do nervo facial, geralmente unilateral e de instalação súbita.',
+      type: 'question',
+      content: `
+        <div class="space-y-5 text-sm text-slate-900">
+          <div class="space-y-3">
+            <div class="flex items-start justify-between gap-4">
+              <div class="space-y-3">
+                <p>A <strong>paralisia de Bell</strong> é uma <strong>neuropatia periférica aguda do nervo facial (VII par craniano)</strong>. Caracteriza-se por <strong>instalação súbita de fraqueza ou paralisia unilateral</strong> dos músculos da expressão facial, sem causa identificável na avaliação inicial.</p>
+                <p>É a forma mais comum de paralisia facial periférica idiopática. O quadro resulta de <strong>disfunção súbita do nervo facial ao longo do trajeto intratemporal</strong>, geralmente associada a processo inflamatório de provável origem viral.</p>
+              </div>
+              <details class="relative shrink-0">
+                <summary class="flex h-9 w-9 cursor-pointer list-none items-center justify-center rounded-full border border-blue-300 bg-blue-50 text-base font-extrabold text-blue-800 shadow-sm">
+                  i
+                </summary>
+                <div class="absolute right-0 z-20 mt-2 w-[min(56rem,calc(100vw-4rem))] rounded-xl border border-blue-200 bg-white p-4 shadow-xl">
+                  <p class="mb-2 font-bold text-blue-950">Nervo facial (VII par craniano)</p>
+                  <img src="/paralisia%20de%20bell/facial%20nerve.png" alt="Trajeto do nervo facial" class="max-h-[72vh] w-full rounded-lg object-contain" />
+                </div>
+              </details>
+            </div>
+            <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+              <p><strong>Diferencial essencial:</strong> a paralisia facial central decorre de lesão supranuclear, acima do núcleo do nervo facial, geralmente com preservação da musculatura frontal. A paralisia de Bell envolve <strong>todo o hemiface</strong>.</p>
+            </div>
+          </div>
+
+        </div>
+      `,
+      options: [
+        { text: 'Lado direito acometido', nextStep: 'bell_criterios_obrigatorios', value: 'lado_direito' },
+        { text: 'Lado esquerdo acometido', nextStep: 'bell_criterios_obrigatorios', value: 'lado_esquerdo' }
+      ]
+    },
+    bell_criterios_obrigatorios: {
+      id: 'bell_criterios_obrigatorios',
+      title: 'Critérios Diagnósticos Obrigatórios',
+      description: 'Todos os critérios devem estar presentes simultaneamente para confirmar suspeita clínica de Paralisia de Bell.',
+      type: 'question',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="space-y-4">
+            <p class="font-semibold">Para confirmar o diagnóstico de Paralisia de Bell, todos os critérios obrigatórios abaixo devem estar presentes simultaneamente.</p>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+              <ol class="list-decimal space-y-2 pl-5">
+                <li><strong>Fraqueza ou paralisia facial periférica unilateral</strong>, envolvendo:
+                  <ul class="mt-1 list-disc pl-5">
+                    <li>fronte, com incapacidade de enrugar a testa;</li>
+                    <li>fechamento ocular incompleto;</li>
+                    <li>desvio da comissura labial.</li>
+                  </ul>
+                </li>
+                <li><strong>Início agudo</strong>, com progressão até o pico em <strong>72 horas ou menos</strong>.</li>
+                <li><strong>Ausência de causa identificável</strong> após avaliação clínica inicial.</li>
+                <li><strong>Ausência de outros déficits neurológicos</strong> além do VII par craniano.</li>
+              </ol>
+            </div>
+            <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+              <p class="font-bold">O VII par craniano faz 4 coisas:</p>
+              <ol class="mt-2 list-decimal space-y-1 pl-5">
+                <li><strong>Motor</strong>: músculos da expressão facial.</li>
+                <li><strong>Sensorial especial</strong>: paladar dos 2/3 anteriores da língua.</li>
+                <li><strong>Sensitivo</strong>: dor no ouvido, hiperacusia e sensação auditiva alterada podem ocorrer.</li>
+                <li><strong>Autonômico</strong>: lágrimas e saliva.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Critérios obrigatórios preenchidos', nextStep: 'bell_red_flags_ramsay', value: 'criterios_preenchidos' },
+        { text: 'Critérios obrigatórios não preenchidos', nextStep: 'bell_criterios_nao_preenchidos', value: 'criterios_nao_preenchidos', critical: true }
+      ]
+    },
+    bell_criterios_nao_preenchidos: {
+      id: 'bell_criterios_nao_preenchidos',
+      title: 'Critérios Não Preenchidos',
+      description: 'Não considerar Paralisia de Bell até prova em contrário.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="rounded-lg border-l-4 border-red-600 bg-red-50 p-4 text-sm text-red-950">
+          <p><strong>Se não preenche critérios de Paralisia de Bell, não é Bell até prova em contrário.</strong></p>
+          <p class="mt-2">Investigar outras causas infecciosas, estruturais, centrais ou sistêmicas e solicitar exames conforme suspeita clínica.</p>
+        </div>
+      `,
+      options: []
+    },
+    bell_red_flags_ramsay: {
+      id: 'bell_red_flags_ramsay',
+      title: 'Red Flags e Síndrome de Ramsay Hunt',
+      description: 'Descartar sinais que mudam investigação, urgência e encaminhamento.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-5 text-sm">
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+              <h4 class="font-extrabold text-red-950">Red flags</h4>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Outros déficits neurológicos, alteração de consciência, ataxia, disartria ou hemiparesia.</li>
+                <li>Início progressivo, recorrente, bilateral ou evolução fora do padrão esperado.</li>
+                <li>Febre, imunossupressão, trauma, otite/mastoidite, massa parotídea ou suspeita de neoplasia.</li>
+                <li>Dor intensa, erupções vesiculares, hipoacusia, zumbido ou vertigem importantes.</li>
+              </ul>
+              <img src="/paralisia%20de%20bell/red%20flag.png" alt="Sinais de alerta em Paralisia de Bell" class="mt-3 w-full rounded-lg object-contain" />
+            </div>
+            <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <h4 class="font-extrabold text-blue-950">Ramsay Hunt vs Bell</h4>
+              <p class="mt-2">A síndrome de Ramsay Hunt é causada pela reativação do vírus varicela-zóster, afetando principalmente o VII par e, muitas vezes, o VIII par.</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li><strong>Ramsay Hunt:</strong> dor otológica intensa, vesículas na orelha/conduto auditivo e sintomas cocleovestibulares.</li>
+                <li><strong>Bell:</strong> paralisia facial periférica isolada, sem vesículas e sem comprometimento auditivo/vestibular típico.</li>
+              </ul>
+              <img src="/paralisia%20de%20bell/sinfrome%20de%20hamsay%20hunt%20x%20paralisia%20de%20bell.png" alt="Ramsay Hunt versus Paralisia de Bell" class="mt-3 w-full rounded-lg object-contain" />
+            </div>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sem red flags e sem sinais de Ramsay Hunt', nextStep: 'bell_sem_exames', value: 'sem_red_flags' },
+        { text: 'Há red flags ou suspeita de Ramsay Hunt', nextStep: 'bell_red_flags_investigar', value: 'red_flags', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    bell_red_flags_investigar: {
+      id: 'bell_red_flags_investigar',
+      title: 'Investigar Diagnósticos Alternativos',
+      description: 'Solicitar exames e acionar especialidade conforme suspeita.',
+      type: 'result',
+      critical: true,
+      requiresSpecialist: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-lg border-l-4 border-red-600 bg-red-50 p-4 text-red-950">
+            <p><strong>Conduta:</strong> não tratar como Paralisia de Bell isolada. Investigar causas centrais, infecciosas, otológicas, estruturais ou sistêmicas conforme quadro.</p>
+          </div>
+          <ul class="list-disc pl-5">
+            <li>Considerar neuroimagem se déficit neurológico, suspeita central, evolução atípica ou sinais focais.</li>
+            <li>Considerar avaliação otorrinolaringológica se dor otológica intensa, vesículas, otite/mastoidite, hipoacusia ou vertigem.</li>
+            <li>Na suspeita de Ramsay Hunt, iniciar abordagem direcionada e encaminhar para seguimento especializado.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    bell_sem_exames: {
+      id: 'bell_sem_exames',
+      title: 'Quadro Compatível com Paralisia de Bell',
+      description: 'Periférico, unilateral, agudo e sem red flags.',
+      type: 'question',
+      content: `
+        <div class="space-y-4 text-center text-sm">
+          <p class="text-lg font-extrabold text-slate-950">Verificado quadro clínico compatível com Paralisia de Bell periférica, unilateral, aguda e sem red flags.</p>
+          <img src="/paralisia%20de%20bell/nao%20e%CC%81%20necessario%20solicitar%20exames.png" alt="Não é necessário solicitar exames" class="mx-auto w-full max-w-xl rounded-lg object-contain" />
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-left text-emerald-950">
+            <p><strong>Não é necessário solicitar exames</strong> quando o quadro é típico de Paralisia de Bell, sem sinais de alarme e sem déficits neurológicos adicionais.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Avaliar grau pela escala de House-Brackmann', nextStep: 'bell_house_brackmann', value: 'avaliar_house' }
+      ]
+    },
+    bell_house_brackmann: {
+      id: 'bell_house_brackmann',
+      title: 'Escala de House-Brackmann',
+      description: 'Classificação da gravidade da disfunção motora facial.',
+      type: 'question',
+      content: `
+        <div class="space-y-5 text-sm">
+          <div class="rounded-lg border border-pink-200 bg-pink-50 p-4 text-center">
+            <p>A <strong>Escala de House-Brackmann</strong> é o sistema mais utilizado para classificar a gravidade da paralisia facial periférica. Ela padroniza o grau de comprometimento e ajuda no acompanhamento da evolução clínica e resposta ao tratamento.</p>
+          </div>
+          <img src="/paralisia%20de%20bell/escala%20de%20house.png" alt="Escala de House-Brackmann" class="w-full rounded-lg object-contain" />
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <h4 class="mb-2 font-extrabold">Selecione conforme a avaliação do paciente</h4>
+            <ul class="list-disc space-y-2 pl-5">
+              <li><strong>Grau I:</strong> normal.</li>
+              <li><strong>Grau II:</strong> leve fraqueza facial; tônus e simetria normais em repouso; fechamento ocular completo sem esforço.</li>
+              <li><strong>Grau III:</strong> disfunção moderada; fechamento ocular completo e boa movimentação da testa com esforço.</li>
+              <li><strong>Grau IV:</strong> disfunção grave; fechamento ocular incompleto, ausência de movimento da testa, movimento assimétrico da boca e sincinesia.</li>
+              <li><strong>Grau V:</strong> pouca ou nenhuma capacidade de sorrir, franzir a testa ou fazer expressões; fechamento ocular incompleto.</li>
+              <li><strong>Grau VI:</strong> ausência de movimentos faciais.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Grau I', nextStep: 'bell_tratamento_clinico', value: 'house_i' },
+        { text: 'Grau II', nextStep: 'bell_tratamento_clinico', value: 'house_ii' },
+        { text: 'Grau III', nextStep: 'bell_tratamento_clinico', value: 'house_iii' },
+        { text: 'Grau IV', nextStep: 'bell_tratamento_clinico', value: 'house_iv' },
+        { text: 'Grau V', nextStep: 'bell_tratamento_clinico', value: 'house_v' },
+        { text: 'Grau VI', nextStep: 'bell_tratamento_clinico', value: 'house_vi' }
+      ]
+    },
+    bell_tratamento_clinico: {
+      id: 'bell_tratamento_clinico',
+      title: 'Tratamento Clínico e Orientações',
+      description: 'Iniciar tratamento precocemente, idealmente nas primeiras 72 horas.',
+      type: 'question',
+      timeSensitive: true,
+      content: `
+        <div class="grid gap-5 text-sm lg:grid-cols-[1fr_0.85fr] lg:items-start">
+          <div class="space-y-4">
+            <img src="/paralisia%20de%20bell/tratamento%20clinico.png" alt="Tratamento clínico da Paralisia de Bell" class="w-full rounded-lg object-contain" />
+            <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
+              <p><strong>O tratamento deve ser iniciado o mais precocemente possível</strong>, idealmente nas primeiras <strong>72 horas</strong> do início dos sintomas, para melhorar o prognóstico.</p>
+            </div>
+            <div class="space-y-3">
+              <p><strong>Corticosteroides:</strong> são a base do tratamento, com evidência para redução de sequelas e melhora da recuperação.</p>
+              <p><strong>Antivirais:</strong> benefício controverso, geralmente reservado para casos graves ou associado a corticosteroides em casos moderados a graves.</p>
+              <p><strong>Cuidados locais:</strong> proteção ocular é fundamental devido ao lagoftalmo, com lubrificantes e, se necessário, oclusão ocular para evitar ceratite.</p>
+              <p><strong>Encaminhamento:</strong> considerar neurologista ou otorrinolaringologista para avaliação detalhada e acompanhamento.</p>
+            </div>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <h4 class="font-extrabold text-slate-950">Tratamento farmacológico</h4>
+            <ul class="mt-2 list-disc space-y-2 pl-5">
+              <li><strong>Prednisona 60 mg VO ao dia</strong> por 7 a 10 dias; ou</li>
+              <li><strong>Prednisolona 25 mg VO</strong>, 2 vezes ao dia, por 7 a 10 dias.</li>
+              <li><strong>Aciclovir 400 mg VO</strong>, 5 vezes ao dia, por 10 dias quando indicado.</li>
+            </ul>
+            <h4 class="mt-4 font-extrabold text-slate-950">Cuidados oculares</h4>
+            <ul class="mt-2 list-disc space-y-2 pl-5">
+              <li>Lágrimas artificiais sem conservantes de 1/1 a 2/2 h durante o dia.</li>
+              <li>Pomada lubrificante oftálmica à noite.</li>
+              <li>Oclusão palpebral noturna com fita hipoalergênica.</li>
+              <li>Óculos de proteção contra vento e poeira.</li>
+              <li>Encaminhar ao oftalmologista se sinais de exposição ou lesão corneana.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sugestão de prescrição e cuidados', nextStep: 'bell_prescricao_cuidados', value: 'prescricao' },
+        { text: 'Sugestão de encaminhamento ao Neurologista', nextStep: 'bell_encaminhamento_neuro', value: 'encaminhar_neuro' },
+        { text: 'Sugestão de encaminhamento ao Otorrinolaringologista', nextStep: 'bell_encaminhamento_otorrino', value: 'encaminhar_otorrino' },
+        { text: 'Finalizar fluxograma', nextStep: 'bell_finalizado', value: 'finalizar' }
+      ]
+    },
+    bell_prescricao_cuidados: {
+      id: 'bell_prescricao_cuidados',
+      title: 'Prescrição e Cuidados',
+      description: 'Sugestão de tratamento clínico para Paralisia de Bell.',
+      type: 'result',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <h4 class="text-lg font-extrabold text-blue-950">Tratamento clínico - Paralisia de Bell</h4>
+            <p class="mt-2 font-semibold">Tratamento farmacológico</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Prednisona 60 mg VO por dia, por 7 a 10 dias; ou prednisolona 25 mg VO, duas vezes ao dia, por 7 a 10 dias.</li>
+              <li>Considerar aciclovir 400 mg VO, 5 vezes ao dia, por 10 dias, especialmente em casos moderados a graves ou suspeita viral associada.</li>
+            </ul>
+            <p class="mt-3 font-semibold">Cuidados oculares</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Lágrimas artificiais sem conservantes de 1/1 a 2/2 h durante o dia.</li>
+              <li>Pomada lubrificante oftálmica à noite.</li>
+              <li>Oclusão palpebral noturna com fita adesiva hipoalergênica.</li>
+              <li>Óculos de proteção ao vento e poeira.</li>
+              <li>Encaminhar ao oftalmologista se sinais de exposição ou lesão corneana.</li>
+            </ul>
+          </div>
+          <p class="text-slate-600">Ajustar doses, contraindicações, comorbidades e alergias conforme avaliação clínica individual.</p>
+        </div>
+      `,
+      options: []
+    },
+    bell_encaminhamento_neuro: {
+      id: 'bell_encaminhamento_neuro',
+      title: 'Encaminhamento ao Neurologista',
+      description: 'Texto sugerido para encaminhamento especializado.',
+      type: 'result',
+      requiresSpecialist: true,
+      content: `
+        <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm leading-relaxed shadow-sm">
+          <h4 class="font-serif text-lg font-bold">Encaminhamento ao Neurologista</h4>
+          <p class="mt-4">Encaminho o paciente portador de quadro clínico compatível com <strong>Paralisia de Bell</strong> para avaliação especializada em <strong>Neurologia</strong>. O paciente apresenta instalação súbita de paralisia facial periférica unilateral, já em tratamento inicial, porém necessita de seguimento neurológico para monitorar a evolução da função facial, orientar sobre a necessidade de exames complementares como eletroneuromiografia ou neuroimagem, excluir outras possíveis causas de paralisia facial periférica, definir condutas terapêuticas adicionais e avaliar a necessidade de reabilitação motora, além de prevenir potenciais sequelas funcionais e estéticas.</p>
+          <p class="mt-4">O quadro teve início em <strong>XX/XX/XXXX</strong>, acometendo o lado <strong>XXXXX</strong>, com grau de comprometimento facial estimado em <strong>grau XX de House-Brackmann</strong>. Foi iniciado tratamento com corticoide, antiviral quando indicado e orientações de cuidados com a proteção ocular.</p>
+          <p class="mt-4">Solicito, portanto, avaliação e seguimento pelo Neurologista para continuidade do cuidado e definição da melhor conduta terapêutica.</p>
+          <p class="mt-4">Atenciosamente,</p>
+          <p class="mt-4 font-bold">Dr. XXXXXXXXXXXXXXXX</p>
+        </div>
+      `,
+      options: []
+    },
+    bell_encaminhamento_otorrino: {
+      id: 'bell_encaminhamento_otorrino',
+      title: 'Encaminhamento à Otorrinolaringologia',
+      description: 'Texto sugerido para encaminhamento especializado.',
+      type: 'result',
+      requiresSpecialist: true,
+      content: `
+        <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm leading-relaxed shadow-sm">
+          <h4 class="font-serif text-lg font-bold">Encaminhamento à especialidade de Otorrinolaringologia</h4>
+          <p class="mt-4">Encaminho o paciente portador de quadro clínico compatível com <strong>Paralisia de Bell</strong> para avaliação especializada em <strong>Otorrinolaringologia</strong>. O paciente apresenta instalação súbita de paralisia facial periférica unilateral, já em tratamento inicial, porém necessita de avaliação otorrinolaringológica para investigação de possíveis causas otológicas da paralisia facial, avaliação da orelha média e mastoide, definição da necessidade de exames complementares além de acompanhamento da evolução funcional e orientação sobre terapias adjuvantes e prevenção de sequelas.</p>
+          <p class="mt-4">O quadro teve início em <strong>XX/XX/XXXX</strong>, acometendo o lado <strong>XXXXX</strong>, com grau de comprometimento facial estimado em <strong>grau XX de House-Brackmann</strong>, tendo sido iniciado tratamento com corticoide, antiviral quando indicado e orientações de proteção ocular.</p>
+          <p class="mt-4">Solicito, portanto, avaliação e seguimento pelo Otorrinolaringologista para continuidade do cuidado, investigação de causas otológicas e definição da melhor conduta terapêutica.</p>
+          <p class="mt-4">Atenciosamente,</p>
+          <p class="mt-4 font-bold">Dr. XXXXXXXXXXXXXXXX</p>
+        </div>
+      `,
+      options: []
+    },
+    bell_finalizado: {
+      id: 'bell_finalizado',
+      title: 'Fluxograma Finalizado',
+      description: 'Orientações e tratamento inicial revisados.',
+      type: 'result',
+      content: `
+        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-5 text-center text-emerald-950">
+          <p class="text-xl font-extrabold">Fluxograma finalizado</p>
+          <p class="mt-2 text-sm">Registrar lado acometido, tempo de início, grau House-Brackmann, tratamento instituído, cuidados oculares e plano de seguimento.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -7126,6 +7467,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   monoartrite: monoartriteFlowchart,
   crise_ansiedade: ansiedadeFlowchart,
   sindrome_vertiginosa: sindromeVertiginosaFlowchart,
+  paralisia_bell: paralisiaBellFlowchart,
   cefaleia: cefaleiaFlowchart,
   agitacao_psicomotora: agitacaoPsicomotoraFlowchart,
   pep_hiv: pepHivFlowchart,
@@ -7179,6 +7521,7 @@ export const allFlowcharts = [
   { id: 'crise_convulsiva', name: 'Crise convulsiva', category: 'neurological', implemented: false },
   { id: 'delirium', name: 'Delirium', category: 'neurological', implemented: false },
   { id: 'rebaixamento_consciencia', name: 'Rebaixamento do nível de consciência', category: 'neurological', implemented: false },
+  { id: 'paralisia_bell', name: 'Paralisia de Bell', category: 'neurological', implemented: true },
   { id: 'sindrome_vertiginosa', name: 'Síndrome Vertiginosa Aguda', category: 'neurological', implemented: true },
   { id: 'sindrome_guillain_barre', name: 'Síndrome de Guillain-Barré', category: 'neurological', implemented: false },
   { id: 'tce', name: 'TCE', category: 'neurological', implemented: false },

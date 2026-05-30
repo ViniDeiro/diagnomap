@@ -53,6 +53,7 @@ export type EmergencyType =
   | 'monoartrite'
   | 'crise_ansiedade'
   | 'sindrome_vertiginosa'
+  | 'paralisia_bell'
   | 'cefaleia'
   | 'agitacao_psicomotora'
   | 'pep_hiv'

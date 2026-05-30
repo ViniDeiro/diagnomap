@@ -984,6 +984,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [lombalgiaPrescriptionGenerated, setLombalgiaPrescriptionGenerated] = useState(false)
   const [flegmasiaGalleryOpen, setFlegmasiaGalleryOpen] = useState(false)
   const [cincinnatiInfoOpen, setCincinnatiInfoOpen] = useState(false)
+  const [bellFacialNerveOpen, setBellFacialNerveOpen] = useState(false)
+  const [bellCranioOpen, setBellCranioOpen] = useState(false)
+  const [pendingBellSide, setPendingBellSide] = useState<{ label: string; value: string } | null>(null)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
     pco2: '',
@@ -1577,6 +1580,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const tvpSelectedLegFromAnswers = useMemo(() => parseTVPSelectedLeg(answers.start), [answers])
   const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : tvpSelectedLegFromAnswers === 'other' ? 'Outras Localizações' : ''
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
+  const isBellSideSelection = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_inicio'
+  const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_criterios_obrigatorios'
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
@@ -4402,7 +4407,96 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
             {/* Conteúdo do Step */}
             <div className="p-6">
-              {currentStepData.content && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {isBellSideSelection && (
+                <div className="mb-8 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
+                  <div className="grid gap-0 lg:grid-cols-[0.92fr_1.08fr]">
+                    <div className="flex flex-col justify-between bg-gradient-to-br from-blue-950 via-blue-900 to-cyan-800 p-6 text-white sm:p-8">
+                      <div>
+                        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-blue-50">
+                          <Brain className="h-4 w-4" />
+                          Avaliação inicial
+                        </div>
+                        <h3 className="text-3xl font-extrabold leading-tight sm:text-4xl">
+                          Paralisia facial periférica aguda
+                        </h3>
+                        <p className="mt-4 text-base leading-relaxed text-blue-50 sm:text-lg">
+                          Defina o lado acometido e siga para os critérios obrigatórios da Paralisia de Bell.
+                        </p>
+                      </div>
+
+                      <div className="mt-8 space-y-4">
+                        <div className="rounded-xl border border-white/20 bg-white/10 p-4">
+                          <p className="text-sm font-semibold leading-relaxed text-blue-50">
+                            Bell costuma envolver todo o hemiface: fronte, fechamento ocular e comissura labial.
+                            Preservação da fronte acende alerta para causa central.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setBellFacialNerveOpen(true)}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white px-4 py-2.5 text-sm font-bold text-blue-900 shadow-sm transition-colors hover:bg-blue-50"
+                          title="Ver imagem do nervo facial"
+                        >
+                          <Info className="h-4 w-4" />
+                          Ver nervo facial
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 p-5 sm:p-6">
+                      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                            Selecione o lado suspeito
+                          </p>
+                          <p className="mt-1 text-sm text-slate-600">
+                            A foto escolhida abre a epidemiologia antes da próxima etapa.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        {[
+                          {
+                            label: 'Lado direito',
+                            src: '/paralisia%20de%20bell/Lado%20direito.png',
+                            value: 'lado_direito'
+                          },
+                          {
+                            label: 'Lado esquerdo',
+                            src: '/paralisia%20de%20bell/Lado%20esquerdo.png',
+                            value: 'lado_esquerdo'
+                          }
+                        ].map((item) => (
+                          <motion.button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setPendingBellSide({ label: item.label, value: item.value })}
+                            className="group overflow-hidden rounded-2xl border-2 border-slate-200 bg-white text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-500 hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-100"
+                            whileHover={{ y: -2 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <img
+                              src={item.src}
+                              alt={`Paralisia facial do ${item.label.toLowerCase()}`}
+                              className="aspect-[4/3] w-full bg-slate-100 object-cover object-top transition-transform duration-300 group-hover:scale-[1.03]"
+                            />
+                            <div className="flex items-center justify-between gap-3 border-t border-slate-100 p-4">
+                              <span className="text-base font-extrabold text-slate-950 sm:text-lg">
+                                {item.label}
+                              </span>
+                              <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-blue-50 text-blue-700 transition-colors group-hover:bg-blue-700 group-hover:text-white">
+                                <ChevronRight className="h-5 w-5" />
+                              </span>
+                            </div>
+                          </motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {currentStepData.content && !isBellSideSelection && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">
@@ -4420,6 +4514,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   <div className="prose prose-sm max-w-none">
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
+                  {isBellCriteriaStep && (
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setBellCranioOpen(true)}
+                        className="inline-flex items-center gap-2 rounded-full border border-blue-300 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
+                        title="Ver imagem do VII par craniano"
+                      >
+                        <Info className="h-4 w-4" />
+                        VII par craniano
+                      </button>
+                    </div>
+                  )}
                   {isAsthmaStartStep && (
                     <div className="mt-4 rounded-xl border border-cyan-200 bg-cyan-50 p-4">
                       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -7132,6 +7239,131 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
+              {isBellSideSelection && bellFacialNerveOpen && (
+                <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm">
+                  <div className="flex min-h-full items-center justify-center">
+                    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                      <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-blue-800 to-cyan-700 px-5 py-4 text-white">
+                        <div>
+                          <h4 className="text-lg font-extrabold">Nervo facial (VII par craniano)</h4>
+                          <p className="mt-1 text-sm text-blue-50">
+                            Referência visual do trajeto periférico acometido na Paralisia de Bell.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setBellFacialNerveOpen(false)}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 transition-colors hover:bg-white/30"
+                          title="Fechar"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="bg-slate-50 p-4">
+                        <img
+                          src="/paralisia%20de%20bell/facial%20nerve.png"
+                          alt="Trajeto do nervo facial"
+                          className="mx-auto max-h-[58vh] w-full rounded-xl object-contain"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isBellSideSelection && pendingBellSide && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0 bg-slate-900/45"
+                    onClick={() => setPendingBellSide(null)}
+                  />
+                  <div className="relative w-full max-w-5xl rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-2xl sm:p-6">
+                    <button
+                      type="button"
+                      onClick={() => setPendingBellSide(null)}
+                      className="absolute top-3 right-3 rounded-full p-1 text-slate-500 hover:bg-slate-100"
+                      aria-label="Fechar epidemiologia da Paralisia de Bell"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+
+                    <div className="pr-9">
+                      <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                        {pendingBellSide.label} selecionado
+                      </p>
+                      <h4 className="mt-1 text-base font-extrabold text-slate-900 sm:text-lg">
+                        Epidemiologia da Paralisia de Bell
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-slate-700">
+                        Revise os dados epidemiológicos antes de seguir para os critérios diagnósticos.
+                      </p>
+                    </div>
+
+                    <div className="mt-4 overflow-hidden rounded-xl border border-amber-100 bg-white p-2">
+                      <img
+                        src="/paralisia%20de%20bell/Epidemiologia%20Paralisia%20de%20Bell.jpg"
+                        alt="Epidemiologia da Paralisia de Bell"
+                        className="mx-auto max-h-[62vh] w-full rounded-lg object-contain"
+                      />
+                    </div>
+
+                    <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setPendingBellSide(null)}
+                        className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const selectedSide = pendingBellSide
+                          setPendingBellSide(null)
+                          handleAnswer('bell_criterios_obrigatorios', selectedSide.value)
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-cyan-700"
+                      >
+                        Seguir para Critérios Diagnósticos
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isBellCriteriaStep && bellCranioOpen && (
+                <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm">
+                  <div className="flex min-h-full items-center justify-center">
+                    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                      <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-blue-800 to-cyan-700 px-5 py-4 text-white">
+                        <div>
+                          <h4 className="text-lg font-extrabold">VII par craniano</h4>
+                          <p className="mt-1 text-sm text-blue-50">
+                            Referência visual do trajeto do nervo facial.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setBellCranioOpen(false)}
+                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 transition-colors hover:bg-white/30"
+                          title="Fechar"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <div className="bg-slate-50 p-4">
+                        <img
+                          src="/paralisia%20de%20bell/cranio.png"
+                          alt="VII par craniano"
+                          className="mx-auto max-h-[58vh] w-full rounded-xl object-contain"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isAVCCincinnatiStep && cincinnatiInfoOpen && (
                 <div className="fixed inset-0 z-[60] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
                   <div className="w-full max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
@@ -8631,7 +8863,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       : isTVPClinicalEvaluation && tvpAlertInterruptionOption
                         ? [tvpAlertInterruptionOption]
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
