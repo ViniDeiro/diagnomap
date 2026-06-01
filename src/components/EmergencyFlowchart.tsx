@@ -359,6 +359,7 @@ type LombalgiaPrescriptionPreview = {
 }
 
 type BellCriteriaKey = 'periferica_unilateral' | 'inicio_agudo' | 'sem_causa_identificavel' | 'sem_outros_deficits'
+type BellSupportKey = 'otalgia_leve' | 'hiperacusia' | 'disgeusia_ageusia' | 'xeroftalmia' | 'xerostomia' | 'infeccao_viral'
 type BellRedFlagKey =
   | 'testa_poupada'
   | 'bilateral'
@@ -394,6 +395,39 @@ const BELL_DIAGNOSTIC_CRITERIA: Array<{ key: BellCriteriaKey; label: string; det
     key: 'sem_outros_deficits',
     label: 'Ausência de outros déficits neurológicos',
     detail: 'Sem alteração de consciência, ataxia, disartria, hemiparesia ou outros sinais focais.'
+  }
+]
+
+const BELL_SUPPORT_CRITERIA: Array<{ key: BellSupportKey; label: string; detail: string }> = [
+  {
+    key: 'otalgia_leve',
+    label: 'Otalgia leve',
+    detail: 'Dor retroauricular ou mastoidea.'
+  },
+  {
+    key: 'hiperacusia',
+    label: 'Hiperacusia',
+    detail: 'Hipersensibilidade a sons.'
+  },
+  {
+    key: 'disgeusia_ageusia',
+    label: 'Disgeusia ou ageusia nos 2/3 anteriores da língua',
+    detail: 'Alteração ou redução do paladar nos 2/3 anteriores da língua.'
+  },
+  {
+    key: 'xeroftalmia',
+    label: 'Xeroftalmia',
+    detail: 'Redução do lacrimejamento.'
+  },
+  {
+    key: 'xerostomia',
+    label: 'Xerostomia',
+    detail: 'Redução da salivação.'
+  },
+  {
+    key: 'infeccao_viral',
+    label: 'História recente de infecção viral inespecífica',
+    detail: 'Pródromo viral recente pode reforçar a hipótese clínica.'
   }
 ]
 
@@ -465,6 +499,15 @@ const defaultBellCriteriaChecks = (): Record<BellCriteriaKey, boolean> => ({
   inicio_agudo: false,
   sem_causa_identificavel: false,
   sem_outros_deficits: false
+})
+
+const defaultBellSupportChecks = (): Record<BellSupportKey, boolean> => ({
+  otalgia_leve: false,
+  hiperacusia: false,
+  disgeusia_ageusia: false,
+  xeroftalmia: false,
+  xerostomia: false,
+  infeccao_viral: false
 })
 
 const defaultBellRedFlagChecks = (): Record<BellRedFlagKey, boolean> => ({
@@ -1121,6 +1164,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellCranioOpen, setBellCranioOpen] = useState(false)
   const [pendingBellSide, setPendingBellSide] = useState<{ label: string; value: string } | null>(null)
   const [bellCriteriaChecks, setBellCriteriaChecks] = useState<Record<BellCriteriaKey, boolean>>(() => defaultBellCriteriaChecks())
+  const [bellSupportChecks, setBellSupportChecks] = useState<Record<BellSupportKey, boolean>>(() => defaultBellSupportChecks())
   const [bellRedFlagChecks, setBellRedFlagChecks] = useState<Record<BellRedFlagKey, boolean>>(() => defaultBellRedFlagChecks())
   const [bellRamsayInfoOpen, setBellRamsayInfoOpen] = useState(false)
   const [selectedBellHouseGrade, setSelectedBellHouseGrade] = useState('')
@@ -1254,6 +1298,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isAppendicitisAlvaradoStep = flowchart.id === 'appendicitis' && currentStep === 'apend_alvarado'
     const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStep === 'lomb_red_flags'
     const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_criterios_obrigatorios'
+    const isBellSupportStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_suporte_diagnostico'
     const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_red_flags_ramsay'
     const psiResult = calculatePneumoniaPsi(pneumoniaPsiValues, patient)
     const curbResult = calculatePneumoniaCurb65(pneumoniaCurbValues)
@@ -1384,6 +1429,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       criteriosSelecionados: BELL_DIAGNOSTIC_CRITERIA.filter((item) => bellCriteriaChecks[item.key]).map((item) => item.key),
       todosCriteriosPresentes: BELL_DIAGNOSTIC_CRITERIA.every((item) => bellCriteriaChecks[item.key])
     })
+    const bellSupportAnswer = JSON.stringify({
+      decision: value || nextStep,
+      criteriosSuporteSelecionados: BELL_SUPPORT_CRITERIA.filter((item) => bellSupportChecks[item.key]).map((item) => item.key)
+    })
     const bellRedFlagsAnswer = JSON.stringify({
       decision: value || nextStep,
       redFlagsSelecionadas: BELL_RED_FLAGS.filter((item) => bellRedFlagChecks[item.key]).map((item) => item.key),
@@ -1431,9 +1480,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                             ? lombalgiaRiskAnswer
                                             : isBellCriteriaStep
                                               ? bellCriteriaAnswer
-                                              : isBellRedFlagsStep
-                                                ? bellRedFlagsAnswer
-                                                : value || nextStep
+                                              : isBellSupportStep
+                                                ? bellSupportAnswer
+                                                : isBellRedFlagsStep
+                                                  ? bellRedFlagsAnswer
+                                                  : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -1730,6 +1781,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setDpocSinaisGravidade([])
     setDpocAnthonisen([])
     setBellCriteriaChecks(defaultBellCriteriaChecks())
+    setBellSupportChecks(defaultBellSupportChecks())
     setBellRedFlagChecks(defaultBellRedFlagChecks())
     setBellRamsayInfoOpen(false)
     setSelectedBellHouseGrade('')
@@ -1745,6 +1797,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isBellSideSelection = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_inicio'
   const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_criterios_obrigatorios'
+  const isBellSupportStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_suporte_diagnostico'
   const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_red_flags_ramsay'
   const isBellHouseStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_house_brackmann'
   const isBellTreatmentStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_tratamento_clinico'
@@ -4300,6 +4353,27 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isBellRedFlagsStep])
 
   useEffect(() => {
+    if (!isBellSupportStep) {
+      setBellSupportChecks(defaultBellSupportChecks())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      const selected = Array.isArray(parsed?.criteriosSuporteSelecionados) ? parsed.criteriosSuporteSelecionados : []
+      setBellSupportChecks({
+        ...defaultBellSupportChecks(),
+        ...Object.fromEntries(
+          BELL_SUPPORT_CRITERIA.map((item) => [item.key, selected.includes(item.key)])
+        )
+      } as Record<BellSupportKey, boolean>)
+    } catch {
+      setBellSupportChecks(defaultBellSupportChecks())
+    }
+  }, [answers, currentStep, isBellSupportStep])
+
+  useEffect(() => {
     setBellDocumentCopied(false)
   }, [currentStep, isBellDynamicDocumentStep])
 
@@ -4803,12 +4877,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         {[
                           {
                             label: 'Lado direito',
-                            src: '/paralisia%20de%20bell/Lado%20direito.png',
+                            src: '/paralisia%20de%20bell/Lado%20esquerdo.png',
                             value: 'lado_direito'
                           },
                           {
                             label: 'Lado esquerdo',
-                            src: '/paralisia%20de%20bell/Lado%20esquerdo.png',
+                            src: '/paralisia%20de%20bell/Lado%20direito.png',
                             value: 'lado_esquerdo'
                           }
                         ].map((item) => (
@@ -4879,7 +4953,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
                     <span className={clsx('text-sm font-semibold', allBellCriteriaChecked ? 'text-emerald-700' : 'text-amber-700')}>
                       {allBellCriteriaChecked
-                        ? 'Todos os critérios foram marcados. Pode seguir para red flags.'
+                        ? 'Todos os critérios foram marcados. Pode seguir para critérios de suporte.'
                         : 'Ainda faltam critérios obrigatórios para confirmar suspeita de Bell.'}
                     </span>
                     <div className="flex flex-col-reverse gap-2 sm:flex-row">
@@ -4893,7 +4967,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <button
                         type="button"
                         disabled={!allBellCriteriaChecked}
-                        onClick={() => handleAnswer('bell_red_flags_ramsay', 'criterios_preenchidos')}
+                        onClick={() => handleAnswer('bell_suporte_diagnostico', 'criterios_preenchidos')}
                         className={clsx(
                           'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
                           allBellCriteriaChecked
@@ -4916,6 +4990,67 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       <Info className="h-4 w-4" />
                       VII par craniano
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {isBellSupportStep && (
+                <div className="mb-8 overflow-hidden rounded-2xl border border-amber-200 bg-[#f4dbaf] shadow-sm">
+                  <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.5fr)] lg:items-center">
+                    <section className="space-y-5">
+                      <div className="text-center lg:text-left">
+                        <h4 className="text-xl font-extrabold text-slate-950">
+                          Critérios Diagnósticos de Suporte (não obrigatórios)
+                        </h4>
+                        <p className="mt-4 text-sm font-semibold leading-relaxed text-slate-900">
+                          A presença dos itens abaixo reforça o diagnóstico de Paralisia de Bell. Marque os sinais presentes.
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {BELL_SUPPORT_CRITERIA.map((item) => {
+                          const checked = bellSupportChecks[item.key]
+                          return (
+                            <label
+                              key={item.key}
+                              className={clsx(
+                                'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2 transition-colors',
+                                checked
+                                  ? 'border-blue-400 bg-blue-50 shadow-sm'
+                                  : 'border-amber-300 bg-white/50 hover:border-blue-300 hover:bg-blue-50/70'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 rounded border-slate-400 text-blue-600 focus:ring-blue-500"
+                                checked={checked}
+                                onChange={(event) => {
+                                  setBellSupportChecks((prev) => ({ ...prev, [item.key]: event.target.checked }))
+                                }}
+                              />
+                              <span className="flex-1">
+                                <span className="block text-sm font-extrabold text-slate-950">{item.label}</span>
+                                <span className="mt-1 block text-sm leading-relaxed text-slate-700">{item.detail}</span>
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleAnswer('bell_red_flags_ramsay', 'suporte_verificado')}
+                        className="w-full rounded-full border-2 border-blue-500 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 transition-colors hover:bg-blue-100 sm:w-auto sm:min-w-[340px]"
+                      >
+                        Critérios de suporte verificados, seguir fluxo.
+                      </button>
+                    </section>
+
+                    <section className="flex items-center justify-center">
+                      <div className="rounded-full bg-blue-900 p-5 text-white shadow-lg">
+                        <ChevronRight className="h-20 w-20" />
+                      </div>
+                    </section>
                   </div>
                 </div>
               )}
@@ -5294,7 +5429,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">
@@ -8167,11 +8302,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         onClick={() => {
                           const selectedSide = pendingBellSide
                           setPendingBellSide(null)
-                          handleAnswer('bell_criterios_obrigatorios', selectedSide.value)
+                          handleAnswer('bell_transicao_central_periferica', selectedSide.value)
                         }}
                         className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-cyan-700"
                       >
-                        Seguir para Critérios Diagnósticos
+                        Seguir
                         <ChevronRight className="h-4 w-4" />
                       </button>
                     </div>
@@ -9712,7 +9847,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         : isBellTreatmentStep
                           ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellRedFlagsStep || isBellHouseStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

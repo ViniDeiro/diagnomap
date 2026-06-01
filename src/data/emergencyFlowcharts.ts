@@ -7165,8 +7165,24 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Lado direito acometido', nextStep: 'bell_criterios_obrigatorios', value: 'lado_direito' },
-        { text: 'Lado esquerdo acometido', nextStep: 'bell_criterios_obrigatorios', value: 'lado_esquerdo' }
+        { text: 'Lado direito acometido', nextStep: 'bell_transicao_central_periferica', value: 'lado_direito' },
+        { text: 'Lado esquerdo acometido', nextStep: 'bell_transicao_central_periferica', value: 'lado_esquerdo' }
+      ]
+    },
+    bell_transicao_central_periferica: {
+      id: 'bell_transicao_central_periferica',
+      title: 'Diferenciar Paralisia Central',
+      description: 'Diferenciar Paralisia de Bell de paralisia facial central antes dos critérios diagnósticos.',
+      type: 'question',
+      content: `
+        <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 text-center text-sm leading-relaxed text-yellow-950 shadow-sm">
+          <p class="text-lg font-extrabold">Paralisia de Bell vs Paralisia Facial Central</p>
+          <p class="mt-3 text-base">A <strong>paralisia de Bell</strong> deve ser diferenciada da <strong>paralisia facial central</strong>. A paralisia facial central decorre de <strong>lesão supranuclear</strong>, acima do núcleo do nervo facial, geralmente com preservação da musculatura frontal.</p>
+          <p class="mt-3 text-base">Já a <strong>paralisia de Bell</strong> resulta de <strong>lesão periférica do nervo facial</strong>, envolvendo <strong>todo o hemiface</strong>, e caracteriza-se por inflamação restrita ao próprio nervo facial, sem acometimento de outras estruturas do sistema nervoso central.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para critérios obrigatórios', nextStep: 'bell_criterios_obrigatorios', value: 'seguir_criterios' }
       ]
     },
     bell_criterios_obrigatorios: {
@@ -7205,8 +7221,23 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Critérios obrigatórios preenchidos', nextStep: 'bell_red_flags_ramsay', value: 'criterios_preenchidos' },
+        { text: 'Critérios obrigatórios preenchidos', nextStep: 'bell_suporte_diagnostico', value: 'criterios_preenchidos' },
         { text: 'Critérios obrigatórios não preenchidos', nextStep: 'bell_criterios_nao_preenchidos', value: 'criterios_nao_preenchidos', critical: true }
+      ]
+    },
+    bell_suporte_diagnostico: {
+      id: 'bell_suporte_diagnostico',
+      title: 'Critérios Diagnósticos de Suporte',
+      description: 'Sinais não obrigatórios que reforçam a hipótese de Paralisia de Bell.',
+      type: 'question',
+      content: `
+        <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-relaxed text-amber-950 shadow-sm">
+          <p class="text-lg font-extrabold text-center">Critérios Diagnósticos de Suporte (não obrigatórios)</p>
+          <p class="mt-4 font-semibold">A presença dos itens abaixo reforça o diagnóstico de Paralisia de Bell. Marque os sinais presentes.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Critérios de suporte verificados, seguir fluxo', nextStep: 'bell_red_flags_ramsay', value: 'suporte_verificado' }
       ]
     },
     bell_criterios_nao_preenchidos: {
@@ -7225,7 +7256,7 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
     },
     bell_red_flags_ramsay: {
       id: 'bell_red_flags_ramsay',
-      title: 'Red Flags e Síndrome de Ramsay Hunt',
+      title: 'Red Flags (critérios de exclusão)',
       description: 'Descartar sinais que mudam investigação, urgência e encaminhamento.',
       type: 'question',
       critical: true,
@@ -7288,7 +7319,7 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-4 text-center text-sm">
           <p class="text-lg font-extrabold text-slate-950">Verificado quadro clínico compatível com Paralisia de Bell periférica, unilateral, aguda e sem red flags.</p>
-          <img src="/paralisia%20de%20bell/nao%20e%CC%81%20necessario%20solicitar%20exames.png" alt="Não é necessário solicitar exames" class="mx-auto w-full max-w-xl rounded-lg object-contain" />
+          <img src="/paralisia%20de%20bell/nao%20necessario%20solicitar%20exames.png" alt="Não é necessário solicitar exames" class="mx-auto w-full max-w-xl rounded-lg object-contain" />
           <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-left text-emerald-950">
             <p><strong>Não é necessário solicitar exames</strong> quando o quadro é típico de Paralisia de Bell, sem sinais de alarme e sem déficits neurológicos adicionais.</p>
           </div>
