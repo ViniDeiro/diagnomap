@@ -988,6 +988,67 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
     }
 
+    if (flowId === 'paralisia_bell') {
+      const criteriaData = safeParse(answers.bell_criterios_obrigatorios) as { criteriosSelecionados?: string[]; todosCriteriosPresentes?: boolean } | null
+      const redFlagsData = safeParse(answers.bell_red_flags_ramsay) as { redFlagsSelecionadas?: string[]; possuiRedFlag?: boolean } | null
+      const sideAnswer = answers.bell_inicio
+      const sideLabel = sideAnswer === 'lado_direito'
+        ? 'à direita'
+        : sideAnswer === 'lado_esquerdo'
+          ? 'à esquerda'
+          : 'lado não especificado'
+      const houseLabelMap: Record<string, string> = {
+        house_i: 'Grau I',
+        house_ii: 'Grau II',
+        house_iii: 'Grau III',
+        house_iv: 'Grau IV',
+        house_v: 'Grau V',
+        house_vi: 'Grau VI'
+      }
+      const houseLabel = houseLabelMap[answers.bell_house_brackmann] || 'não informado'
+      const additionalFindings = uniqueItems([
+        ...symptoms,
+        ...observations,
+        ...vitalItems
+      ])
+      const additionalFindingsText = additionalFindings.length > 0
+        ? additionalFindings.join(', ')
+        : 'assimetria facial, lagoftalmo e desvio da comissura labial'
+      const redFlagsText = redFlagsData?.possuiRedFlag
+        ? 'Foram registrados sinais de alerta no fluxo, sendo indicada investigação complementar e avaliação especializada conforme suspeita clínica.'
+        : 'Diante das características apresentadas, da ausência de sinais de alerta e da evolução típica, o quadro foi considerado compatível com Paralisia de Bell.'
+      const centralInvestigationText = redFlagsData?.possuiRedFlag
+        ? 'A presença de sinais de alerta impede conduzir o caso como Paralisia de Bell típica isolada até investigação complementar adequada.'
+        : 'Não houve achados clínicos sugestivos de paralisia facial central que indicassem necessidade imediata de investigação complementar com exames de imagem ou outros métodos diagnósticos.'
+      const diagnosticCriteriaText = criteriaData?.todosCriteriosPresentes
+        ? 'Observou-se comprometimento dos músculos da fronte, fechamento ocular incompleto e desvio da comissura labial, sem identificação de causas etiológicas após a avaliação clínica inicial. Não foram evidenciados outros déficits neurológicos além daqueles atribuídos ao acometimento do VII par craniano.'
+        : 'Os critérios obrigatórios para Paralisia de Bell não foram completamente registrados no fluxo, devendo ser reavaliados antes de confirmar a hipótese diagnóstica.'
+      const bellEvolutionText = [
+        `Paciente ${patient.name || 'não identificado'}, admitido na unidade com quadro sugestivo de neuropatia periférica do nervo facial, de instalação aguda, apresentando paralisia facial periférica unilateral ${sideLabel}. ${diagnosticCriteriaText}`,
+        `Durante o exame físico, foram registrados sinais e sintomas adicionais compatíveis com o diagnóstico, incluindo ${additionalFindingsText}, os quais reforçaram a hipótese de paralisia facial periférica idiopática. ${centralInvestigationText}`,
+        `${redFlagsText} Em seguida, procedeu-se à avaliação do grau de disfunção motora facial por meio da escala de House-Brackmann, classificando o paciente como ${houseLabel}.`,
+        'O paciente foi devidamente informado sobre a natureza da patologia, seu curso clínico esperado, possibilidades terapêuticas e prognóstico. Foi instituído tratamento medicamentoso com corticosteroides e antivirais, conforme diretrizes usuais, além de orientações específicas para cuidados oculares locais, visando proteção da superfície ocular durante o período de fechamento palpebral incompleto. Foram realizados também os encaminhamentos pertinentes para acompanhamento e suporte terapêutico adequado.'
+      ].join('\n\n')
+
+      return {
+        title: 'PRONTUÁRIO MÉDICO – PARALISIA DE BELL',
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'Queixa Principal',
+            text: symptoms[0] || 'Paralisia facial periférica aguda.'
+          },
+          {
+            title: 'Evolução em Prontuário',
+            text: bellEvolutionText
+          }
+        ]
+      }
+    }
+
     const groupInfo = getGroupInfo(patient.flowchartState.group)
     return {
       title: `PRONTUÁRIO MÉDICO – ${(flowchart?.name || flowId).toUpperCase()}`,

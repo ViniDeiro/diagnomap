@@ -3,8 +3,8 @@ import type { Patient, Prescription } from '@/types/patient'
 type PrescriptionDraft = Omit<Prescription, 'id' | 'prescribedAt'>
 
 export const INFLUENZA_SEVERITY_SIGNS = [
-  'SpO2 < 95% em ar ambiente',
-  'Desconforto / insuficiência respiratória',
+  'SpO2 <95% (ar ambiente)',
+  'Desconforto / Insuficiência respiratória',
   'Dispneia',
   'Exacerbação de doenças pré-existentes'
 ]

@@ -5,6 +5,8 @@ import {
   Activity,
   ArrowLeft,
   BarChart3,
+  Briefcase,
+  Building2,
   Camera,
   ChevronRight,
   FileText,
@@ -17,7 +19,6 @@ import {
   Stethoscope,
   User
 } from 'lucide-react'
-import Image from 'next/image'
 
 type DoctorRow = {
   id: string
@@ -28,6 +29,25 @@ type DoctorRow = {
   crm?: string | null
   specialty?: string | null
   phone?: string | null
+  cpf?: string | null
+  unit?: string | null
+  company?: string | null
+  avatar_url?: string | null
+}
+
+type Municipality = {
+  id: number
+  name: string
+  uf: string
+}
+
+type MedicalTermMetadata = {
+  name?: string | null
+  crmUf?: string | null
+  cpf?: string | null
+  unit?: string | null
+  company?: string | null
+  email?: string | null
 }
 
 type RecentPatient = {
@@ -70,12 +90,60 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
   const [crm, setCrm] = useState('')
   const [specialty, setSpecialty] = useState('')
   const [phone, setPhone] = useState('')
+  const [cpf, setCpf] = useState('')
+  const [unit, setUnit] = useState('')
+  const [company, setCompany] = useState('')
+  const [selectedUf, setSelectedUf] = useState('')
+  const [municipalityId, setMunicipalityId] = useState<number | null>(null)
+  const [municipalityName, setMunicipalityName] = useState('')
+  const [ufs, setUfs] = useState<string[]>([])
+  const [municipalities, setMunicipalities] = useState<Municipality[]>([])
+  const [feedback, setFeedback] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
+  const [avatarSaving, setAvatarSaving] = useState(false)
   const [saving, setSaving] = useState(false)
   const [isEditing, setIsEditing] = useState(false)
   const [stats, setStats] = useState({ total: 0, active: 0, waiting: 0, discharged: 0 })
   const [recentPatients, setRecentPatients] = useState<RecentPatient[]>([])
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  useEffect(() => {
+    const loadUfs = async () => {
+      const fallbackUfs = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+      try {
+        const { data, error } = await supabase.from('municipalities').select('uf').order('uf', { ascending: true })
+        if (!error && Array.isArray(data)) {
+          const distinct = Array.from(new Set(data.map((item) => String((item as { uf?: string }).uf || '').trim()).filter(Boolean)))
+          setUfs(Array.from(new Set([...distinct, ...fallbackUfs])).sort())
+          return
+        }
+      } catch {}
+      setUfs(fallbackUfs)
+    }
+
+    loadUfs()
+  }, [])
+
+  useEffect(() => {
+    const loadMunicipalities = async () => {
+      if (!selectedUf) {
+        setMunicipalities([])
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('municipalities')
+        .select('id,name,uf')
+        .eq('uf', selectedUf)
+        .order('name', { ascending: true })
+
+      if (!error && Array.isArray(data)) {
+        setMunicipalities(data as Municipality[])
+      }
+    }
+
+    loadMunicipalities()
+  }, [selectedUf])
 
   useEffect(() => {
     const load = async () => {
@@ -88,8 +156,13 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
       }
 
       setUserEmail(user.email || '')
-      const metaAvatar = (user.user_metadata as { avatar_url?: string } | null)?.avatar_url || ''
+      const metadata = user.user_metadata as { avatar_url?: string; medical_responsibility_term?: MedicalTermMetadata } | null
+      const term = metadata?.medical_responsibility_term || {}
+      const metaAvatar = metadata?.avatar_url || ''
       if (metaAvatar) setAvatarUrl(metaAvatar)
+      setCpf(term.cpf || '')
+      setUnit(term.unit || '')
+      setCompany(term.company || '')
 
       const { data } = await supabase
         .from('doctors')
@@ -104,6 +177,25 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
         setCrm(doctor.crm || '')
         setSpecialty(doctor.specialty || 'Clínico Geral')
         setPhone(doctor.phone || '')
+        setCpf(doctor.cpf || term.cpf || '')
+        setUnit(doctor.unit || term.unit || '')
+        setCompany(doctor.company || term.company || '')
+        setAvatarUrl(doctor.avatar_url || metaAvatar)
+        setMunicipalityId(doctor.municipality_id || null)
+
+        if (doctor.municipality_id) {
+          const { data: municipality } = await supabase
+            .from('municipalities')
+            .select('id,name,uf')
+            .eq('id', doctor.municipality_id)
+            .single()
+
+          if (municipality) {
+            const mun = municipality as Municipality
+            setMunicipalityName(`${mun.name}/${mun.uf}`)
+            setSelectedUf(mun.uf)
+          }
+        }
       }
 
       if (data?.id) {
@@ -141,15 +233,50 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
 
   const handleSave = async () => {
     if (!profile) return
+    setFeedback('')
     setSaving(true)
     try {
-      await updateDoctorProfile(profile.id, {
+      const updated = await updateDoctorProfile(profile.id, {
         name,
         crm,
         specialty,
-        phone
+        phone,
+        cpf,
+        unit,
+        company,
+        municipality_id: municipalityId
       })
+      setProfile(updated as DoctorRow)
+
+      const { data: userRes } = await supabase.auth.getUser()
+      const currentMetadata = userRes.user?.user_metadata || {}
+      const currentTerm = (currentMetadata.medical_responsibility_term || {}) as MedicalTermMetadata
+      await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          medical_responsibility_term: {
+            ...currentTerm,
+            name,
+            crmUf: crm,
+            cpf: cpf || null,
+            unit: unit || null,
+            company: company || null,
+            email: userEmail || currentTerm.email || null
+          }
+        }
+      })
+
+      const selectedMunicipality = municipalities.find((item) => item.id === municipalityId)
+      if (selectedMunicipality) {
+        setMunicipalityName(`${selectedMunicipality.name}/${selectedMunicipality.uf}`)
+      }
+
       setIsEditing(false)
+      setFeedback('Perfil atualizado com sucesso.')
+      setTimeout(() => setFeedback(''), 2500)
+    } catch (error) {
+      console.error('Erro ao salvar perfil:', error)
+      setFeedback('Não foi possível salvar o perfil. Tente novamente.')
     } finally {
       setSaving(false)
     }
@@ -159,25 +286,65 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
     const file = e.target.files?.[0]
     if (!file) return
 
+    setFeedback('')
+    setAvatarSaving(true)
     const { data: userRes } = await supabase.auth.getUser()
     const user = userRes?.user
-    if (!user) return
-
-    const filePath = `${user.id}/${Date.now()}_${file.name}`
-    const { error: upErr } = await supabase.storage.from('avatars').upload(filePath, file, {
-      cacheControl: '3600',
-      upsert: true
-    })
-
-    if (upErr) {
-      console.error('Erro no upload:', upErr)
+    if (!user) {
+      setAvatarSaving(false)
       return
     }
 
-    const { data: pub } = supabase.storage.from('avatars').getPublicUrl(filePath)
-    const url = pub?.publicUrl || ''
-    setAvatarUrl(url)
-    await supabase.auth.updateUser({ data: { avatar_url: url } })
+    const saveAvatarUrl = async (url: string) => {
+      const currentMetadata = user.user_metadata || {}
+      setAvatarUrl(url)
+      if (profile?.id) {
+        const updated = await updateDoctorProfile(profile.id, { avatar_url: url })
+        setProfile(updated as DoctorRow)
+      }
+      await supabase.auth.updateUser({ data: { ...currentMetadata, avatar_url: url } })
+      setFeedback('Foto atualizada com sucesso.')
+      setTimeout(() => setFeedback(''), 2500)
+    }
+
+    try {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const filePath = `${user.id}/${Date.now()}_${safeName}`
+      const { error: upErr } = await supabase.storage.from('avatars').upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true
+      })
+
+      if (!upErr) {
+        const { data: pub } = supabase.storage.from('avatars').getPublicUrl(filePath)
+        const url = pub?.publicUrl || ''
+        if (url) {
+          await saveAvatarUrl(url)
+          return
+        }
+      }
+
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const dataUrl = String(reader.result || '')
+        if (dataUrl) {
+          await saveAvatarUrl(dataUrl)
+        }
+        setAvatarSaving(false)
+      }
+      reader.onerror = () => {
+        setFeedback('Não foi possível carregar a foto.')
+        setAvatarSaving(false)
+      }
+      reader.readAsDataURL(file)
+      return
+    } catch (error) {
+      console.error('Erro ao atualizar foto:', error)
+      setFeedback('Não foi possível atualizar a foto.')
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = ''
+      setAvatarSaving(false)
+    }
   }
 
   const derivedMetrics = useMemo(() => {
@@ -208,8 +375,20 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
     {
       label: 'Vínculo',
       icon: MapPin,
-      value: profile?.municipality_id ? `Município #${profile.municipality_id}` : 'Município não informado',
+      value: municipalityName || 'Município não informado',
       helper: 'Cadastro institucional'
+    },
+    {
+      label: 'Unidade',
+      icon: Building2,
+      value: unit || 'Unidade não informada',
+      helper: company || 'Empresa/contratante não informada'
+    },
+    {
+      label: 'Documento',
+      icon: FileText,
+      value: cpf || 'CPF não informado',
+      helper: 'Informação do termo de responsabilidade'
     }
   ]
 
@@ -288,7 +467,7 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
                     className="group relative h-28 w-28 overflow-hidden rounded-[28px] border border-white/30 bg-white/10 shadow-2xl shadow-slate-950/25 backdrop-blur"
                   >
                     {avatarUrl ? (
-                      <Image src={avatarUrl} alt="Avatar" fill className="object-cover" />
+                      <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-white/10">
                         <User className="h-10 w-10 text-white/90" />
@@ -296,7 +475,11 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
                     )}
                     <div className="absolute inset-0 flex items-end justify-end bg-gradient-to-t from-slate-950/35 via-transparent to-transparent p-3 opacity-100">
                       <span className="rounded-full bg-white/90 p-2 text-slate-900 shadow-lg transition group-hover:scale-105">
-                        <Camera className="h-4 w-4" />
+                        {avatarSaving ? (
+                          <span className="block h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+                        ) : (
+                          <Camera className="h-4 w-4" />
+                        )}
                       </span>
                     </div>
                   </button>
@@ -413,6 +596,12 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
               </div>
             </div>
 
+            {feedback && (
+              <div className="mt-5 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">
+                {feedback}
+              </div>
+            )}
+
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               <div className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
                 <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
@@ -479,6 +668,104 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
                   />
                 ) : (
                   <p className="text-base font-semibold text-slate-900">{phone || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
+                <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <FileText className="h-4 w-4" />
+                  CPF
+                </label>
+                {isEditing ? (
+                  <input
+                    value={cpf}
+                    onChange={(e) => setCpf(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    placeholder="000.000.000-00"
+                  />
+                ) : (
+                  <p className="text-base font-semibold text-slate-900">{cpf || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
+                <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <Building2 className="h-4 w-4" />
+                  Unidade de atuação
+                </label>
+                {isEditing ? (
+                  <input
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    placeholder="Ex.: UPA Centro"
+                  />
+                ) : (
+                  <p className="text-base font-semibold text-slate-900">{unit || 'Não informada'}</p>
+                )}
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
+                <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <Briefcase className="h-4 w-4" />
+                  Empresa/Contratante
+                </label>
+                {isEditing ? (
+                  <input
+                    value={company}
+                    onChange={(e) => setCompany(e.target.value)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                    placeholder="Nome da instituição/empresa"
+                  />
+                ) : (
+                  <p className="text-base font-semibold text-slate-900">{company || 'Não informada'}</p>
+                )}
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
+                <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <MapPin className="h-4 w-4" />
+                  Estado (UF)
+                </label>
+                {isEditing ? (
+                  <select
+                    value={selectedUf}
+                    onChange={(e) => {
+                      setSelectedUf(e.target.value)
+                      setMunicipalityId(null)
+                      setMunicipalityName('')
+                    }}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  >
+                    <option value="">Selecione...</option>
+                    {ufs.map((uf) => (
+                      <option key={uf} value={uf}>{uf}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-base font-semibold text-slate-900">{selectedUf || 'Não informado'}</p>
+                )}
+              </div>
+
+              <div className="rounded-[26px] border border-slate-200 bg-slate-50/80 p-5">
+                <label className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                  <MapPin className="h-4 w-4" />
+                  Município
+                </label>
+                {isEditing ? (
+                  <select
+                    value={municipalityId ?? ''}
+                    onChange={(e) => setMunicipalityId(Number(e.target.value) || null)}
+                    disabled={!selectedUf}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100 disabled:bg-slate-100 disabled:text-slate-400"
+                  >
+                    <option value="">{selectedUf ? 'Selecione...' : 'Escolha o estado primeiro'}</option>
+                    {municipalities.map((municipality) => (
+                      <option key={municipality.id} value={municipality.id}>{municipality.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-base font-semibold text-slate-900">{municipalityName || 'Não informado'}</p>
                 )}
               </div>
 

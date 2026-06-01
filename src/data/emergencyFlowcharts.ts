@@ -3756,13 +3756,13 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
-            <p><strong>Síndrome gripal:</strong> deve ser considerada frente a paciente com sintomas característicos e sem outro diagnóstico definido. O quadro é sugerido por <strong>febre</strong> (inclusive se somente relatada), com <strong>tosse</strong> ou <strong>dor de garganta</strong>, juntamente com pelo menos um dos demais sintomas: <strong>artralgia</strong>, <strong>cefaleia</strong> ou <strong>mialgia</strong>.</p>
+            <p><strong>Síndrome gripal:</strong> deve ser considerada frente a um paciente com sintomas característicos e sem outro diagnóstico definido. Paciente apresentando <strong>febre</strong> (inclusive se somente relatada), com <strong>tosse</strong> ou <strong>dor de garganta</strong>, juntamente com pelo menos um dos demais sintomas: <strong>artralgia</strong>, <strong>cefaleia</strong> ou <strong>mialgia</strong>.</p>
           </div>
           <div class="rounded-xl border border-red-200 bg-red-50 p-4">
             <p class="font-semibold text-red-800">Notificação e cuidados iniciais importantes</p>
             <ul class="list-disc pl-5 mt-2 space-y-1 text-red-900">
               <li>Considerar isolamento por gotículas e máscara cirúrgica para o paciente.</li>
-              <li>No Brasil, a maior relevância clínica e epidemiológica é dos vírus influenza A, especialmente A(H1N1)pdm09 e A(H3N2), e também do influenza B, sobretudo linhagem Victoria.</li>
+              <li>Priorizar influenza A(H1N1)pdm09, A(H3N2) e influenza B/Victoria como agentes de maior relevância clínica e epidemiológica no fluxo.</li>
               <li>Oseltamivir deve ser priorizado em pacientes hospitalizados ou com fatores de risco para complicações.</li>
             </ul>
           </div>
@@ -3770,9 +3770,13 @@ export const influenzaFlowchart: EmergencyFlowchart = {
             <summary class="cursor-pointer font-semibold text-slate-800">Ver pontos que não podem passar despercebidos</summary>
             <div class="mt-3 space-y-2 text-slate-700">
               <p>A influenza acomete vias aéreas superiores e inferiores e pode evoluir com <strong>síndrome respiratória aguda grave (SRAG)</strong>.</p>
+              <p>No Brasil, os vírus influenza com maior relevância clínica e epidemiológica hoje são principalmente os do tipo A, especialmente <strong>Influenza A(H1N1)pdm09</strong> e <strong>Influenza A(H3N2)</strong>. Em menor grau, mas ainda importante, entram os vírus influenza B, sobretudo da linhagem Victoria.</p>
+              <p>Os surtos variam bastante ano a ano. Nas últimas temporadas brasileiras, A(H1N1)pdm09 e A(H3N2) alternaram protagonismo. O H3N2 costuma causar ondas fortes em idosos e maior pressão hospitalar; o H1N1 frequentemente tem impacto importante em adultos mais jovens, obesos, gestantes e pacientes com comorbidades.</p>
               <p>Apesar da incubação clássica de 1 a 4 dias, muitos pacientes iniciam sintomas de forma abrupta cerca de 48 horas após exposição significativa.</p>
               <p>No Brasil, a sazonalidade varia por região: Sul e Sudeste têm pico mais clássico entre outono e inverno; Norte e Nordeste podem ter circulação mais prolongada e associada ao período chuvoso.</p>
-              <p>H1N1 costuma chamar atenção por SDRA viral primária; H3N2 por descompensar pacientes frágeis e favorecer coinfecção bacteriana; influenza B tende a ser mais branda, mas pode causar complicações, especialmente em jovens.</p>
+              <p>Desde a pandemia de COVID, a sazonalidade do influenza ficou mais irregular, com surtos fora do inverno em vários anos, inclusive epidemias importantes de H3N2 em dezembro/janeiro.</p>
+              <p>Do ponto de vista de gravidade em UTI, H1N1 chama atenção por <strong>SDRA viral primária</strong>; H3N2 por descompensação de fragilidade prévia e coinfecção bacteriana; influenza B geralmente é mais brando, mas pode causar miocardite e encefalite, especialmente em jovens.</p>
+              <p>Febre alta abrupta, mialgia intensa, cefaleia, tosse seca, linfopenia e pró-calcitonina baixa inicialmente mantêm forte suspeita clínica de influenza A, especialmente H1N1.</p>
               <p>A principal complicação é a <strong>pneumonia viral</strong>, podendo haver coinfecção bacteriana associada.</p>
               <p>O tratamento antiviral indicado inclui <strong>oseltamivir</strong> ou <strong>zanamivir</strong>, com maior benefício quando iniciado nas primeiras 48 horas.</p>
               <p>Pacientes graves com pneumonia podem necessitar de <strong>antibioticoterapia de amplo espectro</strong> conforme avaliação clínica.</p>
@@ -3804,8 +3808,8 @@ export const influenzaFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
             <p class="font-semibold text-amber-900">Considerar gravidade quando houver:</p>
             <ul class="list-disc pl-5 mt-2 space-y-1 text-amber-900">
-              <li>SpO2 &lt; 95% em ar ambiente</li>
-              <li>Desconforto / insuficiência respiratória</li>
+              <li>SpO2 &lt;95% (ar ambiente)</li>
+              <li>Desconforto / Insuficiência respiratória</li>
               <li>Dispneia</li>
               <li>Exacerbação de doenças pré-existentes</li>
             </ul>
@@ -3945,12 +3949,12 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
-            <p><strong>Não deixar passar:</strong> febre persistente, FR &gt; 25 irpm, expectoração, FC &gt; 100 bpm, estertores, queda de sons respiratórios, mialgia e sudorese noturna.</p>
+            <p><strong>Prestar atenção:</strong> quadros de febre persistente, paciente apresentando expectoração, taquicardia (FC &gt; 100 bpm), presença de estertores na ausculta pulmonar, diminuição de sons pulmonares, sudorese noturna, mialgia e aumento de frequência respiratória (acima de 25 irpm).</p>
           </div>
           <ul class="list-disc pl-5 space-y-1">
-            <li>Idosos podem ter apresentação atípica: declínio cognitivo, fraqueza, perda de funcionalidade ou alteração de consciência.</li>
-            <li>Radiografia de tórax é indicada em todos os pacientes, pois confirma diagnóstico e pesquisa derrame pleural/doença multilobar.</li>
-            <li>Use escore para decisão de tratamento ambulatorial ou hospitalar. O PSI é preferencial por maior acurácia.</li>
+            <li><strong>Idosos:</strong> frequentemente podem ter apresentações atípicas, com sintomas frustros ou pouco exuberantes, como mal estar, fraqueza, rebaixamento do nível de consciência ou diminuição da cognição.</li>
+            <li><strong>RX de tórax:</strong> exame que deve ser realizado em todos os pacientes, possibilitando a confirmação do diagnóstico e avaliação da presença de derrame pleural e doença extensa ou multilobar.</li>
+            <li><strong>PSI (Pneumonia Severity Index):</strong> Classe I a V, indica a severidade e a possibilidade de mortalidade. É ferramenta que auxilia na tomada de decisão, inclusive para determinação de internação e encaminhamento à Unidade de Terapia Intensiva.</li>
           </ul>
         </div>
       `,
@@ -3966,7 +3970,8 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
       critical: true,
       content: `
         <div class="space-y-2 text-sm">
-          <p>Se houver sepse, choque, hipoxemia importante, esforço respiratório, rebaixamento ou falência ventilatória, interrompa o fluxo de escore e estabilize.</p>
+          <p><strong>Critérios de interrupção do fluxograma:</strong> pacientes que se apresentam com sepse, sinais de má perfusão e choque, insuficiência respiratória ou falência pulmonar, hipóxia significativa (SpO2 &lt;90% em ar ambiente, PaO2 &lt;60 mmHg, PaO2/FiO2 &lt;250).</p>
+          <p>Se qualquer critério estiver presente, interrompa a aplicação do escore e priorize estabilização clínica imediata.</p>
         </div>
       `,
       options: [
@@ -4036,7 +4041,11 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>Conduta:</strong> oxigênio conforme alvo, acesso venoso, monitorização, lactato/culturas quando indicado, antibiótico precoce e suporte hemodinâmico/ventilatório.</p>
+            <p><strong>Prioridade inicial:</strong> estabilização clínica do paciente, avaliação da gravidade para decisão do local mais adequado de internação hospitalar e verificação do histórico clínico/fatores de risco para cobertura de Pseudomonas.</p>
+          </div>
+          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
+            <p><strong>Atendimento inicial:</strong> monitorização cardíaca + PANI, suplementação de O2 conforme severidade da hipoxemia (CNO2, Venturi, não reinalante ou VNI), acesso venoso periférico, avaliação da necessidade de coleta de culturas, marcadores de inflamação (lactato, PCR), hemoculturas e secreção traqueal quando indicado.</p>
+            <p class="mt-2">Avaliar necessidade de suporte ventilatório invasivo ou hemodinâmico com drogas vasoativas. A antibioticoterapia deve ser iniciada de forma precoce, pois a precocidade da administração é fundamental para melhor desfecho.</p>
           </div>
           <p>Após estabilização, definir local de internação e antibioticoterapia hospitalar conforme gravidade e risco de Pseudomonas.</p>
         </div>
@@ -7286,7 +7295,24 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Avaliar grau pela escala de House-Brackmann', nextStep: 'bell_house_brackmann', value: 'avaliar_house' }
+        { text: 'Avaliar grau pela escala de House-Brackmann', nextStep: 'bell_transicao_house_brackmann', value: 'avaliar_house' }
+      ]
+    },
+    bell_transicao_house_brackmann: {
+      id: 'bell_transicao_house_brackmann',
+      title: 'Escala de House-Brackmann',
+      description: 'Entender a escala antes de classificar o grau de disfunção facial.',
+      type: 'question',
+      content: `
+        <div class="rounded-2xl border border-pink-200 bg-pink-50 p-5 text-center text-sm leading-relaxed text-pink-950 shadow-sm">
+          <p class="text-lg font-extrabold">Escala de House-Brackmann</p>
+          <p class="mt-3 text-base">A <strong>Escala de House-Brackmann</strong> é o sistema mais utilizado para classificar a gravidade da paralisia facial periférica, especialmente em casos como a Paralisia de Bell. Ela avalia a função motora da face, permitindo padronizar o grau de comprometimento e acompanhar a evolução clínica e resposta ao tratamento.</p>
+          <p class="mt-5 text-base font-bold">Estrutura da Escala</p>
+          <p class="mt-2 text-base">A escala é dividida em seis graus, do I ao VI, que vão desde a função facial normal até a paralisia completa, com critérios baseados na simetria em repouso, movimento voluntário e presença de sincinesias, que são movimentos involuntários associados.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para classificação', nextStep: 'bell_house_brackmann', value: 'seguir_house' }
       ]
     },
     bell_house_brackmann: {
@@ -7314,12 +7340,28 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Grau I', nextStep: 'bell_tratamento_clinico', value: 'house_i' },
-        { text: 'Grau II', nextStep: 'bell_tratamento_clinico', value: 'house_ii' },
-        { text: 'Grau III', nextStep: 'bell_tratamento_clinico', value: 'house_iii' },
-        { text: 'Grau IV', nextStep: 'bell_tratamento_clinico', value: 'house_iv' },
-        { text: 'Grau V', nextStep: 'bell_tratamento_clinico', value: 'house_v' },
-        { text: 'Grau VI', nextStep: 'bell_tratamento_clinico', value: 'house_vi' }
+        { text: 'Grau I', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_i' },
+        { text: 'Grau II', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_ii' },
+        { text: 'Grau III', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_iii' },
+        { text: 'Grau IV', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_iv' },
+        { text: 'Grau V', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_v' },
+        { text: 'Grau VI', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_vi' }
+      ]
+    },
+    bell_transicao_tratamento_precoce: {
+      id: 'bell_transicao_tratamento_precoce',
+      title: 'Tratamento Precoce',
+      description: 'Orientação temporal antes da conduta terapêutica.',
+      type: 'question',
+      timeSensitive: true,
+      content: `
+        <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 text-sm leading-relaxed text-yellow-950 shadow-sm">
+          <p class="text-lg font-extrabold">Antes do tratamento</p>
+          <p class="mt-2 text-base font-semibold">O tratamento da Paralisia de Bell deve ser iniciado o mais precocemente possível, idealmente nas primeiras <strong>72 horas</strong> do início dos sintomas, para melhorar o prognóstico.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Seguir para tratamento clínico', nextStep: 'bell_tratamento_clinico', value: 'seguir_tratamento' }
       ]
     },
     bell_tratamento_clinico: {
@@ -7407,10 +7449,10 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm leading-relaxed shadow-sm">
           <h4 class="font-serif text-lg font-bold">Encaminhamento ao Neurologista</h4>
           <p class="mt-4">Encaminho o paciente portador de quadro clínico compatível com <strong>Paralisia de Bell</strong> para avaliação especializada em <strong>Neurologia</strong>. O paciente apresenta instalação súbita de paralisia facial periférica unilateral, já em tratamento inicial, porém necessita de seguimento neurológico para monitorar a evolução da função facial, orientar sobre a necessidade de exames complementares como eletroneuromiografia ou neuroimagem, excluir outras possíveis causas de paralisia facial periférica, definir condutas terapêuticas adicionais e avaliar a necessidade de reabilitação motora, além de prevenir potenciais sequelas funcionais e estéticas.</p>
-          <p class="mt-4">O quadro teve início em <strong>XX/XX/XXXX</strong>, acometendo o lado <strong>XXXXX</strong>, com grau de comprometimento facial estimado em <strong>grau XX de House-Brackmann</strong>. Foi iniciado tratamento com corticoide, antiviral quando indicado e orientações de cuidados com a proteção ocular.</p>
+          <p class="mt-4">O quadro teve início conforme registrado no atendimento, acometendo o lado selecionado no fluxo, com grau de comprometimento facial estimado pela escala de House-Brackmann. Foi iniciado tratamento com corticoide, antiviral quando indicado e orientações de cuidados com a proteção ocular.</p>
           <p class="mt-4">Solicito, portanto, avaliação e seguimento pelo Neurologista para continuidade do cuidado e definição da melhor conduta terapêutica.</p>
           <p class="mt-4">Atenciosamente,</p>
-          <p class="mt-4 font-bold">Dr. XXXXXXXXXXXXXXXX</p>
+          <p class="mt-4 font-bold">Médico assistente</p>
         </div>
       `,
       options: []
@@ -7425,10 +7467,10 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         <div class="rounded-lg border border-slate-200 bg-white p-5 text-sm leading-relaxed shadow-sm">
           <h4 class="font-serif text-lg font-bold">Encaminhamento à especialidade de Otorrinolaringologia</h4>
           <p class="mt-4">Encaminho o paciente portador de quadro clínico compatível com <strong>Paralisia de Bell</strong> para avaliação especializada em <strong>Otorrinolaringologia</strong>. O paciente apresenta instalação súbita de paralisia facial periférica unilateral, já em tratamento inicial, porém necessita de avaliação otorrinolaringológica para investigação de possíveis causas otológicas da paralisia facial, avaliação da orelha média e mastoide, definição da necessidade de exames complementares além de acompanhamento da evolução funcional e orientação sobre terapias adjuvantes e prevenção de sequelas.</p>
-          <p class="mt-4">O quadro teve início em <strong>XX/XX/XXXX</strong>, acometendo o lado <strong>XXXXX</strong>, com grau de comprometimento facial estimado em <strong>grau XX de House-Brackmann</strong>, tendo sido iniciado tratamento com corticoide, antiviral quando indicado e orientações de proteção ocular.</p>
+          <p class="mt-4">O quadro teve início conforme registrado no atendimento, acometendo o lado selecionado no fluxo, com grau de comprometimento facial estimado pela escala de House-Brackmann, tendo sido iniciado tratamento com corticoide, antiviral quando indicado e orientações de proteção ocular.</p>
           <p class="mt-4">Solicito, portanto, avaliação e seguimento pelo Otorrinolaringologista para continuidade do cuidado, investigação de causas otológicas e definição da melhor conduta terapêutica.</p>
           <p class="mt-4">Atenciosamente,</p>
-          <p class="mt-4 font-bold">Dr. XXXXXXXXXXXXXXXX</p>
+          <p class="mt-4 font-bold">Médico assistente</p>
         </div>
       `,
       options: []

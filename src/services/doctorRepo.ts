@@ -8,6 +8,10 @@ export type DoctorProfile = {
   specialty?: string | null;
   email?: string | null;
   phone?: string | null;
+  cpf?: string | null;
+  unit?: string | null;
+  company?: string | null;
+  avatar_url?: string | null;
   municipality_id?: number | null;
   status?: 'active' | 'inactive';
 };
@@ -22,6 +26,10 @@ export async function createDoctorProfile(profile: DoctorProfile) {
       specialty: profile.specialty ?? null,
       email: profile.email ?? null,
       phone: profile.phone ?? null,
+      cpf: profile.cpf ?? null,
+      unit: profile.unit ?? null,
+      company: profile.company ?? null,
+      avatar_url: profile.avatar_url ?? null,
       municipality_id: profile.municipality_id ?? null,
       status: profile.status ?? 'active',
     })
@@ -148,16 +156,21 @@ export async function signOutDoctor() {
 }
 
 export async function updateDoctorProfile(id: string, patch: Partial<DoctorProfile>) {
+  const updatePayload: Record<string, unknown> = {}
+  if ('name' in patch) updatePayload.name = patch.name
+  if ('crm' in patch) updatePayload.crm = patch.crm ?? null
+  if ('specialty' in patch) updatePayload.specialty = patch.specialty ?? null
+  if ('phone' in patch) updatePayload.phone = patch.phone ?? null
+  if ('cpf' in patch) updatePayload.cpf = patch.cpf ?? null
+  if ('unit' in patch) updatePayload.unit = patch.unit ?? null
+  if ('company' in patch) updatePayload.company = patch.company ?? null
+  if ('avatar_url' in patch) updatePayload.avatar_url = patch.avatar_url ?? null
+  if ('municipality_id' in patch) updatePayload.municipality_id = patch.municipality_id ?? null
+  if ('status' in patch) updatePayload.status = patch.status
+
   const { data, error } = await supabase
     .from('doctors')
-    .update({
-      name: patch.name,
-      crm: patch.crm ?? null,
-      specialty: patch.specialty ?? null,
-      phone: patch.phone ?? null,
-      municipality_id: patch.municipality_id ?? null,
-      status: patch.status ?? undefined,
-    })
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .single();

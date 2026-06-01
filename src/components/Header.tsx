@@ -25,10 +25,18 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
         if (!user) return
 
         const metaAvatar = (user.user_metadata as any)?.avatar_url || ''
-        if (metaAvatar) setAvatarUrl(metaAvatar)
+        const { data: doctor } = await supabase
+          .from('doctors')
+          .select('name, avatar_url')
+          .eq('auth_user_id', user.id)
+          .single()
 
-        const metaName = (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || 'Médico(a)'
-        setUserName(metaName)
+        const doctorAvatar = (doctor as { avatar_url?: string } | null)?.avatar_url || ''
+        setAvatarUrl(doctorAvatar || metaAvatar || '')
+
+        const doctorName = (doctor as { name?: string } | null)?.name || ''
+        const metaName = (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || ''
+        setUserName(doctorName || metaName || 'Médico(a)')
 
         setUserEmail(user.email || '')
       } catch {

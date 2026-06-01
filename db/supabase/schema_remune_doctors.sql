@@ -22,11 +22,21 @@ create table if not exists public.doctors (
   specialty text,
   email text unique,
   phone text,
+  cpf text,
+  unit text,
+  company text,
+  avatar_url text,
   municipality_id bigint references public.municipalities(id) on delete set null,
   status text not null default 'active' check (status in ('active','inactive')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.doctors
+  add column if not exists cpf text,
+  add column if not exists unit text,
+  add column if not exists company text,
+  add column if not exists avatar_url text;
 create index if not exists doctors_municipality_idx on public.doctors (municipality_id);
 create index if not exists doctors_status_idx on public.doctors (status);
 

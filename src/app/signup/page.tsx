@@ -243,6 +243,9 @@ export default function SignupPage() {
       await createDoctorProfile({
         name,
         crm: crmUf,
+        cpf,
+        unit,
+        company,
         municipality_id: municipalityId ?? null,
         status: 'active',
         email,

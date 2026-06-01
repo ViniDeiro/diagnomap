@@ -358,6 +358,139 @@ type LombalgiaPrescriptionPreview = {
   content: string[]
 }
 
+type BellCriteriaKey = 'periferica_unilateral' | 'inicio_agudo' | 'sem_causa_identificavel' | 'sem_outros_deficits'
+type BellRedFlagKey =
+  | 'testa_poupada'
+  | 'bilateral'
+  | 'progressao_maior_7_dias'
+  | 'recorrencia_frequente'
+  | 'otalgia_intensa'
+  | 'vertigem_hipoacusia_disfagia'
+  | 'ramsay_hunt'
+  | 'trauma_cirurgia'
+  | 'massa_parotida'
+  | 'sinais_sistemicos'
+  | 'multiplos_nervos'
+  | 'achados_neurologicos'
+type FeedbackTone = 'slate' | 'emerald' | 'amber' | 'red'
+
+const BELL_DIAGNOSTIC_CRITERIA: Array<{ key: BellCriteriaKey; label: string; detail: string }> = [
+  {
+    key: 'periferica_unilateral',
+    label: 'Fraqueza ou paralisia facial periférica unilateral',
+    detail: 'Envolve fronte, fechamento ocular e comissura labial no mesmo hemiface.'
+  },
+  {
+    key: 'inicio_agudo',
+    label: 'Início agudo, com pico em 72 horas ou menos',
+    detail: 'Instalação súbita, sem progressão lenta ou padrão recorrente.'
+  },
+  {
+    key: 'sem_causa_identificavel',
+    label: 'Ausência de causa identificável na avaliação inicial',
+    detail: 'Sem trauma, otite/mastoidite, lesão estrutural, neoplasia ou outra causa evidente.'
+  },
+  {
+    key: 'sem_outros_deficits',
+    label: 'Ausência de outros déficits neurológicos',
+    detail: 'Sem alteração de consciência, ataxia, disartria, hemiparesia ou outros sinais focais.'
+  }
+]
+
+const BELL_RED_FLAGS: Array<{ key: BellRedFlagKey; label: string; detail: string }> = [
+  {
+    key: 'testa_poupada',
+    label: 'Ausência de acometimento da musculatura da testa',
+    detail: 'A musculatura da testa costuma ser poupada na paralisia facial central.'
+  },
+  {
+    key: 'bilateral',
+    label: 'Paralisia bilateral',
+    detail: 'Acometimento bilateral exige investigação adicional e afasta Bell típica.'
+  },
+  {
+    key: 'progressao_maior_7_dias',
+    label: 'Progressão dos sintomas por mais de 7 dias',
+    detail: 'Progressão prolongada sugere evolução atípica e outra etiologia.'
+  },
+  {
+    key: 'recorrencia_frequente',
+    label: 'Recorrência frequente',
+    detail: 'Episódios repetidos exigem investigação de causas secundárias.'
+  },
+  {
+    key: 'otalgia_intensa',
+    label: 'Otalgia intensa',
+    detail: 'Dor otológica intensa aumenta suspeita de acometimento otológico ou Ramsay Hunt.'
+  },
+  {
+    key: 'vertigem_hipoacusia_disfagia',
+    label: 'Vertigem, hipoacusia ou disfagia',
+    detail: 'Sintomas cocleovestibulares ou disfagia sugerem acometimento além do VII par.'
+  },
+  {
+    key: 'ramsay_hunt',
+    label: 'Vesículas auriculares ou orais, suspeita de síndrome de Ramsay Hunt',
+    detail: 'Vesículas, dor otológica intensa e sintomas auditivos/vestibulares mudam a hipótese diagnóstica.'
+  },
+  {
+    key: 'trauma_cirurgia',
+    label: 'História de trauma craniano ou cirurgias otológicas',
+    detail: 'Pode indicar lesão traumática ou iatrogênica do nervo facial.'
+  },
+  {
+    key: 'massa_parotida',
+    label: 'Massa parotídea ou suspeita de neoplasia',
+    detail: 'Lesões estruturais podem comprimir ou infiltrar o nervo facial.'
+  },
+  {
+    key: 'sinais_sistemicos',
+    label: 'Sinais sistêmicos',
+    detail: 'Febre, perda de peso ou rigidez de nuca sugerem etiologia infecciosa, inflamatória ou neoplásica.'
+  },
+  {
+    key: 'multiplos_nervos',
+    label: 'Envolvimento de múltiplos nervos cranianos',
+    detail: 'Acometimento de outros pares cranianos não é esperado em Bell típica.'
+  },
+  {
+    key: 'achados_neurologicos',
+    label: 'Achados neurológicos adicionais',
+    detail: 'Ataxia, diplopia, paresias ou alterações de sensibilidade exigem investigação neurológica.'
+  }
+]
+
+const defaultBellCriteriaChecks = (): Record<BellCriteriaKey, boolean> => ({
+  periferica_unilateral: false,
+  inicio_agudo: false,
+  sem_causa_identificavel: false,
+  sem_outros_deficits: false
+})
+
+const defaultBellRedFlagChecks = (): Record<BellRedFlagKey, boolean> => ({
+  testa_poupada: false,
+  bilateral: false,
+  progressao_maior_7_dias: false,
+  recorrencia_frequente: false,
+  otalgia_intensa: false,
+  vertigem_hipoacusia_disfagia: false,
+  ramsay_hunt: false,
+  trauma_cirurgia: false,
+  massa_parotida: false,
+  sinais_sistemicos: false,
+  multiplos_nervos: false,
+  achados_neurologicos: false
+})
+
+const bellHouseGradeLabels: Record<string, string> = {
+  house_i: 'Grau I',
+  house_ii: 'Grau II',
+  house_iii: 'Grau III',
+  house_iv: 'Grau IV',
+  house_v: 'Grau V',
+  house_vi: 'Grau VI'
+}
+
 const gasometryFieldConfig: Array<{ key: GasometryFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
   { key: 'ph', label: 'pH', unit: '', min: 6.8, max: 7.8, required: true },
   { key: 'pco2', label: 'PaCO2', unit: 'mmHg', min: 10, max: 120, required: true },
@@ -987,7 +1120,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellFacialNerveOpen, setBellFacialNerveOpen] = useState(false)
   const [bellCranioOpen, setBellCranioOpen] = useState(false)
   const [pendingBellSide, setPendingBellSide] = useState<{ label: string; value: string } | null>(null)
+  const [bellCriteriaChecks, setBellCriteriaChecks] = useState<Record<BellCriteriaKey, boolean>>(() => defaultBellCriteriaChecks())
+  const [bellRedFlagChecks, setBellRedFlagChecks] = useState<Record<BellRedFlagKey, boolean>>(() => defaultBellRedFlagChecks())
+  const [bellRamsayInfoOpen, setBellRamsayInfoOpen] = useState(false)
   const [selectedBellHouseGrade, setSelectedBellHouseGrade] = useState('')
+  const [bellDocumentCopied, setBellDocumentCopied] = useState(false)
+  const [bellTreatmentPrescriptionOpen, setBellTreatmentPrescriptionOpen] = useState(false)
+  const [bellTreatmentPrescriptionGenerated, setBellTreatmentPrescriptionGenerated] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
     pco2: '',
@@ -1114,6 +1253,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isCholecystitisSeverityStep = flowchart.id === 'cholecystitis' && currentStep === 'cole_tokyo_gravidade'
     const isAppendicitisAlvaradoStep = flowchart.id === 'appendicitis' && currentStep === 'apend_alvarado'
     const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStep === 'lomb_red_flags'
+    const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_criterios_obrigatorios'
+    const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_red_flags_ramsay'
     const psiResult = calculatePneumoniaPsi(pneumoniaPsiValues, patient)
     const curbResult = calculatePneumoniaCurb65(pneumoniaCurbValues)
     const pancreatitisBisapResult = calculatePancreatitisBisap(pancreatitisBisapValues)
@@ -1238,6 +1379,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       classificacao: lombalgiaDispositionResult.title,
       criteriosSelecionados: lombalgiaRiskValues
     })
+    const bellCriteriaAnswer = JSON.stringify({
+      decision: value || nextStep,
+      criteriosSelecionados: BELL_DIAGNOSTIC_CRITERIA.filter((item) => bellCriteriaChecks[item.key]).map((item) => item.key),
+      todosCriteriosPresentes: BELL_DIAGNOSTIC_CRITERIA.every((item) => bellCriteriaChecks[item.key])
+    })
+    const bellRedFlagsAnswer = JSON.stringify({
+      decision: value || nextStep,
+      redFlagsSelecionadas: BELL_RED_FLAGS.filter((item) => bellRedFlagChecks[item.key]).map((item) => item.key),
+      possuiRedFlag: BELL_RED_FLAGS.some((item) => bellRedFlagChecks[item.key])
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -1278,7 +1429,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                           ? appendicitisAlvaradoAnswer
                                           : isLombalgiaRiskStep
                                             ? lombalgiaRiskAnswer
-                                            : value || nextStep
+                                            : isBellCriteriaStep
+                                              ? bellCriteriaAnswer
+                                              : isBellRedFlagsStep
+                                                ? bellRedFlagsAnswer
+                                                : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -1574,7 +1729,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     setDpocSinaisGravidade([])
     setDpocAnthonisen([])
+    setBellCriteriaChecks(defaultBellCriteriaChecks())
+    setBellRedFlagChecks(defaultBellRedFlagChecks())
+    setBellRamsayInfoOpen(false)
     setSelectedBellHouseGrade('')
+    setBellDocumentCopied(false)
+    setBellTreatmentPrescriptionOpen(false)
+    setBellTreatmentPrescriptionGenerated(false)
     onUpdate(patient.id, flowchart.initialStep, [], {}, 0)
   }
 
@@ -1584,7 +1745,135 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isBellSideSelection = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_inicio'
   const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_criterios_obrigatorios'
+  const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_red_flags_ramsay'
   const isBellHouseStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_house_brackmann'
+  const isBellTreatmentStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_tratamento_clinico'
+  const isBellPrescriptionStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_prescricao_cuidados'
+  const isBellReferralStep = flowchart.id === 'paralisia_bell' && (currentStepData?.id === 'bell_encaminhamento_neuro' || currentStepData?.id === 'bell_encaminhamento_otorrino')
+  const isBellDynamicDocumentStep = isBellPrescriptionStep || isBellReferralStep
+  const allBellCriteriaChecked = BELL_DIAGNOSTIC_CRITERIA.every((item) => bellCriteriaChecks[item.key])
+  const hasBellRedFlagChecked = BELL_RED_FLAGS.some((item) => bellRedFlagChecks[item.key])
+  const bellSelectedSideLabel = useMemo(() => {
+    const raw = answers.bell_inicio
+    if (raw === 'lado_direito') return 'direito'
+    if (raw === 'lado_esquerdo') return 'esquerdo'
+    try {
+      const parsed = raw ? JSON.parse(raw) : null
+      if (parsed?.decision === 'lado_direito') return 'direito'
+      if (parsed?.decision === 'lado_esquerdo') return 'esquerdo'
+    } catch {
+      return 'não informado'
+    }
+    return 'não informado'
+  }, [answers.bell_inicio])
+  const bellSelectedHouseLabel = useMemo(() => {
+    const raw = answers.bell_house_brackmann || selectedBellHouseGrade
+    return bellHouseGradeLabels[raw] || 'não informado'
+  }, [answers.bell_house_brackmann, selectedBellHouseGrade])
+  const bellAdmissionDateLabel = useMemo(() => {
+    const date = patient.admission?.date ? new Date(patient.admission.date) : null
+    if (!date || Number.isNaN(date.getTime())) return 'data não informada'
+    return date.toLocaleDateString('pt-BR')
+  }, [patient.admission?.date])
+  const bellPrescriptionText = useMemo(() => [
+    'Prescrição e cuidados - Paralisia de Bell',
+    '',
+    '1. Prednisona 60 mg VO 1x/dia por 7 a 10 dias; ou prednisolona 25 mg VO 12/12h por 7 a 10 dias.',
+    '2. Considerar aciclovir 400 mg VO 5x/dia por 10 dias em casos moderados a graves ou suspeita viral associada.',
+    '3. Lágrimas artificiais sem conservantes de 1/1h a 2/2h durante o dia.',
+    '4. Pomada lubrificante oftálmica à noite.',
+    '5. Oclusão palpebral noturna com fita adesiva hipoalergênica.',
+    '6. Óculos de proteção contra vento e poeira.',
+    '7. Encaminhar ao oftalmologista se houver sinais de exposição ou lesão corneana.',
+    '',
+    'Ajustar doses, contraindicações, comorbidades e alergias conforme avaliação clínica individual.'
+  ].join('\n'), [])
+  const bellReferralText = useMemo(() => {
+    const specialty = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologia' : 'Neurologia'
+    const specialist = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologista' : 'Neurologista'
+    const reason = currentStepData?.id === 'bell_encaminhamento_otorrino'
+      ? 'avaliação otorrinolaringológica para investigação de possíveis causas otológicas da paralisia facial, avaliação da orelha média e mastoide, definição da necessidade de exames complementares, acompanhamento da evolução funcional e orientação sobre terapias adjuvantes e prevenção de sequelas'
+      : 'seguimento neurológico para monitorar a evolução da função facial, orientar sobre necessidade de exames complementares como eletroneuromiografia ou neuroimagem, excluir outras possíveis causas de paralisia facial periférica, definir condutas terapêuticas adicionais e avaliar necessidade de reabilitação motora'
+
+    return [
+      `Encaminhamento à ${specialty}`,
+      '',
+      `Encaminho o paciente ${patient.name || 'não identificado'}, portador de quadro clínico compatível com Paralisia de Bell, para avaliação especializada em ${specialty}.`,
+      '',
+      `O paciente apresenta instalação súbita de paralisia facial periférica unilateral, acometendo o lado ${bellSelectedSideLabel}, com início registrado em ${bellAdmissionDateLabel} e grau de comprometimento facial estimado em ${bellSelectedHouseLabel} de House-Brackmann.`,
+      '',
+      `Foi iniciado tratamento clínico com corticoide, antiviral quando indicado e orientações de proteção ocular. Solicito avaliação pelo ${specialist} para ${reason}.`,
+      '',
+      'Atenciosamente,',
+      'Médico assistente'
+    ].join('\n')
+  }, [bellAdmissionDateLabel, bellSelectedHouseLabel, bellSelectedSideLabel, currentStepData?.id, patient.name])
+  const currentBellDocumentText = isBellPrescriptionStep || isBellTreatmentStep ? bellPrescriptionText : bellReferralText
+  const getPersistedBellPrescriptions = useCallback(() => {
+    const livePatient = patientService.getPatientById(patient.id) || patient
+    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Paralisia de Bell')
+  }, [patient])
+  const hasBellTreatmentPrescription = bellTreatmentPrescriptionGenerated || getPersistedBellPrescriptions().length > 0
+  const copyBellDocumentText = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(currentBellDocumentText)
+      setBellDocumentCopied(true)
+      setTimeout(() => setBellDocumentCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar documento da Paralisia de Bell:', error)
+      alert('Não foi possível copiar o texto. Tente novamente.')
+    }
+  }, [currentBellDocumentText])
+  const handleGenerateBellTreatmentPrescription = useCallback(() => {
+    const prescriptionItems = [
+      {
+        medication: 'Prednisona',
+        dosage: '60 mg VO',
+        frequency: '1 vez ao dia',
+        duration: '7 a 10 dias',
+        instructions: 'Iniciar preferencialmente nas primeiras 72 horas. Ajustar conforme contraindicações, comorbidades e avaliação médica.',
+        prescribedBy: 'Fluxograma Paralisia de Bell'
+      },
+      {
+        medication: 'Aciclovir',
+        dosage: '400 mg VO',
+        frequency: '5 vezes ao dia',
+        duration: '10 dias',
+        instructions: 'Considerar em casos moderados a graves ou suspeita viral associada; avaliar indicação individual.',
+        prescribedBy: 'Fluxograma Paralisia de Bell'
+      },
+      {
+        medication: 'Lágrimas artificiais sem conservantes',
+        dosage: '1 gota no olho acometido',
+        frequency: 'a cada 1 a 2 horas durante o dia',
+        duration: 'enquanto houver lagoftalmo ou ressecamento ocular',
+        instructions: 'Associar proteção ocular, pomada lubrificante à noite e oclusão palpebral noturna quando necessário.',
+        prescribedBy: 'Fluxograma Paralisia de Bell'
+      },
+      {
+        medication: 'Pomada lubrificante oftálmica',
+        dosage: 'aplicar no olho acometido',
+        frequency: 'à noite',
+        duration: 'enquanto houver exposição ocular',
+        instructions: 'Usar antes da oclusão palpebral noturna com fita hipoalergênica, se indicado.',
+        prescribedBy: 'Fluxograma Paralisia de Bell'
+      }
+    ]
+    const persisted = getPersistedBellPrescriptions()
+    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+
+    prescriptionItems.forEach((item) => {
+      const key = `${item.medication}_${item.dosage}`
+      if (!existingKeys.has(key)) {
+        patientService.addPrescription(patient.id, item)
+      }
+    })
+
+    setBellTreatmentPrescriptionGenerated(true)
+    setBellTreatmentPrescriptionOpen(true)
+    setBellDocumentCopied(false)
+    onUpdate(patient.id, currentStep, history, answers, progress)
+  }, [answers, currentStep, getPersistedBellPrescriptions, history, onUpdate, patient.id, progress])
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
@@ -3306,7 +3595,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return { tone: 'slate', text: 'Sem classificação' }
   }
 
-  const getAsthmaFieldFeedback = (key: AsthmaInitialFieldKey | AsthmaReevalFieldKey, value: number | null) => {
+  const getAsthmaFieldFeedback = (key: AsthmaInitialFieldKey | AsthmaReevalFieldKey, value: number | null): { tone: FeedbackTone; text: string } => {
     if (value === null) return { tone: 'slate', text: 'Aguardando preenchimento' }
 
     if (key === 'sato2' || key === 'sato2Re') {
@@ -3342,7 +3631,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return { tone: 'slate', text: 'Sem classificação' }
   }
 
-  const getFeedbackToneClass = (tone: 'slate' | 'emerald' | 'amber' | 'red') => {
+  const getFeedbackToneClass = (tone: FeedbackTone) => {
     if (tone === 'red') return 'border-red-300 bg-red-50 text-red-700'
     if (tone === 'amber') return 'border-amber-300 bg-amber-50 text-amber-700'
     if (tone === 'emerald') return 'border-emerald-300 bg-emerald-50 text-emerald-700'
@@ -3969,6 +4258,59 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isAnaphylaxisCriteriaStep])
 
   useEffect(() => {
+    if (!isBellCriteriaStep) {
+      setBellCriteriaChecks(defaultBellCriteriaChecks())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      const selected = Array.isArray(parsed?.criteriosSelecionados) ? parsed.criteriosSelecionados : []
+      setBellCriteriaChecks({
+        ...defaultBellCriteriaChecks(),
+        ...Object.fromEntries(
+          BELL_DIAGNOSTIC_CRITERIA.map((item) => [item.key, selected.includes(item.key)])
+        )
+      } as Record<BellCriteriaKey, boolean>)
+    } catch {
+      setBellCriteriaChecks(defaultBellCriteriaChecks())
+    }
+  }, [answers, currentStep, isBellCriteriaStep])
+
+  useEffect(() => {
+    if (!isBellRedFlagsStep) {
+      setBellRedFlagChecks(defaultBellRedFlagChecks())
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      const selected = Array.isArray(parsed?.redFlagsSelecionadas) ? parsed.redFlagsSelecionadas : []
+      setBellRedFlagChecks({
+        ...defaultBellRedFlagChecks(),
+        ...Object.fromEntries(
+          BELL_RED_FLAGS.map((item) => [item.key, selected.includes(item.key)])
+        )
+      } as Record<BellRedFlagKey, boolean>)
+    } catch {
+      setBellRedFlagChecks(defaultBellRedFlagChecks())
+    }
+  }, [answers, currentStep, isBellRedFlagsStep])
+
+  useEffect(() => {
+    setBellDocumentCopied(false)
+  }, [currentStep, isBellDynamicDocumentStep])
+
+  useEffect(() => {
+    if (!isBellTreatmentStep) {
+      setBellTreatmentPrescriptionOpen(false)
+      setBellTreatmentPrescriptionGenerated(false)
+    }
+  }, [isBellTreatmentStep])
+
+  useEffect(() => {
     if (!isAnaphylaxisAdjunctStep) {
       setSelectedAnaphylaxisAdjuncts([])
       setAnaphylaxisAdjunctPrescriptionPreview(null)
@@ -4453,7 +4795,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                             Selecione o lado suspeito
                           </p>
                           <p className="mt-1 text-sm text-slate-600">
-                            A foto escolhida abre a epidemiologia antes da próxima etapa.
+                            A foto escolhida abre um resumo epidemiológico antes da próxima etapa.
                           </p>
                         </div>
                       </div>
@@ -4494,6 +4836,281 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           </motion.button>
                         ))}
                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isBellCriteriaStep && (
+                <div className="mb-8 rounded-2xl border border-amber-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <h4 className="text-base font-extrabold text-amber-950">Critérios obrigatórios do diagnóstico</h4>
+                    <p className="mt-1 text-sm text-amber-900">
+                      Marque todos os critérios presentes. Só siga como Paralisia de Bell se todos estiverem confirmados.
+                    </p>
+                  </div>
+                  <div className="grid gap-3">
+                    {BELL_DIAGNOSTIC_CRITERIA.map((item) => {
+                      const checked = bellCriteriaChecks[item.key]
+                      return (
+                        <label
+                          key={item.key}
+                          className={clsx(
+                            'flex cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors',
+                            checked ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-amber-300'
+                          )}
+                        >
+                          <input
+                            type="checkbox"
+                            className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            checked={checked}
+                            onChange={(event) => {
+                              setBellCriteriaChecks((prev) => ({ ...prev, [item.key]: event.target.checked }))
+                            }}
+                          />
+                          <span className="flex-1">
+                            <span className="block text-sm font-extrabold text-slate-950">{item.label}</span>
+                            <span className="mt-1 block text-sm leading-relaxed text-slate-600">{item.detail}</span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <span className={clsx('text-sm font-semibold', allBellCriteriaChecked ? 'text-emerald-700' : 'text-amber-700')}>
+                      {allBellCriteriaChecked
+                        ? 'Todos os critérios foram marcados. Pode seguir para red flags.'
+                        : 'Ainda faltam critérios obrigatórios para confirmar suspeita de Bell.'}
+                    </span>
+                    <div className="flex flex-col-reverse gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        onClick={() => handleAnswer('bell_criterios_nao_preenchidos', 'criterios_nao_preenchidos')}
+                        className="rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-bold text-red-700 transition-colors hover:bg-red-50"
+                      >
+                        Critérios incompletos
+                      </button>
+                      <button
+                        type="button"
+                        disabled={!allBellCriteriaChecked}
+                        onClick={() => handleAnswer('bell_red_flags_ramsay', 'criterios_preenchidos')}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
+                          allBellCriteriaChecked
+                            ? 'bg-cyan-600 text-white hover:bg-cyan-700'
+                            : 'cursor-not-allowed bg-slate-200 text-slate-500'
+                        )}
+                      >
+                        Seguir
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setBellCranioOpen(true)}
+                      className="inline-flex items-center gap-2 rounded-full border border-blue-300 bg-white px-3 py-2 text-sm font-bold text-blue-700 shadow-sm transition-colors hover:bg-blue-50"
+                      title="Ver imagem do VII par craniano"
+                    >
+                      <Info className="h-4 w-4" />
+                      VII par craniano
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {isBellRedFlagsStep && (
+                <div className="mb-8 overflow-hidden rounded-2xl border border-orange-200 bg-[#f6d2ab] shadow-sm">
+                  <div className="p-5 text-center sm:p-6">
+                    <h4 className="mx-auto max-w-5xl text-xl font-extrabold leading-snug text-slate-950 sm:text-2xl">
+                      O diagnóstico da paralisia de Bell é clínico e de exclusão, baseado na avaliação detalhada da história e exame físico do paciente, buscando afastar paralisia facial central (PFC) e causas secundárias de paralisia facial periférica (PFP).
+                    </h4>
+                  </div>
+
+                  <div className="grid gap-5 px-4 pb-5 sm:px-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,0.48fr)]">
+                    <section className="space-y-4">
+                      <div>
+                        <h5 className="text-base font-extrabold text-slate-950">
+                          Critérios de Exclusão (Red Flags)
+                        </h5>
+                        <p className="mt-4 text-sm font-bold leading-relaxed text-slate-950">
+                          A presença de qualquer um dos itens abaixo afasta o diagnóstico de Paralisia de Bell até investigação adicional:
+                        </p>
+                      </div>
+
+                      <div className="grid gap-2">
+                        {BELL_RED_FLAGS.map((item) => {
+                          const checked = bellRedFlagChecks[item.key]
+                          return (
+                            <label
+                              key={item.key}
+                              className={clsx(
+                                'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2 transition-colors',
+                                checked
+                                  ? 'border-red-400 bg-red-50 shadow-sm'
+                                  : 'border-orange-300 bg-white/45 hover:border-red-300 hover:bg-red-50/70'
+                              )}
+                            >
+                              <input
+                                type="checkbox"
+                                className="mt-1 h-4 w-4 rounded border-slate-400 text-red-600 focus:ring-red-500"
+                                checked={checked}
+                                onChange={(event) => {
+                                  setBellRedFlagChecks((prev) => ({ ...prev, [item.key]: event.target.checked }))
+                                }}
+                              />
+                              <span className="flex-1">
+                                <span className="flex items-center gap-2 text-sm font-extrabold text-slate-950">
+                                  {item.label}
+                                  {item.key === 'ramsay_hunt' && (
+                                    <button
+                                      type="button"
+                                      onClick={(event) => {
+                                        event.preventDefault()
+                                        event.stopPropagation()
+                                        setBellRamsayInfoOpen(true)
+                                      }}
+                                      className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-700 bg-white text-slate-900 transition-colors hover:bg-slate-100"
+                                      title="O que é Síndrome de Ramsay Hunt?"
+                                    >
+                                      <Info className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </span>
+                                <span className="mt-1 block text-sm leading-relaxed text-slate-600">{item.detail}</span>
+                              </span>
+                            </label>
+                          )
+                        })}
+                      </div>
+
+                      <div className="grid gap-3 pt-2 sm:grid-cols-2">
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer('bell_sem_exames', 'sem_red_flags')}
+                          disabled={hasBellRedFlagChecked}
+                          className={clsx(
+                            'rounded-full border-2 px-4 py-3 text-sm font-semibold transition-colors',
+                            hasBellRedFlagChecked
+                              ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400'
+                              : 'border-blue-500 bg-emerald-100 text-emerald-800 hover:bg-emerald-200'
+                          )}
+                        >
+                          Critérios de exclusão ausentes, seguir fluxo.
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer('bell_red_flags_investigar', 'red_flags')}
+                          disabled={!hasBellRedFlagChecked}
+                          className={clsx(
+                            'rounded-full border-2 px-4 py-3 text-sm font-semibold transition-colors',
+                            hasBellRedFlagChecked
+                              ? 'border-blue-500 bg-red-100 text-red-800 hover:bg-red-200'
+                              : 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400'
+                          )}
+                        >
+                          Critérios de exclusão presentes, interromper fluxo.
+                        </button>
+                      </div>
+                    </section>
+
+                    <section className="flex items-center justify-center">
+                      <img
+                        src="/paralisia%20de%20bell/red%20flag.png"
+                        alt="Sinais de alerta em Paralisia de Bell"
+                        className="w-full max-w-sm rounded-xl object-contain"
+                      />
+                    </section>
+                  </div>
+                </div>
+              )}
+
+              {bellRamsayInfoOpen && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 bg-gradient-to-r from-blue-800 to-cyan-700 px-5 py-4 text-white">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-100">
+                          Diferencial obrigatório
+                        </p>
+                        <h4 className="mt-1 text-xl font-extrabold">
+                          Síndrome de Ramsay Hunt vs Paralisia de Bell
+                        </h4>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setBellRamsayInfoOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 transition-colors hover:bg-white/25"
+                        title="Fechar"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 overflow-y-auto p-5">
+                      <div className="grid gap-5 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.75fr)]">
+                        <div className="space-y-4 text-sm leading-relaxed text-slate-800">
+                          <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                            <h5 className="text-base font-extrabold text-slate-950">Visão geral</h5>
+                            <p className="mt-2">
+                              Este documento apresenta uma descrição objetiva da síndrome de Ramsay Hunt e esclarece, de forma concisa, como ela difere da Paralisia de Bell. O foco é identificar causas, sinais clínicos, prognóstico e abordagem terapêutica.
+                            </p>
+                          </section>
+
+                          <section className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                            <h5 className="text-base font-extrabold text-blue-950">Descrição</h5>
+                            <p className="mt-2">
+                              A síndrome de Ramsay Hunt é uma condição neurológica causada pela reativação do vírus varicela-zóster, o mesmo que causa catapora e herpes-zóster, afetando principalmente o nervo facial (VII) e, muitas vezes, o nervo vestibulococlear (VIII). O resultado típico é paralisia facial periférica, dor intensa no ouvido e erupções com bolhas na região da orelha.
+                            </p>
+                          </section>
+
+                          <section className="rounded-xl border border-slate-200 bg-white p-4">
+                            <h5 className="text-base font-extrabold text-slate-950">Diferenças objetivas</h5>
+                            <div className="mt-3 grid gap-3">
+                              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                                <p className="font-extrabold text-red-950">Ramsay Hunt</p>
+                                <p className="mt-1">
+                                  Paralisia facial periférica acompanhada de dor otológica intensa, erupções vesiculares na orelha, conduto auditivo ou aurícula e, frequentemente, sintomas cocleovestibulares como zumbido, vertigem e hipoacusia.
+                                </p>
+                              </div>
+                              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                                <p className="font-extrabold text-emerald-950">Paralisia de Bell</p>
+                                <p className="mt-1">
+                                  Paralisia facial periférica isolada; pode haver dor retroauricular leve, mas sem vesículas e sem comprometimento auditivo ou vestibular típico.
+                                </p>
+                              </div>
+                            </div>
+                          </section>
+                        </div>
+
+                        <div className="space-y-4">
+                          <figure className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                            <img
+                              src="/paralisia%20de%20bell/sinfrome%20de%20hamsay%20hunt%20x%20paralisia%20de%20bell.png"
+                              alt="Comparação entre Síndrome de Ramsay Hunt e Paralisia de Bell"
+                              className="w-full object-contain"
+                            />
+                          </figure>
+                          <figure className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                            <img
+                              src="/paralisia%20de%20bell/red%20flag.png"
+                              alt="Sinais de alerta em Paralisia de Bell"
+                              className="w-full object-contain"
+                            />
+                          </figure>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setBellRamsayInfoOpen(false)}
+                        className="rounded-xl bg-blue-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-800"
+                      >
+                        Entendi
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -4573,7 +5190,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       disabled={!selectedBellHouseGrade}
                       onClick={() => {
                         if (!selectedBellHouseGrade) return
-                        handleAnswer('bell_tratamento_clinico', selectedBellHouseGrade)
+                        handleAnswer('bell_transicao_tratamento_precoce', selectedBellHouseGrade)
                       }}
                       className={clsx(
                         'inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold transition-colors',
@@ -4582,14 +5199,102 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           : 'cursor-not-allowed bg-slate-100 text-slate-400'
                       )}
                     >
-                      Seguir para Tratamento Clínico
+                      Seguir
                       <ChevronRight className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellHouseStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {isBellTreatmentStep && (
+                <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="max-w-3xl">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                        Prescrição nesta etapa
+                      </p>
+                      <h4 className="mt-1 text-lg font-extrabold text-slate-950">
+                        Gere a prescrição antes de seguir
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-emerald-950">
+                        Registra corticoide, antiviral quando indicado e cuidados oculares no receituário do paciente,
+                        além de liberar o texto para copiar aqui mesmo.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGenerateBellTreatmentPrescription}
+                      className={clsx(
+                        'inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors',
+                        hasBellTreatmentPrescription
+                          ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                      )}
+                    >
+                      <Pill className="h-4 w-4" />
+                      {hasBellTreatmentPrescription ? 'Prescrição gerada' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+
+                  {bellTreatmentPrescriptionOpen && (
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
+                      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h5 className="text-sm font-extrabold text-slate-950">Prescrição e cuidados - Paralisia de Bell</h5>
+                          <p className="mt-1 text-xs font-semibold text-emerald-700">
+                            Registrada no receituário do paciente.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={copyBellDocumentText}
+                          className={clsx(
+                            'inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors',
+                            bellDocumentCopied ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                          )}
+                        >
+                          {bellDocumentCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                          {bellDocumentCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto whitespace-pre-line rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-900">
+                        {bellPrescriptionText}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isBellDynamicDocumentStep && (
+                <div className="mb-6 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
+                        {isBellPrescriptionStep ? 'Prescrição' : 'Encaminhamento'}
+                      </p>
+                      <h4 className="mt-1 text-lg font-extrabold text-slate-950">
+                        {isBellPrescriptionStep ? 'Prescrição e cuidados - Paralisia de Bell' : currentStepData.title}
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={copyBellDocumentText}
+                      className={clsx(
+                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
+                        bellDocumentCopied ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                      )}
+                    >
+                      {bellDocumentCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                      {bellDocumentCopied ? 'Copiado' : 'Copiar'}
+                    </button>
+                  </div>
+                  <div className="whitespace-pre-line rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-900">
+                    {currentBellDocumentText}
+                  </div>
+                </div>
+              )}
+
+              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">
@@ -6425,12 +7130,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     })}
                   </div>
                   <div className={clsx(
-                    'mt-4 rounded-xl border p-3 text-sm',
+                    'mt-4 rounded-xl border p-3 text-sm leading-relaxed',
                     pneumoniaPseudomonasRisk.length > 0 ? 'border-red-200 bg-white text-red-900' : 'border-slate-200 bg-white text-slate-700'
                   )}>
-                    {pneumoniaPseudomonasRisk.length > 0
-                      ? 'Esquema sugerido: piperacilina-tazobactam 4,5 g EV 6/6h por 7 a 10 dias, associado a azitromicina, claritromicina ou levofloxacino.'
-                      : 'Esquema sugerido: ceftriaxona 1 a 2 g EV 24/24h por 7 a 10 dias, associada a azitromicina ou claritromicina.'}
+                    {pneumoniaPseudomonasRisk.length > 0 ? (
+                      <div className="space-y-2">
+                        <p><strong>Esquema sugerido:</strong> piperacilina-tazobactam + macrolídeo ou levofloxacino, conforme perfil clínico e protocolo local.</p>
+                        <p><strong>Piperacilina-tazobactam na pneumonia grave:</strong> ClCr &gt;40 mL/min: 4,5 g EV 6/6h; ClCr 20-40 mL/min: 3,375 g EV 6/6h; ClCr &lt;20 mL/min: 2,25 g EV 6/6h; hemodiálise: 2,25 g EV 8/8h + 0,75 g pós-HD.</p>
+                        <p><strong>Associação:</strong> azitromicina 500 mg 1x/dia por 5 dias, claritromicina 500 mg 12/12h ou levofloxacino conforme avaliação médica.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p><strong>Esquema sugerido sem risco de Pseudomonas:</strong> ceftriaxona associada a azitromicina ou claritromicina.</p>
+                        <p><strong>Ceftriaxona:</strong> casos leves: 1 g EV/IM 1x/dia. Casos moderados em diante: 1 g 12/12h ou 2 g 1x/dia; a literatura não evidencia superioridade clara de um esquema sobre o outro.</p>
+                        <p><strong>Macrolídeo:</strong> azitromicina 500 mg 1x/dia por 5 dias ou claritromicina 500 mg 12/12h. Azitromicina não requer ajuste de função renal. Claritromicina requer ajuste: se ClCr &lt;30 mL/min, usar 50% da dose, ou seja, 250 mg 12/12h.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -7392,12 +8107,51 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       </p>
                     </div>
 
-                    <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-amber-100 bg-white p-2">
-                      <img
-                        src="/paralisia%20de%20bell/Epidemiologia%20Paralisia%20de%20Bell.jpg"
-                        alt="Epidemiologia da Paralisia de Bell"
-                        className="mx-auto w-full max-w-2xl rounded-lg object-contain"
-                      />
+                    <div className="mt-3 min-h-0 flex-1 overflow-y-auto rounded-xl border border-amber-100 bg-white p-4 sm:p-5">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {[
+                          {
+                            label: 'Incidência',
+                            value: '15 a 40 casos por 100.000 habitantes/ano.'
+                          },
+                          {
+                            label: 'Risco global',
+                            value: '1 em cada 60 pessoas desenvolverá na vida.'
+                          },
+                          {
+                            label: 'Prevalência',
+                            value: 'Causa de 60% a 75% das paralisias faciais periféricas.'
+                          },
+                          {
+                            label: 'Idade',
+                            value: 'Pico bimodal: 20-30 anos e 60-70 anos; rara em crianças.'
+                          },
+                          {
+                            label: 'Gênero',
+                            value: 'Distribuição idêntica entre homens e mulheres.'
+                          },
+                          {
+                            label: 'Gestantes',
+                            value: 'Risco 3x maior no 3º trimestre e na 1ª semana pós-parto.'
+                          },
+                          {
+                            label: 'Comorbidades',
+                            value: 'Maior frequência em diabéticos e hipertensos.'
+                          }
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                          >
+                            <p className="text-xs font-extrabold uppercase tracking-wide text-cyan-700">
+                              {item.label}
+                            </p>
+                            <p className="mt-2 text-sm font-semibold leading-relaxed text-slate-900 sm:text-base">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     <div className="mt-4 flex shrink-0 flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -8955,8 +9709,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       ? asthmaStepOptions
                       : isTVPClinicalEvaluation && tvpAlertInterruptionOption
                         ? [tvpAlertInterruptionOption]
+                        : isBellTreatmentStep
+                          ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
                         : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellHouseStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellRedFlagsStep || isBellHouseStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
