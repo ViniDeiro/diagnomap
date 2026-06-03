@@ -991,6 +991,19 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     if (flowId === 'paralisia_bell') {
       const criteriaData = safeParse(answers.bell_criterios_obrigatorios) as { criteriosSelecionados?: string[]; todosCriteriosPresentes?: boolean } | null
       const redFlagsData = safeParse(answers.bell_red_flags_ramsay) as { redFlagsSelecionadas?: string[]; possuiRedFlag?: boolean } | null
+      const bellMandatoryCriteriaLabels: Record<string, string> = {
+        periferica_unilateral: 'Fraqueza ou paralisia facial periférica unilateral, envolvendo fronte, fechamento ocular e comissura labial',
+        inicio_agudo: 'Início agudo, com progressão até o pico em 72 horas ou menos',
+        sem_causa_identificavel: 'Ausência de causa identificável após avaliação clínica inicial',
+        sem_outros_deficits: 'Ausência de outros déficits neurológicos além do VII par craniano'
+      }
+      const selectedMandatoryCriteria = Array.isArray(criteriaData?.criteriosSelecionados)
+        ? criteriaData.criteriosSelecionados
+        : []
+      const mandatoryCriteriaItems = Object.entries(bellMandatoryCriteriaLabels).map(([key, label]) => {
+        const wasSelected = selectedMandatoryCriteria.includes(key)
+        return `${wasSelected ? 'Presente' : 'Não registrado'}: ${label}.`
+      })
       const sideAnswer = answers.bell_inicio
       const sideLabel = sideAnswer === 'lado_direito'
         ? 'à direita'
@@ -1021,7 +1034,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         ? 'A presença de sinais de alerta impede conduzir o caso como Paralisia de Bell típica isolada até investigação complementar adequada.'
         : 'Não houve achados clínicos sugestivos de paralisia facial central que indicassem necessidade imediata de investigação complementar com exames de imagem ou outros métodos diagnósticos.'
       const diagnosticCriteriaText = criteriaData?.todosCriteriosPresentes
-        ? 'Observou-se comprometimento dos músculos da fronte, fechamento ocular incompleto e desvio da comissura labial, sem identificação de causas etiológicas após a avaliação clínica inicial. Não foram evidenciados outros déficits neurológicos além daqueles atribuídos ao acometimento do VII par craniano.'
+        ? `Critérios diagnósticos obrigatórios registrados como presentes: ${Object.values(bellMandatoryCriteriaLabels).join('; ')}.`
         : 'Os critérios obrigatórios para Paralisia de Bell não foram completamente registrados no fluxo, devendo ser reavaliados antes de confirmar a hipótese diagnóstica.'
       const bellEvolutionText = [
         `Paciente ${patient.name || 'não identificado'}, admitido na unidade com quadro sugestivo de neuropatia periférica do nervo facial, de instalação aguda, apresentando paralisia facial periférica unilateral ${sideLabel}. ${diagnosticCriteriaText}`,
@@ -1044,6 +1057,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Evolução em Prontuário',
             text: bellEvolutionText
+          },
+          {
+            title: 'Critérios Diagnósticos Obrigatórios',
+            items: mandatoryCriteriaItems
           }
         ]
       }

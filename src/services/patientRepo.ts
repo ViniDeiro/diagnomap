@@ -104,6 +104,19 @@ export async function updatePatientWithFlowLink(id: string, patch: Partial<Patie
       upd.assigned_doctor_id = current.id;
     }
   }
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id)
+  if (isUuid) {
+    const { data: byId, error: byIdError } = await supabase
+      .from('patients')
+      .update(upd)
+      .eq('id', id)
+      .select()
+      .single()
+    if (!byIdError) return byId
+    if ((byIdError as { code?: string })?.code !== 'PGRST116') throw byIdError
+  }
+
   const { data, error } = await supabase
     .from('patients')
     .update(upd)
@@ -148,15 +161,16 @@ export async function getPatientById(id: string) {
 }
 
 export async function deletePatient(id: string) {
-  // Tenta deletar pelo ID interno (UUID do banco)
-  const { error } = await supabase.from('patients').delete().eq('id', id);
-  
-  // Se não encontrou ou falhou (talvez seja um external_id), tenta deletar pelo external_id
-  if (error || !error) {
-     const { error: extError } = await supabase.from('patients').delete().eq('external_id', id);
-     // Se ambos falharem, lançar erro, mas se um funcionar, ok.
-     if (error && extError) throw error;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+  let firstError: unknown = null;
+
+  if (isUuid) {
+    const { error } = await supabase.from('patients').delete().eq('id', id);
+    firstError = error;
   }
+
+  const { error: extError } = await supabase.from('patients').delete().eq('external_id', id);
+  if (firstError && extError) throw firstError;
 }
 
 // Optional helper to map local form data into DB payload structure

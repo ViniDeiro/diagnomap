@@ -1,5 +1,7 @@
 import { Patient, PatientFormData, Prescription, DashboardStats } from '@/types/patient'
 import { insertPatientWithFlowLink, updatePatientWithFlowLink, deletePatient as deletePatientDB, fromUIPatient } from './patientRepo'
+import { getFlowchartById } from '@/data/emergencyFlowcharts'
+import type { EmergencyType } from '@/types/emergency'
 
 class PatientService {
   private storageKey = 'siga_o_fluxo_patients'
@@ -170,12 +172,15 @@ class PatientService {
       }
       patients[patientIndex].updatedAt = new Date()
 
+      const selectedFlowchart = getFlowchartById(patients[patientIndex].selectedFlowchart as EmergencyType)
+      const isFinalStep = currentStep === 'end' || selectedFlowchart?.finalSteps.includes(currentStep)
+
       // Se fluxograma foi finalizado, dar alta ao paciente
-      if (currentStep === 'end') {
+      if (isFinalStep) {
         patients[patientIndex].status = 'discharged'
         patients[patientIndex].treatment.dischargeDate = new Date()
         patients[patientIndex].treatment.dischargeCriteria = [
-          'Fluxograma de classificação de risco concluído',
+          `${selectedFlowchart?.name || 'Fluxograma'} concluído`,
           'Conduta médica definida conforme protocolo',
           'Orientações de retorno fornecidas'
         ]

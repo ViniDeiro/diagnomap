@@ -191,26 +191,31 @@ export default function Home() {
     setAppState('flowchart')
   }
 
+  const getFreshPatient = (patient: Patient) => {
+    const localPatient = patientService.getPatientById(patient.id)
+    if (!localPatient) return patient
+    return new Date(localPatient.updatedAt).getTime() > new Date(patient.updatedAt).getTime()
+      ? localPatient
+      : patient
+  }
+
   const handleViewPrescriptions = (patient: Patient) => {
     // Guardar o estado atual antes de mudar e garantir dados frescos do paciente
     setPreviousState(appState)
-    const fresh = patientService.getPatientById(patient.id) || patient
-    setCurrentPatient(fresh)
+    setCurrentPatient(getFreshPatient(patient))
     setAppState('prescriptions')
   }
 
   const handleViewReport = (patient: Patient) => {
     // Guardar o estado atual antes de mudar e garantir dados frescos do paciente
     setPreviousState(appState)
-    const fresh = patientService.getPatientById(patient.id) || patient
-    setCurrentPatient(fresh)
+    setCurrentPatient(getFreshPatient(patient))
     setAppState('report')
   }
 
   const handleViewMedicalPrescription = (patient: Patient) => {
     setPreviousState(appState) // Guardar o estado atual antes de mudar
-    const fresh = patientService.getPatientById(patient.id) || patient
-    setCurrentPatient(fresh)
+    setCurrentPatient(getFreshPatient(patient))
     setAppState('medical-prescription')
   }
 
