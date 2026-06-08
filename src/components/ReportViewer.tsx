@@ -168,6 +168,11 @@ interface ReportViewerProps {
 const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
+  const activeFlowState = ((patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState?.answers &&
+    Object.keys((patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState?.answers || {}).length > Object.keys(patient.flowchartState?.answers || {}).length)
+    ? (patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState
+    : patient.flowchartState
+  const activeGroup = activeFlowState?.group || patient.flowchartState?.group
 
   // Faixas de referência da Hemoglobina por idade/sexo
   const getHbRange = () => {
@@ -368,9 +373,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
     const flowId = patient.selectedFlowchart || 'dengue'
     const flowchart = getFlowchartById(flowId)
-    const answers = patient.flowchartState?.answers || {}
-    const currentStep = patient.flowchartState?.currentStep || ''
-    const history = patient.flowchartState?.history || []
+    const emergencyState = (patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState
+    const flowchartState = patient.flowchartState
+    const selectedState = emergencyState && Object.keys(emergencyState.answers || {}).length > Object.keys(flowchartState?.answers || {}).length
+      ? emergencyState
+      : flowchartState
+    const answers = selectedState?.answers || {}
+    const currentStep = selectedState?.currentStep || ''
+    const history = selectedState?.history || []
+    const currentGroup = selectedState?.group || patient.flowchartState?.group
     const symptoms = uniqueItems(patient.admission.symptoms)
     const vitalItems = buildVitalsList()
     const labItems = buildLabItems()
@@ -738,7 +749,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const recommendedExamTextsD = uniqueItems(recommendedExamsD.map(item => DENGUE_RECOMMENDED_EXAMS_LABELS[item] || item))
       const otherExamTextsD = uniqueItems(otherExamsD.map(item => DENGUE_OTHER_EXAMS_LABELS[item] || item))
 
-      const hasLabDrivenGroupC = patient.flowchartState.group === 'C'
+      const hasLabDrivenGroupC = currentGroup === 'C'
         && history.includes('evaluate_labs_b')
         && alarmSigns.length === 0
         && gravitySigns.length === 0
@@ -748,7 +759,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         : 'Febre aguda com suspeita clínica de dengue.'
 
       const groupNarrative = (() => {
-        switch (patient.flowchartState.group) {
+        switch (currentGroup) {
           case 'A':
             return 'Classificado como Grupo A, compatível com dengue sem sinais de alarme, sem comorbidades ou condições especiais descompensadoras no fluxo atual.'
           case 'B':
@@ -780,22 +791,22 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const examNarrativeParts = uniqueItems([
         ...labItems,
-        patient.flowchartState.group === 'B' && suggestedExamTexts.length > 0
+        currentGroup === 'B' && suggestedExamTexts.length > 0
           ? `Exames complementares sugeridos/assinalados para o Grupo B: ${suggestedExamTexts.join('; ')}.`
           : null,
-        patient.flowchartState.group === 'C' && recommendedExamTextsC.length > 0
+        currentGroup === 'C' && recommendedExamTextsC.length > 0
           ? `Exames recomendados assinalados para o Grupo C: ${recommendedExamTextsC.join('; ')}.`
           : null,
-        patient.flowchartState.group === 'C' && otherExamTextsC.length > 0
+        currentGroup === 'C' && otherExamTextsC.length > 0
           ? `Outros exames registrados para o Grupo C: ${otherExamTextsC.join('; ')}.`
           : null,
-        patient.flowchartState.group === 'D' && recommendedExamTextsD.length > 0
+        currentGroup === 'D' && recommendedExamTextsD.length > 0
           ? `Exames recomendados assinalados para o Grupo D: ${recommendedExamTextsD.join('; ')}.`
           : null,
-        patient.flowchartState.group === 'D' && otherExamTextsD.length > 0
+        currentGroup === 'D' && otherExamTextsD.length > 0
           ? `Outros exames registrados para o Grupo D: ${otherExamTextsD.join('; ')}.`
           : null,
-        ['C', 'D'].includes(patient.flowchartState.group || '')
+        ['C', 'D'].includes(currentGroup || '')
           ? 'Exame confirmatório específico para dengue permanece obrigatório, sem atrasar a conduta clínica imediata.'
           : null
       ])
@@ -803,31 +814,31 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const conductNarrative = uniqueItems([
         groupNarrative,
         prescriptions.length > 0 ? `Foram registradas as seguintes prescrições no sistema: ${prescriptions.join('; ')}.` : null,
-        patient.flowchartState.group === 'A'
+        currentGroup === 'A'
           ? 'Orientado tratamento ambulatorial com hidratação oral, antitérmico conforme prescrição e vigilância de sinais de alarme.'
           : null,
-        patient.flowchartState.group === 'B'
+        currentGroup === 'B'
           ? 'Mantida observação clínica até resultado dos exames, com hidratação oral e reavaliação seriada.'
           : null,
-        patient.flowchartState.group === 'C'
+        currentGroup === 'C'
           ? 'Indicada internação para hidratação, monitorização clínica/laboratorial e seguimento conforme protocolo.'
           : null,
-        patient.flowchartState.group === 'D'
+        currentGroup === 'D'
           ? 'Indicado manejo intensivo, suporte hemodinâmico e monitorização em ambiente crítico.'
           : null
       ])
 
       const planNarrative = uniqueItems([
-        patient.flowchartState.group === 'A'
+        currentGroup === 'A'
           ? 'Orientado retorno imediato se surgirem sinais de alarme ou piora clínica, retorno no dia da melhora da febre pela possibilidade de fase crítica e retorno no 5º dia da doença se não houver defervescência.'
           : null,
-        patient.flowchartState.group === 'B'
+        currentGroup === 'B'
           ? 'Programado retorno diário para reavaliação clínica e laboratorial, mantendo seguimento até 48 horas após a remissão da febre.'
           : null,
-        patient.flowchartState.group === 'C'
+        currentGroup === 'C'
           ? 'Manter internação, hidratação e reavaliações seriadas até estabilização clínica e laboratorial, com alta apenas após critérios protocolados.'
           : null,
-        patient.flowchartState.group === 'D'
+        currentGroup === 'D'
           ? 'Manter acompanhamento intensivo, reavaliações frequentes e posterior seguimento ambulatorial após estabilização.'
           : null,
         'Entregue ou orientada a entrega do cartão de acompanhamento da dengue.'
@@ -1118,7 +1129,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
     }
 
-    const groupInfo = getGroupInfo(patient.flowchartState.group)
+    const groupInfo = getGroupInfo(currentGroup)
     return {
       title: `PRONTUÁRIO MÉDICO – ${(flowchart?.name || flowId).toUpperCase()}`,
       sections: [
@@ -1274,19 +1285,19 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             </div>
 
             {/* Classificação em Destaque */}
-            {patient.flowchartState.group && (
+            {activeGroup && (
               <div className="mb-8">
-                <div className={`${getGroupInfo(patient.flowchartState.group)?.bg} p-6 rounded-xl border-2 ${getGroupInfo(patient.flowchartState.group)?.color.replace('text-', 'border-')}`}>
+                <div className={`${getGroupInfo(activeGroup)?.bg} p-6 rounded-xl border-2 ${getGroupInfo(activeGroup)?.color.replace('text-', 'border-')}`}>
                   <div className="flex items-center space-x-4">
-                    <div className={`w-16 h-16 ${getGroupInfo(patient.flowchartState.group)?.color.replace('text-', 'bg-')} rounded-2xl flex items-center justify-center`}>
-                      <span className="text-white text-2xl font-bold">{patient.flowchartState.group}</span>
+                    <div className={`w-16 h-16 ${getGroupInfo(activeGroup)?.color.replace('text-', 'bg-')} rounded-2xl flex items-center justify-center`}>
+                      <span className="text-white text-2xl font-bold">{activeGroup}</span>
                     </div>
                     <div>
-                      <h3 className={`text-xl font-bold ${getGroupInfo(patient.flowchartState.group)?.color} mb-1`}>
-                        {getGroupInfo(patient.flowchartState.group)?.name}
+                      <h3 className={`text-xl font-bold ${getGroupInfo(activeGroup)?.color} mb-1`}>
+                        {getGroupInfo(activeGroup)?.name}
                       </h3>
-                      <p className={`text-sm ${getGroupInfo(patient.flowchartState.group)?.color.replace('600', '700')}`}>
-                        {getGroupInfo(patient.flowchartState.group)?.description}
+                      <p className={`text-sm ${getGroupInfo(activeGroup)?.color.replace('600', '700')}`}>
+                        {getGroupInfo(activeGroup)?.description}
                       </p>
                     </div>
                   </div>

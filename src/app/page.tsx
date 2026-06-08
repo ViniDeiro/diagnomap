@@ -16,6 +16,7 @@ import { Patient, PatientFormData } from '@/types/patient'
 
 import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
+import { updatePatientWithFlowLink } from '@/services/patientRepo'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { isSupabaseConfigured, supabase } from '@/services/supabaseClient'
 import Header from '@/components/Header'
@@ -262,8 +263,43 @@ export default function Home() {
     setRefreshTrigger(prev => prev + 1)
   }
 
-  const handleFlowchartUpdate = (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, group?: 'A' | 'B' | 'C' | 'D') => {
+  const handleFlowchartUpdate = async (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, group?: 'A' | 'B' | 'C' | 'D') => {
     patientService.updateFlowchartState(patientId, currentStep, history, answers, progress, group)
+    const lastUpdate = new Date()
+    setCurrentPatient((prev) => {
+      if (!prev || prev.id !== patientId) return prev
+      return {
+        ...prev,
+        flowchartState: {
+          currentStep,
+          history,
+          answers,
+          progress,
+          group: group ?? prev.flowchartState?.group,
+          lastUpdate
+        },
+        updatedAt: lastUpdate
+      }
+    })
+
+    try {
+      const updatedPatient = patientService.getPatientById(patientId)
+      if (updatedPatient) {
+        setCurrentPatient(updatedPatient)
+      }
+      await updatePatientWithFlowLink(patientId, {
+        flowchart_state: {
+          currentStep,
+          history,
+          answers,
+          progress,
+          group: group ?? currentPatient?.flowchartState?.group ?? null,
+          lastUpdate: lastUpdate.toISOString()
+        }
+      })
+    } catch (error) {
+      console.warn('Falha ao persistir estado do fluxograma no Supabase:', error)
+    }
     setRefreshTrigger(prev => prev + 1)
   }
 

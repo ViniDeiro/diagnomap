@@ -1829,6 +1829,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers.bell_inicio])
   const bellSelectedHouseLabel = useMemo(() => {
     const raw = answers.bell_house_brackmann || selectedBellHouseGrade
+    try {
+      const parsed = raw ? JSON.parse(raw) : null
+      if (parsed?.houseBrackmannLabel) return parsed.houseBrackmannLabel
+      if (parsed?.houseBrackmann) return bellHouseGradeLabels[parsed.houseBrackmann] || 'não informado'
+    } catch {}
     return bellHouseGradeLabels[raw] || 'não informado'
   }, [answers.bell_house_brackmann, selectedBellHouseGrade])
   const bellAdmissionDateLabel = useMemo(() => {
