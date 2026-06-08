@@ -58,7 +58,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     const allAvailableFlowcharts = allFlowcharts
     const implementedFlowchartsCount = allAvailableFlowcharts.filter(flowchart => flowchart.implemented).length
     const totalFlowchartsCount = allAvailableFlowcharts.length
-    const finishedFlowchartIds = ['tvp', 'anafilaxia']
+    const finishedFlowchartIds = ['tvp', 'anafilaxia', 'paralisia_bell']
     const finishedFlowchartsCount = finishedFlowchartIds.length
 
     const clinicalProtocols: Array<{ id: string; name: string; category: string; implemented: boolean }> = [
