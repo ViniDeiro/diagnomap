@@ -990,24 +990,58 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
     if (flowId === 'paralisia_bell') {
       const criteriaData = safeParse(answers.bell_criterios_obrigatorios) as { criteriosSelecionados?: string[]; todosCriteriosPresentes?: boolean } | null
+      const supportData = safeParse(answers.bell_suporte_diagnostico) as { criteriosSuporteSelecionados?: string[] } | null
       const redFlagsData = safeParse(answers.bell_red_flags_ramsay) as { redFlagsSelecionadas?: string[]; possuiRedFlag?: boolean } | null
+      const houseData = safeParse(answers.bell_house_brackmann) as { houseBrackmann?: string; houseBrackmannLabel?: string } | null
       const bellMandatoryCriteriaLabels: Record<string, string> = {
         periferica_unilateral: 'Fraqueza ou paralisia facial periférica unilateral, envolvendo fronte, fechamento ocular e comissura labial',
         inicio_agudo: 'Início agudo, com progressão até o pico em 72 horas ou menos',
         sem_causa_identificavel: 'Ausência de causa identificável após avaliação clínica inicial',
         sem_outros_deficits: 'Ausência de outros déficits neurológicos além do VII par craniano'
       }
-      const selectedMandatoryCriteria = Array.isArray(criteriaData?.criteriosSelecionados)
-        ? criteriaData.criteriosSelecionados
-        : []
+      const bellSupportCriteriaLabels: Record<string, string> = {
+        otalgia_leve: 'Otalgia leve ou dor retroauricular/mastoidea',
+        hiperacusia: 'Hiperacusia',
+        disgeusia_ageusia: 'Disgeusia ou ageusia nos 2/3 anteriores da língua',
+        xeroftalmia: 'Xeroftalmia/redução do lacrimejamento',
+        xerostomia: 'Xerostomia/redução da salivação',
+        infeccao_viral: 'História recente de infecção viral inespecífica'
+      }
+      const bellRedFlagLabels: Record<string, string> = {
+        testa_poupada: 'Ausência de acometimento da musculatura da testa',
+        bilateral: 'Paralisia bilateral',
+        progressao_maior_7_dias: 'Progressão dos sintomas por mais de 7 dias',
+        recorrencia_frequente: 'Recorrência frequente',
+        otalgia_intensa: 'Otalgia intensa',
+        vertigem_hipoacusia_disfagia: 'Vertigem, hipoacusia ou disfagia',
+        ramsay_hunt: 'Vesículas auriculares ou orais / suspeita de síndrome de Ramsay Hunt',
+        trauma_cirurgia: 'História de trauma craniano ou cirurgia otológica',
+        massa_parotida: 'Massa parotídea ou suspeita de neoplasia',
+        sinais_sistemicos: 'Sinais sistêmicos',
+        multiplos_nervos: 'Envolvimento de múltiplos nervos cranianos',
+        achados_neurologicos: 'Achados neurológicos adicionais'
+      }
+      let selectedMandatoryCriteria: string[] = []
+      if (Array.isArray(criteriaData?.criteriosSelecionados)) {
+        selectedMandatoryCriteria = criteriaData.criteriosSelecionados
+      } else if (answers.bell_criterios_obrigatorios === 'criterios_preenchidos') {
+        selectedMandatoryCriteria = Object.keys(bellMandatoryCriteriaLabels)
+      }
       const mandatoryCriteriaItems = Object.entries(bellMandatoryCriteriaLabels).map(([key, label]) => {
         const wasSelected = selectedMandatoryCriteria.includes(key)
         return `${wasSelected ? 'Presente' : 'Não registrado'}: ${label}.`
       })
-      const sideAnswer = answers.bell_inicio
-      const sideLabel = sideAnswer === 'lado_direito'
+      const supportCriteriaItems = uniqueItems(
+        (supportData?.criteriosSuporteSelecionados || []).map((item) => bellSupportCriteriaLabels[item] || item)
+      )
+      const redFlagItems = uniqueItems(
+        (redFlagsData?.redFlagsSelecionadas || []).map((item) => bellRedFlagLabels[item] || item)
+      )
+      const parsedSideData = safeParse(answers.bell_inicio) as { decision?: string } | null
+      const sideDecision = parsedSideData?.decision || answers.bell_inicio
+      const sideLabel = sideDecision === 'lado_direito'
         ? 'à direita'
-        : sideAnswer === 'lado_esquerdo'
+        : sideDecision === 'lado_esquerdo'
           ? 'à esquerda'
           : 'lado não especificado'
       const houseLabelMap: Record<string, string> = {
@@ -1018,7 +1052,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         house_v: 'Grau V',
         house_vi: 'Grau VI'
       }
-      const houseLabel = houseLabelMap[answers.bell_house_brackmann] || 'não informado'
+      const houseValue = houseData?.houseBrackmann || answers.bell_house_brackmann
+      const houseLabel = houseData?.houseBrackmannLabel || houseLabelMap[houseValue] || 'não informado'
       const additionalFindings = uniqueItems([
         ...symptoms,
         ...observations,
@@ -1028,17 +1063,22 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         ? additionalFindings.join(', ')
         : 'assimetria facial, lagoftalmo e desvio da comissura labial'
       const redFlagsText = redFlagsData?.possuiRedFlag
-        ? 'Foram registrados sinais de alerta no fluxo, sendo indicada investigação complementar e avaliação especializada conforme suspeita clínica.'
+        ? `Foram registrados sinais de alerta no fluxo${redFlagItems.length > 0 ? `: ${redFlagItems.join('; ')}` : ''}, sendo indicada investigação complementar e avaliação especializada conforme suspeita clínica.`
         : 'Diante das características apresentadas, da ausência de sinais de alerta e da evolução típica, o quadro foi considerado compatível com Paralisia de Bell.'
       const centralInvestigationText = redFlagsData?.possuiRedFlag
         ? 'A presença de sinais de alerta impede conduzir o caso como Paralisia de Bell típica isolada até investigação complementar adequada.'
         : 'Não houve achados clínicos sugestivos de paralisia facial central que indicassem necessidade imediata de investigação complementar com exames de imagem ou outros métodos diagnósticos.'
       const diagnosticCriteriaText = criteriaData?.todosCriteriosPresentes
         ? `Critérios diagnósticos obrigatórios registrados como presentes: ${Object.values(bellMandatoryCriteriaLabels).join('; ')}.`
+        : selectedMandatoryCriteria.length === Object.keys(bellMandatoryCriteriaLabels).length
+          ? `Critérios diagnósticos obrigatórios registrados como presentes: ${Object.values(bellMandatoryCriteriaLabels).join('; ')}.`
         : 'Os critérios obrigatórios para Paralisia de Bell não foram completamente registrados no fluxo, devendo ser reavaliados antes de confirmar a hipótese diagnóstica.'
+      const supportCriteriaText = supportCriteriaItems.length > 0
+        ? `Critérios de suporte registrados: ${supportCriteriaItems.join('; ')}.`
+        : 'Não foram registrados critérios de suporte adicionais no fluxo.'
       const bellEvolutionText = [
         `Paciente ${patient.name || 'não identificado'}, admitido na unidade com quadro sugestivo de neuropatia periférica do nervo facial, de instalação aguda, apresentando paralisia facial periférica unilateral ${sideLabel}. ${diagnosticCriteriaText}`,
-        `Durante o exame físico, foram registrados sinais e sintomas adicionais compatíveis com o diagnóstico, incluindo ${additionalFindingsText}, os quais reforçaram a hipótese de paralisia facial periférica idiopática. ${centralInvestigationText}`,
+        `Durante o exame físico, foram registrados sinais e sintomas adicionais compatíveis com o diagnóstico, incluindo ${additionalFindingsText}, os quais reforçaram a hipótese de paralisia facial periférica idiopática. ${supportCriteriaText} ${centralInvestigationText}`,
         `${redFlagsText} Em seguida, procedeu-se à avaliação do grau de disfunção motora facial por meio da escala de House-Brackmann, classificando o paciente como ${houseLabel}.`,
         'O paciente foi devidamente informado sobre a natureza da patologia, seu curso clínico esperado, possibilidades terapêuticas e prognóstico. Foi instituído tratamento medicamentoso com corticosteroides e antivirais, conforme diretrizes usuais, além de orientações específicas para cuidados oculares locais, visando proteção da superfície ocular durante o período de fechamento palpebral incompleto. Foram realizados também os encaminhamentos pertinentes para acompanhamento e suporte terapêutico adequado.'
       ].join('\n\n')
@@ -1061,6 +1101,18 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Critérios Diagnósticos Obrigatórios',
             items: mandatoryCriteriaItems
+          },
+          {
+            title: 'Critérios de Suporte',
+            items: supportCriteriaItems.length > 0 ? supportCriteriaItems : ['Sem critérios de suporte adicionais registrados.']
+          },
+          {
+            title: 'Red Flags / Critérios de Exclusão',
+            items: redFlagItems.length > 0 ? redFlagItems : ['Red flags ausentes no fluxo.']
+          },
+          {
+            title: 'Classificação House-Brackmann',
+            text: houseLabel
           }
         ]
       }

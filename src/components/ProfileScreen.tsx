@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/services/supabaseClient'
-import { updateDoctorProfile } from '@/services/doctorRepo'
+import { getCurrentDoctor, updateDoctorProfile } from '@/services/doctorRepo'
 import {
   Activity,
   ArrowLeft,
@@ -164,11 +164,7 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
       setUnit(term.unit || '')
       setCompany(term.company || '')
 
-      const { data } = await supabase
-        .from('doctors')
-        .select('*')
-        .eq('auth_user_id', user.id)
-        .single()
+      const data = await getCurrentDoctor()
 
       if (data) {
         const doctor = data as DoctorRow
@@ -232,39 +228,59 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
   }, [onSignOut])
 
   const handleSave = async () => {
-    if (!profile) return
     setFeedback('')
     setSaving(true)
     try {
-      const updated = await updateDoctorProfile(profile.id, {
-        name,
-        crm,
-        specialty,
-        phone,
-        cpf,
-        unit,
-        company,
-        municipality_id: municipalityId
-      })
+      const { data: userRes } = await supabase.auth.getUser()
+      const user = userRes.user
+      if (!user) {
+        setFeedback('Sessão expirada. Faça login novamente.')
+        return
+      }
+
+      const currentProfile = profile || await getCurrentDoctor()
+      if (!currentProfile?.id) {
+        setFeedback('Perfil médico não encontrado no banco para este usuário.')
+        return
+      }
+
+      const payload = {
+        name: name.trim() || user.email || 'Médico(a)',
+        crm: crm.trim() || null,
+        specialty: specialty.trim() || null,
+        phone: phone.trim() || null,
+        cpf: cpf.trim() || null,
+        unit: unit.trim() || null,
+        company: company.trim() || null,
+        municipality_id: municipalityId,
+        avatar_url: avatarUrl || null
+      }
+
+      const updated = await updateDoctorProfile(currentProfile.id, payload)
       setProfile(updated as DoctorRow)
 
-      const { data: userRes } = await supabase.auth.getUser()
       const currentMetadata = userRes.user?.user_metadata || {}
       const currentTerm = (currentMetadata.medical_responsibility_term || {}) as MedicalTermMetadata
-      await supabase.auth.updateUser({
+      const { error: metadataError } = await supabase.auth.updateUser({
         data: {
           ...currentMetadata,
+          name: payload.name,
+          full_name: payload.name,
+          avatar_url: avatarUrl || currentMetadata.avatar_url || null,
           medical_responsibility_term: {
             ...currentTerm,
-            name,
-            crmUf: crm,
-            cpf: cpf || null,
-            unit: unit || null,
-            company: company || null,
+            name: payload.name,
+            crmUf: payload.crm,
+            cpf: payload.cpf,
+            unit: payload.unit,
+            company: payload.company,
             email: userEmail || currentTerm.email || null
           }
         }
       })
+      if (metadataError) {
+        console.warn('Perfil salvo em doctors, mas não foi possível atualizar metadata do usuário:', metadataError)
+      }
 
       const selectedMunicipality = municipalities.find((item) => item.id === municipalityId)
       if (selectedMunicipality) {
@@ -298,11 +314,16 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
     const saveAvatarUrl = async (url: string) => {
       const currentMetadata = user.user_metadata || {}
       setAvatarUrl(url)
-      if (profile?.id) {
-        const updated = await updateDoctorProfile(profile.id, { avatar_url: url })
-        setProfile(updated as DoctorRow)
+      const currentProfile = profile || (await getCurrentDoctor()) as DoctorRow | null
+      if (!currentProfile?.id) {
+        throw new Error('Perfil médico não encontrado no banco para este usuário.')
       }
-      await supabase.auth.updateUser({ data: { ...currentMetadata, avatar_url: url } })
+      const updated = await updateDoctorProfile(currentProfile.id, { avatar_url: url })
+      setProfile(updated as DoctorRow)
+      const { error: metadataError } = await supabase.auth.updateUser({ data: { ...currentMetadata, avatar_url: url } })
+      if (metadataError) {
+        console.warn('Avatar salvo no perfil, mas não foi possível atualizar metadata do usuário:', metadataError)
+      }
       setFeedback('Foto atualizada com sucesso.')
       setTimeout(() => setFeedback(''), 2500)
     }
@@ -324,20 +345,7 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
         }
       }
 
-      const reader = new FileReader()
-      reader.onload = async () => {
-        const dataUrl = String(reader.result || '')
-        if (dataUrl) {
-          await saveAvatarUrl(dataUrl)
-        }
-        setAvatarSaving(false)
-      }
-      reader.onerror = () => {
-        setFeedback('Não foi possível carregar a foto.')
-        setAvatarSaving(false)
-      }
-      reader.readAsDataURL(file)
-      return
+      throw upErr || new Error('Upload concluído, mas o Supabase não retornou URL pública.')
     } catch (error) {
       console.error('Erro ao atualizar foto:', error)
       setFeedback('Não foi possível atualizar a foto.')

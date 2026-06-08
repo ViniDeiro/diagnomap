@@ -1300,6 +1300,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_criterios_obrigatorios'
     const isBellSupportStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_suporte_diagnostico'
     const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_red_flags_ramsay'
+    const isBellHouseStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_house_brackmann'
     const psiResult = calculatePneumoniaPsi(pneumoniaPsiValues, patient)
     const curbResult = calculatePneumoniaCurb65(pneumoniaCurbValues)
     const pancreatitisBisapResult = calculatePancreatitisBisap(pancreatitisBisapValues)
@@ -1312,7 +1313,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const legSelectionAnswer = JSON.stringify({
       decision: value || nextStep,
       selectedLeg: selectedTVPLeg,
-      selectedLegLabel: selectedTVPLeg === 'left' ? 'Perna Esquerda' : selectedTVPLeg === 'right' ? 'Perna Direita' : ''
+      selectedLegLabel: selectedTVPLeg === 'left' ? 'Perna Esquerda' : selectedTVPLeg === 'right' ? 'Perna Direita' : selectedTVPLeg === 'other' ? 'Outras localizações' : ''
     })
     const clinicalEvaluationAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -1438,6 +1439,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       redFlagsSelecionadas: BELL_RED_FLAGS.filter((item) => bellRedFlagChecks[item.key]).map((item) => item.key),
       possuiRedFlag: BELL_RED_FLAGS.some((item) => bellRedFlagChecks[item.key])
     })
+    const bellHouseAnswer = JSON.stringify({
+      decision: value || nextStep,
+      houseBrackmann: selectedBellHouseGrade,
+      houseBrackmannLabel: bellHouseGradeLabels[selectedBellHouseGrade] || ''
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -1484,7 +1490,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                                 ? bellSupportAnswer
                                                 : isBellRedFlagsStep
                                                   ? bellRedFlagsAnswer
-                                                  : value || nextStep
+                                                  : isBellHouseStep
+                                                    ? bellHouseAnswer
+                                                    : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -4026,7 +4034,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       return
     }
     const savedLeg = parseTVPSelectedLeg(answers[currentStep])
-    setSelectedTVPLeg(savedLeg === 'left' || savedLeg === 'right' ? savedLeg : '')
+    setSelectedTVPLeg(savedLeg)
   }, [isTVPLegSelection, answers, currentStep])
 
   useEffect(() => {
@@ -4372,6 +4380,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setBellSupportChecks(defaultBellSupportChecks())
     }
   }, [answers, currentStep, isBellSupportStep])
+
+  useEffect(() => {
+    if (!isBellHouseStep) {
+      setSelectedBellHouseGrade('')
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      setSelectedBellHouseGrade(typeof parsed?.houseBrackmann === 'string' ? parsed.houseBrackmann : saved)
+    } catch {
+      setSelectedBellHouseGrade(saved)
+    }
+  }, [answers, currentStep, isBellHouseStep])
 
   useEffect(() => {
     setBellDocumentCopied(false)

@@ -81,7 +81,17 @@ export async function getCurrentDoctor() {
   const email = user.email || null;
   if (email) {
     try {
-      return await findDoctorByEmail(email);
+      const doctor = await findDoctorByEmail(email);
+      if (doctor && !doctor.auth_user_id) {
+        const { data: linked } = await supabase
+          .from('doctors')
+          .update({ auth_user_id: user.id })
+          .eq('id', doctor.id)
+          .select()
+          .single();
+        return linked || doctor;
+      }
+      return doctor;
     } catch {}
   }
   return null;
