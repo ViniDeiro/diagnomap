@@ -54,7 +54,7 @@ export async function findDoctorByEmail(email: string) {
     .from('doctors')
     .select('*')
     .eq('email', email)
-    .single();
+    .maybeSingle();
   if (error) throw error;
   return data;
 }
@@ -76,8 +76,9 @@ export async function getCurrentDoctor() {
     .from('doctors')
     .select('*')
     .eq('auth_user_id', user.id)
-    .single();
+    .maybeSingle();
   if (!error && data) return data;
+
   const email = user.email || null;
   if (email) {
     try {
@@ -91,10 +92,49 @@ export async function getCurrentDoctor() {
           .single();
         return linked || doctor;
       }
-      return doctor;
+      if (doctor) return doctor;
     } catch {}
   }
-  return null;
+
+  const metadata = (user.user_metadata || {}) as Record<string, unknown>;
+  const term = (metadata.medical_responsibility_term || {}) as Record<string, unknown>;
+  const fallbackName =
+    typeof metadata.name === 'string' && metadata.name.trim()
+      ? metadata.name.trim()
+      : typeof metadata.full_name === 'string' && metadata.full_name.trim()
+        ? metadata.full_name.trim()
+        : typeof term.name === 'string' && term.name.trim()
+          ? term.name.trim()
+          : email || 'Médico(a)';
+
+  try {
+    return await createDoctorProfile({
+      auth_user_id: user.id,
+      name: fallbackName,
+      email,
+      crm: typeof term.crmUf === 'string' ? term.crmUf : null,
+      cpf: typeof term.cpf === 'string' ? term.cpf : null,
+      unit: typeof term.unit === 'string' ? term.unit : null,
+      company: typeof term.company === 'string' ? term.company : null,
+      avatar_url: typeof metadata.avatar_url === 'string' ? metadata.avatar_url : null,
+      status: 'active',
+    });
+  } catch (createError) {
+    if (!email) throw createError;
+    const doctor = await findDoctorByEmail(email);
+    if (doctor && !doctor.auth_user_id) {
+      const { data: linked, error: linkError } = await supabase
+        .from('doctors')
+        .update({ auth_user_id: user.id })
+        .eq('id', doctor.id)
+        .select()
+        .single();
+      if (linkError) throw linkError;
+      return linked;
+    }
+    if (doctor) return doctor;
+    throw createError;
+  }
 }
 
 export async function searchDoctors(query: string, opts?: { municipality_id?: number; status?: string; limit?: number }) {
@@ -168,6 +208,7 @@ export async function signOutDoctor() {
 export async function updateDoctorProfile(id: string, patch: Partial<DoctorProfile>) {
   const updatePayload: Record<string, unknown> = {}
   if ('name' in patch) updatePayload.name = patch.name
+  if ('email' in patch) updatePayload.email = patch.email ?? null
   if ('crm' in patch) updatePayload.crm = patch.crm ?? null
   if ('specialty' in patch) updatePayload.specialty = patch.specialty ?? null
   if ('phone' in patch) updatePayload.phone = patch.phone ?? null

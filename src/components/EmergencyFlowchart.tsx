@@ -1007,7 +1007,7 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
         src="/tvp-other-sites.png"
         alt="Trombose em outras localidades além de membros inferiores"
         className={clsx(
-          'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
+          'aspect-[4/3] w-full rounded-xl border border-slate-200 bg-white object-contain transition-all',
           selected ? 'brightness-105 saturate-110' : 'opacity-95 group-hover:opacity-100'
         )}
         loading="lazy"
@@ -1024,7 +1024,7 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
       }
       alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
       className={clsx(
-        'w-full h-auto rounded-xl border border-slate-200 object-cover transition-all',
+        'aspect-[4/3] w-full rounded-xl border border-slate-200 bg-white object-contain transition-all',
         selected ? 'brightness-105 saturate-110' : 'opacity-95 group-hover:opacity-100'
       )}
       loading="lazy"
@@ -1168,6 +1168,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellRedFlagChecks, setBellRedFlagChecks] = useState<Record<BellRedFlagKey, boolean>>(() => defaultBellRedFlagChecks())
   const [bellRamsayInfoOpen, setBellRamsayInfoOpen] = useState(false)
   const [selectedBellHouseGrade, setSelectedBellHouseGrade] = useState('')
+  const [bellTreatmentTimingOpen, setBellTreatmentTimingOpen] = useState(false)
   const [bellDocumentCopied, setBellDocumentCopied] = useState(false)
   const [bellTreatmentPrescriptionOpen, setBellTreatmentPrescriptionOpen] = useState(false)
   const [bellTreatmentPrescriptionGenerated, setBellTreatmentPrescriptionGenerated] = useState(false)
@@ -1793,6 +1794,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setBellRedFlagChecks(defaultBellRedFlagChecks())
     setBellRamsayInfoOpen(false)
     setSelectedBellHouseGrade('')
+    setBellTreatmentTimingOpen(false)
     setBellDocumentCopied(false)
     setBellTreatmentPrescriptionOpen(false)
     setBellTreatmentPrescriptionGenerated(false)
@@ -4389,6 +4391,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   useEffect(() => {
     if (!isBellHouseStep) {
       setSelectedBellHouseGrade('')
+      setBellTreatmentTimingOpen(false)
       return
     }
     const saved = answers[currentStep]
@@ -4629,7 +4632,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (isTVPClinicalEvaluation) {
       setSectionOpen({
         tvp_clinical_0: true,
-        tvp_clinical_1: false,
+        tvp_clinical_1: true,
         tvp_clinical_2: false,
         tvp_clinical_other: true
       })
@@ -4867,15 +4870,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           Paralisia facial periférica aguda
                         </h3>
                         <p className="mt-4 text-base leading-relaxed text-blue-50 sm:text-lg">
-                          Defina o lado acometido e siga para os critérios obrigatórios da Paralisia de Bell.
+                          A paralisia de Bell é uma neuropatia periférica aguda do nervo facial (VII par craniano). Caracteriza‑se por instalação súbita de fraqueza ou paralisia unilateral dos músculos da expressão facial, sem causa identificável na avaliação inicial.
+Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial periférica idiopática. O quadro resulta de uma disfunção súbita do nervo facial ao longo de seu trajeto intratemporal, geralmente associada a um processo inflamatório de provável origem viral, restrito ao próprio nervo.
                         </p>
                       </div>
 
                       <div className="mt-8 space-y-4">
                         <div className="rounded-xl border border-white/20 bg-white/10 p-4">
                           <p className="text-sm font-semibold leading-relaxed text-blue-50">
-                            Bell costuma envolver todo o hemiface: fronte, fechamento ocular e comissura labial.
-                            Preservação da fronte acende alerta para causa central.
+                            A Paralisia de Bell costuma envolver toda a hemiface: fronte, fechamento ocular e comissura labial.
+                            A Preservação da fronte acende alerta para causas centrais.
                           </p>
                         </div>
                         <button
@@ -4897,7 +4901,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                             Selecione o lado suspeito
                           </p>
                           <p className="mt-1 text-sm text-slate-600">
-                            A foto escolhida abre um resumo epidemiológico antes da próxima etapa.
+                            Defina o lado acometido e siga para os critérios diagnosticos obrigatórios da Paralisia de Bell.
                           </p>
                         </div>
                       </div>
@@ -5353,7 +5357,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       disabled={!selectedBellHouseGrade}
                       onClick={() => {
                         if (!selectedBellHouseGrade) return
-                        handleAnswer('bell_transicao_tratamento_precoce', selectedBellHouseGrade)
+                        setBellTreatmentTimingOpen(true)
                       }}
                       className={clsx(
                         'inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold transition-colors',
@@ -5369,62 +5373,49 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 </div>
               )}
 
-              {isBellTreatmentStep && (
-                <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                        Prescrição nesta etapa
-                      </p>
-                      <h4 className="mt-1 text-lg font-extrabold text-slate-950">
-                        Gere a prescrição antes de seguir
-                      </h4>
-                      <p className="mt-2 text-sm leading-relaxed text-emerald-950">
-                        Registra corticoide, antiviral quando indicado e cuidados oculares no receituário do paciente,
-                        além de liberar o texto para copiar aqui mesmo.
-                      </p>
-                    </div>
+              {isBellHouseStep && bellTreatmentTimingOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                  <div
+                    className="absolute inset-0 bg-slate-900/45"
+                    onClick={() => setBellTreatmentTimingOpen(false)}
+                  />
+                  <div className="relative w-full max-w-2xl rounded-2xl border border-amber-200 bg-amber-50 p-6 shadow-2xl">
                     <button
                       type="button"
-                      onClick={handleGenerateBellTreatmentPrescription}
-                      className={clsx(
-                        'inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors',
-                        hasBellTreatmentPrescription
-                          ? 'bg-emerald-700 text-white hover:bg-emerald-800'
-                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
-                      )}
+                      onClick={() => setBellTreatmentTimingOpen(false)}
+                      className="absolute right-3 top-3 rounded-full p-1 text-slate-500 transition-colors hover:bg-amber-100"
+                      aria-label="Fechar orientação antes do tratamento"
                     >
-                      <Pill className="h-4 w-4" />
-                      {hasBellTreatmentPrescription ? 'Prescrição gerada' : 'Gerar prescrição'}
+                      <X className="h-4 w-4" />
                     </button>
-                  </div>
-
-                  {bellTreatmentPrescriptionOpen && (
-                    <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
-                      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <h5 className="text-sm font-extrabold text-slate-950">Prescrição e cuidados - Paralisia de Bell</h5>
-                          <p className="mt-1 text-xs font-semibold text-emerald-700">
-                            Registrada no receituário do paciente.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={copyBellDocumentText}
-                          className={clsx(
-                            'inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors',
-                            bellDocumentCopied ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
-                          )}
-                        >
-                          {bellDocumentCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-                          {bellDocumentCopied ? 'Copiado' : 'Copiar'}
-                        </button>
-                      </div>
-                      <div className="max-h-72 overflow-y-auto whitespace-pre-line rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-900">
-                        {bellPrescriptionText}
-                      </div>
+                    <h4 className="mb-3 text-base font-extrabold text-slate-900 sm:text-lg">
+                      Antes do tratamento
+                    </h4>
+                    <p className="text-sm font-semibold leading-relaxed text-slate-800 sm:text-base">
+                      O tratamento da Paralisia de Bell deve ser iniciado o mais precocemente possível,
+                      idealmente nas primeiras <strong>72 horas</strong> do início dos sintomas, para melhorar o prognóstico.
+                    </p>
+                    <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setBellTreatmentTimingOpen(false)}
+                        className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        Voltar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedBellHouseGrade) return
+                          setBellTreatmentTimingOpen(false)
+                          handleAnswer('bell_tratamento_clinico', selectedBellHouseGrade)
+                        }}
+                        className="rounded-xl bg-cyan-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-cyan-700"
+                      >
+                        Seguir para tratamento clínico
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
@@ -5509,6 +5500,65 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           </span>
                           Ouvir e entender a sibilância
                         </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isBellTreatmentStep && (
+                <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="max-w-3xl">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
+                        Prescrição nesta etapa
+                      </p>
+                      <h4 className="mt-1 text-lg font-extrabold text-slate-950">
+                        Gere a prescrição antes de encaminhar
+                      </h4>
+                      <p className="mt-2 text-sm leading-relaxed text-emerald-950">
+                        Registra corticoide, antiviral quando indicado e cuidados oculares no receituário do paciente,
+                        além de liberar o texto para copiar aqui mesmo.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGenerateBellTreatmentPrescription}
+                      className={clsx(
+                        'inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors',
+                        hasBellTreatmentPrescription
+                          ? 'bg-emerald-700 text-white hover:bg-emerald-800'
+                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                      )}
+                    >
+                      <Pill className="h-4 w-4" />
+                      {hasBellTreatmentPrescription ? 'Prescrição gerada' : 'Gerar prescrição'}
+                    </button>
+                  </div>
+
+                  {bellTreatmentPrescriptionOpen && (
+                    <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
+                      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <h5 className="text-sm font-extrabold text-slate-950">Prescrição e cuidados - Paralisia de Bell</h5>
+                          <p className="mt-1 text-xs font-semibold text-emerald-700">
+                            Registrada no receituário do paciente.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={copyBellDocumentText}
+                          className={clsx(
+                            'inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors',
+                            bellDocumentCopied ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                          )}
+                        >
+                          {bellDocumentCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                          {bellDocumentCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                      </div>
+                      <div className="max-h-72 overflow-y-auto whitespace-pre-line rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-900">
+                        {bellPrescriptionText}
                       </div>
                     </div>
                   )}
@@ -7361,9 +7411,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           className="w-full flex items-center justify-between text-left"
                         >
                           <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wide">{section.title}</h4>
-                          <ChevronRight className={clsx('w-4 h-4 text-blue-700 transition-transform', isSectionOpen(`tvp_clinical_${index}`, index === 0) ? 'rotate-90' : '')} />
+                          <ChevronRight className={clsx('w-4 h-4 text-blue-700 transition-transform', isSectionOpen(`tvp_clinical_${index}`, index <= 1) ? 'rotate-90' : '')} />
                         </button>
-                        {isSectionOpen(`tvp_clinical_${index}`, index === 0) && (
+                        {isSectionOpen(`tvp_clinical_${index}`, index <= 1) && (
                         <div className="space-y-1.5 mt-3">
                           {section.items.map((item) => {
                             const checked = selectedClinicalFindings.includes(item)
@@ -7460,146 +7510,187 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
               )}
 
               {isTVPLegSelection && (
-                <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50/50 p-5">
-                  <div className="max-w-3xl space-y-5">
-                    <h3 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight">
-                      Trombose Venosa
-                      <br />
-                      Profunda
-                    </h3>
-                    <div className="space-y-4 text-slate-800">
-                      <p className="text-xl sm:text-2xl font-bold leading-tight">
-                        Sinais e sintomas comuns: dor, edema unilateral, alterações da coloração da pele e endurecimento do trajeto venoso.
-                      </p>
-                      <p className="text-xl sm:text-2xl font-bold leading-tight">
-                        A TVP pode ser oligossintomática ou assintomática em parcela significativa dos casos.
-                      </p>
+                <div className="mb-6 overflow-hidden rounded-2xl border border-cyan-100 bg-gradient-to-br from-white via-cyan-50/40 to-emerald-50/30 shadow-sm">
+                  <div className="p-5 sm:p-6 lg:p-7">
+                    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-bold uppercase tracking-wide text-cyan-800">
+                            <Activity className="h-3.5 w-3.5" />
+                            Triagem TVP
+                          </span>
+                          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-800">
+                            Etapa inicial
+                          </span>
+                        </div>
+
+                        <div className="mt-4 max-w-3xl">
+                          <h3 className="text-2xl font-extrabold leading-tight text-slate-950 sm:text-3xl">
+                            Suspeita de trombose venosa profunda
+                          </h3>
+                          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-base">
+                            Localize o território suspeito antes de avançar para sinais clínicos, alertas de gravidade
+                            e estratificação pelo escore de Wells.
+                          </p>
+                        </div>
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                          {[
+                            { label: 'Dor ou edema unilateral', detail: 'padrão mais comum', tone: 'border-cyan-200 bg-cyan-50 text-cyan-900' },
+                            { label: 'Comparação entre lados', detail: 'assimetria orienta', tone: 'border-emerald-200 bg-emerald-50 text-emerald-900' },
+                            { label: 'Sinais de alerta', detail: 'mudam prioridade', tone: 'border-amber-200 bg-amber-50 text-amber-900' }
+                          ].map((item) => (
+                            <div key={item.label} className={clsx('rounded-xl border p-3', item.tone)}>
+                              <p className="text-xs font-extrabold">{item.label}</p>
+                              <p className="mt-1 text-xs opacity-80">{item.detail}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl border border-amber-200 bg-white/90 p-4 text-amber-950 shadow-sm">
+                        <div className="flex items-start gap-3">
+                          <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-amber-100 text-amber-700">
+                            <AlertTriangle className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <p className="text-sm font-extrabold">Atenção à gravidade</p>
+                            <p className="mt-1 text-xs leading-relaxed text-amber-900">
+                              Edema intenso, cianose, dor progressiva, veias superficiais tensas ou sintomas respiratórios
+                              exigem mudança imediata na prioridade.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                      Definir lado da trombose suspeita
-                    </h4>
-                  </div>
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {[
-                      { side: 'right' as TVPLegSide, label: 'Perna Direita' },
-                      { side: 'left' as TVPLegSide, label: 'Perna Esquerda' },
-                      { side: 'other' as TVPLegSide, label: 'Outras localizações' }
-                    ].map((item) => {
-                      if (item.side === 'other') {
-                        return (
-                          <div
-                            key={item.side}
-                            className="relative overflow-hidden rounded-2xl border-2 border-slate-200 bg-slate-50 p-4 text-left"
-                          >
-                            <div className="relative">
-                              <TVPLegIllustration side={item.side} selected={false} />
-                              <div className="mt-3 text-center">
-                                <div className="text-sm font-bold uppercase tracking-wide text-slate-700">
-                                  {item.label}
+
+                    <div className="mt-6">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <h4 className="text-base font-extrabold text-slate-950">
+                            Definir território suspeito
+                          </h4>
+                          <p className="mt-1 text-sm text-slate-600">
+                            Escolha o lado acometido ou marque outra localização para registrar o início da avaliação.
+                          </p>
+                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                          Seleção obrigatória
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+                        {[
+                          { side: 'right' as TVPLegSide, label: 'Perna Direita', helper: 'Dor, edema ou alteração no membro inferior direito.' },
+                          { side: 'left' as TVPLegSide, label: 'Perna Esquerda', helper: 'Dor, edema ou alteração no membro inferior esquerdo.' }
+                        ].map((item) => {
+                          const selected = selectedTVPLeg === item.side
+                          return (
+                            <motion.button
+                              key={item.side}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => setSelectedTVPLeg(item.side)}
+                              className={clsx(
+                                'group min-w-0 overflow-hidden rounded-2xl border bg-white p-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
+                                selected
+                                  ? 'border-cyan-500 shadow-lg shadow-cyan-100'
+                                  : 'border-slate-200 hover:border-cyan-300 hover:shadow-md'
+                              )}
+                              whileHover={{ y: -2 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              <div className="overflow-hidden rounded-xl bg-slate-50">
+                                <TVPLegIllustration side={item.side} selected={selected} />
+                              </div>
+                              <div className="mt-3 flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className={clsx(
+                                    'text-sm font-extrabold',
+                                    selected ? 'text-cyan-800' : 'text-slate-800'
+                                  )}>
+                                    {item.label}
+                                  </p>
+                                  <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                                    {item.helper}
+                                  </p>
                                 </div>
-                                <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                                  Imagem apenas informativa. Este fluxo segue a avaliacao de TVP em membro inferior.
-                                </p>
+                                <span className={clsx(
+                                  'flex h-7 w-7 flex-none items-center justify-center rounded-full border',
+                                  selected ? 'border-cyan-500 bg-cyan-600 text-white' : 'border-slate-200 bg-white text-slate-300 group-hover:text-cyan-500'
+                                )}>
+                                  {selected ? <CheckCircle className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                </span>
                               </div>
-                            </div>
+                            </motion.button>
+                          )
+                        })}
+                        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-3 text-left">
+                          <div className="overflow-hidden rounded-xl bg-slate-50">
+                            <TVPLegIllustration side="other" selected={false} />
                           </div>
-                        )
-                      }
-
-                      const selected = selectedTVPLeg === item.side
-                      return (
-                        <motion.button
-                          key={item.side}
-                          type="button"
-                          aria-pressed={selected}
-                          onClick={() => setSelectedTVPLeg(item.side)}
-                          className={clsx(
-                            'group relative overflow-hidden rounded-2xl border-2 bg-white p-4 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400',
-                            selected
-                              ? 'border-cyan-500 shadow-xl shadow-cyan-200/70'
-                              : 'border-slate-200 hover:border-cyan-300 hover:shadow-lg'
-                          )}
-                          whileHover={{ y: -2 }}
-                          whileTap={{ scale: 0.99 }}
-                        >
-                          <div className={clsx(
-                            'absolute inset-0 transition-opacity',
-                            selected ? 'opacity-100 bg-gradient-to-b from-cyan-100/70 to-transparent' : 'opacity-0 group-hover:opacity-100 bg-gradient-to-b from-slate-100/70 to-transparent'
-                          )} />
-                          <div className="relative">
-                            <TVPLegIllustration side={item.side} selected={selected} />
-                            <div className="mt-3 text-center">
-                              <div className={clsx(
-                                'text-sm font-bold uppercase tracking-wide',
-                                selected ? 'text-cyan-800' : 'text-slate-700'
-                              )}>
-                                {item.label}
-                              </div>
-                            </div>
+                          <div className="mt-3">
+                            <p className="text-sm font-extrabold text-slate-700">Outras localizações</p>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+                              Imagem informativa. Este fluxo segue a avaliação de TVP em membro inferior.
+                            </p>
                           </div>
-                        </motion.button>
-                      )
-                    })}
-                  </div>
-
-                  <div className="mt-6 bg-white/70 backdrop-blur-sm rounded-xl border border-cyan-100 p-4 shadow-sm">
-                    <h5 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
-                      <Info className="w-4 h-4 text-cyan-600" /> Principais Localizações
-                    </h5>
-                    <div className="grid md:grid-cols-2 gap-x-6 gap-y-3 text-xs text-slate-700">
-                      <div>
-                        <strong className="text-cyan-800 block mb-1">Membros Inferiores (Pernas e Coxas):</strong>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li><span className="font-semibold text-slate-900">Panturrilha:</span> Local mais comum de início.</li>
-                          <li><span className="font-semibold text-slate-900">Veia Poplítea (Atrás do joelho):</span> Localização frequente.</li>
-                          <li><span className="font-semibold text-slate-900">Veia Femoral (Coxa):</span> Uma das principais veias acometidas.</li>
-                          <li><span className="font-semibold text-slate-900">Veias Ilíacas (Pelve/Quadril):</span> TVP na região pélvica.</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <strong className="text-cyan-800 block mb-1">Outras Localizações:</strong>
-                        <ul className="list-disc pl-4 space-y-1">
-                          <li><span className="font-semibold text-slate-900">Membros Superiores (Braços):</span> Menos comum.</li>
-                          <li><span className="font-semibold text-slate-900">Veias Cerebrais (Rara):</span> Trombose venosa cerebral.</li>
-                          <li><span className="font-semibold text-slate-900">Região Abdominal (Rara):</span> Veias do intestino, fígado ou rins.</li>
-                        </ul>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <span className={clsx(
-                      'text-sm font-medium',
-                      selectedTVPLeg ? 'text-emerald-700' : 'text-amber-700'
-                    )}>
-                      {selectedTVPLeg
-                        ? `Selecionado: ${
-                            selectedTVPLeg === 'left'
-                              ? 'Perna Esquerda'
-                              : selectedTVPLeg === 'right'
-                                ? 'Perna Direita'
-                                : ''
-                          }`
-                        : 'Selecione uma perna para avancar'}
-                    </span>
-                    <motion.button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedTVPLeg) return
-                        handleAnswer('avaliacao_clinica', selectedTVPLeg)
-                      }}
-                      disabled={!selectedTVPLeg}
-                      className={clsx(
-                        'px-5 py-2.5 rounded-xl font-semibold transition-all',
-                        selectedTVPLeg
-                          ? 'bg-cyan-600 hover:bg-cyan-700 text-white'
-                          : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                      )}
-                      whileHover={selectedTVPLeg ? { scale: 1.01 } : {}}
-                      whileTap={selectedTVPLeg ? { scale: 0.99 } : {}}
-                    >
-                      Confirmar seleção e iniciar avaliação
-                    </motion.button>
+                    <div className="mt-5 rounded-xl border border-slate-200 bg-white/85 p-4">
+                      <h5 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
+                        <Info className="h-4 w-4 text-cyan-600" />
+                        Mapa rápido de localizações
+                      </h5>
+                      <div className="mt-3 grid gap-4 text-xs leading-relaxed text-slate-700 md:grid-cols-2">
+                        <div>
+                          <strong className="mb-1 block text-slate-950">Membros inferiores</strong>
+                          <p>Panturrilha, região poplítea, veia femoral e veias ilíacas são os territórios centrais deste fluxo.</p>
+                        </div>
+                        <div>
+                          <strong className="mb-1 block text-slate-950">Outras localizações</strong>
+                          <p>Membros superiores, veias cerebrais e território abdominal são menos comuns e pedem investigação direcionada.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <span className={clsx(
+                        'text-sm font-semibold',
+                        selectedTVPLeg ? 'text-emerald-700' : 'text-amber-700'
+                      )}>
+                        {selectedTVPLeg
+                          ? `Selecionado: ${
+                              selectedTVPLeg === 'left'
+                                ? 'Perna Esquerda'
+                                : selectedTVPLeg === 'right'
+                                  ? 'Perna Direita'
+                                  : ''
+                            }`
+                          : 'Selecione uma opção para avançar'}
+                      </span>
+                      <motion.button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedTVPLeg) return
+                          handleAnswer('avaliacao_clinica', selectedTVPLeg)
+                        }}
+                        disabled={!selectedTVPLeg}
+                        className={clsx(
+                          'inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-2.5 font-semibold transition-all sm:w-auto',
+                          selectedTVPLeg
+                            ? 'bg-cyan-600 text-white hover:bg-cyan-700'
+                            : 'cursor-not-allowed bg-slate-100 text-slate-400'
+                        )}
+                        whileHover={selectedTVPLeg ? { scale: 1.01 } : {}}
+                        whileTap={selectedTVPLeg ? { scale: 0.99 } : {}}
+                      >
+                        Confirmar e iniciar avaliação
+                        <ChevronRight className="h-4 w-4" />
+                      </motion.button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -6125,7 +6125,7 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
     },
     ana_criterios_wao: {
       id: 'ana_criterios_wao',
-      title: 'Critérios Diagnósticos WAO 2020',
+      title: 'Critérios Diagnósticos da Organização Mundial de Alergia',
       description: 'Definir se há anafilaxia provável e iniciar adrenalina IM.',
       type: 'question',
       critical: true,
@@ -7247,9 +7247,19 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
       type: 'result',
       critical: true,
       content: `
-        <div class="rounded-lg border-l-4 border-red-600 bg-red-50 p-4 text-sm text-red-950">
-          <p><strong>Se não preenche critérios de Paralisia de Bell, não é Bell até prova em contrário.</strong></p>
-          <p class="mt-2">Investigar outras causas infecciosas, estruturais, centrais ou sistêmicas e solicitar exames conforme suspeita clínica.</p>
+        <div class="space-y-4 text-sm text-red-950">
+          <div class="rounded-lg border-l-4 border-red-600 bg-red-50 p-4">
+            <p><strong>Se não preenche critérios de Paralisia de Bell, não é Bell até prova em contrário.</strong></p>
+            <p class="mt-2">Investigar outras causas infecciosas, estruturais, centrais ou sistêmicas e solicitar exames conforme suspeita clínica.</p>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-white p-4 leading-relaxed text-slate-800">
+            <h4 class="font-extrabold text-red-950">Quando não for Bell</h4>
+            <p class="mt-3">Quando a Paralisia de Bell é descartada após investigação adequada, o caso deixa de ser considerado uma paralisia facial idiopática e passa a exigir uma abordagem etiológica ativa. Nesse momento, o médico deve reorganizar o raciocínio clínico, partindo da premissa de que toda paralisia facial periférica não-Bell tem uma causa subjacente que precisa ser identificada. O primeiro passo é confirmar se o padrão realmente corresponde a uma paralisia periférica ou se há elementos que sugerem um componente central, como fronte poupada, paralisia bilateral ou outros déficits neurológicos associados. Essa distinção é fundamental porque define se a investigação deve se concentrar no tronco cerebral ou nas estruturas periféricas do nervo facial.</p>
+            <p class="mt-3">Com o padrão periférico confirmado, o próximo movimento é interpretar cuidadosamente os elementos clínicos que já foram observados. A evolução progressiva por mais de 72 horas, a presença de dor intensa, vesículas, recorrência, bilateralidade, sintomas sistêmicos, acometimento de outros pares cranianos, hipoacusia, zumbido, vertigem ou história de trauma são pistas que afastam definitivamente o diagnóstico de Bell e direcionam para etiologias infecciosas, estruturais, centrais ou sistêmicas. Cada detalhe do exame físico e da anamnese passa a ter peso, pois é ele que orientará a escolha dos exames complementares.</p>
+            <p class="mt-3">A partir daí, a investigação deve ser direcionada. Se houver dor intensa, vesículas ou imunossupressão, o foco recai sobre causas infecciosas como zoster, Lyme, HIV ou otites complicadas. Se o quadro for progressivo, recorrente ou acompanhado de sintomas otológicos, a hipótese estrutural ganha força, exigindo ressonância magnética de orelha interna, parótida e ângulo ponto-cerebelar. Quando há sinais neurológicos associados, a suspeita de lesão central deve ser priorizada, com ressonância magnética de encéfalo com ênfase em tronco cerebral. Já quadros bilaterais, recorrentes ou acompanhados de manifestações sistêmicas sugerem sarcoidose, síndrome de Guillain-Barré, Melkersson–Rosenthal ou outras doenças autoimunes, demandando exames laboratoriais, líquor ou eletroneuromiografia.</p>
+            <p class="mt-3">A condução prática, portanto, envolve reavaliar clinicamente o paciente com foco em sinais de alerta, classificar o padrão da paralisia, identificar o grupo etiológico mais provável e solicitar exames direcionados, evitando painéis indiscriminados. Encaminhamentos para neurologia, otorrinolaringologia, infectologia ou reumatologia podem ser necessários conforme a hipótese predominante. Por fim, é essencial monitorar a evolução, pois algumas causas estruturais ou inflamatórias se revelam de forma progressiva e podem exigir reavaliação periódica.</p>
+            <p class="mt-3">Em síntese, após descartar Paralisia de Bell, o médico deve abandonar a lógica do diagnóstico de exclusão e adotar uma postura investigativa ativa, sistemática e guiada por pistas clínicas. Esse é o ponto em que a conduta deixa de ser expectante e passa a ser verdadeiramente etiológica, garantindo segurança diagnóstica e terapêutica ao paciente.</p>
+          </div>
         </div>
       `,
       options: []
@@ -7307,6 +7317,14 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
             <li>Considerar avaliação otorrinolaringológica se dor otológica intensa, vesículas, otite/mastoidite, hipoacusia ou vertigem.</li>
             <li>Na suspeita de Ramsay Hunt, iniciar abordagem direcionada e encaminhar para seguimento especializado.</li>
           </ul>
+          <div class="rounded-lg border border-red-200 bg-white p-4 leading-relaxed text-slate-800">
+            <h4 class="font-extrabold text-red-950">Quando não for Bell</h4>
+            <p class="mt-3">Quando a Paralisia de Bell é descartada após investigação adequada, o caso deixa de ser considerado uma paralisia facial idiopática e passa a exigir uma abordagem etiológica ativa. Nesse momento, o médico deve reorganizar o raciocínio clínico, partindo da premissa de que toda paralisia facial periférica não-Bell tem uma causa subjacente que precisa ser identificada. O primeiro passo é confirmar se o padrão realmente corresponde a uma paralisia periférica ou se há elementos que sugerem um componente central, como fronte poupada, paralisia bilateral ou outros déficits neurológicos associados. Essa distinção é fundamental porque define se a investigação deve se concentrar no tronco cerebral ou nas estruturas periféricas do nervo facial.</p>
+            <p class="mt-3">Com o padrão periférico confirmado, o próximo movimento é interpretar cuidadosamente os elementos clínicos que já foram observados. A evolução progressiva por mais de 72 horas, a presença de dor intensa, vesículas, recorrência, bilateralidade, sintomas sistêmicos, acometimento de outros pares cranianos, hipoacusia, zumbido, vertigem ou história de trauma são pistas que afastam definitivamente o diagnóstico de Bell e direcionam para etiologias infecciosas, estruturais, centrais ou sistêmicas. Cada detalhe do exame físico e da anamnese passa a ter peso, pois é ele que orientará a escolha dos exames complementares.</p>
+            <p class="mt-3">A partir daí, a investigação deve ser direcionada. Se houver dor intensa, vesículas ou imunossupressão, o foco recai sobre causas infecciosas como zoster, Lyme, HIV ou otites complicadas. Se o quadro for progressivo, recorrente ou acompanhado de sintomas otológicos, a hipótese estrutural ganha força, exigindo ressonância magnética de orelha interna, parótida e ângulo ponto-cerebelar. Quando há sinais neurológicos associados, a suspeita de lesão central deve ser priorizada, com ressonância magnética de encéfalo com ênfase em tronco cerebral. Já quadros bilaterais, recorrentes ou acompanhados de manifestações sistêmicas sugerem sarcoidose, síndrome de Guillain-Barré, Melkersson–Rosenthal ou outras doenças autoimunes, demandando exames laboratoriais, líquor ou eletroneuromiografia.</p>
+            <p class="mt-3">A condução prática, portanto, envolve reavaliar clinicamente o paciente com foco em sinais de alerta, classificar o padrão da paralisia, identificar o grupo etiológico mais provável e solicitar exames direcionados, evitando painéis indiscriminados. Encaminhamentos para neurologia, otorrinolaringologia, infectologia ou reumatologia podem ser necessários conforme a hipótese predominante. Por fim, é essencial monitorar a evolução, pois algumas causas estruturais ou inflamatórias se revelam de forma progressiva e podem exigir reavaliação periódica.</p>
+            <p class="mt-3">Em síntese, após descartar Paralisia de Bell, o médico deve abandonar a lógica do diagnóstico de exclusão e adotar uma postura investigativa ativa, sistemática e guiada por pistas clínicas. Esse é o ponto em que a conduta deixa de ser expectante e passa a ser verdadeiramente etiológica, garantindo segurança diagnóstica e terapêutica ao paciente.</p>
+          </div>
         </div>
       `,
       options: []
@@ -7371,12 +7389,12 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Grau I', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_i' },
-        { text: 'Grau II', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_ii' },
-        { text: 'Grau III', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_iii' },
-        { text: 'Grau IV', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_iv' },
-        { text: 'Grau V', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_v' },
-        { text: 'Grau VI', nextStep: 'bell_transicao_tratamento_precoce', value: 'house_vi' }
+        { text: 'Grau I', nextStep: 'bell_tratamento_clinico', value: 'house_i' },
+        { text: 'Grau II', nextStep: 'bell_tratamento_clinico', value: 'house_ii' },
+        { text: 'Grau III', nextStep: 'bell_tratamento_clinico', value: 'house_iii' },
+        { text: 'Grau IV', nextStep: 'bell_tratamento_clinico', value: 'house_iv' },
+        { text: 'Grau V', nextStep: 'bell_tratamento_clinico', value: 'house_v' },
+        { text: 'Grau VI', nextStep: 'bell_tratamento_clinico', value: 'house_vi' }
       ]
     },
     bell_transicao_tratamento_precoce: {

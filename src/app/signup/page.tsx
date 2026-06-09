@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { UserPlus, Mail, Lock, MapPin, FileText, Building2, Briefcase } from 'lucide-react'
-import { signUpDoctor, signInDoctor, createDoctorProfile } from '@/services/doctorRepo'
+import { signUpDoctor, signInDoctor, getCurrentDoctor, updateDoctorProfile } from '@/services/doctorRepo'
 import { supabase } from '@/services/supabaseClient'
 import MedicalResponsibilityTerm, { MedicalTermDoctorInfo } from '@/components/MedicalResponsibilityTerm'
 
@@ -239,17 +239,37 @@ export default function SignupPage() {
         setLoading(false)
         return
       }
-      const authUserId = signed.user.id
-      await createDoctorProfile({
-        name,
-        crm: crmUf,
-        cpf,
-        unit,
-        company,
-        municipality_id: municipalityId ?? null,
-        status: 'active',
-        email,
-        auth_user_id: authUserId
+      const doctor = await getCurrentDoctor()
+      if (doctor?.id) {
+        await updateDoctorProfile(doctor.id, {
+          name,
+          crm: crmUf,
+          email,
+          cpf,
+          unit,
+          company,
+          municipality_id: municipalityId ?? null,
+          status: 'active'
+        })
+      } else {
+        throw new Error('Não foi possível criar o perfil médico para este usuário.')
+      }
+      const currentMetadata = signed.user.user_metadata || {}
+      await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          name,
+          full_name: name,
+          medical_responsibility_term: {
+            ...((currentMetadata.medical_responsibility_term || {}) as Record<string, unknown>),
+            name,
+            crmUf,
+            cpf,
+            unit,
+            company,
+            email
+          }
+        }
       })
       setPendingTermDoctor({
         name,

@@ -39,6 +39,9 @@ alter table public.doctors
   add column if not exists avatar_url text;
 create index if not exists doctors_municipality_idx on public.doctors (municipality_id);
 create index if not exists doctors_status_idx on public.doctors (status);
+create unique index if not exists doctors_auth_user_id_unique
+  on public.doctors (auth_user_id)
+  where auth_user_id is not null;
 
 -- Trigger updated_at (reusa function set_updated_at se já existir)
 create or replace function public.set_updated_at()
@@ -157,6 +160,16 @@ begin
     create policy doctors_update_own on public.doctors
       for update to authenticated
       using (auth.uid() = auth_user_id)
+      with check (auth.uid() = auth_user_id);
+  end if;
+  if not exists (select 1 from pg_policies where schemaname='public' and tablename='doctors' and policyname='doctors_claim_by_email') then
+    create policy doctors_claim_by_email on public.doctors
+      for update to authenticated
+      using (
+        auth_user_id is null
+        and email is not null
+        and lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+      )
       with check (auth.uid() = auth_user_id);
   end if;
   -- Municípios: leitura pública (anon e authenticated) segura
