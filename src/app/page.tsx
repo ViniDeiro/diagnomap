@@ -37,7 +37,16 @@ export default function Home() {
   useEffect(() => {
     let active = true
     async function ensureAuth() {
+      const shouldOpenDashboardDirectly =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('view') === 'dashboard'
+
       if (!isSupabaseConfigured) {
+        if (shouldOpenDashboardDirectly) {
+          window.history.replaceState(null, '', '/')
+          setAppState('dashboard')
+          return
+        }
         setTimeout(() => {
           if (!active) return
           setIsFading(true)
@@ -60,6 +69,11 @@ export default function Home() {
               router.replace('/login')
             }, 500)
           }, 4000)
+          return
+        }
+        if (shouldOpenDashboardDirectly) {
+          window.history.replaceState(null, '', '/')
+          setAppState('dashboard')
           return
         }
         setTimeout(() => {

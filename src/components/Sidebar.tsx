@@ -16,6 +16,7 @@ import {
   User,
   Calculator
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
 
 interface SidebarProps {
@@ -25,6 +26,34 @@ interface SidebarProps {
   userName?: string
   userEmail?: string
   onProfileClick?: () => void
+}
+
+type SidebarChild = {
+  label: string
+  href: string
+}
+
+type SidebarLinkItem = {
+  icon: LucideIcon
+  label: string
+  href: string
+  submenuId?: never
+  children?: never
+}
+
+type SidebarSubmenuItem = {
+  icon: LucideIcon
+  label: string
+  submenuId: string
+  children: SidebarChild[]
+  href?: never
+}
+
+type SidebarItem = SidebarLinkItem | SidebarSubmenuItem
+
+type SidebarGroup = {
+  title?: string
+  items: SidebarItem[]
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -43,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     setOpenSubmenus(prev => ({ ...prev, [id]: !prev[id] }))
   }
   
-  const menuGroups = [
+  const menuGroups: SidebarGroup[] = [
     {
       items: [
         { icon: Plus, label: 'Novo atendimento', href: '#' },
@@ -69,7 +98,8 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: 'Calculadoras',
           submenuId: 'calculadoras',
           children: [
-            { label: 'Wells TVP', href: '/calculadoras/wells' }
+            { label: 'Wells TVP', href: '/calculadoras/wells' },
+            { label: 'Escala de Glasgow', href: '/calculadoras/glasgow' }
           ]
         }
       ]

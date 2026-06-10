@@ -78,9 +78,9 @@ export default function WellsCalculatorPage() {
       <Header />
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
-          <Link href="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-blue-700 transition-colors">
+          <Link href="/?view=dashboard" className="inline-flex items-center gap-2 text-slate-600 hover:text-blue-700 transition-colors">
             <ArrowLeft className="w-4 h-4" />
-            <span className="font-medium">Voltar para página inicial</span>
+            <span className="font-medium">Voltar ao dashboard</span>
           </Link>
         </div>
 

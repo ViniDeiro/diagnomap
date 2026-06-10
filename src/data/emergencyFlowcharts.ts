@@ -7158,7 +7158,7 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
               </details>
             </div>
             <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-              <p><strong>Diferencial essencial:</strong> a paralisia facial central decorre de lesão supranuclear, acima do núcleo do nervo facial, geralmente com preservação da musculatura frontal. A paralisia de Bell envolve <strong>todo o hemiface</strong>.</p>
+              <p><strong>Diferencial essencial:</strong> a paralisia facial central decorre de lesão supranuclear, acima do núcleo do nervo facial, geralmente com preservação da musculatura frontal. A paralisia de Bell envolve <strong>toda a hemiface</strong>.</p>
             </div>
           </div>
 
@@ -7178,7 +7178,7 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         <div class="rounded-2xl border border-yellow-200 bg-yellow-50 p-5 text-center text-sm leading-relaxed text-yellow-950 shadow-sm">
           <p class="text-lg font-extrabold">Paralisia de Bell vs Paralisia Facial Central</p>
           <p class="mt-3 text-base">A <strong>paralisia de Bell</strong> deve ser diferenciada da <strong>paralisia facial central</strong>. A paralisia facial central decorre de <strong>lesão supranuclear</strong>, acima do núcleo do nervo facial, geralmente com preservação da musculatura frontal.</p>
-          <p class="mt-3 text-base">Já a <strong>paralisia de Bell</strong> resulta de <strong>lesão periférica do nervo facial</strong>, envolvendo <strong>todo o hemiface</strong>, e caracteriza-se por inflamação restrita ao próprio nervo facial, sem acometimento de outras estruturas do sistema nervoso central.</p>
+          <p class="mt-3 text-base">Já a <strong>paralisia de Bell</strong> resulta de <strong>lesão periférica do nervo facial</strong>, envolvendo <strong>toda a hemiface</strong>, e caracteriza-se por inflamação restrita ao próprio nervo facial, sem acometimento de outras estruturas do sistema nervoso central.</p>
         </div>
       `,
       options: [
