@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import jsPDF from 'jspdf'
 import { supabase } from '@/services/supabaseClient'
 import { getCurrentDoctor, updateDoctorProfile } from '@/services/doctorRepo'
+import { TERM_SECTIONS, TERM_VERSION } from '@/components/MedicalResponsibilityTerm'
 import {
   Activity,
   ArrowLeft,
@@ -9,6 +11,7 @@ import {
   Building2,
   Camera,
   ChevronRight,
+  Download,
   FileText,
   LogOut,
   Mail,
@@ -42,6 +45,9 @@ type Municipality = {
 }
 
 type MedicalTermMetadata = {
+  version?: string | null
+  acceptedAt?: string | null
+  signature?: string | null
   name?: string | null
   crmUf?: string | null
   cpf?: string | null
@@ -93,6 +99,7 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
   const [cpf, setCpf] = useState('')
   const [unit, setUnit] = useState('')
   const [company, setCompany] = useState('')
+  const [medicalTerm, setMedicalTerm] = useState<MedicalTermMetadata | null>(null)
   const [selectedUf, setSelectedUf] = useState('')
   const [municipalityId, setMunicipalityId] = useState<number | null>(null)
   const [municipalityName, setMunicipalityName] = useState('')
@@ -158,6 +165,7 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
       setUserEmail(user.email || '')
       const metadata = user.user_metadata as { avatar_url?: string; medical_responsibility_term?: MedicalTermMetadata } | null
       const term = metadata?.medical_responsibility_term || {}
+      setMedicalTerm(term)
       const metaAvatar = metadata?.avatar_url || ''
       if (metaAvatar) setAvatarUrl(metaAvatar)
       setCpf(term.cpf || '')
@@ -355,11 +363,96 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
     }
   }
 
+  const formatTermDate = (raw?: string | null) => {
+    if (!raw) return 'Data não registrada'
+    const date = new Date(raw)
+    if (Number.isNaN(date.getTime())) return raw
+    return date.toLocaleString('pt-BR')
+  }
+
+  const downloadResponsibilityTerm = () => {
+    const doc = new jsPDF('p', 'mm', 'a4')
+    const marginX = 18
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const maxWidth = pageWidth - marginX * 2
+    let y = 18
+
+    const acceptedAt = medicalTerm?.acceptedAt || null
+    const termName = medicalTerm?.name || name || 'Não informado'
+    const termCrm = medicalTerm?.crmUf || crm || 'Não informado'
+    const termCpf = medicalTerm?.cpf || cpf || 'Não informado'
+    const termUnit = medicalTerm?.unit || unit || 'Não informado'
+    const termCompany = medicalTerm?.company || company || 'Não informado'
+    const termEmail = medicalTerm?.email || userEmail || 'Não informado'
+    const signature = medicalTerm?.signature || termName
+
+    const ensureSpace = (needed = 12) => {
+      if (y + needed <= pageHeight - 16) return
+      doc.addPage()
+      y = 18
+    }
+
+    const writeText = (text: string, options?: { size?: number; bold?: boolean; gap?: number }) => {
+      const size = options?.size ?? 10
+      doc.setFont('helvetica', options?.bold ? 'bold' : 'normal')
+      doc.setFontSize(size)
+      const lines = doc.splitTextToSize(text, maxWidth)
+      const lineHeight = size * 0.42
+      ensureSpace(lines.length * lineHeight + 4)
+      doc.text(lines, marginX, y)
+      y += lines.length * lineHeight + (options?.gap ?? 4)
+    }
+
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(15)
+    doc.text('Termo de Ciencia, Responsabilidade e Uso de Sistema', marginX, y)
+    y += 7
+    doc.setFontSize(11)
+    doc.text('de Apoio a Conduta Medica', marginX, y)
+    y += 10
+
+    writeText(`Versao do termo: ${medicalTerm?.version || TERM_VERSION}`, { size: 9 })
+    writeText(`Data do aceite: ${formatTermDate(acceptedAt)}`, { size: 9 })
+    writeText(`Medico(a): ${termName}`, { size: 9 })
+    writeText(`CRM/UF: ${termCrm}`, { size: 9 })
+    writeText(`CPF: ${termCpf}`, { size: 9 })
+    writeText(`E-mail: ${termEmail}`, { size: 9 })
+    writeText(`Unidade de atuacao: ${termUnit}`, { size: 9 })
+    writeText(`Empresa/Contratante: ${termCompany}`, { size: 9, gap: 8 })
+
+    writeText(
+      'Pelo presente instrumento, o(a) medico(a) acima identificado(a) declara, para todos os fins, que tomou ciencia das condicoes de utilizacao do sistema de fluxogramas e protocolos clinicos disponibilizado pela instituicao.',
+      { size: 10, gap: 6 }
+    )
+
+    TERM_SECTIONS.forEach((section) => {
+      ensureSpace(18)
+      writeText(section.title, { size: 10, bold: true, gap: 2 })
+      writeText(section.text, { size: 9, gap: 5 })
+    })
+
+    ensureSpace(34)
+    writeText('15. Assinatura', { size: 10, bold: true, gap: 2 })
+    writeText(
+      'E, por estar ciente e de acordo com os termos acima, o(a) medico(a) assina eletronicamente o presente Termo.',
+      { size: 9, gap: 8 }
+    )
+    doc.line(marginX, y + 8, marginX + 88, y + 8)
+    y += 14
+    writeText(`Assinatura eletronica: ${signature}`, { size: 10, bold: true, gap: 2 })
+    writeText(`Aceite registrado em: ${formatTermDate(acceptedAt)}`, { size: 9 })
+
+    const safeName = termName.replace(/[^a-zA-Z0-9_-]+/g, '_').replace(/^_+|_+$/g, '') || 'medico'
+    doc.save(`termo_responsabilidade_${safeName}.pdf`)
+  }
+
   const derivedMetrics = useMemo(() => {
     const completedRate = stats.total > 0 ? Math.round((stats.discharged / stats.total) * 100) : 0
     const activePressure = stats.total > 0 ? Math.round((stats.active / stats.total) * 100) : 0
     return { completedRate, activePressure }
   }, [stats])
+  const hasAcceptedMedicalTerm = Boolean(medicalTerm?.acceptedAt)
 
   const profileCards = [
     {
@@ -587,19 +680,15 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
 
               <div className="flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => setIsEditing((prev) => !prev)}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-                >
-                  <User className="h-4 w-4" />
-                  {isEditing ? 'Cancelar edição' : 'Editar perfil'}
-                </button>
-                <button
                   onClick={isEditing ? handleSave : () => setIsEditing(true)}
                   disabled={saving}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-70"
+                  className={isEditing
+                    ? 'inline-flex items-center gap-2 rounded-2xl bg-sky-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-600 disabled:cursor-not-allowed disabled:opacity-70'
+                    : 'inline-flex items-center gap-2 rounded-2xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50'
+                  }
                 >
-                  <span>{isEditing ? (saving ? 'Salvando...' : 'Salvar alterações') : 'Entrar no modo edição'}</span>
-                  <ChevronRight className="h-4 w-4" />
+                  {isEditing ? <ChevronRight className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                  {isEditing ? (saving ? 'Salvando...' : 'Salvar alterações') : 'Editar perfil'}
                 </button>
               </div>
             </div>
@@ -789,6 +878,40 @@ export default function ProfileScreen({ onBack, onSignOut }: ProfileScreenProps)
           </section>
 
           <aside className="space-y-6">
+            <section className="rounded-[34px] border border-white bg-white/90 p-6 shadow-[0_20px_60px_rgba(148,163,184,0.15)] backdrop-blur sm:p-7">
+              <div className="flex items-center gap-3">
+                <div className="rounded-2xl bg-blue-600 p-3 text-white shadow-lg shadow-blue-600/20">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">Documento assinado</p>
+                  <h3 className="mt-1 text-xl font-semibold text-slate-900">Termo de responsabilidade</h3>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-[26px] border border-slate-200 bg-slate-50/80 p-4">
+                <p className="text-sm font-semibold text-slate-500">Status do aceite</p>
+                <p className="mt-1 text-base font-bold text-slate-900">
+                  {hasAcceptedMedicalTerm ? 'Assinado eletronicamente' : 'Aceite não encontrado'}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  {hasAcceptedMedicalTerm
+                    ? `Registrado em ${formatTermDate(medicalTerm?.acceptedAt)}`
+                    : 'O termo será disponibilizado após o aceite obrigatório.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={downloadResponsibilityTerm}
+                disabled={!hasAcceptedMedicalTerm}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500 disabled:shadow-none"
+              >
+                <Download className="h-4 w-4" />
+                Baixar termo em PDF
+              </button>
+            </section>
+
             <section className="rounded-[34px] border border-white bg-white/90 p-6 shadow-[0_20px_60px_rgba(148,163,184,0.15)] backdrop-blur sm:p-7">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl bg-slate-900 p-3 text-white">

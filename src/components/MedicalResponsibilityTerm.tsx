@@ -18,7 +18,9 @@ interface MedicalResponsibilityTermProps {
   onAccept: () => void
 }
 
-const TERM_SECTIONS = [
+export const TERM_VERSION = '2026-05-25'
+
+export const TERM_SECTIONS = [
   {
     title: '1. Do objeto',
     text: 'O presente Termo regula a ciência e responsabilidade do(a) médico(a) quanto à utilização do sistema de apoio à conduta médica, composto por fluxogramas, protocolos clínicos, orientações técnicas e diretrizes assistenciais. O sistema possui caráter orientativo, educativo, técnico e de apoio à decisão clínica, não substituindo atuação médica individualizada, raciocínio clínico, anamnese, exame físico, análise de exames, avaliação específica do paciente ou autonomia técnica.'

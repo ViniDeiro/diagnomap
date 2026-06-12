@@ -300,10 +300,14 @@ export default function SignupPage() {
         crmUf: pendingTermDoctor.crmUf || null,
         cpf: pendingTermDoctor.cpf || null,
         unit: pendingTermDoctor.unit || null,
-        company: pendingTermDoctor.company || null
+        company: pendingTermDoctor.company || null,
+        email: pendingTermDoctor.email || null
       }
+      const { data: userRes } = await supabase.auth.getUser()
+      const currentMetadata = userRes.user?.user_metadata || {}
       await supabase.auth.updateUser({
         data: {
+          ...currentMetadata,
           medical_responsibility_term: termPayload
         }
       })
