@@ -724,6 +724,25 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           return []
         }
       }
+      const readLocalObject = <T,>(key: string): T | null => {
+        if (typeof window === 'undefined') return null
+        try {
+          const raw = localStorage.getItem(key)
+          if (!raw) return null
+          return JSON.parse(raw) as T
+        } catch {
+          return null
+        }
+      }
+      const readLocalString = (key: string) => {
+        if (typeof window === 'undefined') return ''
+        return localStorage.getItem(key) || ''
+      }
+      const readLocalNumber = (key: string) => {
+        const raw = readLocalString(key).replace(',', '.')
+        const value = Number(raw)
+        return Number.isFinite(value) ? value : undefined
+      }
 
       const alarmData = safeParse(answers.alarm_check) as { grupoC?: string[]; grupoD?: string[] } | null
       const riskFactors = readLocalArray(`risk_factors_${patient.id}`)
@@ -748,8 +767,42 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const otherExamTextsC = uniqueItems(otherExamsC.map(item => DENGUE_OTHER_EXAMS_LABELS[item] || item))
       const recommendedExamTextsD = uniqueItems(recommendedExamsD.map(item => DENGUE_RECOMMENDED_EXAMS_LABELS[item] || item))
       const otherExamTextsD = uniqueItems(otherExamsD.map(item => DENGUE_OTHER_EXAMS_LABELS[item] || item))
+      const dengueGroup = currentGroup as 'A' | 'B' | 'C' | 'D' | undefined
+      const shockDecisionItems = uniqueItems(readLocalArray(`shock_decisions_${patient.id}`))
+      const dIntervalChoice = typeof window !== 'undefined' ? localStorage.getItem(`d_interval_choice_${patient.id}`) || '' : ''
+      const dReevaluationItems = uniqueItems(Array.from({ length: 8 }, (_, index) => {
+        const tab = index + 1
+        const data = readLocalObject<{
+          vitals?: { bp?: string; hr?: number; rr?: number; spo2?: number; temp?: number }
+          diuresis?: number
+          labs?: { hb?: number; ht?: number; plt?: number; alb?: number; alt?: number; ast?: number }
+        }>(`d_tab_${tab}_data_${patient.id}`)
+        if (!data) return null
 
-      const hasLabDrivenGroupC = currentGroup === 'C'
+        const vitals = uniqueItems([
+          data.vitals?.bp ? `PA ${data.vitals.bp} mmHg` : null,
+          data.vitals?.hr != null ? `FC ${data.vitals.hr} bpm` : null,
+          data.vitals?.rr != null ? `FR ${data.vitals.rr} irpm` : null,
+          data.vitals?.spo2 != null ? `SpO2 ${data.vitals.spo2}%` : null,
+          data.vitals?.temp != null ? `temperatura ${data.vitals.temp} °C` : null
+        ])
+        const labs = uniqueItems([
+          data.labs?.hb != null ? `Hb ${data.labs.hb} g/dL` : null,
+          data.labs?.ht != null ? `Ht ${data.labs.ht}%` : null,
+          data.labs?.plt != null ? `plaquetas ${data.labs.plt.toLocaleString('pt-BR')}/mm³` : null,
+          data.labs?.alb != null ? `albumina ${data.labs.alb} g/dL` : null,
+          data.labs?.alt != null ? `ALT ${data.labs.alt} U/L` : null,
+          data.labs?.ast != null ? `AST ${data.labs.ast} U/L` : null
+        ])
+        const parts = uniqueItems([
+          vitals.length > 0 ? `sinais vitais: ${vitals.join(', ')}` : null,
+          data.diuresis != null ? `diurese ${data.diuresis} mL/h` : null,
+          labs.length > 0 ? `exames: ${labs.join(', ')}` : null
+        ])
+        return parts.length > 0 ? `${tab}ª reavaliação em UTI - ${parts.join('; ')}.` : null
+      }))
+
+      const hasLabDrivenGroupC = dengueGroup === 'C'
         && history.includes('evaluate_labs_b')
         && alarmSigns.length === 0
         && gravitySigns.length === 0
@@ -758,19 +811,196 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         ? symptoms[0]
         : 'Febre aguda com suspeita clínica de dengue.'
 
+      if (dengueGroup === 'D') {
+        const admissionDate = patient.admission.date ? formatDateOnly(patient.admission.date) : '__/__/____'
+        const dischargeDate = patient.treatment.dischargeDate
+          ? formatDateOnly(patient.treatment.dischargeDate)
+          : formatDateOnly(new Date())
+        const selectedExamsD = uniqueItems([...recommendedExamTextsD, ...otherExamTextsD])
+        const relevantExamItems = uniqueItems([
+          ...labItems,
+          selectedExamsD.length > 0 ? `Exames assinalados no fluxo do Grupo D: ${selectedExamsD.join('; ')}.` : null,
+          dReevaluationItems.length > 0 ? `Reavaliações documentadas: ${dReevaluationItems.join(' ')}` : null
+        ])
+        const treatmentDetails = uniqueItems([
+          prescriptions.length > 0 ? `Prescrições/medicações registradas: ${prescriptions.join('; ')}.` : null,
+          shockDecisionItems.length > 0 ? `Decisões clínicas registradas no manejo de choque/hemorragia/coagulopatia: ${shockDecisionItems.join('; ')}.` : null,
+          dIntervalChoice ? `Intervalo de reavaliação em UTI registrado: ${dIntervalChoice === 'after_expansion' ? 'após cada expansão volêmica, conforme definição da equipe' : dIntervalChoice}.` : null
+        ])
+        const admissionContext = uniqueItems([
+          symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : null,
+          alarmSigns.length > 0 ? `Sinais de alarme assinalados: ${alarmSigns.join('; ')}.` : null,
+          gravitySigns.length > 0 ? `Critérios de gravidade assinalados: ${gravitySigns.join('; ')}.` : null,
+          vitalItems.length > 0 ? `Sinais vitais iniciais: ${vitalItems.join('; ')}.` : null,
+          observations.length > 0 ? `Observações registradas: ${observations.join('; ')}.` : null,
+          notificationNumber ? `Notificação compulsória registrada sob o número ${notificationNumber}.` : null
+        ])
+
+        return {
+          title: 'RESUMO DE ALTA HOSPITALAR',
+          sections: [
+            {
+              title: 'Diagnóstico principal',
+              text: 'Dengue grave (Grupo D), resolvida.'
+            },
+            {
+              title: 'Datas',
+              text: `Data da internação: ${admissionDate}\nData da alta: ${dischargeDate}`
+            },
+            {
+              title: 'História da internação',
+              text: [
+                'Paciente admitido com quadro clínico compatível com dengue, apresentando inicialmente sinais de alarme, sendo internado para monitorização clínica e tratamento conforme protocolo institucional.',
+                'Durante a evolução hospitalar apresentou agravamento clínico, com desenvolvimento de critérios de dengue grave, necessitando internação em Unidade de Terapia Intensiva para monitorização contínua e suporte clínico especializado.',
+                admissionContext.length > 0 ? `Dados registrados no sistema: ${admissionContext.join(' ')}` : null
+              ].filter(Boolean).join('\n\n')
+            },
+            {
+              title: 'Tratamento realizado',
+              text: [
+                'Durante a permanência na UTI recebeu tratamento de suporte intensivo, monitorização hemodinâmica contínua, reposição volêmica guiada por parâmetros clínicos e laboratoriais, acompanhamento multiprofissional e realização de exames seriados para avaliação evolutiva.',
+                treatmentDetails.length > 0 ? treatmentDetails.join(' ') : null,
+                relevantExamItems.length > 0 ? `Exames e controles registrados: ${relevantExamItems.join(' ')}` : null,
+                'Após estabilização clínica, apresentou melhora progressiva do estado geral, recuperação hemodinâmica, normalização dos parâmetros laboratoriais e resolução dos sinais de gravidade, possibilitando transferência para unidade de internação convencional.'
+              ].filter(Boolean).join('\n\n')
+            },
+            {
+              title: 'Evolução',
+              text: 'Paciente evoluiu de forma favorável, sem novas intercorrências após a saída da UTI. Manteve estabilidade clínica, aceitação adequada de dieta, hidratação satisfatória, diurese preservada e melhora progressiva dos exames laboratoriais de controle.'
+            },
+            {
+              title: 'Condição na alta',
+              text: 'Paciente em bom estado geral, consciente, orientado, afebril, hemodinamicamente estável, eupneico em ar ambiente, sem sinais de alarme ou critérios atuais de gravidade, apresentando condições clínicas adequadas para alta hospitalar.'
+            },
+            {
+              title: 'Orientações',
+              items: [
+                'Manter hidratação oral adequada.',
+                'Repouso relativo nos próximos dias.',
+                'Retorno ambulatorial conforme agendamento.',
+                'Procurar imediatamente atendimento médico em caso de sangramentos, vômitos persistentes, dor abdominal intensa, tonturas, síncope, dispneia ou qualquer sinal de piora clínica.'
+              ]
+            },
+            {
+              title: 'Alta hospitalar',
+              text: 'Paciente recebe alta após recuperação clínica satisfatória de quadro de dengue grave, sem necessidade de suporte intensivo adicional.'
+            },
+            {
+              title: 'Médico responsável',
+              text: 'Médico Responsável: ______________________\nCRM: ______________________'
+            }
+          ]
+        }
+      }
+
+      if (dengueGroup === 'C') {
+        const admissionDate = patient.admission.date ? formatDateOnly(patient.admission.date) : '__/__/____'
+        const dischargeDate = patient.treatment.dischargeDate
+          ? formatDateOnly(patient.treatment.dischargeDate)
+          : formatDateOnly(new Date())
+        const cHb = patient.labResults?.hemoglobin ?? readLocalNumber(`lab_hemoglobin_${patient.id}`)
+        const cHt = patient.labResults?.hematocrit ?? readLocalNumber(`lab_hematocrit_${patient.id}`)
+        const cPlatelets = patient.labResults?.platelets ?? readLocalNumber(`lab_platelets_${patient.id}`)
+        const selectedExamsC = uniqueItems([...recommendedExamTextsC, ...otherExamTextsC])
+        const cReevaluationItems = uniqueItems([
+          (() => {
+            const vitals = uniqueItems([
+              readLocalString(`vitals_c_1h_bp_${patient.id}`) ? `PA ${readLocalString(`vitals_c_1h_bp_${patient.id}`)} mmHg` : null,
+              readLocalNumber(`vitals_c_1h_hr_${patient.id}`) != null ? `FC ${readLocalNumber(`vitals_c_1h_hr_${patient.id}`)} bpm` : null,
+              readLocalNumber(`vitals_c_1h_rr_${patient.id}`) != null ? `FR ${readLocalNumber(`vitals_c_1h_rr_${patient.id}`)} irpm` : null,
+              readLocalNumber(`vitals_c_1h_spo2_${patient.id}`) != null ? `SpO2 ${readLocalNumber(`vitals_c_1h_spo2_${patient.id}`)}%` : null,
+              readLocalNumber(`vitals_c_1h_temp_${patient.id}`) != null ? `temperatura ${readLocalNumber(`vitals_c_1h_temp_${patient.id}`)} °C` : null,
+              readLocalNumber(`diuresis_c_1h_${patient.id}`) != null ? `diurese ${readLocalNumber(`diuresis_c_1h_${patient.id}`)} mL/h` : null
+            ])
+            return vitals.length > 0 ? `1ª reavaliação: ${vitals.join(', ')}.` : null
+          })(),
+          (() => {
+            const vitals = uniqueItems([
+              readLocalString(`vitals_c_2h_bp_${patient.id}`) ? `PA ${readLocalString(`vitals_c_2h_bp_${patient.id}`)} mmHg` : null,
+              readLocalNumber(`vitals_c_2h_hr_${patient.id}`) != null ? `FC ${readLocalNumber(`vitals_c_2h_hr_${patient.id}`)} bpm` : null,
+              readLocalNumber(`vitals_c_2h_rr_${patient.id}`) != null ? `FR ${readLocalNumber(`vitals_c_2h_rr_${patient.id}`)} irpm` : null,
+              readLocalNumber(`vitals_c_2h_spo2_${patient.id}`) != null ? `SpO2 ${readLocalNumber(`vitals_c_2h_spo2_${patient.id}`)}%` : null,
+              readLocalNumber(`vitals_c_2h_temp_${patient.id}`) != null ? `temperatura ${readLocalNumber(`vitals_c_2h_temp_${patient.id}`)} °C` : null,
+              readLocalNumber(`diuresis_c_2h_${patient.id}`) != null ? `diurese ${readLocalNumber(`diuresis_c_2h_${patient.id}`)} mL/h` : null
+            ])
+            return vitals.length > 0 ? `2ª reavaliação: ${vitals.join(', ')}.` : null
+          })()
+        ])
+        const cAdmissionFindings = uniqueItems([
+          hasLabDrivenGroupC
+            ? `aumento progressivo do hematócrito/hemoconcentração${htHbRatio != null ? ` (razão Ht/Hb ${htHbRatio.toFixed(2)}x)` : ''}`
+            : null,
+          ...alarmSigns
+        ])
+        const relevantExamText = uniqueItems([
+          cHb != null ? `Hemoglobina: ${cHb} g/dL.` : null,
+          cHt != null ? `Hematócrito: ${cHt}%.` : null,
+          cPlatelets != null ? `Plaquetas: ${cPlatelets.toLocaleString('pt-BR')}/mm³.` : null,
+          selectedExamsC.length > 0 ? `Exames assinalados no fluxo: ${selectedExamsC.join('; ')}.` : null,
+          cReevaluationItems.length > 0 ? `Controles evolutivos registrados: ${cReevaluationItems.join(' ')}` : null,
+          observations.length > 0 ? `Observações em prontuário: ${observations.join('; ')}.` : null
+        ])
+
+        return {
+          title: 'RESUMO DE ALTA HOSPITALAR',
+          sections: [
+            {
+              title: 'Diagnóstico principal',
+              text: 'Dengue com sinais de alarme (Grupo C conforme protocolo do Ministério da Saúde).'
+            },
+            {
+              title: 'Datas',
+              text: `Data da internação: ${admissionDate}\nData da alta: ${dischargeDate}`
+            },
+            {
+              title: 'Motivo da internação',
+              text: `Paciente admitido com quadro clínico compatível com dengue, apresentando sinais de alarme caracterizados por ${cAdmissionFindings.length > 0 ? cAdmissionFindings.join('; ') : '_____________________________'}, sendo classificado como Grupo C e indicado para internação hospitalar para monitorização clínica e hidratação venosa.`
+            },
+            {
+              title: 'Exames relevantes na admissão',
+              text: relevantExamText.length > 0
+                ? relevantExamText.join(' ')
+                : 'Hemograma evidenciando ____________________________. Hematócrito: ______%. Plaquetas: ______/mm³. Demais exames sem alterações significativas / conforme descrito em prontuário.'
+            },
+            {
+              title: 'Tratamento realizado',
+              text: [
+                'Paciente submetido a hidratação venosa conforme protocolo institucional para dengue com sinais de alarme, monitorização clínica seriada, controle de sinais vitais, acompanhamento laboratorial com hemogramas seriados e tratamento sintomático conforme necessidade.',
+                prescriptions.length > 0 ? `Medicações/prescrições registradas: ${prescriptions.join('; ')}.` : null
+              ].filter(Boolean).join('\n\n')
+            },
+            {
+              title: 'Evolução hospitalar',
+              text: 'Apresentou evolução clínica favorável durante a internação, com melhora progressiva do estado geral, estabilização hemodinâmica, resolução dos sinais de alarme, adequada aceitação de dieta e hidratação por via oral. Houve melhora dos parâmetros laboratoriais e ausência de critérios para progressão para dengue grave (Grupo D). Não houve necessidade de suporte em unidade de terapia intensiva, drogas vasoativas, ventilação mecânica ou transfusão de hemocomponentes.'
+            },
+            {
+              title: 'Condição na alta',
+              text: 'Paciente em bom estado geral, consciente, orientado, afebril, hemodinamicamente estável, com diurese preservada, tolerando dieta por via oral e sem sinais clínicos de alarme ou de gravidade.'
+            },
+            {
+              title: 'Orientações na alta',
+              items: [
+                'Manter hidratação oral vigorosa.',
+                'Realizar repouso relativo.',
+                'Utilizar medicações sintomáticas conforme prescrição médica.',
+                'Retornar imediatamente ao serviço de emergência em caso de dor abdominal intensa, vômitos persistentes, sangramentos, tonturas, síncope, dificuldade respiratória, redução da diurese ou qualquer sinal de piora clínica.',
+                'Manter acompanhamento ambulatorial conforme orientação médica.'
+              ]
+            },
+            {
+              title: 'Médico responsável',
+              text: 'Médico responsável: __________________________________\nCRM: __________________'
+            }
+          ]
+        }
+      }
+
       const groupNarrative = (() => {
-        switch (currentGroup) {
+        switch (dengueGroup) {
           case 'A':
             return 'Classificado como Grupo A, compatível com dengue sem sinais de alarme, sem comorbidades ou condições especiais descompensadoras no fluxo atual.'
           case 'B':
             return `Classificado como Grupo B, pela presença de fatores de risco/condições associadas${riskFactors.length > 0 ? `: ${riskFactors.join('; ')}` : ''}.`
-          case 'C':
-            if (hasLabDrivenGroupC) {
-              return `Reclassificado para Grupo C por hemoconcentração laboratorial${htHbRatio != null ? ` (razão Ht/Hb ${htHbRatio.toFixed(2)}x)` : ''}, com necessidade de internação e monitorização.`
-            }
-            return `Classificado como Grupo C pela presença de sinais de alarme${alarmSigns.length > 0 ? `: ${alarmSigns.join('; ')}` : ''}.`
-          case 'D':
-            return `Classificado como Grupo D por critérios de gravidade${gravitySigns.length > 0 ? `: ${gravitySigns.join('; ')}` : ''}.`
           default:
             return 'Caso em avaliação clínica dentro do protocolo institucional de dengue.'
         }
@@ -791,55 +1021,28 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const examNarrativeParts = uniqueItems([
         ...labItems,
-        currentGroup === 'B' && suggestedExamTexts.length > 0
+        dengueGroup === 'B' && suggestedExamTexts.length > 0
           ? `Exames complementares sugeridos/assinalados para o Grupo B: ${suggestedExamTexts.join('; ')}.`
           : null,
-        currentGroup === 'C' && recommendedExamTextsC.length > 0
-          ? `Exames recomendados assinalados para o Grupo C: ${recommendedExamTextsC.join('; ')}.`
-          : null,
-        currentGroup === 'C' && otherExamTextsC.length > 0
-          ? `Outros exames registrados para o Grupo C: ${otherExamTextsC.join('; ')}.`
-          : null,
-        currentGroup === 'D' && recommendedExamTextsD.length > 0
-          ? `Exames recomendados assinalados para o Grupo D: ${recommendedExamTextsD.join('; ')}.`
-          : null,
-        currentGroup === 'D' && otherExamTextsD.length > 0
-          ? `Outros exames registrados para o Grupo D: ${otherExamTextsD.join('; ')}.`
-          : null,
-        ['C', 'D'].includes(currentGroup || '')
-          ? 'Exame confirmatório específico para dengue permanece obrigatório, sem atrasar a conduta clínica imediata.'
-          : null
       ])
 
       const conductNarrative = uniqueItems([
         groupNarrative,
         prescriptions.length > 0 ? `Foram registradas as seguintes prescrições no sistema: ${prescriptions.join('; ')}.` : null,
-        currentGroup === 'A'
+        dengueGroup === 'A'
           ? 'Orientado tratamento ambulatorial com hidratação oral, antitérmico conforme prescrição e vigilância de sinais de alarme.'
           : null,
-        currentGroup === 'B'
+        dengueGroup === 'B'
           ? 'Mantida observação clínica até resultado dos exames, com hidratação oral e reavaliação seriada.'
           : null,
-        currentGroup === 'C'
-          ? 'Indicada internação para hidratação, monitorização clínica/laboratorial e seguimento conforme protocolo.'
-          : null,
-        currentGroup === 'D'
-          ? 'Indicado manejo intensivo, suporte hemodinâmico e monitorização em ambiente crítico.'
-          : null
       ])
 
       const planNarrative = uniqueItems([
-        currentGroup === 'A'
+        dengueGroup === 'A'
           ? 'Orientado retorno imediato se surgirem sinais de alarme ou piora clínica, retorno no dia da melhora da febre pela possibilidade de fase crítica e retorno no 5º dia da doença se não houver defervescência.'
           : null,
-        currentGroup === 'B'
+        dengueGroup === 'B'
           ? 'Programado retorno diário para reavaliação clínica e laboratorial, mantendo seguimento até 48 horas após a remissão da febre.'
-          : null,
-        currentGroup === 'C'
-          ? 'Manter internação, hidratação e reavaliações seriadas até estabilização clínica e laboratorial, com alta apenas após critérios protocolados.'
-          : null,
-        currentGroup === 'D'
-          ? 'Manter acompanhamento intensivo, reavaliações frequentes e posterior seguimento ambulatorial após estabilização.'
           : null,
         'Entregue ou orientada a entrega do cartão de acompanhamento da dengue.'
       ])

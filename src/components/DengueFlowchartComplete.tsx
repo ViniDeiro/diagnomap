@@ -59,7 +59,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
   onViewReport,
   onViewMedicalPrescription
 }) => {
-  const [currentStep, setCurrentStep] = useState(patient.flowchartState.currentStep || 'start')
+  const initialStep = patient.flowchartState.currentStep === 'start'
+    ? 'alarm_check'
+    : patient.flowchartState.currentStep || 'alarm_check'
+  const [currentStep, setCurrentStep] = useState(initialStep)
   const [history, setHistory] = useState<string[]>(patient.flowchartState.history || [])
   const [answers, setAnswers] = useState<Record<string, string>>(patient.flowchartState.answers || {})
   const [progress, setProgress] = useState(patient.flowchartState.progress || 0)
@@ -83,13 +86,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_d_${patient.id}`) || '') : ''
   )
   const [antipyreticAddedD, setAntipyreticAddedD] = useState<boolean>(false)
-  const [notificationConfirmed, setNotificationConfirmed] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(`dengue_notification_ack_${patient.id}`)
-      if (saved !== null) return saved === 'true'
-    }
-    return (patient.flowchartState.answers?.dengue_notification_ack || '') === 'true'
-  })
   const [notificationNumber, setNotificationNumber] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(`dengue_notification_number_${patient.id}`)
@@ -166,11 +162,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     }
   }
 
-  const persistNotificationState = (confirmed: boolean, rawNumber: string) => {
+  const persistNotificationNumber = (rawNumber: string) => {
     const normalizedNumber = rawNumber.trim().toUpperCase()
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem(`dengue_notification_ack_${patient.id}`, String(confirmed))
       if (normalizedNumber) {
         localStorage.setItem(`dengue_notification_number_${patient.id}`, normalizedNumber)
       } else {
@@ -180,20 +175,14 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
     setAnswers(prev => ({
       ...prev,
-      dengue_notification_ack: confirmed ? 'true' : 'false',
       dengue_notification_number: normalizedNumber
     }))
-  }
-
-  const handleNotificationConfirmedChange = (checked: boolean) => {
-    setNotificationConfirmed(checked)
-    persistNotificationState(checked, notificationNumber)
   }
 
   const handleNotificationNumberChange = (value: string) => {
     const normalized = value.toUpperCase()
     setNotificationNumber(normalized)
-    persistNotificationState(notificationConfirmed, normalized)
+    persistNotificationNumber(normalized)
   }
 
   const persistGroupCExpansionRepeats = (count: number) => {
@@ -233,20 +222,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
           </p>
         </div>
       </div>
-
-      {!requireNumberForFinalization && (
-        <label className="flex items-center space-x-3 rounded-xl bg-white/80 border border-red-200 px-4 py-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={notificationConfirmed}
-            onChange={(e) => handleNotificationConfirmedChange(e.target.checked)}
-            className="w-5 h-5 rounded border-red-300 text-red-600 focus:ring-red-500"
-          />
-          <span className="text-sm font-medium text-red-900">
-            Confirmo que a notificação já foi realizada ou foi iniciada antes de prosseguir com a avaliação.
-          </span>
-        </label>
-      )}
 
       <div className="rounded-xl bg-white/80 border border-slate-200 p-4">
         <label className="block text-sm font-semibold text-slate-800 mb-2">
@@ -735,13 +710,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
   // Recarregar estado do paciente quando houver mudanças
   useEffect(() => {
     const flowchartState = patient.flowchartState
-    setCurrentStep(flowchartState.currentStep || 'start')
+    setCurrentStep(flowchartState.currentStep === 'start' ? 'alarm_check' : flowchartState.currentStep || 'alarm_check')
     setHistory(flowchartState.history || [])
     setAnswers(flowchartState.answers || {})
     setProgress(flowchartState.progress || 0)
-    const storedNotificationAck = typeof window !== 'undefined'
-      ? localStorage.getItem(`dengue_notification_ack_${patient.id}`)
-      : null
     const storedNotificationNumber = typeof window !== 'undefined'
       ? localStorage.getItem(`dengue_notification_number_${patient.id}`)
       : null
@@ -751,9 +723,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     const storedDInterval = typeof window !== 'undefined'
       ? localStorage.getItem(`d_interval_choice_${patient.id}`)
       : null
-    setNotificationConfirmed(storedNotificationAck != null
-      ? storedNotificationAck === 'true'
-      : (flowchartState.answers?.dengue_notification_ack || '') === 'true')
     setNotificationNumber(storedNotificationNumber || flowchartState.answers?.dengue_notification_number || '')
     setGroupCExpansionRepeats(Number.isNaN(storedGroupCRepeats) ? 0 : Math.max(0, Math.min(storedGroupCRepeats, 3)))
     if (storedDInterval === '20min' || storedDInterval === '30min' || storedDInterval === 'after_expansion' || storedDInterval === '15min') {
@@ -837,53 +806,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
   }
 
   const steps: Record<string, FlowchartStep> = {
-    start: {
-      id: 'start',
-      title: 'Suspeita de Dengue',
-      description: 'Definição de caso suspeito, notificação compulsória e liberação da avaliação clínica.',
-      type: 'question',
-      icon: <Stethoscope className="w-6 h-6" />,
-      color: 'bg-gradient-to-r from-blue-600 to-slate-700',
-      content: (
-        <div className="space-y-6">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h4 className="font-bold text-slate-900 mb-2">Quando pensar em dengue?</h4>
-            <p className="text-sm text-slate-700 leading-7">
-              Suspeitar em paciente com <strong>febre entre 2 e 7 dias</strong>, acompanhada de <strong>duas ou mais</strong> manifestações como náuseas, vômitos,
-              exantema, mialgia, artralgia, cefaleia, dor retro-orbitária, petéquias, prova do laço positiva ou leucopenia.
-            </p>
-            <p className="text-sm text-slate-700 leading-7 mt-3">
-              Em crianças, também considerar suspeita diante de quadro febril agudo sem foco aparente de infecção.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-red-300 bg-red-50 p-5">
-            <div className="flex items-start space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-red-900">NOTIFICAR TODO CASO SUSPEITO DE DENGUE</h4>
-                <p className="text-sm text-red-800 mt-2 leading-7">
-                  A avaliação clínica no fluxo só deve prosseguir após o registro ou início da notificação compulsória.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {renderNotificationCard(false)}
-        </div>
-      ),
-      options: [
-        {
-          text: notificationConfirmed ? 'Iniciar avaliação' : 'Confirme a notificação para liberar a avaliação',
-          nextStep: 'alarm_check',
-          value: 'start',
-          disabled: !notificationConfirmed
-        }
-      ]
-    },
-
     // GRUPO D — Choque: avaliação inicial focada
     group_d_shock: {
       id: 'group_d_shock',
@@ -1702,7 +1624,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
                             .modern-scroll::-webkit-scrollbar-thumb:hover{background:linear-gradient(180deg,#dc2626,#db2777)}
                           </style>
                           <div class="rounded-xl overflow-hidden border border-slate-200 bg-slate-50 p-2">
-                            <img src="/prova-do-laco.png" alt="Prova do laço - técnica ilustrada" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
+                            <img src="/prova%20de%20la%C3%A7o.jpeg" alt="Prova do laço - técnica ilustrada" class="w-full h-auto max-w-[720px] max-h-[280px] object-contain mx-auto" />
                           </div>
                           <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                             <h3 class="font-bold text-blue-800 mb-3 flex items-center">
@@ -3494,7 +3416,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
         </div>
       ),
       options: [
-        { text: 'Evolução disponível', nextStep: 'reevaluation_d', value: 'continue' }
+        { text: 'Ir para alta', nextStep: 'end_group_d', value: 'discharge' }
       ]
     },
 
@@ -5374,7 +5296,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
     const baseAnswers = {
       ...answers,
-      dengue_notification_ack: notificationConfirmed ? 'true' : 'false',
       dengue_notification_number: notificationNumber.trim().toUpperCase()
     }
     const newAnswers = value ? { ...baseAnswers, [currentStep]: value } : baseAnswers
@@ -5643,8 +5564,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
   const goBack = () => {
     if (history.length > 0) {
-      const previousStep = history[history.length - 1]
-      const newHistory = history.slice(0, -1)
+      const previousStep = history[history.length - 1] === 'start'
+        ? 'alarm_check'
+        : history[history.length - 1]
+      const newHistory = history.slice(0, -1).filter(stepId => stepId !== 'start')
       setHistory(newHistory)
       setCurrentStep(previousStep)
 
@@ -5655,13 +5578,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
   const restart = () => {
     setIsTransitioning(true)
-    setCurrentStep('start')
+    setCurrentStep('alarm_check')
     setHistory([])
     setAnswers({})
     setProgress(0)
 
     try {
-      onUpdate(patient.id, 'start', [], {}, 0)
+      onUpdate(patient.id, 'alarm_check', [], {}, 0)
     } catch (error) {
       console.error('Erro ao reiniciar fluxograma:', error)
     }
@@ -5675,8 +5598,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
   
   if (!step) {
-    console.error(`Step '${currentStep}' não encontrado. Redirecionando para 'start'.`)
-    setCurrentStep('start')
+    console.error(`Step '${currentStep}' não encontrado. Redirecionando para 'alarm_check'.`)
+    setCurrentStep('alarm_check')
     setHistory([])
     setAnswers({})
     setProgress(0)
