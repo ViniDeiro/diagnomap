@@ -932,6 +932,13 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             : null,
           ...alarmSigns
         ])
+        const cAdmissionReason = cAdmissionFindings.length > 0
+          ? cAdmissionFindings.join('; ')
+          : uniqueItems([
+              vitalItems.length > 0 ? `alterações clínicas e sinais vitais registrados na admissão (${vitalItems.join('; ')})` : null,
+              symptoms.length > 0 ? `quadro sintomático compatível com dengue (${symptoms.join('; ')})` : null,
+              'critérios clínicos de alarme registrados no atendimento'
+            ]).join('; ')
         const relevantExamText = uniqueItems([
           cHb != null ? `Hemoglobina: ${cHb} g/dL.` : null,
           cHt != null ? `Hematócrito: ${cHt}%.` : null,
@@ -954,13 +961,13 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             },
             {
               title: 'Motivo da internação',
-              text: `Paciente admitido com quadro clínico compatível com dengue, apresentando sinais de alarme caracterizados por ${cAdmissionFindings.length > 0 ? cAdmissionFindings.join('; ') : '_____________________________'}, sendo classificado como Grupo C e indicado para internação hospitalar para monitorização clínica e hidratação venosa.`
+              text: `Paciente admitido com quadro clínico compatível com dengue, apresentando sinais de alarme caracterizados por ${cAdmissionReason}, sendo classificado como Grupo C e indicado para internação hospitalar para monitorização clínica e hidratação venosa.`
             },
             {
               title: 'Exames relevantes na admissão',
               text: relevantExamText.length > 0
                 ? relevantExamText.join(' ')
-                : 'Hemograma evidenciando ____________________________. Hematócrito: ______%. Plaquetas: ______/mm³. Demais exames sem alterações significativas / conforme descrito em prontuário.'
+                : 'Hemograma e demais exames complementares conforme descrito em prontuário, sem dados laboratoriais estruturados disponíveis no sistema.'
             },
             {
               title: 'Tratamento realizado',

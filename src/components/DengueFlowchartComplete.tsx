@@ -5548,12 +5548,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       setIsTransitioning(false)
     }, 300)
 
-    
-    if (nextStep === 'end') {
-      setTimeout(() => {
-        onComplete()
-      }, 500)
-    }
   }
 
   const goBack = () => {
