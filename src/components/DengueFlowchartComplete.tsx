@@ -57,7 +57,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
   onBack,
   onViewPrescriptions,
   onViewReport,
-  onViewMedicalPrescription
 }) => {
   const initialStep = patient.flowchartState.currentStep === 'start'
     ? 'alarm_check'
@@ -2964,7 +2963,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       ),
       options: [
         {
-          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          text: hasNotificationNumber ? 'Finalizar atendimento' : 'Informe o número da notificação para finalizar',
           nextStep: 'end',
           value: 'finish',
           disabled: !hasNotificationNumber
@@ -3875,7 +3874,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       ),
       options: [
         {
-          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          text: hasNotificationNumber ? 'Finalizar atendimento' : 'Informe o número da notificação para finalizar',
           nextStep: 'end',
           value: 'finish',
           disabled: !hasNotificationNumber
@@ -5094,7 +5093,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       ),
       options: [
         {
-          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          text: hasNotificationNumber ? 'Finalizar atendimento' : 'Informe o número da notificação para finalizar',
           nextStep: 'end',
           value: 'finish',
           disabled: !hasNotificationNumber
@@ -5225,7 +5224,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       ),
       options: [
         {
-          text: hasNotificationNumber ? 'Finalizar e abrir receituário' : 'Informe o número da notificação para finalizar',
+          text: hasNotificationNumber ? 'Finalizar atendimento' : 'Informe o número da notificação para finalizar',
           nextStep: 'end',
           value: 'finish',
           disabled: !hasNotificationNumber
@@ -5552,11 +5551,6 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     
     if (nextStep === 'end') {
       setTimeout(() => {
-        const freshPatient = patientService.getPatientById(patient.id) || patient
-        if (onViewMedicalPrescription) {
-          onViewMedicalPrescription(freshPatient)
-          return
-        }
         onComplete()
       }, 500)
     }
