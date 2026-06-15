@@ -2512,7 +2512,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
               {hydrationObservPrescribed && (
                 <button
                   type="button"
-                  onClick={() => onViewPrescriptions && onViewPrescriptions(patient)}
+                  onClick={() => {
+                    const freshPatient = patientService.getPatientById(patient.id) || patient
+                    onViewPrescriptions && onViewPrescriptions(freshPatient)
+                  }}
                   className={clsx(
                     'inline-flex items-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium border transition-colors',
                     'bg-white hover:bg-green-100 text-green-800 border-green-300'
@@ -3161,7 +3164,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     wait_reevaluation_c: {
       id: 'wait_reevaluation_c',
       title: 'Aguardando Reavaliação - Grupo C',
-      description: 'Paciente internado aguardando reavaliação após 1 hora',
+      description: 'Paciente em observação no pronto-socorro aguardando reavaliação após 1 hora',
       type: 'wait_labs',
       icon: <Clock className="w-6 h-6" />,
       color: 'bg-yellow-500',
@@ -3169,10 +3172,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       content: (
         <div className="bg-yellow-50 p-4 rounded-lg">
           <h4 className="font-semibold text-yellow-800 mb-2">Status:</h4>
-          <p className="text-yellow-700">• Paciente internado</p>
+          <p className="text-yellow-700">• Paciente em observação no pronto-socorro</p>
           <p className="text-yellow-700">• Aguardando reavaliação clínica (1 hora)</p>
           <p className="text-yellow-700">• Aguardando resultados dos exames</p>
-          <p className="text-yellow-700">• Monitoramento contínuo</p>
+          <p className="text-yellow-700">• Monitoramento clínico contínuo</p>
         </div>
       ),
       options: [
@@ -3334,31 +3337,31 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
     treatment_d: {
       id: 'treatment_d',
-      title: 'Tratamento Intensivo - Grupo D',
-      description: '20ml/kg soro fisiológico em 20 minutos',
+      title: 'Manejo Inicial - Grupo D',
+      description: 'Expansão volêmica inicial: 20 mL/kg de soro fisiológico em até 20 minutos',
       type: 'action',
       icon: <AlertTriangle className="w-6 h-6" />,
       color: 'bg-red-600',
       requiresLabs: true,
       content: (
         <div className="bg-red-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-red-800 mb-2">Tratamento intensivo iniciado:</h4>
-          <p className="text-red-700">• Soro fisiológico 0,9% - 20ml/kg</p>
+          <h4 className="font-semibold text-red-800 mb-2">Manejo inicial iniciado:</h4>
+          <p className="text-red-700">• Soro fisiológico 0,9% - 20 mL/kg</p>
           <p className="text-red-700">• Administração em até 20 minutos</p>
-          <p className="text-red-700">• UTI obrigatória</p>
-          <p className="text-red-700">• Monitoramento contínuo</p>
+          <p className="text-red-700">• Acionar transferência ou ingresso em UTI conforme protocolo institucional</p>
+          <p className="text-red-700">• Monitoramento clínico contínuo</p>
           <p className="text-red-700">• Investigar hemorragia se necessário</p>
         </div>
       ),
       options: [
-        { text: 'Reavaliação após conduta inicial', nextStep: 'choose_reevaluation_interval_d', value: 'continue' }
+        { text: 'Reavaliação após manejo inicial', nextStep: 'choose_reevaluation_interval_d', value: 'continue' }
       ]
     },
 
     choose_reevaluation_interval_d: {
       id: 'choose_reevaluation_interval_d',
       title: 'Reavaliação após Expansão - UTI',
-      description: 'Documente como a equipe vai reavaliar após cada etapa de expansão',
+      description: 'Documente a reavaliação após cada etapa de expansão',
       type: 'question',
       icon: <Clock className="w-6 h-6" />,
       color: 'bg-red-600',
@@ -3369,7 +3372,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
             No Grupo D, a reavaliação clínica deve acontecer <strong>depois de cada expansão volêmica</strong>, mantendo monitorização contínua.
           </p>
           <p className="text-red-700">
-            Se o serviço quiser, também pode registrar o intervalo usado entre as etapas.
+            De acordo com o protocolo institucional local ou opção da equipe assistente, pode ser registrado o intervalo usado entre as etapas.
           </p>
         </div>
       ),
@@ -5244,6 +5247,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-green-800">Protocolo Concluído!</h3>
           <p className="text-green-600 mt-2">Fluxograma oficial do Ministério da Saúde 2024</p>
+          <button
+            type="button"
+            onClick={onComplete}
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-green-600 px-5 py-3 font-semibold text-white shadow-sm transition-colors hover:bg-green-700"
+          >
+            Voltar para página inicial
+          </button>
         </div>
       ),
       options: []

@@ -215,10 +215,7 @@ export default function Home() {
 
   const getFreshPatient = (patient: Patient) => {
     const localPatient = patientService.getPatientById(patient.id)
-    if (!localPatient) return patient
-    return new Date(localPatient.updatedAt).getTime() > new Date(patient.updatedAt).getTime()
-      ? localPatient
-      : patient
+    return localPatient || patient
   }
 
   const handleViewPrescriptions = (patient: Patient) => {

@@ -35,6 +35,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   onUpdate,
   mode = 'full'
 }) => {
+  const livePatient = patientService.getPatientById(patient.id) || patient
   // Modo mínimo mostra apenas "Prescrições Ativas" conforme implementação original
   const isMinimal = mode === 'prescription-only'
   const isHydrationOnly = mode === 'hydration-only'
@@ -48,7 +49,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
       name.includes('hidratacao oral')
     )
   }
-  const activeHydrationPrescriptions = (patient.treatment.prescriptions || []).filter(isHydrationPrescription)
+  const activeHydrationPrescriptions = (livePatient.treatment.prescriptions || []).filter(isHydrationPrescription)
   const [showAddForm, setShowAddForm] = useState(false)
   const prescriptionRef = useRef<HTMLDivElement>(null)
   const labRef = useRef<HTMLDivElement>(null)
@@ -61,7 +62,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   })
   const [selectedAntipyretic, setSelectedAntipyretic] = useState<'paracetamol' | 'dipirona' | null>(null)
 
-  const allergies = (patient.allergies || []).map(a => a.toLowerCase())
+  const allergies = (livePatient.allergies || []).map(a => a.toLowerCase())
   const isAllergicTo = (key: 'paracetamol' | 'dipirona') => {
     const synonyms: Record<'paracetamol' | 'dipirona', string[]> = {
       paracetamol: ['paracetamol', 'acetaminofeno', 'acetaminophen'],
