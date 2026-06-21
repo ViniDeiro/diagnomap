@@ -21,39 +21,51 @@ export const INFLUENZA_RISK_FACTORS = [
 ]
 
 export const INFLUENZA_WORSENING_SIGNS = [
-  'Persistência ou agravamento da febre por mais de 3 dias',
-  'Miosite comprovada por CPK elevada',
-  'Alteração do sensório',
+  'Manutenção de febre por mais de 3 dias ou agravamento da febre',
   'Desidratação',
-  'Em crianças, exacerbação de sintomas gastrointestinais'
+  'Exacerbação de sintomas gastrointestinais na população pediátrica',
+  'Alterações do estado mental (confusão, sonolência excessiva ou desorientação)'
 ]
 
 export const INFLUENZA_ICU_CRITERIA = [
-  'Choque',
-  'Disfunção de órgãos vitais',
-  'Insuficiência respiratória',
-  'Instabilidade hemodinâmica'
+  'Saturação <90% apesar de oxigênio suplementar',
+  'FR >30 irpm persistente',
+  'Uso de musculatura acessória',
+  'Alteração do nível de consciência',
+  'Hipotensão',
+  'Lactato elevado',
+  'Necessidade de ventilação não invasiva',
+  'Necessidade de cânula nasal de alto fluxo',
+  'Choque ou falência orgânica'
 ]
 
 export const INFLUENZA_ICU_CRITERIA_INFO: Record<string, string> = {
-  'Choque':
-    'Choque é uma síndrome de falência circulatória aguda em que a oferta e/ou utilização de oxigênio tornam-se insuficientes para sustentar o metabolismo celular, levando à hipoperfusão tecidual, disfunção orgânica progressiva e risco de morte.',
-  'Disfunção de órgãos vitais':
-    'Disfunção de órgãos vitais é o comprometimento agudo ou progressivo da função de órgãos essenciais à homeostase sistêmica, com incapacidade parcial ou completa de sustentar suas funções fisiológicas, podendo evoluir para falência orgânica multissistêmica.',
-  'Insuficiência respiratória':
-    'Insuficiência respiratória é a incapacidade do sistema respiratório de manter trocas gasosas adequadas às demandas metabólicas, por falha de ventilação, difusão, relação ventilação/perfusão, mecânica respiratória ou controle neuromuscular, resultando em hipoxemia, hipercapnia ou ambas.',
-  'Instabilidade hemodinâmica':
-    'Instabilidade hemodinâmica é a incapacidade do sistema cardiovascular de manter perfusão tecidual adequada e sustentada, com hipoperfusão sistêmica, variabilidade pressórica significativa, deterioração orgânica progressiva e possível necessidade de suporte volêmico, vasoativo ou circulatório.'
+  'Saturação <90% apesar de oxigênio suplementar':
+    'Hipoxemia persistente apesar de oxigênio suplementar sugere insuficiência respiratória grave e risco de necessidade de suporte ventilatório avançado.',
+  'FR >30 irpm persistente':
+    'Taquipneia persistente acima de 30 irpm indica aumento importante do trabalho respiratório e risco de fadiga muscular.',
+  'Uso de musculatura acessória':
+    'Uso de musculatura acessória, tiragens ou esforço respiratório sustentado indicam desconforto respiratório importante e possível falência ventilatória iminente.',
+  'Alteração do nível de consciência':
+    'Confusão, sonolência excessiva, agitação ou rebaixamento podem indicar hipoxemia, hipercapnia, sepse ou disfunção orgânica.',
+  'Hipotensão':
+    'Hipotensão em síndrome gripal/SRAG deve levantar suspeita de sepse, choque ou hipovolemia significativa, exigindo monitorização estreita.',
+  'Lactato elevado':
+    'Lactato elevado sugere hipoperfusão tecidual ou sepse e deve acelerar avaliação intensiva e investigação de falência orgânica.',
+  'Necessidade de ventilação não invasiva':
+    'Necessidade de VNI indica insuficiência respiratória com demanda de suporte ventilatório e vigilância em ambiente com resposta rápida.',
+  'Necessidade de cânula nasal de alto fluxo':
+    'Necessidade de alto fluxo indica demanda elevada de FiO2/fluxo e risco de progressão para suporte ventilatório invasivo.',
+  'Choque ou falência orgânica':
+    'Choque ou falência orgânica representa doença sistêmica grave, com necessidade de suporte hemodinâmico, respiratório ou multiorgânico.'
 }
 
 const INFLUENZA_PRESCRIPTION_MEDICATIONS = [
   'Fosfato de Oseltamivir',
   'Acetilcisteína',
   'Paracetamol ou Dipirona',
-  'Bromoprida ou Ondansetrona',
-  'Flurbiprofeno pastilha',
+  'Metoclopramida ou Ondansetrona',
   'Budesonida spray nasal',
-  'Cloridrato de Oximetazolina',
   'Lavagem nasal com soro fisiológico 0,9%'
 ]
 
@@ -129,19 +141,15 @@ export const buildInfluenzaPrescriptionItems = (
       prescribedBy: 'Fluxograma Influenza'
     },
     {
-      medication: 'Bromoprida ou Ondansetrona',
-      dosage: isAdult ? 'Bromoprida 10 mg ou Ondansetrona 4 mg' : 'Ajustar dose conforme idade/peso',
-      frequency: 'VO a cada 8 horas, se náuseas ou vômitos',
+      medication: 'Metoclopramida ou Ondansetrona',
+      dosage: isAdult
+        ? 'Metoclopramida 10 mg VO/EV/IM ou Ondansetrona 4 mg VO/EV'
+        : 'Metoclopramida: contraindicada em menores de 1 ano; 1-3 anos: 1 mg VO 2-3x/dia; 3-5 anos: 2 mg VO 2-3x/dia; 5-14 anos: 2,5-5 mg VO 3x/dia',
+      frequency: isAdult ? 'A cada 8 horas, se náuseas ou vômitos' : 'Conforme faixa etária, se náuseas ou vômitos',
       duration: 'Conforme necessidade',
-      instructions: 'Usar apenas se houver sintomas gastrointestinais.',
-      prescribedBy: 'Fluxograma Influenza'
-    },
-    {
-      medication: 'Flurbiprofeno pastilha',
-      dosage: '1 pastilha',
-      frequency: 'Dissolver lentamente na boca a cada 6 horas, se odinofagia',
-      duration: 'Conforme necessidade',
-      instructions: 'Reservar para dor de garganta.',
+      instructions: isAdult
+        ? 'Usar apenas se houver sintomas gastrointestinais. Para preparo de exame radiológico do trato gastrointestinal, metoclopramida pode ser usada 10 minutos antes do exame conforme protocolo local.'
+        : 'Dose máxima usual de metoclopramida: 0,5 mg/kg/dia, com teto prático de 60 mg/dia ou 20 mg/dose. Considerar ondansetrona conforme protocolo pediátrico local.',
       prescribedBy: 'Fluxograma Influenza'
     },
     {
@@ -150,14 +158,6 @@ export const buildInfluenzaPrescriptionItems = (
       frequency: 'Aplicar 1 a 2 jatos em cada narina de 12/12 horas',
       duration: '10 dias',
       instructions: 'Uso nasal.',
-      prescribedBy: 'Fluxograma Influenza'
-    },
-    {
-      medication: 'Cloridrato de Oximetazolina',
-      dosage: '0,5 mg/mL',
-      frequency: '1 a 2 gotas em cada narina, manhã e noite',
-      duration: 'Máximo de 5 dias',
-      instructions: 'Usar somente em caso de congestão nasal intensa.',
       prescribedBy: 'Fluxograma Influenza'
     },
     {

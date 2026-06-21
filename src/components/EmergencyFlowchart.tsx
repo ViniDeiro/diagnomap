@@ -662,6 +662,76 @@ const pneumoniaCurbItems: Array<{ key: PneumoniaCurbFieldKey; label: string }> =
   { key: 'idadeMaior65', label: 'Idade maior que 65 anos' }
 ]
 
+const pneumoniaCrbItems = [
+  'Confusão mental nova',
+  'Frequência respiratória ≥ 30 irpm',
+  'PAS < 90 mmHg ou PAD ≤ 60 mmHg',
+  'Idade ≥ 65 anos'
+]
+
+const pneumoniaAtsIdsaMajorItems = [
+  'Necessidade de ventilação mecânica invasiva',
+  'Choque séptico com necessidade de vasopressor'
+]
+
+const pneumoniaAtsIdsaMinorItems = [
+  'Frequência respiratória ≥ 30 irpm',
+  'Relação PaO2/FiO2 ≤ 250',
+  'Infiltrado multilobar',
+  'Confusão/desorientação',
+  'Uremia (BUN ≥ 20 mg/dL)',
+  'Leucopenia (< 4.000/mm3)',
+  'Plaquetopenia (< 100.000/mm3)',
+  'Hipotermia (< 36°C)',
+  'Hipotensão necessitando reposição volêmica agressiva'
+]
+
+const pneumoniaSmartCopItems: Array<{ label: string; points: number }> = [
+  { label: 'PAS < 90 mmHg', points: 2 },
+  { label: 'Comprometimento multilobar', points: 1 },
+  { label: 'Albumina < 3,5 g/dL', points: 1 },
+  { label: 'FR ≥25/min (<50 anos) ou ≥30/min (≥50 anos)', points: 1 },
+  { label: 'FC ≥ 125 bpm', points: 1 },
+  { label: 'Confusão aguda', points: 1 },
+  { label: 'Hipoxemia significativa para a idade', points: 2 },
+  { label: 'pH arterial < 7,35', points: 2 }
+]
+
+const pneumoniaDripMajorItems = [
+  'Antibiótico nos últimos 60 dias',
+  'Instituição de longa permanência',
+  'Alimentação por sonda enteral',
+  'História prévia de infecção por germe resistente',
+  'Colonização prévia por germe resistente'
+]
+
+const pneumoniaDripMinorItems = [
+  'Hospitalização nos últimos 60 dias',
+  'Doença pulmonar crônica, principalmente DPOC/bronquiectasias',
+  'Estado funcional dependente',
+  'Uso de bloqueador de ácido gástrico (IBP/H2)',
+  'Ferida crônica',
+  'Colonização por MRSA em passado remoto'
+]
+
+const pneumoniaScapItems: Array<{ label: string; points: number }> = [
+  { label: 'pH arterial < 7,30', points: 13 },
+  { label: 'PAS < 90 mmHg', points: 11 },
+  { label: 'Frequência respiratória > 30 irpm', points: 9 },
+  { label: 'PaO2/FiO2 < 250', points: 6 },
+  { label: 'BUN > 30 mg/dL', points: 5 },
+  { label: 'Idade ≥ 80 anos', points: 5 },
+  { label: 'Confusão mental', points: 5 },
+  { label: 'Infiltrado multilobar ou bilateral', points: 5 }
+]
+
+const pneumoniaSoarItems = [
+  'Saturação de O2 reduzida',
+  'Desorientação ou confusão',
+  'Idade avançada',
+  'Frequência respiratória elevada'
+]
+
 const anaphylaxisAdjunctOrder: AnaphylaxisAdjunctKey[] = [
   'hypotension',
   'stridor',
@@ -1087,6 +1157,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pneumoniaCurbValues, setPneumoniaCurbValues] = useState<PneumoniaCurbValues>(() => defaultCurbValues(patient))
   const [pneumoniaComorbidities, setPneumoniaComorbidities] = useState<string[]>([])
   const [pneumoniaPseudomonasRisk, setPneumoniaPseudomonasRisk] = useState<string[]>([])
+  const [pneumoniaCrbCriteria, setPneumoniaCrbCriteria] = useState<string[]>([])
+  const [pneumoniaAtsIdsaMajorCriteria, setPneumoniaAtsIdsaMajorCriteria] = useState<string[]>([])
+  const [pneumoniaAtsIdsaMinorCriteria, setPneumoniaAtsIdsaMinorCriteria] = useState<string[]>([])
+  const [pneumoniaSmartCopCriteria, setPneumoniaSmartCopCriteria] = useState<string[]>([])
+  const [pneumoniaDripMajorCriteria, setPneumoniaDripMajorCriteria] = useState<string[]>([])
+  const [pneumoniaDripMinorCriteria, setPneumoniaDripMinorCriteria] = useState<string[]>([])
+  const [pneumoniaScapCriteria, setPneumoniaScapCriteria] = useState<string[]>([])
+  const [pneumoniaSoarCriteria, setPneumoniaSoarCriteria] = useState<string[]>([])
+  const [pneumoniaSipfValues, setPneumoniaSipfValues] = useState({ fc: '', pas: '', pf: '' })
   const [pneumoniaPrescriptionPreview, setPneumoniaPrescriptionPreview] = useState<PneumoniaPrescriptionPreview | null>(null)
   const [pneumoniaPrescriptionCopied, setPneumoniaPrescriptionCopied] = useState(false)
   const [pneumoniaPrescriptionGenerated, setPneumoniaPrescriptionGenerated] = useState(false)
@@ -1691,6 +1770,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       ]).filter(Boolean),
       'Medidas não farmacológicas:',
       '• Manter hidratação e alimentação adequadas.',
+      '• Usar máscara enquanto sintomático, higienizar as mãos, cobrir boca/nariz ao tossir ou espirrar, evitar contato próximo com pessoas vulneráveis e manter ambientes ventilados.',
       '• Reavaliar em 48 a 72 horas ou antes se houver piora clínica.',
       '• Orientar retorno imediato em dispneia, desconforto respiratório, saturação baixa, confusão, vômitos persistentes ou sinais de desidratação.'
     ]
@@ -1751,6 +1831,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaPrescriptionPreview(null)
     setInfluenzaPrescriptionCopied(false)
     setInfluenzaPrescriptionGeneratedSteps({})
+    setPneumoniaCrbCriteria([])
+    setPneumoniaAtsIdsaMajorCriteria([])
+    setPneumoniaAtsIdsaMinorCriteria([])
+    setPneumoniaSmartCopCriteria([])
+    setPneumoniaDripMajorCriteria([])
+    setPneumoniaDripMinorCriteria([])
+    setPneumoniaScapCriteria([])
+    setPneumoniaSoarCriteria([])
+    setPneumoniaSipfValues({ fc: '', pas: '', pf: '' })
     setGasometryDraft({
       ph: '',
       pco2: '',
@@ -2018,6 +2107,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isInfluenzaAmbulatoryFinalStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
   const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_psi'
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
+  const isPneumoniaIntroStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_inicio'
   const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
   const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
@@ -2071,6 +2161,58 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : 'moderada_oral'
   const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
   const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
+  const pneumoniaCrbScore = pneumoniaCrbCriteria.length
+  const pneumoniaCrbInterpretation = pneumoniaCrbScore === 0
+    ? 'Baixo risco'
+    : pneumoniaCrbScore <= 2
+      ? 'Considerar avaliação hospitalar'
+      : 'Alto risco - internação recomendada'
+  const pneumoniaAtsIdsaSevere = pneumoniaAtsIdsaMajorCriteria.length > 0 || pneumoniaAtsIdsaMinorCriteria.length >= 3
+  const pneumoniaSmartCopScore = pneumoniaSmartCopCriteria.reduce((total, label) => {
+    const item = pneumoniaSmartCopItems.find((criterion) => criterion.label === label)
+    return total + (item?.points || 0)
+  }, 0)
+  const pneumoniaSmartCopInterpretation = pneumoniaSmartCopScore <= 2
+    ? 'Baixo risco'
+    : pneumoniaSmartCopScore <= 4
+      ? 'Risco moderado'
+      : pneumoniaSmartCopScore <= 6
+        ? 'Alto risco'
+        : 'Risco muito alto'
+  const pneumoniaDripScore = (pneumoniaDripMajorCriteria.length * 2) + pneumoniaDripMinorCriteria.length
+  const pneumoniaDripInterpretation = pneumoniaDripScore >= 4
+    ? 'Maior risco de patógenos resistentes - considerar cobertura ampliada conforme contexto'
+    : 'Baixo risco de patógenos resistentes'
+  const pneumoniaScapScore = pneumoniaScapCriteria.reduce((total, label) => {
+    const item = pneumoniaScapItems.find((criterion) => criterion.label === label)
+    return total + (item?.points || 0)
+  }, 0)
+  const pneumoniaScapInterpretation = pneumoniaScapScore >= 20
+    ? 'PAC grave - alto risco de VM/choque/mortalidade'
+    : pneumoniaScapScore >= 10
+      ? 'PAC grave - considerar UTI'
+      : 'Sem critérios de PAC grave pelo SCAP'
+  const pneumoniaSipfFc = Number(String(pneumoniaSipfValues.fc).replace(',', '.'))
+  const pneumoniaSipfPas = Number(String(pneumoniaSipfValues.pas).replace(',', '.'))
+  const pneumoniaSipfPf = Number(String(pneumoniaSipfValues.pf).replace(',', '.'))
+  const pneumoniaSipfShockIndex = Number.isFinite(pneumoniaSipfFc) && Number.isFinite(pneumoniaSipfPas) && pneumoniaSipfPas > 0
+    ? pneumoniaSipfFc / pneumoniaSipfPas
+    : undefined
+  const pneumoniaSipfRiskPoints = [
+    pneumoniaSipfShockIndex != null && pneumoniaSipfShockIndex >= 0.9,
+    Number.isFinite(pneumoniaSipfPf) && pneumoniaSipfPf <= 250
+  ].filter(Boolean).length
+  const pneumoniaSipfInterpretation = pneumoniaSipfRiskPoints === 0
+    ? 'Sem sinal de alto risco pelos parâmetros preenchidos'
+    : pneumoniaSipfRiskPoints === 1
+      ? 'Risco aumentado - interpretar com o quadro clínico'
+      : 'Alto risco - considerar UTI'
+  const pneumoniaSoarScore = pneumoniaSoarCriteria.length
+  const pneumoniaSoarInterpretation = pneumoniaSoarScore <= 1
+    ? 'Baixo risco'
+    : pneumoniaSoarScore === 2
+      ? 'Risco intermediário'
+      : 'Alto risco de mortalidade hospitalar'
   const anaphylaxisAdrenalineDose = useMemo(() => calculateAnaphylaxisAdrenalineDose(patient), [patient])
   const pancreatitisBisapResult = useMemo(() => calculatePancreatitisBisap(pancreatitisBisapValues), [pancreatitisBisapValues])
   const pancreatitisMarshallResult = useMemo(() => calculatePancreatitisMarshall(pancreatitisMarshallValues), [pancreatitisMarshallValues])
@@ -2097,15 +2239,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
     const includeOseltamivir = currentStepData.id === 'influenza_ambulatorial_oseltamivir'
     const draftItems = buildInfluenzaPrescriptionItems(patient, includeOseltamivir)
-    const persisted = getPersistedInfluenzaPrescriptions()
-    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
-
-    draftItems.forEach((item) => {
-      const key = `${item.medication}_${item.dosage}`
-      if (!existingKeys.has(key)) {
-        patientService.addPrescription(patient.id, item)
-      }
-    })
+    patientService.replacePrescriptionsByPrescriber(patient.id, 'Fluxograma Influenza', draftItems)
 
     setInfluenzaPrescriptionGeneratedSteps((prev) => ({ ...prev, [currentStepData.id]: true }))
     setInfluenzaPrescriptionPreview(buildInfluenzaPrescriptionPreview(includeOseltamivir))
@@ -2117,7 +2251,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     buildInfluenzaPrescriptionPreview,
     currentStep,
     currentStepData,
-    getPersistedInfluenzaPrescriptions,
     history,
     isInfluenzaAmbulatoryFinalStep,
     onUpdate,
@@ -6049,6 +6182,287 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
+              {isPneumoniaIntroStep && (
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">Calculadoras complementares de PAC</h4>
+                      <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                        PSI e CURB-65 seguem nas próximas etapas. Aqui ficam os escores rápidos para triagem, UTI e risco de germes resistentes.
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-900">
+                      Apoio à decisão clínica
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 xl:grid-cols-2">
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-blue-950">CRB-65</h5>
+                          <p className="text-xs text-blue-900">Sem laboratório. Máximo 4 pontos.</p>
+                        </div>
+                        <div className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-blue-900">
+                          {pneumoniaCrbScore} ponto(s)
+                          <div className="text-xs font-semibold">{pneumoniaCrbInterpretation}</div>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        {pneumoniaCrbItems.map((item) => {
+                          const checked = pneumoniaCrbCriteria.includes(item)
+                          return (
+                            <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-blue-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setPneumoniaCrbCriteria, item)}
+                                className="mt-1 h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span>{item}</span>
+                              <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+1</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-rose-950">ATS/IDSA - PAC grave</h5>
+                          <p className="text-xs text-rose-900">1 maior ou 3 menores define PAC grave.</p>
+                        </div>
+                        <div className={clsx('rounded-lg px-3 py-2 text-right text-sm font-bold', pneumoniaAtsIdsaSevere ? 'bg-red-600 text-white' : 'bg-white text-rose-900')}>
+                          {pneumoniaAtsIdsaSevere ? 'PAC grave' : 'Sem PAC grave'}
+                          <div className="text-xs font-semibold">{pneumoniaAtsIdsaMajorCriteria.length} maior(es), {pneumoniaAtsIdsaMinorCriteria.length} menor(es)</div>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-900">Maiores</p>
+                          <div className="space-y-1.5">
+                            {pneumoniaAtsIdsaMajorItems.map((item) => {
+                              const checked = pneumoniaAtsIdsaMajorCriteria.includes(item)
+                              return (
+                                <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-rose-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleSelection(setPneumoniaAtsIdsaMajorCriteria, item)}
+                                    className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                                  />
+                                  <span>{item}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-900">Menores</p>
+                          <div className="space-y-1.5">
+                            {pneumoniaAtsIdsaMinorItems.map((item) => {
+                              const checked = pneumoniaAtsIdsaMinorCriteria.includes(item)
+                              return (
+                                <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-rose-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleSelection(setPneumoniaAtsIdsaMinorCriteria, item)}
+                                    className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                                  />
+                                  <span>{item}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-orange-950">SMART-COP</h5>
+                          <p className="text-xs text-orange-900">Risco de ventilação mecânica, vasopressor ou UTI.</p>
+                        </div>
+                        <div className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-orange-900">
+                          {pneumoniaSmartCopScore} ponto(s)
+                          <div className="text-xs font-semibold">{pneumoniaSmartCopInterpretation}</div>
+                        </div>
+                      </div>
+                      <div className="grid gap-1.5 md:grid-cols-2">
+                        {pneumoniaSmartCopItems.map((item) => {
+                          const checked = pneumoniaSmartCopCriteria.includes(item.label)
+                          return (
+                            <label key={item.label} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-orange-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setPneumoniaSmartCopCriteria, item.label)}
+                                className="mt-1 h-4 w-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500"
+                              />
+                              <span>{item.label}</span>
+                              <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+{item.points}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-violet-950">DRIP Score</h5>
+                          <p className="text-xs text-violet-900">Risco de patógenos resistentes. Complementar aos fatores ATS/IDSA e epidemiologia local.</p>
+                        </div>
+                        <div className={clsx('rounded-lg px-3 py-2 text-right text-sm font-bold', pneumoniaDripScore >= 4 ? 'bg-violet-700 text-white' : 'bg-white text-violet-900')}>
+                          DRIP {pneumoniaDripScore}
+                          <div className="text-xs font-semibold">{pneumoniaDripInterpretation}</div>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-900">Fatores maiores (+2)</p>
+                          <div className="space-y-1.5">
+                            {pneumoniaDripMajorItems.map((item) => {
+                              const checked = pneumoniaDripMajorCriteria.includes(item)
+                              return (
+                                <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-violet-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleSelection(setPneumoniaDripMajorCriteria, item)}
+                                    className="mt-1 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                                  />
+                                  <span>{item}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-900">Fatores menores (+1)</p>
+                          <div className="space-y-1.5">
+                            {pneumoniaDripMinorItems.map((item) => {
+                              const checked = pneumoniaDripMinorCriteria.includes(item)
+                              return (
+                                <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-violet-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => toggleSelection(setPneumoniaDripMinorCriteria, item)}
+                                    className="mt-1 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500"
+                                  />
+                                  <span>{item}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-red-950">SCAP</h5>
+                          <p className="text-xs text-red-900">Prediz ventilação mecânica, choque séptico e mortalidade hospitalar.</p>
+                        </div>
+                        <div className={clsx('rounded-lg px-3 py-2 text-right text-sm font-bold', pneumoniaScapScore >= 10 ? 'bg-red-600 text-white' : 'bg-white text-red-900')}>
+                          {pneumoniaScapScore} ponto(s)
+                          <div className="text-xs font-semibold">{pneumoniaScapInterpretation}</div>
+                        </div>
+                      </div>
+                      <div className="grid gap-1.5 md:grid-cols-2">
+                        {pneumoniaScapItems.map((item) => {
+                          const checked = pneumoniaScapCriteria.includes(item.label)
+                          return (
+                            <label key={item.label} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-red-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setPneumoniaScapCriteria, item.label)}
+                                className="mt-1 h-4 w-4 rounded border-red-300 text-red-600 focus:ring-red-500"
+                              />
+                              <span>{item.label}</span>
+                              <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+{item.points}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-teal-200 bg-teal-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-teal-950">SIPF</h5>
+                          <p className="text-xs text-teal-900">Combina Shock Index (FC/PAS) e PaO2/FiO2.</p>
+                        </div>
+                        <div className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-teal-900">
+                          SI {pneumoniaSipfShockIndex != null ? pneumoniaSipfShockIndex.toFixed(2) : '--'}
+                          <div className="text-xs font-semibold">{pneumoniaSipfInterpretation}</div>
+                        </div>
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-3">
+                        {[
+                          { key: 'fc', label: 'FC', unit: 'bpm' },
+                          { key: 'pas', label: 'PAS', unit: 'mmHg' },
+                          { key: 'pf', label: 'PaO2/FiO2', unit: '' }
+                        ].map((field) => (
+                          <label key={field.key} className="text-sm font-semibold text-teal-950">
+                            {field.label}
+                            <div className="mt-1 flex items-center gap-2">
+                              <input
+                                type="number"
+                                min={0}
+                                value={pneumoniaSipfValues[field.key as keyof typeof pneumoniaSipfValues]}
+                                onChange={(event) => setPneumoniaSipfValues((prev) => ({ ...prev, [field.key]: event.target.value }))}
+                                className="w-full rounded-xl border border-teal-200 bg-white px-3 py-2 text-slate-800 outline-none focus:ring-2 focus:ring-teal-200"
+                              />
+                              {field.unit ? <span className="text-xs text-teal-800">{field.unit}</span> : null}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                      <p className="mt-3 text-xs leading-relaxed text-teal-900">
+                        Alerta se Shock Index ≥0,9 ou PaO2/FiO2 ≤250. Use como triagem rápida junto da avaliação clínica.
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <div className="mb-3 flex items-start justify-between gap-3">
+                        <div>
+                          <h5 className="font-bold text-emerald-950">SOAR</h5>
+                          <p className="text-xs text-emerald-900">Saturation, Orientation, Age, Respiratory Rate.</p>
+                        </div>
+                        <div className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-emerald-900">
+                          {pneumoniaSoarScore} ponto(s)
+                          <div className="text-xs font-semibold">{pneumoniaSoarInterpretation}</div>
+                        </div>
+                      </div>
+                      <div className="grid gap-1.5 md:grid-cols-2">
+                        {pneumoniaSoarItems.map((item) => {
+                          const checked = pneumoniaSoarCriteria.includes(item)
+                          return (
+                            <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-emerald-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleSelection(setPneumoniaSoarCriteria, item)}
+                                className="mt-1 h-4 w-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500"
+                              />
+                              <span>{item}</span>
+                              <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+1</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isPneumoniaPsiStep && (
                 <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5">
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -7164,6 +7578,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       : 'Sem fator de risco ou piora clínica registrados: seguir com manejo sintomático ambulatorial.'}
                   </div>
 
+                  {influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0 ? (
+                    <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-relaxed text-sky-950">
+                      <h5 className="font-bold text-sky-950">Quando pedir exame de imagem?</h5>
+                      <p className="mt-2">
+                        Não é necessário solicitar radiografia de rotina para toda síndrome gripal. Solicite radiografia de tórax quando houver suspeita de acometimento pulmonar ou complicação, como dispneia, taquipneia, saturação &lt;95%, dor torácica, ausculta pulmonar alterada, febre persistente por vários dias, piora clínica após melhora inicial ou imunossupressão com sintomas respiratórios mais intensos.
+                      </p>
+                      <p className="mt-2">
+                        Considere tomografia quando o RX for inconclusivo com forte suspeita clínica, houver hipoxemia desproporcional ao RX, suspeita de complicações, imunossupressão, caso grave/internado ou suspeita de tromboembolismo pulmonar.
+                      </p>
+                    </div>
+                  ) : null}
+
                   <div className="mt-4 flex justify-end">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -7313,8 +7739,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/60 p-5">
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h4 className="text-sm font-bold uppercase tracking-wide text-rose-900">Risco de Pseudomonas sp.</h4>
-                      <p className="text-sm text-rose-900">A presença de risco muda o esquema hospitalar para cobertura antipseudomonas.</p>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-rose-900">Risco de MRSA/Pseudomonas ou germe resistente</h4>
+                      <p className="text-sm text-rose-900">Use fatores ATS/IDSA como base e DRIP como ferramenta complementar para decidir ampliação de cobertura.</p>
                     </div>
                     <span className={clsx(
                       'rounded-lg border px-2 py-1 text-xs font-semibold',
@@ -7348,9 +7774,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   )}>
                     {pneumoniaPseudomonasRisk.length > 0 ? (
                       <div className="space-y-2">
-                        <p><strong>Esquema sugerido:</strong> piperacilina-tazobactam + macrolídeo ou levofloxacino, conforme perfil clínico e protocolo local.</p>
+                        <p><strong>DRIP/risco resistente:</strong> se a soma dos fatores sugerir DRIP ≥4 ou houver fatores fortes para MRSA/Pseudomonas, avaliar ampliação de cobertura conforme protocolo institucional, culturas e epidemiologia local.</p>
+                        <p><strong>Esquema sugerido para risco de Pseudomonas:</strong> piperacilina-tazobactam + macrolídeo ou levofloxacino, conforme perfil clínico e protocolo local.</p>
                         <p><strong>Piperacilina-tazobactam na pneumonia grave:</strong> ClCr &gt;40 mL/min: 4,5 g EV 6/6h; ClCr 20-40 mL/min: 3,375 g EV 6/6h; ClCr &lt;20 mL/min: 2,25 g EV 6/6h; hemodiálise: 2,25 g EV 8/8h + 0,75 g pós-HD.</p>
                         <p><strong>Associação:</strong> azitromicina 500 mg 1x/dia por 5 dias, claritromicina 500 mg 12/12h ou levofloxacino conforme avaliação médica.</p>
+                        <p><strong>MRSA:</strong> quando houver risco específico ou cultura prévia, considerar cobertura anti-MRSA conforme protocolo local.</p>
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -8613,8 +9041,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {influenzaPrescriptionPreview && (
-                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
+                <div className="fixed inset-0 z-[60] overflow-y-auto bg-slate-900/45 p-4 backdrop-blur-sm">
+                  <div className="mx-auto my-4 flex min-h-0 w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:my-8">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-cyan-700 to-sky-700 text-white">
                       <div>
                         <h4 className="font-bold">{influenzaPrescriptionPreview.title}</h4>
@@ -8650,7 +9078,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </button>
                       </div>
                     </div>
-                    <div className="overflow-y-auto p-5">
+                    <div className="max-h-[calc(100dvh-14rem)] overflow-y-auto p-5">
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
                         {influenzaPrescriptionPreview.content.map((line, index) => (
                           <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
@@ -8658,6 +9086,31 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           </p>
                         ))}
                       </div>
+                    </div>
+                    <div className="flex flex-col gap-2 border-t border-slate-200 bg-white px-5 py-3 sm:flex-row sm:justify-end">
+                      <button
+                        type="button"
+                        onClick={copyInfluenzaPrescriptionText}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                          influenzaPrescriptionCopied
+                            ? 'bg-emerald-600 text-white'
+                            : 'border border-cyan-200 bg-cyan-50 text-cyan-800 hover:bg-cyan-100'
+                        )}
+                      >
+                        {influenzaPrescriptionCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                        {influenzaPrescriptionCopied ? 'Copiado' : 'Copiar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInfluenzaPrescriptionPreview(null)
+                          setInfluenzaPrescriptionCopied(false)
+                        }}
+                        className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                      >
+                        Fechar e voltar ao fluxo
+                      </button>
                     </div>
                   </div>
                 </div>

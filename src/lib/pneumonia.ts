@@ -40,10 +40,15 @@ export const PNEUMONIA_MANDATORY_ADMISSION_LIMITERS = [
 ]
 
 export const PNEUMONIA_PSEUDOMONAS_RISK_FACTORS = [
-  'Uso de antibióticos endovenosos no último mês',
-  'Internação hospitalar por mais de 48 horas na última semana',
+  'Isolamento prévio de MRSA ou Pseudomonas em cultura respiratória',
+  'Internação hospitalar recente com uso de antibiótico parenteral',
+  'Uso de antibiótico nos últimos 60 dias',
+  'Instituição de longa permanência',
+  'Alimentação por sonda enteral',
+  'Colonização ou infecção prévia por germe resistente',
   'Doença estrutural pulmonar, como bronquiectasias',
-  'Neutropenia grave'
+  'Doença pulmonar crônica importante, como DPOC ou bronquiectasias',
+  'Dependência funcional ou ferida crônica'
 ]
 
 export const PNEUMONIA_COMORBIDITIES_FOR_AMBULATORY_ATB = [

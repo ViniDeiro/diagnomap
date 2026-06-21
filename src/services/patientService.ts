@@ -263,6 +263,44 @@ class PatientService {
     }
   }
 
+  replacePrescriptionsByPrescriber(
+    patientId: string,
+    prescribedBy: string,
+    prescriptions: Omit<Prescription, 'id' | 'prescribedAt'>[]
+  ): void {
+    const patients = this.loadFromStorage()
+    const patientIndex = patients.findIndex(p => p.id === patientId)
+
+    if (patientIndex !== -1) {
+      const now = new Date()
+      const remainingPrescriptions = patients[patientIndex].treatment.prescriptions.filter(
+        prescription => prescription.prescribedBy !== prescribedBy
+      )
+      const replacementPrescriptions: Prescription[] = prescriptions.map((prescription) => ({
+        ...prescription,
+        id: `prescription_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        prescribedAt: now
+      }))
+
+      patients[patientIndex].treatment.prescriptions = [
+        ...remainingPrescriptions,
+        ...replacementPrescriptions
+      ]
+      patients[patientIndex].updatedAt = now
+      this.saveToStorage(patients)
+      try {
+        const payload = fromUIPatient(patients[patientIndex])
+        import('./patientRepo').then(({ updatePatientByExternalId }) => {
+          updatePatientByExternalId(patientId, payload).catch((err) => {
+            console.error('Erro ao substituir prescrições:', err)
+          })
+        })
+      } catch (err) {
+        console.error('Erro ao preparar substituição de prescrições:', err)
+      }
+    }
+  }
+
   // Gerar prescrições automáticas baseadas no grupo
   generatePrescriptions(patientId: string, group: 'A' | 'B' | 'C' | 'D', antipyreticChoice?: 'paracetamol' | 'dipirona'): Prescription[] {
     const patient = this.getPatientById(patientId)

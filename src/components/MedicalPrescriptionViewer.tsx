@@ -267,7 +267,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         '• Manter boa hidratação e alimentação fracionada, conforme tolerância.',
         '• Priorizar repouso relativo e controle sintomático.',
         isInfluenza
-          ? '• Manter isolamento por gotículas e etiqueta respiratória enquanto sintomático.'
+          ? '• Manter isolamento por gotículas enquanto sintomático: usar máscara, cobrir boca e nariz ao tossir/espirrar, higienizar as mãos, evitar contato próximo com pessoas vulneráveis e manter ambientes ventilados.'
           : isSinusitis
             ? '• Realizar lavagem nasal e evitar uso prolongado de descongestionante nasal.'
             : isFaringoamigdalite
@@ -647,7 +647,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                       <h3 className="font-bold text-slate-800 mb-2">Cuidados gerais</h3>
                       <ul className="space-y-1 text-slate-700">
                         <li>• Manter hidratação oral e alimentação conforme tolerância.</li>
-                        <li>• Reforçar etiqueta respiratória e isolamento por gotículas enquanto sintomático.</li>
+                        <li>• Manter isolamento por gotículas enquanto sintomático: máscara, higiene das mãos, cobrir tosse/espirro, evitar contato próximo com pessoas vulneráveis e manter ambiente ventilado.</li>
                         <li>• Controlar febre, dor e congestão conforme prescrição registrada.</li>
                       </ul>
                     </div>

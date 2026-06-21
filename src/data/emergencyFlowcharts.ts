@@ -3843,10 +3843,13 @@ export const influenzaFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
             <p class="font-semibold text-rose-900">Critérios que favorecem UTI:</p>
             <ul class="list-disc pl-5 mt-2 space-y-1 text-rose-900">
-              <li>Choque</li>
-              <li>Disfunção de órgãos vitais</li>
-              <li>Insuficiência respiratória</li>
-              <li>Instabilidade hemodinâmica</li>
+              <li>Saturação &lt;90% apesar de oxigênio suplementar</li>
+              <li>FR &gt;30 irpm persistente</li>
+              <li>Uso de musculatura acessória</li>
+              <li>Alteração do nível de consciência</li>
+              <li>Hipotensão ou lactato elevado</li>
+              <li>Necessidade de ventilação não invasiva ou cânula nasal de alto fluxo</li>
+              <li>Choque ou falência orgânica</li>
             </ul>
           </div>
         </div>
@@ -3863,7 +3866,8 @@ export const influenzaFlowchart: EmergencyFlowchart = {
         <div class="space-y-3 text-sm">
           <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
             <p><strong>Conduta:</strong> sintomáticos, aumento da ingestão de líquidos e retorno apenas se houver piora do quadro ou sinais de gravidade.</p>
-            <p class="mt-2">Orientar etiqueta respiratória, hidratação adequada e reavaliação se febre persistente ou surgimento de dispneia.</p>
+            <p class="mt-2"><strong>Orientações respiratórias:</strong> usar máscara enquanto sintomático, cobrir boca e nariz ao tossir/espirrar, higienizar as mãos, evitar contato próximo com pessoas vulneráveis e manter ambientes ventilados.</p>
+            <p class="mt-2">Reavaliar se febre persistente por mais de 3 dias, piora da febre, dispneia, saturação baixa, confusão, sonolência excessiva, vômitos persistentes ou sinais de desidratação.</p>
           </div>
         </div>
       `,
@@ -3878,8 +3882,13 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p><strong>Conduta:</strong> oseltamivir, exames radiográficos quando pertinentes, sintomáticos, aumento da ingestão de líquidos e retorno em 48 horas ou antes se piora clínica/sinais de gravidade.</p>
+            <p><strong>Conduta:</strong> oseltamivir, sintomáticos, aumento da ingestão de líquidos e retorno em 48 horas ou antes se piora clínica/sinais de gravidade.</p>
             <p class="mt-2">Fatores de risco e sinais de piora clínica justificam início do antiviral mesmo sem SRAG.</p>
+            <div class="mt-3 rounded-lg border border-amber-200 bg-white p-3">
+              <p class="font-semibold text-amber-950">Quando solicitar exame de imagem?</p>
+              <p class="mt-2">Não solicitar radiografia de rotina para toda síndrome gripal. Solicitar radiografia de tórax quando houver suspeita de acometimento pulmonar ou complicação: dispneia, taquipneia, saturação &lt;95%, dor torácica, ausculta pulmonar alterada, febre persistente por vários dias, piora clínica após melhora inicial, imunossupressão com sintomas respiratórios mais intensos ou necessidade de internação.</p>
+              <p class="mt-2">Considerar tomografia de tórax quando o RX for inconclusivo com forte suspeita clínica, houver hipoxemia desproporcional ao RX, suspeita de complicações, imunossupressão, casos graves/internados ou suspeita de tromboembolismo pulmonar.</p>
+            </div>
           </div>
         </div>
       `,
@@ -3892,10 +3901,86 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       type: 'result',
       critical: true,
       content: `
-        <div class="space-y-3 text-sm">
+        <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
-            <p><strong>Conduta:</strong> oseltamivir, considerar antibioticoterapia de amplo espectro quando houver suspeita de pneumonia/coinfecção bacteriana, exames radiográficos, sintomáticos, hidratação venosa, oxigenoterapia se necessária e exames complementares.</p>
-            <p class="mt-2">Manter isolamento por gotículas e reavaliação seriada da necessidade de escalonamento para terapia intensiva.</p>
+            <h4 class="font-bold text-orange-950">PROTOCOLO DE INTERNAÇÃO – SÍNDROME GRIPAL / SRAG (ENFERMARIA)</h4>
+            <p class="mt-2"><strong>Internar em enfermaria</strong> paciente com síndrome gripal/SRAG que apresente critério de internação, mas sem necessidade imediata de terapia intensiva.</p>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <h5 class="font-bold text-slate-950">Critérios de internação</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5 text-slate-800">
+                <li>Saturação de O2 &lt;95% em ar ambiente.</li>
+                <li>Dispneia moderada ou taquipneia persistente.</li>
+                <li>Necessidade de oxigenoterapia.</li>
+                <li>Desidratação ou incapacidade de alimentação adequada.</li>
+                <li>Descompensação de doença de base.</li>
+                <li>Idosos frágeis ou imunossuprimidos.</li>
+                <li>Pneumonia viral ou bacteriana suspeita.</li>
+                <li>Critério clínico médico.</li>
+              </ul>
+            </div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <h5 class="font-bold text-emerald-950">Ausência de critérios de UTI</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5 text-emerald-900">
+                <li>Sem necessidade de ventilação mecânica.</li>
+                <li>Sem choque.</li>
+                <li>Sem vasopressores.</li>
+                <li>Sem insuficiência respiratória grave.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+            <h5 class="font-bold text-cyan-950">Antiviral</h5>
+            <p class="mt-2"><strong>Oseltamivir 75 mg VO 12/12 horas por 5 dias</strong> em adultos. Iniciar preferencialmente nas primeiras 48 horas, porém manter indicação em pacientes hospitalizados independentemente do tempo de sintomas.</p>
+            <p class="mt-2">Considerar prolongamento em imunossuprimidos, casos graves ou persistência de replicação viral. Ajustar dose conforme função renal.</p>
+          </div>
+
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <h5 class="font-bold text-blue-950">Oxigenoterapia</h5>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-blue-950">
+              <li>Meta de saturação: ≥92% na maioria dos pacientes.</li>
+              <li>Meta 88-92% em retenção crônica de CO2, como DPOC grave.</li>
+              <li>Iniciar com cateter nasal 1 a 5 L/min.</li>
+              <li>Escalonar para máscara simples 5 a 10 L/min, máscara não reinalante 10 a 15 L/min ou cânula nasal de alto fluxo se disponível.</li>
+              <li>Avaliar UTI se houver necessidade crescente de oxigênio, FiO2 elevada, desconforto respiratório importante ou relação SpO2/FiO2 progressivamente reduzida.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h5 class="font-bold text-slate-950">Exames laboratoriais iniciais</h5>
+            <p class="mt-2">Solicitar hemograma completo, ureia, creatinina, sódio, potássio, TGO, TGP, PCR e glicemia.</p>
+            <p class="mt-2">Solicitar gasometria arterial ou venosa se hipoxemia, lactato se suspeita de sepse e coagulograma em casos moderados/graves.</p>
+            <p class="mt-2">Conforme disponibilidade: teste para Influenza, RT-PCR viral ou painel viral respiratório.</p>
+          </div>
+
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <h5 class="font-bold text-amber-950">Exames de imagem</h5>
+            <p class="mt-2"><strong>Radiografia de tórax:</strong> solicitar se dispneia, saturação &lt;95%, ausculta pulmonar alterada, febre persistente, suspeita de pneumonia ou necessidade de internação.</p>
+            <p class="mt-2"><strong>Tomografia de tórax:</strong> considerar se RX inconclusivo, hipoxemia desproporcional aos achados do RX, suspeita de complicações, imunossupressão, piora clínica sem causa evidente ou suspeita de tromboembolismo pulmonar.</p>
+          </div>
+
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+            <h5 class="font-bold text-red-950">Antibioticoterapia</h5>
+            <p class="mt-2">Não utilizar antibióticos rotineiramente em todos os pacientes com Influenza. Iniciar quando houver suspeita de pneumonia bacteriana associada.</p>
+            <p class="mt-2"><strong>Achados sugestivos:</strong> consolidação lobar, escarro purulento, leucocitose importante, procalcitonina elevada quando disponível, piora após melhora inicial ou infiltrado focal ao RX.</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-red-950">
+              <li>Pneumonia comunitária sem gravidade: ceftriaxona 2 g IV/dia + azitromicina 500 mg/dia.</li>
+              <li>Maior risco ou doença grave: ceftriaxona 2 g IV/dia + azitromicina 500 mg/dia.</li>
+              <li>Suspeita de aspiração: ampicilina/sulbactam.</li>
+              <li>Suspeita de infecção hospitalar: seguir protocolo institucional de pneumonia hospitalar.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <h5 class="font-bold text-rose-950">Critérios para avaliação da UTI</h5>
+            <p class="mt-2">Solicitar avaliação intensiva se saturação &lt;90% apesar de oxigênio suplementar, FR &gt;30 irpm persistente, uso de musculatura acessória, alteração do nível de consciência, hipotensão, lactato elevado, necessidade de ventilação não invasiva, necessidade de alto fluxo, choque ou falência orgânica.</p>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p><strong>Medidas gerais:</strong> manter isolamento por gotículas, máscara cirúrgica quando houver transporte/contato, hidratação venosa conforme necessidade, sintomáticos, monitorização de sinais vitais e reavaliação seriada da necessidade de escalonamento para terapia intensiva.</p>
           </div>
         </div>
       `,
@@ -3956,6 +4041,73 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
             <li><strong>RX de tórax:</strong> exame que deve ser realizado em todos os pacientes, possibilitando a confirmação do diagnóstico e avaliação da presença de derrame pleural e doença extensa ou multilobar.</li>
             <li><strong>PSI (Pneumonia Severity Index):</strong> Classe I a V, indica a severidade e a possibilidade de mortalidade. É ferramenta que auxilia na tomada de decisão, inclusive para determinação de internação e encaminhamento à Unidade de Terapia Intensiva.</li>
           </ul>
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h4 class="font-bold text-slate-950">Ferramentas que auxiliam na tomada de decisão em PAC</h4>
+            <div class="mt-3 grid gap-3 md:grid-cols-2">
+              <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                <p class="font-semibold text-blue-950">Triagem inicial sem laboratório</p>
+                <p class="mt-1 text-blue-900"><strong>CRB-65:</strong> confusão, FR ≥30, PA baixa e idade ≥65. Útil quando não há ureia/BUN disponível.</p>
+              </div>
+              <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                <p class="font-semibold text-cyan-950">Após exames laboratoriais</p>
+                <p class="mt-1 text-cyan-900"><strong>CURB-65:</strong> estima gravidade/mortalidade e auxilia decisão de internação.</p>
+              </div>
+              <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                <p class="font-semibold text-rose-950">Decisão de UTI</p>
+                <p class="mt-1 text-rose-900"><strong>ATS/IDSA:</strong> 1 critério maior ou ≥3 menores define PAC grave e indica forte consideração de UTI.</p>
+              </div>
+              <div class="rounded-lg border border-orange-200 bg-orange-50 p-3">
+                <p class="font-semibold text-orange-950">Risco de VM/vasopressor</p>
+                <p class="mt-1 text-orange-900"><strong>SMART-COP</strong> e <strong>SCAP</strong> ajudam a prever deterioração, ventilação mecânica, choque e suporte intensivo.</p>
+              </div>
+              <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                <p class="font-semibold text-emerald-950">Mortalidade e qualidade</p>
+                <p class="mt-1 text-emerald-900"><strong>PSI/PORT</strong>, <strong>SIPF</strong> e <strong>SOAR</strong> apoiam predição de mortalidade, especialmente em idosos e auditoria de qualidade.</p>
+              </div>
+              <div class="rounded-lg border border-violet-200 bg-violet-50 p-3">
+                <p class="font-semibold text-violet-950">Germes resistentes</p>
+                <p class="mt-1 text-violet-900"><strong>DRIP Score:</strong> ferramenta complementar para risco de MRSA, Pseudomonas e outros patógenos multirresistentes; usar junto ao contexto local e fatores ATS/IDSA.</p>
+              </div>
+            </div>
+          </div>
+          <details class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <summary class="cursor-pointer font-semibold text-slate-900">Ver resumo dos escores de PAC</summary>
+            <div class="mt-4 space-y-4 text-slate-800">
+              <div class="rounded-lg border border-cyan-200 bg-white p-3">
+                <h5 class="font-bold text-cyan-950">CURB-65</h5>
+                <p class="mt-1">Critérios: confusão mental nova, ureia &gt;7 mmol/L ou BUN &gt;20 mg/dL, FR ≥30 irpm, PAS &lt;90 mmHg ou PAD ≤60 mmHg, idade ≥65 anos. Cada critério vale 1 ponto; máximo 5.</p>
+                <p class="mt-1"><strong>Interpretação:</strong> 0-1 baixo risco/tratamento ambulatorial; 2 risco moderado/considerar internação; ≥3 risco elevado/avaliar internação hospitalar ou UTI; 4-5 risco muito elevado/forte indicação de internação e avaliação em UTI.</p>
+              </div>
+              <div class="rounded-lg border border-blue-200 bg-white p-3">
+                <h5 class="font-bold text-blue-950">CRB-65</h5>
+                <p class="mt-1">Versão sem laboratório: confusão mental nova, FR ≥30 irpm, PAS &lt;90 mmHg ou PAD ≤60 mmHg, idade ≥65 anos. Cada critério vale 1 ponto; máximo 4.</p>
+                <p class="mt-1"><strong>Interpretação:</strong> 0 baixo risco; 1-2 considerar avaliação hospitalar; ≥3 alto risco com internação recomendada.</p>
+              </div>
+              <div class="rounded-lg border border-red-200 bg-white p-3">
+                <h5 class="font-bold text-red-950">Critérios ATS/IDSA para PAC grave</h5>
+                <p class="mt-1"><strong>Critérios maiores:</strong> ventilação mecânica invasiva ou choque séptico com necessidade de vasopressor. A presença de 1 critério maior define PAC grave.</p>
+                <p class="mt-1"><strong>Critérios menores:</strong> FR ≥30, PaO2/FiO2 ≤250, infiltrado multilobar, confusão/desorientação, BUN ≥20 mg/dL, leucopenia &lt;4.000/mm3, plaquetopenia &lt;100.000/mm3, hipotermia &lt;36°C e hipotensão necessitando reposição volêmica agressiva. Três ou mais critérios menores definem PAC grave e indicam forte consideração de UTI.</p>
+              </div>
+              <div class="rounded-lg border border-orange-200 bg-white p-3">
+                <h5 class="font-bold text-orange-950">SMART-COP</h5>
+                <p class="mt-1">Prediz necessidade de ventilação mecânica, vasopressor ou terapia intensiva. Componentes: PAS &lt;90, comprometimento multilobar, albumina &lt;3,5 g/dL, FR elevada (≥25/min se &lt;50 anos ou ≥30/min se ≥50 anos), FC ≥125 bpm, confusão aguda, hipoxemia significativa para idade e pH arterial &lt;7,35.</p>
+                <p class="mt-1"><strong>Interpretação:</strong> 0-2 baixo risco; 3-4 moderado; 5-6 alto; ≥7 muito alto.</p>
+              </div>
+              <div class="rounded-lg border border-emerald-200 bg-white p-3">
+                <h5 class="font-bold text-emerald-950">Outros escores relacionados</h5>
+                <p class="mt-1"><strong>PSI/PORT:</strong> principal score de mortalidade, com cerca de 20 variáveis, classes I a V e foco em necessidade de internação.</p>
+                <p class="mt-1"><strong>SCAP:</strong> prevê ventilação mecânica, choque séptico e mortalidade hospitalar.</p>
+                <p class="mt-1"><strong>SIPF:</strong> combina Shock Index (FC/PAS) e PaO2/FiO2 para mortalidade e necessidade de UTI.</p>
+                <p class="mt-1"><strong>SOAR:</strong> saturação, orientação, idade e frequência respiratória; útil especialmente em idosos.</p>
+              </div>
+              <div class="rounded-lg border border-violet-200 bg-white p-3">
+                <h5 class="font-bold text-violet-950">DRIP Score - Drug Resistance in Pneumonia</h5>
+                <p class="mt-1">Não mede gravidade; estima risco de patógenos resistentes. <strong>Fatores maiores (2 pontos):</strong> antibiótico nos últimos 60 dias, instituição de longa permanência, alimentação por sonda, colonização prévia por germe resistente ou infecção prévia por germe resistente.</p>
+                <p class="mt-1"><strong>Fatores menores (1 ponto):</strong> hospitalização recente, doença pulmonar crônica, dependência funcional, uso de bloqueadores de ácido gástrico e feridas crônicas.</p>
+                <p class="mt-1"><strong>Interpretação:</strong> &lt;4 baixo risco de resistência; ≥4 considerar cobertura para germes multirresistentes, como MRSA/Pseudomonas, conforme contexto clínico, epidemiologia local e critérios ATS/IDSA atuais.</p>
+              </div>
+            </div>
+          </details>
         </div>
       `,
       options: [

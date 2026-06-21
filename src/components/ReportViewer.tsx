@@ -1156,11 +1156,27 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
       ])
 
+      const inpatientWardItems = currentStep === 'influenza_internacao_enfermaria'
+        ? [
+            'Internação indicada por síndrome gripal/SRAG com necessidade de manejo hospitalar em enfermaria, sem critério imediato de terapia intensiva.',
+            'Critérios clínicos que sustentam internação em enfermaria incluem: saturação de O2 <95% em ar ambiente, dispneia moderada, taquipneia persistente, necessidade de oxigenoterapia, desidratação, incapacidade de alimentação adequada, descompensação de doença de base, idoso frágil, imunossupressão, suspeita de pneumonia viral/bacteriana ou critério clínico médico.',
+            'Ausência de critérios imediatos para UTI: sem necessidade de ventilação mecânica, sem choque, sem vasopressores e sem insuficiência respiratória grave no momento da decisão.',
+            'Antiviral: oseltamivir 75 mg VO 12/12h por 5 dias em adulto, iniciar preferencialmente nas primeiras 48 horas, mantendo indicação em paciente hospitalizado independentemente do tempo de sintomas. Ajustar dose conforme função renal e considerar prolongamento em imunossuprimidos, casos graves ou persistência de replicação viral.',
+            'Oxigenoterapia: meta de saturação >=92% na maioria dos pacientes; considerar 88-92% em retenção crônica de CO2/DPOC grave. Iniciar com cateter nasal 1-5 L/min e escalonar para máscara simples, máscara não reinalante ou cânula nasal de alto fluxo conforme evolução.',
+            'Exames laboratoriais iniciais sugeridos: hemograma completo, ureia, creatinina, sódio, potássio, TGO, TGP, PCR, glicemia; gasometria se hipoxemia; lactato se suspeita de sepse; coagulograma em casos moderados/graves; teste para Influenza, RT-PCR viral ou painel viral conforme disponibilidade.',
+            'Imagem: radiografia de tórax se dispneia, saturação <95%, ausculta pulmonar alterada, febre persistente, suspeita de pneumonia ou necessidade de internação. Considerar tomografia se RX inconclusivo, hipoxemia desproporcional, suspeita de complicações, imunossupressão, piora sem causa evidente ou suspeita de TEP.',
+            'Antibiótico não deve ser usado rotineiramente em toda Influenza; iniciar quando houver suspeita de pneumonia bacteriana associada, como consolidação lobar, escarro purulento, leucocitose importante, procalcitonina elevada quando disponível, piora após melhora inicial ou infiltrado focal ao RX.',
+            'Solicitar avaliação da UTI se saturação <90% apesar de oxigênio suplementar, FR >30 irpm persistente, uso de musculatura acessória, alteração do nível de consciência, hipotensão, lactato elevado, necessidade de VNI, necessidade de alto fluxo, choque ou falência orgânica.'
+          ]
+        : []
+
       const planItems = uniqueItems([
         currentStep === 'influenza_ambulatorial_sintomaticos' || currentStep === 'influenza_ambulatorial_oseltamivir'
           ? 'Orientado retorno em 48 a 72 horas ou antes em caso de piora clínica.'
           : 'Manter reavaliação hospitalar seriada conforme estabilidade clínica e respiratória.',
-        'Orientado retorno imediato em dispneia, desconforto respiratório, queda da saturação, confusão, desidratação ou persistência/agravamento da febre.',
+        currentStep === 'influenza_ambulatorial_sintomaticos' || currentStep === 'influenza_ambulatorial_oseltamivir'
+          ? 'Orientado retorno imediato em dispneia, desconforto respiratório, queda da saturação, confusão, desidratação ou persistência/agravamento da febre.'
+          : 'Manter isolamento por gotículas, máscara em transporte/contato, hidratação conforme necessidade, controle sintomático e monitorização de sinais vitais.',
         currentStep === 'influenza_ambulatorial_oseltamivir' || currentStep === 'influenza_internacao_enfermaria' || currentStep === 'influenza_internacao_uti'
           ? 'Manter adesão ao esquema antiviral prescrito e ajustar dose em disfunção renal, quando aplicável.'
           : null
@@ -1201,6 +1217,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             title: 'Conduta',
             items: conductItems
           },
+          ...(inpatientWardItems.length > 0
+            ? [{
+                title: 'Protocolo de Internação em Enfermaria',
+                items: inpatientWardItems
+              }]
+            : []),
           {
             title: 'Plano / Acompanhamento',
             items: planItems
