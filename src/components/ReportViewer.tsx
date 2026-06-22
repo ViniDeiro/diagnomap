@@ -349,8 +349,29 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   }
 
   const buildStructuredReport = (): StructuredMedicalReport => {
+    const scoreFlowState = (state?: Patient['flowchartState']) => {
+      if (!state) return -1
+      const answerCount = Object.keys(state.answers || {}).length
+      const historyCount = state.history?.length || 0
+      const hasRealStep = Boolean(state.currentStep && state.currentStep !== 'start')
+      return answerCount * 10 + historyCount * 2 + (hasRealStep ? 1 : 0)
+    }
+    const scorePatientFlow = (candidate?: Patient & { emergencyState?: Patient['flowchartState'] }) => {
+      if (!candidate) return -1
+      return Math.max(scoreFlowState(candidate.flowchartState), scoreFlowState(candidate.emergencyState))
+    }
     const persistedPatient = patientService.getPatientById(patient.id)
-    const patientForReport = persistedPatient || patient
+    const localCandidates = patientService.getAllPatients().filter((candidate) =>
+      candidate.id === patient.id
+      || (!!patient.medicalRecord && candidate.medicalRecord === patient.medicalRecord)
+    )
+    const patientForReport = [patient, persistedPatient, ...localCandidates]
+      .filter(Boolean)
+      .reduce((best, candidate) => (
+        scorePatientFlow(candidate as Patient & { emergencyState?: Patient['flowchartState'] }) > scorePatientFlow(best as Patient & { emergencyState?: Patient['flowchartState'] })
+          ? candidate
+          : best
+      ), patient) as Patient
     const patientWithEmergencyState = patientForReport as Patient & { emergencyState?: Patient['flowchartState'] }
 
     const safeParse = (value?: string) => {
@@ -403,13 +424,6 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     const flowchart = getFlowchartById(flowId)
     const emergencyState = patientWithEmergencyState.emergencyState
     const flowchartState = patientForReport.flowchartState
-    const scoreFlowState = (state?: Patient['flowchartState']) => {
-      if (!state) return -1
-      const answerCount = Object.keys(state.answers || {}).length
-      const historyCount = state.history?.length || 0
-      const hasRealStep = Boolean(state.currentStep && state.currentStep !== 'start')
-      return answerCount * 10 + historyCount * 2 + (hasRealStep ? 1 : 0)
-    }
     const selectedState = scoreFlowState(emergencyState) > scoreFlowState(flowchartState)
       ? emergencyState
       : flowchartState

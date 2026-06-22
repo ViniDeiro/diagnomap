@@ -282,12 +282,22 @@ export default function Home() {
   }
 
   const handleFlowchartUpdate = async (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, group?: 'A' | 'B' | 'C' | 'D') => {
-    patientService.updateFlowchartState(patientId, currentStep, history, answers, progress, group)
+    const storagePatient = patientService.getPatientById(patientId)
+      || patientService.getAllPatients().find((storedPatient) =>
+        !!currentPatient?.medicalRecord && storedPatient.medicalRecord === currentPatient.medicalRecord
+      )
+    const storagePatientId = storagePatient?.id || patientId
+
+    patientService.updateFlowchartState(storagePatientId, currentStep, history, answers, progress, group)
     const lastUpdate = new Date()
     setCurrentPatient((prev) => {
-      if (!prev || prev.id !== patientId) return prev
+      if (
+        !prev
+        || (prev.id !== patientId && prev.id !== storagePatientId && prev.medicalRecord !== storagePatient?.medicalRecord)
+      ) return prev
       return {
         ...prev,
+        id: storagePatientId,
         flowchartState: {
           currentStep,
           history,
@@ -301,11 +311,11 @@ export default function Home() {
     })
 
     try {
-      const updatedPatient = patientService.getPatientById(patientId)
+      const updatedPatient = patientService.getPatientById(storagePatientId)
       if (updatedPatient) {
         setCurrentPatient(updatedPatient)
       }
-      await updatePatientWithFlowLink(patientId, {
+      await updatePatientWithFlowLink(storagePatientId, {
         flowchart_state: {
           currentStep,
           history,
