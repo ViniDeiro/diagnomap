@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
+import { patientService } from '@/services/patientService'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
@@ -325,6 +326,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   }
 
   const buildStructuredReport = (): StructuredMedicalReport => {
+    const persistedPatient = patientService.getPatientById(patient.id)
+    const patientForReport = persistedPatient || patient
+    const patientWithEmergencyState = patientForReport as Patient & { emergencyState?: Patient['flowchartState'] }
+
     const safeParse = (value?: string) => {
       if (!value) return null
       try {
@@ -343,7 +348,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     const formatGender = (gender?: string) => gender?.trim() || 'não informado'
 
     const buildVitalsList = () => {
-      const vs = patient.admission.vitalSigns || {}
+      const vs = patientForReport.admission.vitalSigns || {}
       return uniqueItems([
         vs.temperature != null ? `Temperatura: ${vs.temperature} °C` : null,
         vs.heartRate != null ? `Frequência cardíaca: ${vs.heartRate} bpm` : null,
@@ -356,7 +361,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     }
 
     const buildLabItems = () => {
-      const labs = patient.labResults
+      const labs = patientForReport.labResults
       const findings: string[] = []
       if (labs?.status === 'pending') findings.push('Exames laboratoriais solicitados, ainda pendentes.')
       if (labs?.hemoglobin != null) {
@@ -371,29 +376,36 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       return findings
     }
 
-    const flowId = patient.selectedFlowchart || 'dengue'
+    const flowId = patientForReport.selectedFlowchart || 'dengue'
     const flowchart = getFlowchartById(flowId)
-    const emergencyState = (patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState
-    const flowchartState = patient.flowchartState
-    const selectedState = emergencyState && Object.keys(emergencyState.answers || {}).length > Object.keys(flowchartState?.answers || {}).length
+    const emergencyState = patientWithEmergencyState.emergencyState
+    const flowchartState = patientForReport.flowchartState
+    const scoreFlowState = (state?: Patient['flowchartState']) => {
+      if (!state) return -1
+      const answerCount = Object.keys(state.answers || {}).length
+      const historyCount = state.history?.length || 0
+      const hasRealStep = Boolean(state.currentStep && state.currentStep !== 'start')
+      return answerCount * 10 + historyCount * 2 + (hasRealStep ? 1 : 0)
+    }
+    const selectedState = scoreFlowState(emergencyState) > scoreFlowState(flowchartState)
       ? emergencyState
       : flowchartState
     const answers = selectedState?.answers || {}
     const currentStep = selectedState?.currentStep || ''
     const history = selectedState?.history || []
-    const currentGroup = selectedState?.group || patient.flowchartState?.group
-    const symptoms = uniqueItems(patient.admission.symptoms)
+    const currentGroup = selectedState?.group || patientForReport.flowchartState?.group
+    const symptoms = uniqueItems(patientForReport.admission.symptoms)
     const vitalItems = buildVitalsList()
     const labItems = buildLabItems()
     const prescriptions = uniqueItems(
-      patient.treatment.prescriptions.map((item) => {
+      patientForReport.treatment.prescriptions.map((item) => {
         const parts = [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean)
         return parts.join(' - ')
       })
     )
     const observations = uniqueItems([
-      patient.generalObservations,
-      ...(patient.treatment.observations || [])
+      patientForReport.generalObservations,
+      ...(patientForReport.treatment.observations || [])
     ])
 
     if (flowId === 'tvp') {
@@ -1231,7 +1243,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
     }
 
-    if (flowId === 'pneumonia') {
+    const isPneumoniaReport = flowId === 'pneumonia' || /pneumonia adquirida na comunidade/i.test(flowchart?.name || '')
+
+    if (isPneumoniaReport) {
       const parsePrefixedScore = (value: string | undefined, prefix: string) => {
         const match = String(value || '').match(new RegExp(`^${prefix}_(\\d+)$`))
         return match ? Number(match[1]) : undefined
@@ -1279,6 +1293,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         if (destinationAnswer === 'uti' || currentStep === 'pac_destino_uti' || currentStep === 'pac_psi_alto') return 'uti'
         if (destinationAnswer === 'enfermaria' || currentStep === 'pac_destino_enfermaria' || currentStep === 'pac_psi_intermediario' || currentStep === 'pac_curb_intermediario') return 'enfermaria'
         if (currentStep === 'pac_curb_alto') return effectiveCurbScore != null && effectiveCurbScore >= 4 ? 'uti' : 'enfermaria'
+        if (atsSevere) return 'uti'
+        if (effectiveCurbScore != null && effectiveCurbScore >= 3) return effectiveCurbScore >= 4 ? 'uti' : 'enfermaria'
+        if (effectiveCurbScore === 2) return 'enfermaria'
+        if (crb65Score != null && crb65Score >= 3) return 'enfermaria'
+        if (crb65Score === 0 || effectiveCurbScore === 0 || effectiveCurbScore === 1) return 'ambulatorial'
         return 'avaliacao'
       })()
 
@@ -1414,11 +1433,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         destination === 'enfermaria' ? 'Solicitar ou revisar radiografia de tórax, hemograma, função renal, eletrólitos, marcadores inflamatórios e culturas conforme gravidade e protocolo institucional.' : null,
         destination === 'enfermaria' ? 'Escalonar para UTI se houver aumento da necessidade de oxigênio, desconforto respiratório, hipotensão, alteração do sensório, lactato elevado, choque ou falência orgânica.' : null,
         destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, necessidade de ventilação mecânica, vasopressor, SOFA e acompanhamento intensivo seriado.' : null,
-        patient.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.` : null
+        patientForReport.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patientForReport.treatment.nextEvaluation)}.` : null
       ])
 
       const historyText = [
-        `Paciente admitido em ${formatDate(patient.admission.date)} para avaliação de quadro respiratório compatível com pneumonia adquirida na comunidade.`,
+        `Paciente admitido em ${formatDate(patientForReport.admission.date)} para avaliação de quadro respiratório compatível com pneumonia adquirida na comunidade.`,
         symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : 'Sintomas da admissão não foram registrados de forma estruturada.',
         observations.length > 0 ? `Observações clínicas adicionais: ${observations.join('; ')}.` : null
       ].filter(Boolean).join(' ')
@@ -1428,7 +1447,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         sections: [
           {
             title: 'Identificação do Paciente',
-            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}.`
           },
           {
             title: 'Queixa Principal',
