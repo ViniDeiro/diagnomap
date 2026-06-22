@@ -4018,6 +4018,9 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
   finalSteps: [
     'pac_estabilizacao_seguir_sepse',
     'pac_internacao_limitacao',
+    'pac_destino_ambulatorial',
+    'pac_destino_enfermaria',
+    'pac_destino_uti',
     'pac_psi_baixo',
     'pac_psi_intermediario',
     'pac_psi_alto',
@@ -4039,34 +4042,34 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
           <ul class="list-disc pl-5 space-y-1">
             <li><strong>Idosos:</strong> frequentemente podem ter apresentações atípicas, com sintomas frustros ou pouco exuberantes, como mal estar, fraqueza, rebaixamento do nível de consciência ou diminuição da cognição.</li>
             <li><strong>RX de tórax:</strong> exame que deve ser realizado em todos os pacientes, possibilitando a confirmação do diagnóstico e avaliação da presença de derrame pleural e doença extensa ou multilobar.</li>
-            <li><strong>PSI (Pneumonia Severity Index):</strong> Classe I a V, indica a severidade e a possibilidade de mortalidade. É ferramenta que auxilia na tomada de decisão, inclusive para determinação de internação e encaminhamento à Unidade de Terapia Intensiva.</li>
+            <li><strong>Sequência institucional:</strong> confirmar suspeita de PAC, aplicar CRB-65 na triagem, CURB-65 após exames, ATS/IDSA para destino, DRIP para antibiótico e SMART-COP para risco de deterioração.</li>
           </ul>
           <div class="rounded-xl border border-slate-200 bg-white p-4">
-            <h4 class="font-bold text-slate-950">Ferramentas que auxiliam na tomada de decisão em PAC</h4>
+            <h4 class="font-bold text-slate-950">Fluxo lógico do protocolo</h4>
             <div class="mt-3 grid gap-3 md:grid-cols-2">
               <div class="rounded-lg border border-blue-200 bg-blue-50 p-3">
-                <p class="font-semibold text-blue-950">Triagem inicial sem laboratório</p>
-                <p class="mt-1 text-blue-900"><strong>CRB-65:</strong> confusão, FR ≥30, PA baixa e idade ≥65. Útil quando não há ureia/BUN disponível.</p>
+                <p class="font-semibold text-blue-950">1. Triagem inicial</p>
+                <p class="mt-1 text-blue-900"><strong>CRB-65:</strong> pode ir para casa ou precisa avaliação hospitalar?</p>
               </div>
               <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
-                <p class="font-semibold text-cyan-950">Após exames laboratoriais</p>
-                <p class="mt-1 text-cyan-900"><strong>CURB-65:</strong> estima gravidade/mortalidade e auxilia decisão de internação.</p>
+                <p class="font-semibold text-cyan-950">2. Após exames iniciais</p>
+                <p class="mt-1 text-cyan-900"><strong>CURB-65:</strong> qual o risco inicial de mortalidade e internação?</p>
               </div>
               <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
-                <p class="font-semibold text-rose-950">Decisão de UTI</p>
-                <p class="mt-1 text-rose-900"><strong>ATS/IDSA:</strong> 1 critério maior ou ≥3 menores define PAC grave e indica forte consideração de UTI.</p>
+                <p class="font-semibold text-rose-950">3. Definir destino</p>
+                <p class="mt-1 text-rose-900"><strong>ATS/IDSA:</strong> enfermaria, unidade intermediária ou UTI?</p>
               </div>
               <div class="rounded-lg border border-orange-200 bg-orange-50 p-3">
-                <p class="font-semibold text-orange-950">Risco de VM/vasopressor</p>
-                <p class="mt-1 text-orange-900"><strong>SMART-COP</strong> e <strong>SCAP</strong> ajudam a prever deterioração, ventilação mecânica, choque e suporte intensivo.</p>
+                <p class="font-semibold text-orange-950">4. Definir antibiótico</p>
+                <p class="mt-1 text-orange-900"><strong>DRIP:</strong> precisa cobrir MRSA/Pseudomonas/germes resistentes?</p>
               </div>
               <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <p class="font-semibold text-emerald-950">Mortalidade e qualidade</p>
-                <p class="mt-1 text-emerald-900"><strong>PSI/PORT</strong>, <strong>SIPF</strong> e <strong>SOAR</strong> apoiam predição de mortalidade, especialmente em idosos e auditoria de qualidade.</p>
+                <p class="font-semibold text-emerald-950">5. Risco de piora</p>
+                <p class="mt-1 text-emerald-900"><strong>SMART-COP:</strong> vai precisar de ventilação mecânica ou vasopressor?</p>
               </div>
               <div class="rounded-lg border border-violet-200 bg-violet-50 p-3">
-                <p class="font-semibold text-violet-950">Germes resistentes</p>
-                <p class="mt-1 text-violet-900"><strong>DRIP Score:</strong> ferramenta complementar para risco de MRSA, Pseudomonas e outros patógenos multirresistentes; usar junto ao contexto local e fatores ATS/IDSA.</p>
+                <p class="font-semibold text-violet-950">Complementares</p>
+                <p class="mt-1 text-violet-900"><strong>PSI/PORT, SCAP, SIPF, SOAR, SOFA e SAPS 3:</strong> prognóstico, auditoria, pesquisa e UTI.</p>
               </div>
             </div>
           </div>
@@ -4111,8 +4114,169 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Iniciar triagem de gravidade', nextStep: 'pac_sepse_insuficiencia', value: 'iniciar' }
+        { text: 'Iniciar com CRB-65', nextStep: 'pac_crb65_triagem', value: 'iniciar_crb65' }
       ]
+    },
+    pac_crb65_triagem: {
+      id: 'pac_crb65_triagem',
+      title: 'Etapa 1 - CRB-65',
+      description: 'Primeiro score de triagem para decidir baixo risco versus avaliação hospitalar.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <p><strong>Objetivo:</strong> identificar rapidamente pacientes de baixo ou alto risco ainda na triagem.</p>
+          <p class="mt-2"><strong>Pergunta:</strong> esse paciente pode ser tratado ambulatorialmente ou precisa avaliação hospitalar?</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_curb65_protocolo: {
+      id: 'pac_curb65_protocolo',
+      title: 'Etapa 2 - CURB-65',
+      description: 'Aplicar após exames iniciais, acrescentando ureia/BUN ao CRB-65.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950">
+          <p><strong>Objetivo:</strong> estratificação inicial de gravidade após laboratório.</p>
+          <p class="mt-2"><strong>Pergunta:</strong> qual o risco inicial de mortalidade e necessidade de internação?</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_ats_idsa_gravidade: {
+      id: 'pac_ats_idsa_gravidade',
+      title: 'Etapa 3 - ATS/IDSA para PAC Grave',
+      description: 'Definir necessidade de terapia intensiva.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
+          <p><strong>Objetivo:</strong> determinar se há PAC grave e necessidade de UTI.</p>
+          <p class="mt-2"><strong>Pergunta:</strong> esse paciente precisa de terapia intensiva?</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_destino_protocolo: {
+      id: 'pac_destino_protocolo',
+      title: 'Etapa 3b - Definir Destino',
+      description: 'Escolher destino assistencial após CRB-65, CURB-65 e ATS/IDSA.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-800">
+          <p><strong>Defina o destino clínico:</strong> ambulatório, enfermaria/unidade intermediária ou UTI. Use o resultado dos escores como apoio, mas preserve julgamento clínico, comorbidades, hipoxemia e capacidade de seguimento.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Ambulatório', nextStep: 'pac_destino_ambulatorial', value: 'ambulatorio' },
+        { text: 'Enfermaria / unidade intermediária', nextStep: 'pac_drip_enfermaria', value: 'enfermaria', critical: true },
+        { text: 'UTI', nextStep: 'pac_drip_uti', value: 'uti', critical: true }
+      ]
+    },
+    pac_drip_enfermaria: {
+      id: 'pac_drip_enfermaria',
+      title: 'Etapa 4 - DRIP Score',
+      description: 'Aplicar após decidir internação em enfermaria/unidade intermediária.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950">
+          <p><strong>Objetivo:</strong> estimar risco de patógenos resistentes para ajustar antibiótico empírico.</p>
+          <p class="mt-2"><strong>Pergunta:</strong> preciso ampliar cobertura para MRSA ou Pseudomonas?</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_drip_uti: {
+      id: 'pac_drip_uti',
+      title: 'Etapa 4 - DRIP Score',
+      description: 'Aplicar após decidir UTI.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950">
+          <p><strong>Objetivo:</strong> estimar risco de patógenos resistentes para ajustar antibiótico empírico na admissão hospitalar/UTI.</p>
+          <p class="mt-2"><strong>Pergunta:</strong> preciso ampliar cobertura para MRSA ou Pseudomonas?</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_smartcop_enfermaria: {
+      id: 'pac_smartcop_enfermaria',
+      title: 'Etapa 5 - SMART-COP',
+      description: 'Risco de ventilação mecânica, vasopressor e suporte intensivo.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
+          <p><strong>Objetivo:</strong> prever deterioração respiratória/hemodinâmica.</p>
+          <p class="mt-2"><strong>Pergunta:</strong> esse paciente ainda não está em choque ou intubado, mas vai piorar?</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_smartcop_uti: {
+      id: 'pac_smartcop_uti',
+      title: 'Etapa 5 - SMART-COP',
+      description: 'Risco de ventilação mecânica, vasopressor e suporte intensivo.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
+          <p><strong>Objetivo:</strong> documentar risco de ventilação mecânica, vasopressor e suporte intensivo.</p>
+          <p class="mt-2"><strong>Na UTI:</strong> usar como apoio de gravidade e monitorização, junto de SOFA/SAPS 3 conforme rotina institucional.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_destino_ambulatorial: {
+      id: 'pac_destino_ambulatorial',
+      title: 'Destino - Ambulatório',
+      description: 'Tratamento ambulatorial quando baixo risco e sem limitadores.',
+      type: 'result',
+      group: 'Ambulatório',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p><strong>Destino:</strong> tratamento ambulatorial se baixo risco, sem instabilidade, sem hipoxemia relevante, sem limitador social/via oral e com capacidade de retorno.</p>
+          </div>
+          <p><strong>Antibioticoterapia:</strong> definir conforme comorbidades, uso recente de antibiótico, alergias e protocolo institucional.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_destino_enfermaria: {
+      id: 'pac_destino_enfermaria',
+      title: 'Destino - Enfermaria',
+      description: 'Internação em enfermaria/unidade intermediária.',
+      type: 'result',
+      group: 'Enfermaria',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
+            <p><strong>Destino:</strong> internação em enfermaria ou unidade intermediária, com monitorização clínica, oxigenoterapia conforme necessidade e reavaliação seriada.</p>
+          </div>
+          <p><strong>Sem risco de germe resistente:</strong> ceftriaxona + azitromicina ou claritromicina.</p>
+          <p><strong>Com risco DRIP/ATS-IDSA/local:</strong> avaliar ampliação para piperacilina-tazobactam, cefepime ou meropenem conforme cenário, culturas e protocolo institucional.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_destino_uti: {
+      id: 'pac_destino_uti',
+      title: 'Destino - UTI',
+      description: 'PAC grave com necessidade de terapia intensiva.',
+      type: 'result',
+      critical: true,
+      group: 'UTI',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+            <p><strong>Destino:</strong> terapia intensiva, com suporte ventilatório/hemodinâmico conforme necessidade, coleta de culturas e antibioticoterapia precoce.</p>
+          </div>
+          <p><strong>Após admissão em UTI:</strong> aplicar SOFA para disfunção orgânica/sepses e SAPS 3 para prognóstico e indicadores de qualidade conforme rotina institucional.</p>
+          <p><strong>Antibiótico:</strong> ajustar conforme risco de MRSA/Pseudomonas, DRIP, culturas, epidemiologia local e protocolo institucional.</p>
+        </div>
+      `,
+      options: []
     },
     pac_sepse_insuficiencia: {
       id: 'pac_sepse_insuficiencia',

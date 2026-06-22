@@ -2108,6 +2108,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_psi'
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
   const isPneumoniaIntroStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_inicio'
+  const isPneumoniaCrbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_crb65_triagem'
+  const isPneumoniaCurbProtocolStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_curb65_protocolo'
+  const isPneumoniaAtsIdsaStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_ats_idsa_gravidade'
+  const isPneumoniaDripStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStepData?.id || '')
+  const isPneumoniaSmartCopStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStepData?.id || '')
   const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
   const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
@@ -6182,7 +6187,250 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isPneumoniaIntroStep && (
+              {isPneumoniaCrbStep && (
+                <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-blue-950">Etapa 1 - CRB-65</h4>
+                      <p className="text-sm text-blue-900">Primeiro score de triagem: pode ir para casa ou precisa avaliação hospitalar?</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-blue-900">
+                      {pneumoniaCrbScore} ponto(s)
+                      <div className="text-xs font-semibold">{pneumoniaCrbInterpretation}</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {pneumoniaCrbItems.map((item) => {
+                      const checked = pneumoniaCrbCriteria.includes(item)
+                      return (
+                        <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-blue-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSelection(setPneumoniaCrbCriteria, item)}
+                            className="mt-1 h-4 w-4 rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span>{item}</span>
+                          <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+1</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer('pac_curb65_protocolo', `crb65_${pneumoniaCrbScore}`)}
+                      className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700"
+                    >
+                      Prosseguir para CURB-65
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaCurbProtocolStep && (
+                <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-950">Etapa 2 - CURB-65</h4>
+                      <p className="text-sm text-cyan-900">Após laboratório: risco inicial de mortalidade e necessidade de internação.</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-cyan-900">
+                      CURB-65 {pneumoniaCurbResult.score}
+                      <div className="text-xs font-semibold">{pneumoniaCurbResult.disposition}</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {pneumoniaCurbItems.map((item) => {
+                      const checked = pneumoniaCurbValues[item.key]
+                      return (
+                        <label key={item.key} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-cyan-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) => setPneumoniaCurbValues(prev => ({ ...prev, [item.key]: e.target.checked }))}
+                            className="mt-1 h-4 w-4 rounded border-cyan-300 text-cyan-600 focus:ring-cyan-500"
+                          />
+                          <span>{item.label}</span>
+                          <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+1</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer('pac_ats_idsa_gravidade', `curb65_${pneumoniaCurbResult.score}`)}
+                      className="rounded-xl bg-cyan-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-700"
+                    >
+                      Prosseguir para ATS/IDSA
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaAtsIdsaStep && (
+                <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-rose-950">Etapa 3 - ATS/IDSA</h4>
+                      <p className="text-sm text-rose-900">Score central para definir necessidade de UTI.</p>
+                    </div>
+                    <div className={clsx('rounded-xl px-4 py-3 text-sm font-bold', pneumoniaAtsIdsaSevere ? 'bg-red-600 text-white' : 'bg-white text-rose-900')}>
+                      {pneumoniaAtsIdsaSevere ? 'PAC grave' : 'Sem PAC grave'}
+                      <div className="text-xs font-semibold">{pneumoniaAtsIdsaMajorCriteria.length} maior(es), {pneumoniaAtsIdsaMinorCriteria.length} menor(es)</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-900">Critérios maiores</p>
+                      <div className="space-y-1.5">
+                        {pneumoniaAtsIdsaMajorItems.map((item) => {
+                          const checked = pneumoniaAtsIdsaMajorCriteria.includes(item)
+                          return (
+                            <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-rose-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleSelection(setPneumoniaAtsIdsaMajorCriteria, item)} className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500" />
+                              <span>{item}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-rose-900">Critérios menores</p>
+                      <div className="space-y-1.5">
+                        {pneumoniaAtsIdsaMinorItems.map((item) => {
+                          const checked = pneumoniaAtsIdsaMinorCriteria.includes(item)
+                          return (
+                            <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-rose-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleSelection(setPneumoniaAtsIdsaMinorCriteria, item)} className="mt-1 h-4 w-4 rounded border-rose-300 text-rose-600 focus:ring-rose-500" />
+                              <span>{item}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer('pac_destino_protocolo', pneumoniaAtsIdsaSevere ? 'ats_idsa_pac_grave' : 'ats_idsa_sem_pac_grave')}
+                      className="rounded-xl bg-rose-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-rose-700"
+                    >
+                      Definir destino
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaDripStep && (
+                <div className="mb-6 rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-violet-950">Etapa 4 - DRIP Score</h4>
+                      <p className="text-sm text-violet-900">Após decidir internação: precisa ampliar cobertura para MRSA/Pseudomonas?</p>
+                    </div>
+                    <div className={clsx('rounded-xl px-4 py-3 text-sm font-bold', pneumoniaDripScore >= 4 ? 'bg-violet-700 text-white' : 'bg-white text-violet-900')}>
+                      DRIP {pneumoniaDripScore}
+                      <div className="text-xs font-semibold">{pneumoniaDripInterpretation}</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-900">Fatores maiores (+2)</p>
+                      <div className="space-y-1.5">
+                        {pneumoniaDripMajorItems.map((item) => {
+                          const checked = pneumoniaDripMajorCriteria.includes(item)
+                          return (
+                            <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-violet-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleSelection(setPneumoniaDripMajorCriteria, item)} className="mt-1 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500" />
+                              <span>{item}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      <p className="mb-2 text-xs font-bold uppercase tracking-wide text-violet-900">Fatores menores (+1)</p>
+                      <div className="space-y-1.5">
+                        {pneumoniaDripMinorItems.map((item) => {
+                          const checked = pneumoniaDripMinorCriteria.includes(item)
+                          return (
+                            <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-violet-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                              <input type="checkbox" checked={checked} onChange={() => toggleSelection(setPneumoniaDripMinorCriteria, item)} className="mt-1 h-4 w-4 rounded border-violet-300 text-violet-600 focus:ring-violet-500" />
+                              <span>{item}</span>
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-xl border border-violet-200 bg-white p-3 text-sm text-violet-950">
+                    {pneumoniaDripScore >= 4
+                      ? 'Considerar cobertura ampliada conforme cenário: piperacilina-tazobactam, cefepime ou meropenem; avaliar MRSA conforme cultura/epidemiologia local.'
+                      : 'Baixo risco pelo DRIP: esquema habitual de PAC, como ceftriaxona + azitromicina, se compatível com o cenário clínico.'}
+                  </div>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(currentStepData.id === 'pac_drip_uti' ? 'pac_smartcop_uti' : 'pac_smartcop_enfermaria', `drip_${pneumoniaDripScore}`)}
+                      className="rounded-xl bg-violet-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-violet-800"
+                    >
+                      Prosseguir para SMART-COP
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaSmartCopStep && (
+                <div className="mb-6 rounded-2xl border border-orange-200 bg-orange-50 p-5">
+                  <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-orange-950">Etapa 5 - SMART-COP</h4>
+                      <p className="text-sm text-orange-900">Risco de ventilação mecânica, vasopressor e suporte intensivo.</p>
+                    </div>
+                    <div className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-orange-900">
+                      {pneumoniaSmartCopScore} ponto(s)
+                      <div className="text-xs font-semibold">{pneumoniaSmartCopInterpretation}</div>
+                    </div>
+                  </div>
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {pneumoniaSmartCopItems.map((item) => {
+                      const checked = pneumoniaSmartCopCriteria.includes(item.label)
+                      return (
+                        <label key={item.label} className={clsx('flex cursor-pointer items-start gap-2 rounded-lg p-2 text-sm', checked ? 'bg-white text-orange-950 shadow-sm' : 'text-slate-700 hover:bg-white/70')}>
+                          <input type="checkbox" checked={checked} onChange={() => toggleSelection(setPneumoniaSmartCopCriteria, item.label)} className="mt-1 h-4 w-4 rounded border-orange-300 text-orange-600 focus:ring-orange-500" />
+                          <span>{item.label}</span>
+                          <span className="ml-auto shrink-0 rounded-md bg-white px-2 py-0.5 text-xs font-bold text-slate-700">+{item.points}</span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                  <details className="mt-4 rounded-xl border border-orange-200 bg-white p-4 text-sm text-slate-800">
+                    <summary className="cursor-pointer font-bold text-orange-950">Ferramentas complementares de prognóstico</summary>
+                    <p className="mt-3"><strong>PSI/PORT:</strong> mortalidade, auditoria, pesquisa e discussão de caso; pouco útil para decisão imediata no PS.</p>
+                    <p className="mt-2"><strong>SCAP, SIPF e SOAR:</strong> complementares para risco de VM/choque/mortalidade, especialmente idosos e triagem rápida.</p>
+                    <p className="mt-2"><strong>SOFA:</strong> se sepse/choque/UTI, avaliar disfunção orgânica.</p>
+                    <p className="mt-2"><strong>SAPS 3:</strong> se UTI, predição de mortalidade hospitalar e indicadores de qualidade.</p>
+                  </details>
+                  <div className="mt-4 flex justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => handleAnswer(currentStepData.id === 'pac_smartcop_uti' ? 'pac_destino_uti' : 'pac_destino_enfermaria', `smartcop_${pneumoniaSmartCopScore}`)}
+                      className="rounded-xl bg-orange-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-orange-700"
+                    >
+                      Finalizar protocolo
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {false && isPneumoniaIntroStep && (
                 <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                   <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
