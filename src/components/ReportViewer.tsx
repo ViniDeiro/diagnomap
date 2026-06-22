@@ -1231,6 +1231,245 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
     }
 
+    if (flowId === 'pneumonia') {
+      const parsePrefixedScore = (value: string | undefined, prefix: string) => {
+        const match = String(value || '').match(new RegExp(`^${prefix}_(\\d+)$`))
+        return match ? Number(match[1]) : undefined
+      }
+      const formatScore = (score: number | undefined, max: number) =>
+        score != null ? `${score}/${max}` : 'não registrado'
+      const criteriaFromObject = (criteria: unknown, labels: Record<string, string>) => {
+        if (!criteria || typeof criteria !== 'object') return [] as string[]
+        return Object.entries(criteria as Record<string, boolean | number | string>)
+          .filter(([, selected]) => selected === true)
+          .map(([key]) => labels[key] || key)
+      }
+
+      const crb65Score = parsePrefixedScore(answers.pac_crb65_triagem, 'crb65')
+      const curb65Score = parsePrefixedScore(answers.pac_curb65_protocolo, 'curb65')
+      const dripScore = parsePrefixedScore(answers.pac_drip_enfermaria || answers.pac_drip_uti, 'drip')
+      const smartCopScore = parsePrefixedScore(answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti, 'smartcop')
+      const psiData = safeParse(answers.pac_calcular_psi) as {
+        score?: number
+        grupo?: string
+        destino?: string
+        criterios?: Record<string, boolean | number | string>
+      } | null
+      const curbLegacyData = safeParse(answers.pac_calcular_curb65) as {
+        score?: number
+        destino?: string
+        criterios?: Record<string, boolean | number | string>
+      } | null
+
+      const effectiveCurbScore = curb65Score ?? curbLegacyData?.score
+      const atsSevere = answers.pac_ats_idsa_gravidade === 'ats_idsa_pac_grave'
+      const destinationAnswer = answers.pac_destino_protocolo || ''
+      const psiGroup = psiData?.grupo || (currentStep === 'pac_psi_baixo'
+        ? 'PORT I/II'
+        : currentStep === 'pac_psi_intermediario'
+          ? 'PORT III/IV'
+          : currentStep === 'pac_psi_alto'
+            ? 'PORT V'
+            : '')
+
+      const destination = (() => {
+        if (currentStep === 'pac_estabilizacao_seguir_sepse') return 'estabilizacao'
+        if (currentStep === 'pac_internacao_limitacao') return 'limitador'
+        if (destinationAnswer === 'ambulatorio' || currentStep === 'pac_destino_ambulatorial' || currentStep === 'pac_psi_baixo' || currentStep === 'pac_curb_baixo') return 'ambulatorial'
+        if (destinationAnswer === 'uti' || currentStep === 'pac_destino_uti' || currentStep === 'pac_psi_alto') return 'uti'
+        if (destinationAnswer === 'enfermaria' || currentStep === 'pac_destino_enfermaria' || currentStep === 'pac_psi_intermediario' || currentStep === 'pac_curb_intermediario') return 'enfermaria'
+        if (currentStep === 'pac_curb_alto') return effectiveCurbScore != null && effectiveCurbScore >= 4 ? 'uti' : 'enfermaria'
+        return 'avaliacao'
+      })()
+
+      const crbRisk = crb65Score == null
+        ? 'não registrado'
+        : crb65Score === 0
+          ? 'baixo risco'
+          : crb65Score <= 2
+            ? 'risco intermediário, com necessidade de avaliação hospitalar'
+            : 'alto risco, com internação recomendada'
+      const curbRisk = effectiveCurbScore == null
+        ? 'não registrado'
+        : effectiveCurbScore <= 1
+          ? 'baixo risco, compatível com tratamento ambulatorial se não houver limitadores'
+          : effectiveCurbScore === 2
+            ? 'risco moderado, com indicação de considerar internação'
+            : effectiveCurbScore >= 4
+              ? 'risco elevado, com forte indicação de internação e avaliação para UTI'
+              : 'risco elevado, com indicação de internação hospitalar'
+      const dripRisk = dripScore == null
+        ? 'não avaliado neste trecho do fluxo'
+        : dripScore >= 4
+          ? 'risco aumentado para patógenos resistentes'
+          : 'baixo risco para patógenos resistentes'
+      const smartCopRisk = smartCopScore == null
+        ? 'não avaliado neste trecho do fluxo'
+        : smartCopScore <= 2
+          ? 'baixo risco de necessidade de ventilação mecânica ou vasopressor'
+          : smartCopScore <= 4
+            ? 'risco moderado de deterioração respiratória/hemodinâmica'
+            : smartCopScore <= 6
+              ? 'alto risco de necessidade de suporte intensivo'
+              : 'risco muito alto de necessidade de ventilação mecânica e/ou vasopressor'
+
+      const psiLabels: Record<string, string> = {
+        residenteCasaRepouso: 'residência em instituição/casa de repouso',
+        neoplasiaAtiva: 'neoplasia ativa',
+        doencaHepaticaCronica: 'doença hepática crônica',
+        insuficienciaCardiaca: 'insuficiência cardíaca',
+        doencaCerebrovascular: 'doença cerebrovascular',
+        doencaRenalCronica: 'doença renal crônica',
+        estadoMentalAlterado: 'alteração do estado mental',
+        frMaior30: 'FR >= 30 irpm',
+        pasMenor90: 'PAS < 90 mmHg',
+        temperaturaExtrema: 'temperatura <35 °C ou >=40 °C',
+        fcMaior125: 'FC >= 125 bpm',
+        phMenor735: 'pH arterial < 7,35',
+        ureiaMaior30: 'ureia/BUN elevado',
+        sodioMenor130: 'sódio < 130 mEq/L',
+        glicoseMaior250: 'glicose >= 250 mg/dL',
+        hematocritoMenor30: 'hematócrito < 30%',
+        hipoxemia: 'hipoxemia',
+        derramePleural: 'derrame pleural'
+      }
+      const curbLabels: Record<string, string> = {
+        confusaoMental: 'confusão mental',
+        ureiaMaior43: 'ureia elevada',
+        frMaior30: 'FR >= 30 irpm',
+        paBaixa: 'PAS < 90 mmHg ou PAD <= 60 mmHg',
+        idadeMaior65: 'idade >= 65 anos'
+      }
+      const psiCriteria = criteriaFromObject(psiData?.criterios, psiLabels)
+      const curbCriteria = criteriaFromObject(curbLegacyData?.criterios, curbLabels)
+
+      const title = destination === 'uti'
+        ? 'PRONTUÁRIO MÉDICO – PAC GRAVE / AVALIAÇÃO PARA UTI'
+        : destination === 'enfermaria' || destination === 'limitador'
+          ? 'PRONTUÁRIO MÉDICO – PNEUMONIA ADQUIRIDA NA COMUNIDADE / INTERNAÇÃO'
+          : destination === 'ambulatorial'
+            ? 'PRONTUÁRIO MÉDICO – PNEUMONIA ADQUIRIDA NA COMUNIDADE / MANEJO AMBULATORIAL'
+            : 'PRONTUÁRIO MÉDICO – PNEUMONIA ADQUIRIDA NA COMUNIDADE'
+
+      const diagnosisText = (() => {
+        if (destination === 'estabilizacao') {
+          return 'Paciente avaliado com suspeita de pneumonia adquirida na comunidade, apresentando instabilidade clínica, sepse, insuficiência respiratória ou necessidade de estabilização imediata. Prioridade assistencial definida para sala de emergência, suporte clínico inicial e reavaliação do destino após estabilização.'
+        }
+        if (destination === 'limitador') {
+          return 'Paciente com quadro compatível com pneumonia adquirida na comunidade e presença de limitador para manejo ambulatorial, como impossibilidade de via oral, vulnerabilidade social, doença mental limitante ou incapacidade de adesão segura ao tratamento. Internação indicada independentemente do escore isolado.'
+        }
+        if (destination === 'uti') {
+          return 'Paciente com pneumonia adquirida na comunidade classificada como grave ou de alto risco, com indicação de avaliação para terapia intensiva. A decisão considera critérios ATS/IDSA, escore de gravidade, instabilidade clínica, necessidade de suporte ventilatório/hemodinâmico ou alto risco de deterioração.'
+        }
+        if (destination === 'enfermaria') {
+          return 'Paciente com pneumonia adquirida na comunidade com necessidade de internação hospitalar em enfermaria ou unidade intermediária para antibioticoterapia, monitorização clínica, suporte respiratório se necessário e acompanhamento evolutivo.'
+        }
+        if (destination === 'ambulatorial') {
+          return 'Paciente com quadro compatível com pneumonia adquirida na comunidade, sem critérios atuais de gravidade imediata ou instabilidade clínica registrados no fluxo, com estratificação favorável para tratamento ambulatorial e reavaliação precoce.'
+        }
+        return 'Paciente em avaliação por suspeita de pneumonia adquirida na comunidade. O fluxo ainda não chegou a uma decisão final de destino, devendo a conduta ser confirmada após completar a estratificação clínica.'
+      })()
+
+      const antibioticText = (() => {
+        if (destination === 'ambulatorial') {
+          return 'Antibioticoterapia ambulatorial conforme perfil clínico, com escolha entre beta-lactâmico, macrolídeo ou associação em pacientes com comorbidades/uso recente de antibiótico, seguindo prescrição médica e protocolo institucional.'
+        }
+        if (dripScore != null && dripScore >= 4) {
+          return 'DRIP >= 4 sugere maior risco de patógenos resistentes. Considerar cobertura ampliada para MRSA/Pseudomonas conforme gravidade, culturas prévias, epidemiologia local e protocolo institucional, sem atrasar antibioticoterapia inicial.'
+        }
+        if (destination === 'enfermaria') {
+          return 'Na ausência de risco aumentado para patógenos resistentes, considerar esquema hospitalar habitual para PAC, como ceftriaxona associada a azitromicina, ajustando conforme alergias, função renal, perfil local, culturas e evolução clínica.'
+        }
+        if (destination === 'uti' || destination === 'estabilizacao') {
+          return 'Em PAC grave, iniciar antibioticoterapia precoce após coleta de culturas quando viável, sem atrasar tratamento. Ajustar cobertura conforme risco de MRSA/Pseudomonas, gravidade, foco infeccioso, epidemiologia local e resposta clínica.'
+        }
+        return 'Antibioticoterapia deve ser definida conforme gravidade, comorbidades, alergias, risco de resistência e protocolo institucional.'
+      })()
+
+      const conductItems = uniqueItems([
+        destination === 'ambulatorial' ? 'Tratamento ambulatorial, com antibiótico conforme prescrição, sintomáticos quando indicados e retorno programado em 48 a 72 horas.' : null,
+        destination === 'enfermaria' ? 'Indicada internação hospitalar em enfermaria/unidade intermediária, com antibioticoterapia venosa ou oral conforme gravidade, monitorização clínica seriada e suporte de oxigênio se necessário.' : null,
+        destination === 'uti' ? 'Solicitada avaliação de terapia intensiva, com monitorização contínua, suporte respiratório/hemodinâmico conforme necessidade, coleta de culturas quando possível e antibioticoterapia precoce.' : null,
+        destination === 'estabilizacao' ? 'Priorizada estabilização imediata: monitorização, oxigenoterapia, acesso venoso, avaliação de lactato/culturas, ressuscitação volêmica quando indicada, vasopressor se choque e antibioticoterapia precoce.' : null,
+        destination === 'limitador' ? 'Internação indicada por insegurança para tratamento ambulatorial, garantindo via de administração, observação clínica e adesão terapêutica.' : null,
+        prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
+      ])
+
+      const assessmentItems = uniqueItems([
+        `CRB-65: ${formatScore(crb65Score, 4)} (${crbRisk}).`,
+        `CURB-65: ${formatScore(effectiveCurbScore, 5)} (${curbRisk}).`,
+        psiData?.score != null ? `PSI/PORT: ${psiData.score} pontos, ${psiGroup || 'grupo não informado'}, destino sugerido: ${psiData.destino || 'não informado'}.` : null,
+        psiCriteria.length > 0 ? `Critérios pontuados no PSI: ${psiCriteria.join('; ')}.` : null,
+        curbCriteria.length > 0 ? `Critérios pontuados no CURB-65: ${curbCriteria.join('; ')}.` : null,
+        answers.pac_ats_idsa_gravidade ? `ATS/IDSA: ${atsSevere ? 'PAC grave identificada, por critério maior ou >=3 critérios menores' : 'sem critérios atuais para PAC grave/UTI pelo registro do fluxo'}.` : null,
+        `DRIP Score: ${formatScore(dripScore, 8)} (${dripRisk}).`,
+        `SMART-COP: ${formatScore(smartCopScore, 11)} (${smartCopRisk}).`,
+        'PSI/PORT, SCAP, SIPF, SOAR, SOFA e SAPS 3 permanecem como ferramentas complementares de prognóstico, auditoria ou avaliação em sepse/UTI quando aplicáveis.'
+      ])
+
+      const planItems = uniqueItems([
+        antibioticText,
+        destination === 'ambulatorial' ? 'Orientar retorno imediato em dispneia, queda de saturação, confusão, hipotensão, piora do estado geral, febre persistente, intolerância oral ou ausência de melhora clínica.' : null,
+        destination === 'ambulatorial' ? 'Reavaliar em 48 a 72 horas ou antes se houver piora.' : null,
+        destination === 'enfermaria' ? 'Solicitar ou revisar radiografia de tórax, hemograma, função renal, eletrólitos, marcadores inflamatórios e culturas conforme gravidade e protocolo institucional.' : null,
+        destination === 'enfermaria' ? 'Escalonar para UTI se houver aumento da necessidade de oxigênio, desconforto respiratório, hipotensão, alteração do sensório, lactato elevado, choque ou falência orgânica.' : null,
+        destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, necessidade de ventilação mecânica, vasopressor, SOFA e acompanhamento intensivo seriado.' : null,
+        patient.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patient.treatment.nextEvaluation)}.` : null
+      ])
+
+      const historyText = [
+        `Paciente admitido em ${formatDate(patient.admission.date)} para avaliação de quadro respiratório compatível com pneumonia adquirida na comunidade.`,
+        symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : 'Sintomas da admissão não foram registrados de forma estruturada.',
+        observations.length > 0 ? `Observações clínicas adicionais: ${observations.join('; ')}.` : null
+      ].filter(Boolean).join(' ')
+
+      return {
+        title,
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'Queixa Principal',
+            text: symptoms[0] || 'Tosse, febre, dispneia ou outro quadro respiratório sugestivo de PAC.'
+          },
+          {
+            title: 'História da Doença Atual',
+            text: historyText
+          },
+          {
+            title: 'Exame Físico e Sinais Vitais',
+            items: vitalItems.length > 0 ? vitalItems : ['Sem sinais vitais estruturados registrados no sistema.']
+          },
+          {
+            title: 'Exames Complementares',
+            items: labItems.length > 0 ? labItems : ['Sem exames laboratoriais estruturados registrados no sistema. Radiografia de tórax e exames complementares devem ser interpretados conforme disponibilidade e evolução clínica.']
+          },
+          {
+            title: 'Impressão Diagnóstica',
+            text: diagnosisText
+          },
+          {
+            title: 'Estratificação de Gravidade',
+            items: assessmentItems
+          },
+          {
+            title: 'Conduta e Destino',
+            items: conductItems.length > 0 ? conductItems : ['Conduta final ainda não registrada; completar fluxo de PAC para definição de destino.']
+          },
+          {
+            title: 'Plano Terapêutico e Orientações',
+            items: planItems
+          },
+          {
+            title: 'Médico responsável',
+            text: 'Médico responsável: __________________________________\nCRM: __________________'
+          }
+        ]
+      }
+    }
+
     if (flowId === 'paralisia_bell') {
       const criteriaData = safeParse(answers.bell_criterios_obrigatorios) as { criteriosSelecionados?: string[]; todosCriteriosPresentes?: boolean } | null
       const supportData = safeParse(answers.bell_suporte_diagnostico) as { criteriosSuporteSelecionados?: string[] } | null
