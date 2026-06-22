@@ -14,6 +14,7 @@ import {
 import { Patient } from '@/types/patient'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { patientService } from '@/services/patientService'
+import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
@@ -169,11 +170,33 @@ interface ReportViewerProps {
 const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
+  const [doctorProfile, setDoctorProfile] = React.useState<DoctorProfile | null>(null)
   const activeFlowState = ((patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState?.answers &&
     Object.keys((patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState?.answers || {}).length > Object.keys(patient.flowchartState?.answers || {}).length)
     ? (patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState
     : patient.flowchartState
   const activeGroup = activeFlowState?.group || patient.flowchartState?.group
+
+  React.useEffect(() => {
+    let mounted = true
+    getCurrentDoctor()
+      .then((doctor) => {
+        if (mounted) setDoctorProfile(doctor as DoctorProfile | null)
+      })
+      .catch((error) => {
+        console.warn('Não foi possível carregar o médico responsável do relatório:', error)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const doctorSignatureText = React.useMemo(() => {
+    const doctorName = doctorProfile?.name?.trim()
+    const crm = doctorProfile?.crm?.trim()
+    const crmText = crm ? (/^crm\b/i.test(crm) ? crm : `CRM ${crm}`) : 'CRM não informado'
+    return `Médico responsável: ${doctorName || 'Não informado'}\n${crmText}`
+  }, [doctorProfile])
 
   // Faixas de referência da Hemoglobina por idade/sexo
   const getHbRange = () => {
@@ -899,7 +922,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             },
             {
               title: 'Médico responsável',
-              text: 'Médico Responsável: ______________________\nCRM: ______________________'
+              text: doctorSignatureText
             }
           ]
         }
@@ -1008,7 +1031,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             },
             {
               title: 'Médico responsável',
-              text: 'Médico responsável: __________________________________\nCRM: __________________'
+              text: doctorSignatureText
             }
           ]
         }
@@ -1246,9 +1269,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     const isPneumoniaReport = flowId === 'pneumonia' || /pneumonia adquirida na comunidade/i.test(flowchart?.name || '')
 
     if (isPneumoniaReport) {
-      const parsePrefixedScore = (value: string | undefined, prefix: string) => {
+      const parseScoreAnswer = (value: string | undefined, prefix: string) => {
         const match = String(value || '').match(new RegExp(`^${prefix}_(\\d+)$`))
-        return match ? Number(match[1]) : undefined
+        if (match) return Number(match[1])
+        const parsed = safeParse(value) as { score?: number } | null
+        return typeof parsed?.score === 'number' ? parsed.score : undefined
       }
       const formatScore = (score: number | undefined, max: number) =>
         score != null ? `${score}/${max}` : 'não registrado'
@@ -1258,11 +1283,32 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           .filter(([, selected]) => selected === true)
           .map(([key]) => labels[key] || key)
       }
+      const criteriaFromArray = (items: unknown) => Array.isArray(items) ? uniqueItems(items.map((item) => String(item))) : []
 
-      const crb65Score = parsePrefixedScore(answers.pac_crb65_triagem, 'crb65')
-      const curb65Score = parsePrefixedScore(answers.pac_curb65_protocolo, 'curb65')
-      const dripScore = parsePrefixedScore(answers.pac_drip_enfermaria || answers.pac_drip_uti, 'drip')
-      const smartCopScore = parsePrefixedScore(answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti, 'smartcop')
+      const crbData = safeParse(answers.pac_crb65_triagem) as { score?: number; criteriosSelecionados?: string[] } | null
+      const curbProtocolData = safeParse(answers.pac_curb65_protocolo) as {
+        score?: number
+        destino?: string
+        criterios?: Record<string, boolean | number | string>
+      } | null
+      const atsData = safeParse(answers.pac_ats_idsa_gravidade) as {
+        pacGrave?: boolean
+        criteriosMaioresSelecionados?: string[]
+        criteriosMenoresSelecionados?: string[]
+      } | null
+      const dripData = safeParse(answers.pac_drip_enfermaria || answers.pac_drip_uti) as {
+        score?: number
+        criteriosMaioresSelecionados?: string[]
+        criteriosMenoresSelecionados?: string[]
+      } | null
+      const smartCopData = safeParse(answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti) as {
+        score?: number
+        criteriosSelecionados?: string[]
+      } | null
+      const crb65Score = parseScoreAnswer(answers.pac_crb65_triagem, 'crb65')
+      const curb65Score = parseScoreAnswer(answers.pac_curb65_protocolo, 'curb65')
+      const dripScore = parseScoreAnswer(answers.pac_drip_enfermaria || answers.pac_drip_uti, 'drip')
+      const smartCopScore = parseScoreAnswer(answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti, 'smartcop')
       const psiData = safeParse(answers.pac_calcular_psi) as {
         score?: number
         grupo?: string
@@ -1276,7 +1322,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       } | null
 
       const effectiveCurbScore = curb65Score ?? curbLegacyData?.score
-      const atsSevere = answers.pac_ats_idsa_gravidade === 'ats_idsa_pac_grave'
+      const atsSevere = atsData?.pacGrave ?? answers.pac_ats_idsa_gravidade === 'ats_idsa_pac_grave'
       const destinationAnswer = answers.pac_destino_protocolo || ''
       const psiGroup = psiData?.grupo || (currentStep === 'pac_psi_baixo'
         ? 'PORT I/II'
@@ -1359,8 +1405,14 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         paBaixa: 'PAS < 90 mmHg ou PAD <= 60 mmHg',
         idadeMaior65: 'idade >= 65 anos'
       }
+      const crbCriteria = criteriaFromArray(crbData?.criteriosSelecionados)
       const psiCriteria = criteriaFromObject(psiData?.criterios, psiLabels)
-      const curbCriteria = criteriaFromObject(curbLegacyData?.criterios, curbLabels)
+      const curbCriteria = criteriaFromObject(curbProtocolData?.criterios || curbLegacyData?.criterios, curbLabels)
+      const atsMajorCriteria = criteriaFromArray(atsData?.criteriosMaioresSelecionados)
+      const atsMinorCriteria = criteriaFromArray(atsData?.criteriosMenoresSelecionados)
+      const dripMajorCriteria = criteriaFromArray(dripData?.criteriosMaioresSelecionados)
+      const dripMinorCriteria = criteriaFromArray(dripData?.criteriosMenoresSelecionados)
+      const smartCopCriteria = criteriaFromArray(smartCopData?.criteriosSelecionados)
 
       const title = destination === 'uti'
         ? 'PRONTUÁRIO MÉDICO – PAC GRAVE / AVALIAÇÃO PARA UTI'
@@ -1416,13 +1468,19 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const assessmentItems = uniqueItems([
         `CRB-65: ${formatScore(crb65Score, 4)} (${crbRisk}).`,
+        crbCriteria.length > 0 ? `Critérios marcados no CRB-65: ${crbCriteria.join('; ')}.` : null,
         `CURB-65: ${formatScore(effectiveCurbScore, 5)} (${curbRisk}).`,
         psiData?.score != null ? `PSI/PORT: ${psiData.score} pontos, ${psiGroup || 'grupo não informado'}, destino sugerido: ${psiData.destino || 'não informado'}.` : null,
         psiCriteria.length > 0 ? `Critérios pontuados no PSI: ${psiCriteria.join('; ')}.` : null,
         curbCriteria.length > 0 ? `Critérios pontuados no CURB-65: ${curbCriteria.join('; ')}.` : null,
         answers.pac_ats_idsa_gravidade ? `ATS/IDSA: ${atsSevere ? 'PAC grave identificada, por critério maior ou >=3 critérios menores' : 'sem critérios atuais para PAC grave/UTI pelo registro do fluxo'}.` : null,
+        atsMajorCriteria.length > 0 ? `Critérios maiores ATS/IDSA: ${atsMajorCriteria.join('; ')}.` : null,
+        atsMinorCriteria.length > 0 ? `Critérios menores ATS/IDSA: ${atsMinorCriteria.join('; ')}.` : null,
         `DRIP Score: ${formatScore(dripScore, 8)} (${dripRisk}).`,
+        dripMajorCriteria.length > 0 ? `Fatores maiores do DRIP: ${dripMajorCriteria.join('; ')}.` : null,
+        dripMinorCriteria.length > 0 ? `Fatores menores do DRIP: ${dripMinorCriteria.join('; ')}.` : null,
         `SMART-COP: ${formatScore(smartCopScore, 11)} (${smartCopRisk}).`,
+        smartCopCriteria.length > 0 ? `Critérios marcados no SMART-COP: ${smartCopCriteria.join('; ')}.` : null,
         'PSI/PORT, SCAP, SIPF, SOAR, SOFA e SAPS 3 permanecem como ferramentas complementares de prognóstico, auditoria ou avaliação em sepse/UTI quando aplicáveis.'
       ])
 
@@ -1458,8 +1516,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             text: historyText
           },
           {
-            title: 'Exame Físico e Sinais Vitais',
-            items: vitalItems.length > 0 ? vitalItems : ['Sem sinais vitais estruturados registrados no sistema.']
+            title: 'Sinais Vitais Registrados na Admissão',
+            items: vitalItems.length > 0 ? vitalItems : ['Sinais vitais não preenchidos no cadastro inicial deste atendimento. O fluxo de PAC não possui campo próprio para exame físico completo.']
           },
           {
             title: 'Exames Complementares',
@@ -1483,7 +1541,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           {
             title: 'Médico responsável',
-            text: 'Médico responsável: __________________________________\nCRM: __________________'
+            text: doctorSignatureText
           }
         ]
       }

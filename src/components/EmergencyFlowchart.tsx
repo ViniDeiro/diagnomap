@@ -1366,6 +1366,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStep === 'influenza_sinais_gravidade'
     const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStep === 'influenza_fatores_risco'
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
+    const isPneumoniaCrbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_crb65_triagem'
+    const isPneumoniaCurbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_curb65_protocolo'
+    const isPneumoniaAtsIdsaProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_ats_idsa_gravidade'
+    const isPneumoniaDripProtocolStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStep)
+    const isPneumoniaSmartCopProtocolStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStep)
     const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_psi'
     const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_curb65'
     const isAnaphylaxisCriteriaStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_criterios_wao'
@@ -1434,6 +1439,34 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       criteriosUTISelecionados: influenzaICUCriteria,
       indicarUTI: influenzaICUCriteria.length > 0
+    })
+    const pneumoniaCrbProtocolAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: pneumoniaCrbScore,
+      criteriosSelecionados: pneumoniaCrbCriteria
+    })
+    const pneumoniaCurbProtocolAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: pneumoniaCurbResult.score,
+      destino: pneumoniaCurbResult.disposition,
+      criterios: pneumoniaCurbValues
+    })
+    const pneumoniaAtsIdsaProtocolAnswer = JSON.stringify({
+      decision: value || nextStep,
+      pacGrave: pneumoniaAtsIdsaSevere,
+      criteriosMaioresSelecionados: pneumoniaAtsIdsaMajorCriteria,
+      criteriosMenoresSelecionados: pneumoniaAtsIdsaMinorCriteria
+    })
+    const pneumoniaDripProtocolAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: pneumoniaDripScore,
+      criteriosMaioresSelecionados: pneumoniaDripMajorCriteria,
+      criteriosMenoresSelecionados: pneumoniaDripMinorCriteria
+    })
+    const pneumoniaSmartCopProtocolAnswer = JSON.stringify({
+      decision: value || nextStep,
+      score: pneumoniaSmartCopScore,
+      criteriosSelecionados: pneumoniaSmartCopCriteria
     })
     const pneumoniaPsiAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -1542,37 +1575,47 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     ? influenzaRiskAnswer
                     : isInfluenzaICUStep
                       ? influenzaICUAnswer
-                      : isPneumoniaPsiStep
-                        ? pneumoniaPsiAnswer
-                        : isPneumoniaCurbStep
-                          ? pneumoniaCurbAnswer
-                          : isAnaphylaxisCriteriaStep
-                            ? anaphylaxisCriteriaAnswer
-                            : isAnaphylaxisAdjunctStep
-                              ? anaphylaxisAdjunctAnswer
-                              : isPancreatitisBisapStep
-                                ? pancreatitisBisapAnswer
-                                : isPancreatitisMarshallStep
-                                  ? pancreatitisMarshallAnswer
-                                  : isCholangitisDiagnosisStep
-                                    ? cholangitisDiagnosisAnswer
-                                    : isCholangitisSeverityStep
-                                      ? cholangitisSeverityAnswer
-                                      : isCholecystitisSeverityStep
-                                        ? cholecystitisSeverityAnswer
-                                        : isAppendicitisAlvaradoStep
-                                          ? appendicitisAlvaradoAnswer
-                                          : isLombalgiaRiskStep
-                                            ? lombalgiaRiskAnswer
-                                            : isBellCriteriaStep
-                                              ? bellCriteriaAnswer
-                                              : isBellSupportStep
-                                                ? bellSupportAnswer
-                                                : isBellRedFlagsStep
-                                                  ? bellRedFlagsAnswer
-                                                  : isBellHouseStep
-                                                    ? bellHouseAnswer
-                                                    : value || nextStep
+                      : isPneumoniaCrbProtocolStep
+                        ? pneumoniaCrbProtocolAnswer
+                        : isPneumoniaCurbProtocolStep
+                          ? pneumoniaCurbProtocolAnswer
+                          : isPneumoniaAtsIdsaProtocolStep
+                            ? pneumoniaAtsIdsaProtocolAnswer
+                            : isPneumoniaDripProtocolStep
+                              ? pneumoniaDripProtocolAnswer
+                              : isPneumoniaSmartCopProtocolStep
+                                ? pneumoniaSmartCopProtocolAnswer
+                                : isPneumoniaPsiStep
+                                  ? pneumoniaPsiAnswer
+                                  : isPneumoniaCurbStep
+                                    ? pneumoniaCurbAnswer
+                                    : isAnaphylaxisCriteriaStep
+                                      ? anaphylaxisCriteriaAnswer
+                                      : isAnaphylaxisAdjunctStep
+                                        ? anaphylaxisAdjunctAnswer
+                                        : isPancreatitisBisapStep
+                                          ? pancreatitisBisapAnswer
+                                          : isPancreatitisMarshallStep
+                                            ? pancreatitisMarshallAnswer
+                                            : isCholangitisDiagnosisStep
+                                              ? cholangitisDiagnosisAnswer
+                                              : isCholangitisSeverityStep
+                                                ? cholangitisSeverityAnswer
+                                                : isCholecystitisSeverityStep
+                                                  ? cholecystitisSeverityAnswer
+                                                  : isAppendicitisAlvaradoStep
+                                                    ? appendicitisAlvaradoAnswer
+                                                    : isLombalgiaRiskStep
+                                                      ? lombalgiaRiskAnswer
+                                                      : isBellCriteriaStep
+                                                        ? bellCriteriaAnswer
+                                                        : isBellSupportStep
+                                                          ? bellSupportAnswer
+                                                          : isBellRedFlagsStep
+                                                            ? bellRedFlagsAnswer
+                                                            : isBellHouseStep
+                                                              ? bellHouseAnswer
+                                                              : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
