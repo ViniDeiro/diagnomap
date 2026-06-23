@@ -4072,6 +4072,53 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
                   <li><strong>Derrame pleural:</strong> avaliar recessos costofrênicos; derrame septado pode sugerir complicação/empiema.</li>
                 </ul>
               </div>
+              <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                <h5 class="font-bold text-cyan-950">Interpretação pelo BLUE Protocol</h5>
+                <p class="mt-1"><strong>Objetivo:</strong> protocolo ultrassonográfico à beira-leito para investigar insuficiência respiratória aguda e diferenciar pneumonia, edema pulmonar cardiogênico, DPOC/asma, TEP e pneumotórax.</p>
+                <p class="mt-2"><strong>Componentes principais:</strong> deslizamento pleural, linhas A e linhas B.</p>
+                <p class="mt-2"><strong>Pontos de avaliação:</strong> BLUE point superior, BLUE point inferior e PLAPS point bilateral, com pesquisa posterolateral de consolidação, pneumonia e derrame pleural.</p>
+                <div class="mt-3 grid gap-2 md:grid-cols-2">
+                  <div class="rounded-lg border border-slate-200 bg-white p-3">
+                    <p class="font-bold text-slate-950">Perfil A</p>
+                    <p class="mt-1">Lung sliding presente, linhas A predominantes e ausência de linhas B. Sugere DPOC/asma; se associado à TVP, pensar em TEP.</p>
+                  </div>
+                  <div class="rounded-lg border border-red-200 bg-white p-3">
+                    <p class="font-bold text-red-950">Perfil A + TVP</p>
+                    <p class="mt-1">Perfil A com ultrassom venoso positivo para trombose. Diagnóstico provável: tromboembolismo pulmonar.</p>
+                  </div>
+                  <div class="rounded-lg border border-blue-200 bg-white p-3">
+                    <p class="font-bold text-blue-950">Perfil B</p>
+                    <p class="mt-1">Lung sliding presente com linhas B difusas bilaterais. Diagnóstico provável: edema agudo de pulmão cardiogênico.</p>
+                  </div>
+                  <div class="rounded-lg border border-amber-200 bg-white p-3">
+                    <p class="font-bold text-amber-950">Perfil B'</p>
+                    <p class="mt-1">Linhas B com lung sliding abolido. Diagnóstico provável: pneumonia.</p>
+                  </div>
+                  <div class="rounded-lg border border-emerald-200 bg-white p-3">
+                    <p class="font-bold text-emerald-950">Perfil C</p>
+                    <p class="mt-1">Consolidação pulmonar anterior, hepatização pulmonar e/ou broncograma aéreo. Diagnóstico provável: pneumonia.</p>
+                  </div>
+                  <div class="rounded-lg border border-emerald-200 bg-white p-3">
+                    <p class="font-bold text-emerald-950">Perfil A/B</p>
+                    <p class="mt-1">Pulmão normal de um lado e linhas B do outro. Diagnóstico provável: pneumonia unilateral.</p>
+                  </div>
+                  <div class="rounded-lg border border-emerald-200 bg-white p-3">
+                    <p class="font-bold text-emerald-950">Perfil PLAPS</p>
+                    <p class="mt-1">Consolidação posterior e/ou derrame pleural no ponto posterolateral. Diagnóstico provável: pneumonia, especialmente basal.</p>
+                  </div>
+                  <div class="rounded-lg border border-slate-300 bg-white p-3">
+                    <p class="font-bold text-slate-950">Perfil A'</p>
+                    <p class="mt-1">Ausência de lung sliding com linhas A predominantes. Procurar lung point; se presente, sugere pneumotórax.</p>
+                  </div>
+                </div>
+                <div class="mt-3 rounded-lg border border-cyan-200 bg-white p-3">
+                  <p class="font-bold text-cyan-950">Fluxo simplificado do BLUE</p>
+                  <p class="mt-1">Insuficiência respiratória → avaliar lung sliding. Se ausente, perfil A' e procurar lung point. Se presente, avaliar linhas B difusas bilaterais; se presentes, perfil B/edema pulmonar. Se não, procurar consolidação ou PLAPS positivo; se presentes, pneumonia. Se perfil A persistente, pesquisar TVP: se positiva, TEP; se negativa, DPOC/asma.</p>
+                </div>
+                <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
+                  <p><strong>Na PAC, valorizar:</strong> Perfil C, Perfil A/B, Perfil B' e PLAPS positivo, principalmente quando associados a broncograma aéreo dinâmico e quadro clínico compatível.</p>
+                </div>
+              </div>
               <div class="rounded-lg border border-amber-200 bg-white p-3">
                 <h5 class="font-bold text-amber-950">Interpretação</h5>
                 <p class="mt-1"><strong>POCUS positivo:</strong> consolidação subpleural associada a broncograma aéreo dinâmico, linhas B focais adjacentes e/ou derrame pleural aumenta fortemente a probabilidade de PAC.</p>
@@ -4094,19 +4141,23 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
                 <p class="mt-1 text-blue-900"><strong>CRB-65:</strong> pode ir para casa ou precisa avaliação hospitalar?</p>
               </div>
               <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
-                <p class="font-semibold text-cyan-950">2. Após exames iniciais</p>
+                <p class="font-semibold text-cyan-950">2. Solicitação de exames</p>
+                <p class="mt-1 text-cyan-900"><strong>Checklist:</strong> básicos, gravidade/comorbidades, microbiologia e pacientes selecionados.</p>
+              </div>
+              <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
+                <p class="font-semibold text-cyan-950">3. Após exames iniciais</p>
                 <p class="mt-1 text-cyan-900"><strong>CURB-65:</strong> qual o risco inicial de mortalidade e internação?</p>
               </div>
               <div class="rounded-lg border border-rose-200 bg-rose-50 p-3">
-                <p class="font-semibold text-rose-950">3. Definir destino</p>
+                <p class="font-semibold text-rose-950">4. Definir destino</p>
                 <p class="mt-1 text-rose-900"><strong>ATS/IDSA:</strong> enfermaria, unidade intermediária ou UTI?</p>
               </div>
               <div class="rounded-lg border border-orange-200 bg-orange-50 p-3">
-                <p class="font-semibold text-orange-950">4. Definir antibiótico</p>
+                <p class="font-semibold text-orange-950">5. Definir antibiótico</p>
                 <p class="mt-1 text-orange-900"><strong>DRIP:</strong> precisa cobrir MRSA/Pseudomonas/germes resistentes?</p>
               </div>
               <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-                <p class="font-semibold text-emerald-950">5. Risco de piora</p>
+                <p class="font-semibold text-emerald-950">6. Risco de piora</p>
                 <p class="mt-1 text-emerald-900"><strong>SMART-COP:</strong> vai precisar de ventilação mecânica ou vasopressor?</p>
               </div>
               <div class="rounded-lg border border-violet-200 bg-violet-50 p-3">
@@ -4172,9 +4223,22 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
       `,
       options: []
     },
+    pac_solicitacao_exames: {
+      id: 'pac_solicitacao_exames',
+      title: 'Etapa 2 - Solicitação de Exames',
+      description: 'Checklist de exames laboratoriais e microbiológicos antes do CURB-65.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950">
+          <p><strong>Objetivo:</strong> registrar os exames solicitados antes do CURB-65, separando exames básicos, exames conforme gravidade/comorbidade, investigação microbiológica e testes para pacientes selecionados.</p>
+          <p class="mt-2"><strong>Pacote inicial mais usado no PS:</strong> hemograma completo, ureia, creatinina, sódio, potássio, glicemia e PCR. Acrescentar lactato se houver suspeita de sepse/gravidade e gasometria arterial se hipoxemia ou desconforto respiratório.</p>
+        </div>
+      `,
+      options: []
+    },
     pac_curb65_protocolo: {
       id: 'pac_curb65_protocolo',
-      title: 'Etapa 2 - CURB-65',
+      title: 'Etapa 3 - CURB-65',
       description: 'Aplicar após exames iniciais, acrescentando ureia/BUN ao CRB-65.',
       type: 'question',
       content: `

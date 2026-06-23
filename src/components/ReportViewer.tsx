@@ -1304,6 +1304,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const criteriaFromArray = (items: unknown) => Array.isArray(items) ? uniqueItems(items.map((item) => String(item))) : []
 
       const crbData = safeParse(answers.pac_crb65_triagem) as { score?: number; criteriosSelecionados?: string[] } | null
+      const examRequestData = safeParse(answers.pac_solicitacao_exames) as {
+        examesSelecionados?: string[]
+        grupos?: Record<string, string[]>
+      } | null
       const curbProtocolData = safeParse(answers.pac_curb65_protocolo) as {
         score?: number
         destino?: string
@@ -1424,6 +1428,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         idadeMaior65: 'idade >= 65 anos'
       }
       const crbCriteria = criteriaFromArray(crbData?.criteriosSelecionados)
+      const selectedExamItems = criteriaFromArray(examRequestData?.examesSelecionados)
+      const selectedExamGroups = examRequestData?.grupos && typeof examRequestData.grupos === 'object'
+        ? Object.entries(examRequestData.grupos)
+          .map(([group, items]) => ({
+            group,
+            items: criteriaFromArray(items)
+          }))
+          .filter((entry) => entry.items.length > 0)
+        : []
       const psiCriteria = criteriaFromObject(psiData?.criterios, psiLabels)
       const curbCriteria = criteriaFromObject(curbProtocolData?.criterios || curbLegacyData?.criterios, curbLabels)
       const atsMajorCriteria = criteriaFromArray(atsData?.criteriosMaioresSelecionados)
@@ -1497,9 +1510,26 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                 : 'Destino ainda não definido'
 
       const examAndImagingItems = uniqueItems([
+        selectedExamItems.length > 0
+          ? `Exames solicitados no fluxo: ${selectedExamItems.join('; ')}.`
+          : null,
+        ...selectedExamGroups.map((entry) => {
+          const groupLabel = entry.group === 'basicos'
+            ? 'Exames básicos'
+            : entry.group === 'gravidade'
+              ? 'Conforme gravidade/necessidade clínica'
+              : entry.group === 'microbiologia'
+                ? 'Investigação microbiológica'
+                : entry.group === 'selecionados'
+                  ? 'Pacientes selecionados'
+                  : entry.group
+          return `${groupLabel}: ${entry.items.join('; ')}.`
+        }),
         labItems.length > 0
           ? `Exames laboratoriais registrados: ${labItems.join(' ')}`
-          : 'Não há exames laboratoriais estruturados registrados no sistema para este atendimento.',
+          : selectedExamItems.length > 0
+            ? null
+            : 'Não há exames laboratoriais estruturados registrados no sistema para este atendimento.',
         'Imagem na PAC: radiografia de tórax permanece exame inicial amplamente disponível para confirmação de infiltrado e avaliação de derrame pleural ou acometimento multilobar.',
         'POCUS pulmonar pode ser utilizado à beira-leito para pesquisa de consolidação subpleural, broncograma aéreo dinâmico, linhas B focais e derrame pleural, especialmente quando se deseja avaliação rápida sem radiação.',
         destination === 'ambulatorial'

@@ -669,6 +669,73 @@ const pneumoniaCrbItems = [
   'Idade ≥ 65 anos'
 ]
 
+const pneumoniaExamGroups = [
+  {
+    key: 'basicos',
+    title: 'Exames básicos',
+    description: 'Pacote inicial para a maioria dos pacientes com suspeita de PAC.',
+    tone: 'border-sky-200 bg-sky-50 text-sky-950',
+    items: [
+      'Hemograma completo',
+      'Ureia',
+      'Creatinina',
+      'Sódio',
+      'Potássio',
+      'Glicemia',
+      'Proteína C Reativa (PCR)'
+    ]
+  },
+  {
+    key: 'gravidade',
+    title: 'Conforme gravidade ou necessidade clínica',
+    description: 'Úteis em hipoxemia, desconforto respiratório, sepse, comorbidades ou necessidade de internação.',
+    tone: 'border-amber-200 bg-amber-50 text-amber-950',
+    items: [
+      'Gasometria arterial',
+      'Lactato sérico',
+      'Procalcitonina (PCT)',
+      'Função hepática (AST, ALT, bilirrubinas, FA, GGT)',
+      'Coagulograma (TP/INR, TTPA)',
+      'Albumina'
+    ]
+  },
+  {
+    key: 'microbiologia',
+    title: 'Investigação microbiológica',
+    description: 'Principalmente em pacientes internados, graves, com falha terapêutica ou risco epidemiológico.',
+    tone: 'border-violet-200 bg-violet-50 text-violet-950',
+    items: [
+      'Hemoculturas (2 pares)',
+      'Cultura e bacterioscopia de escarro',
+      'Pesquisa viral respiratória (Influenza, SARS-CoV-2 e outros conforme disponibilidade)',
+      'Antígeno urinário para Pneumococo',
+      'Antígeno urinário para Legionella'
+    ]
+  },
+  {
+    key: 'selecionados',
+    title: 'Pacientes selecionados',
+    description: 'Direcionar conforme imunossupressão, epidemiologia, recorrência, exposição ou diagnóstico diferencial.',
+    tone: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+    items: [
+      'Sorologias específicas conforme contexto epidemiológico',
+      'Pesquisa de fungos',
+      'Pesquisa para micobactérias (BAAR, teste molecular para tuberculose)',
+      'Testes para imunossupressão (HIV, por exemplo)'
+    ]
+  }
+]
+
+const pneumoniaInitialLabPackage = [
+  'Hemograma completo',
+  'Ureia',
+  'Creatinina',
+  'Sódio',
+  'Potássio',
+  'Glicemia',
+  'Proteína C Reativa (PCR)'
+]
+
 const pneumoniaAtsIdsaMajorItems = [
   'Necessidade de ventilação mecânica invasiva',
   'Choque séptico com necessidade de vasopressor'
@@ -1158,6 +1225,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pneumoniaComorbidities, setPneumoniaComorbidities] = useState<string[]>([])
   const [pneumoniaPseudomonasRisk, setPneumoniaPseudomonasRisk] = useState<string[]>([])
   const [pneumoniaCrbCriteria, setPneumoniaCrbCriteria] = useState<string[]>([])
+  const [pneumoniaSelectedExams, setPneumoniaSelectedExams] = useState<string[]>(pneumoniaInitialLabPackage)
   const [pneumoniaRxInfoOpen, setPneumoniaRxInfoOpen] = useState(false)
   const [pneumoniaRxImageOpen, setPneumoniaRxImageOpen] = useState(false)
   const [pneumoniaCtInfoOpen, setPneumoniaCtInfoOpen] = useState(false)
@@ -1370,6 +1438,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStep === 'influenza_fatores_risco'
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
     const isPneumoniaCrbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_crb65_triagem'
+    const isPneumoniaExamRequestStep = flowchart.id === 'pneumonia' && currentStep === 'pac_solicitacao_exames'
     const isPneumoniaCurbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_curb65_protocolo'
     const isPneumoniaAtsIdsaProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_ats_idsa_gravidade'
     const isPneumoniaDripProtocolStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStep)
@@ -1447,6 +1516,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       score: pneumoniaCrbScore,
       criteriosSelecionados: pneumoniaCrbCriteria
+    })
+    const pneumoniaExamRequestAnswer = JSON.stringify({
+      decision: value || nextStep,
+      examesSelecionados: pneumoniaSelectedExams,
+      grupos: Object.fromEntries(
+        pneumoniaExamGroups.map((group) => [
+          group.key,
+          group.items.filter((item) => pneumoniaSelectedExams.includes(item))
+        ])
+      )
     })
     const pneumoniaCurbProtocolAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -1580,18 +1659,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       ? influenzaICUAnswer
                       : isPneumoniaCrbProtocolStep
                         ? pneumoniaCrbProtocolAnswer
-                        : isPneumoniaCurbProtocolStep
-                          ? pneumoniaCurbProtocolAnswer
-                          : isPneumoniaAtsIdsaProtocolStep
-                            ? pneumoniaAtsIdsaProtocolAnswer
-                            : isPneumoniaDripProtocolStep
-                              ? pneumoniaDripProtocolAnswer
-                              : isPneumoniaSmartCopProtocolStep
-                                ? pneumoniaSmartCopProtocolAnswer
-                                : isPneumoniaPsiStep
-                                  ? pneumoniaPsiAnswer
-                                  : isPneumoniaCurbStep
-                                    ? pneumoniaCurbAnswer
+                        : isPneumoniaExamRequestStep
+                          ? pneumoniaExamRequestAnswer
+                          : isPneumoniaCurbProtocolStep
+                            ? pneumoniaCurbProtocolAnswer
+                            : isPneumoniaAtsIdsaProtocolStep
+                              ? pneumoniaAtsIdsaProtocolAnswer
+                              : isPneumoniaDripProtocolStep
+                                ? pneumoniaDripProtocolAnswer
+                                : isPneumoniaSmartCopProtocolStep
+                                  ? pneumoniaSmartCopProtocolAnswer
+                                  : isPneumoniaPsiStep
+                                    ? pneumoniaPsiAnswer
+                                    : isPneumoniaCurbStep
+                                      ? pneumoniaCurbAnswer
                                     : isAnaphylaxisCriteriaStep
                                       ? anaphylaxisCriteriaAnswer
                                       : isAnaphylaxisAdjunctStep
@@ -1878,6 +1959,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaPrescriptionCopied(false)
     setInfluenzaPrescriptionGeneratedSteps({})
     setPneumoniaCrbCriteria([])
+    setPneumoniaSelectedExams(pneumoniaInitialLabPackage)
     setPneumoniaRxInfoOpen(false)
     setPneumoniaRxImageOpen(false)
     setPneumoniaCtInfoOpen(false)
@@ -2158,6 +2240,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
   const isPneumoniaIntroStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_inicio'
   const isPneumoniaCrbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_crb65_triagem'
+  const isPneumoniaExamRequestStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_solicitacao_exames'
   const isPneumoniaCurbProtocolStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_curb65_protocolo'
   const isPneumoniaAtsIdsaStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_ats_idsa_gravidade'
   const isPneumoniaDripStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStepData?.id || '')
@@ -4425,6 +4508,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isPneumoniaCurbStep, patient])
 
   useEffect(() => {
+    if (!isPneumoniaExamRequestStep) return
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed?.examesSelecionados)) {
+        setPneumoniaSelectedExams(parsed.examesSelecionados.map((item: unknown) => String(item)))
+      }
+    } catch {
+      setPneumoniaSelectedExams(pneumoniaInitialLabPackage)
+    }
+  }, [answers, currentStep, isPneumoniaExamRequestStep])
+
+  useEffect(() => {
     if (!isPneumoniaAmbulatoryPrescriptionStep) {
       setPneumoniaComorbidities([])
       setPneumoniaPseudomonasRisk([])
@@ -6285,11 +6382,92 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => handleAnswer('pac_curb65_protocolo', `crb65_${pneumoniaCrbScore}`)}
+                      onClick={() => handleAnswer('pac_solicitacao_exames', `crb65_${pneumoniaCrbScore}`)}
                       className="rounded-xl bg-blue-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-blue-700"
                     >
-                      Prosseguir para CURB-65
+                      Solicitar exames
                     </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaExamRequestStep && (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="bg-gradient-to-r from-slate-900 via-sky-900 to-cyan-800 p-5 text-white">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h4 className="text-base font-extrabold uppercase tracking-wide">Etapa 2 - Solicitação de exames</h4>
+                        <p className="mt-1 text-sm text-sky-100">Marque os exames solicitados antes de aplicar o CURB-65. O checklist será registrado no prontuário.</p>
+                      </div>
+                      <div className="rounded-xl bg-white/15 px-4 py-3 text-sm font-bold">
+                        {pneumoniaSelectedExams.length} exame(s)
+                        <div className="text-xs font-semibold text-sky-100">selecionado(s)</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-5">
+                    <div className="mb-5 rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950">
+                      <p className="font-bold">Pacote laboratorial inicial mais utilizado no pronto-socorro</p>
+                      <p className="mt-1">Hemograma completo, ureia, creatinina, sódio, potássio, glicemia e PCR. Acrescentar lactato se suspeita de sepse/gravidade e gasometria arterial se hipoxemia ou desconforto respiratório.</p>
+                      <button
+                        type="button"
+                        onClick={() => setPneumoniaSelectedExams(Array.from(new Set([...pneumoniaSelectedExams, ...pneumoniaInitialLabPackage])))}
+                        className="mt-3 rounded-lg bg-cyan-700 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-cyan-800"
+                      >
+                        Marcar pacote inicial
+                      </button>
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {pneumoniaExamGroups.map((group) => {
+                        const selectedCount = group.items.filter((item) => pneumoniaSelectedExams.includes(item)).length
+                        return (
+                          <div key={group.key} className={clsx('rounded-2xl border p-4', group.tone)}>
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                              <div>
+                                <h5 className="font-extrabold">{group.title}</h5>
+                                <p className="mt-1 text-xs leading-relaxed opacity-80">{group.description}</p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700">
+                                {selectedCount}/{group.items.length}
+                              </span>
+                            </div>
+                            <div className="space-y-2">
+                              {group.items.map((item) => {
+                                const checked = pneumoniaSelectedExams.includes(item)
+                                return (
+                                  <label key={item} className={clsx('flex cursor-pointer items-start gap-2 rounded-xl p-2 text-sm transition-colors', checked ? 'bg-white shadow-sm' : 'hover:bg-white/70')}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => toggleSelection(setPneumoniaSelectedExams, item)}
+                                      className="mt-1 h-4 w-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-600"
+                                    />
+                                    <span>{item}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setPneumoniaSelectedExams([])}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        Limpar seleção
+                      </button>
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => handleAnswer('pac_curb65_protocolo', 'exames_solicitados')}
+                        className="rounded-xl bg-cyan-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-800"
+                      >
+                        Prosseguir para CURB-65
+                      </motion.button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -6298,7 +6476,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-950">Etapa 2 - CURB-65</h4>
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-950">Etapa 3 - CURB-65</h4>
                       <p className="text-sm text-cyan-900">Após laboratório: risco inicial de mortalidade e necessidade de internação.</p>
                     </div>
                     <div className="rounded-xl bg-white px-4 py-3 text-sm font-bold text-cyan-900">
@@ -6327,10 +6505,16 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => handleAnswer('pac_ats_idsa_gravidade', `curb65_${pneumoniaCurbResult.score}`)}
-                      className="rounded-xl bg-cyan-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-700"
+                      onClick={() => handleAnswer(
+                        pneumoniaCurbResult.score <= 1 ? 'pac_conduta_ambulatorial' : 'pac_ats_idsa_gravidade',
+                        `curb65_${pneumoniaCurbResult.score}`
+                      )}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        pneumoniaCurbResult.score <= 1 ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-cyan-600 hover:bg-cyan-700'
+                      )}
                     >
-                      Prosseguir para ATS/IDSA
+                      {pneumoniaCurbResult.score <= 1 ? 'Seguir para manejo ambulatorial' : 'Prosseguir para ATS/IDSA'}
                     </motion.button>
                   </div>
                 </div>
