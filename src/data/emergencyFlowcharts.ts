@@ -3905,6 +3905,8 @@ export const influenzaFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
             <h4 class="font-bold text-orange-950">PROTOCOLO DE INTERNAÇÃO – SÍNDROME GRIPAL / SRAG (ENFERMARIA)</h4>
             <p class="mt-2"><strong>Internar em enfermaria</strong> paciente com síndrome gripal/SRAG que apresente critério de internação, mas sem necessidade imediata de terapia intensiva.</p>
+            <p class="mt-2"><strong>Conduta inicial para admissão:</strong> iniciar oseltamivir, monitorizar sinais vitais e saturação, manter isolamento por gotículas, solicitar exames laboratoriais iniciais, solicitar imagem de tórax conforme critérios, instituir oxigenoterapia se necessário, hidratar conforme estado clínico, tratar sintomas e reavaliar de forma seriada a necessidade de escalonamento para UTI.</p>
+            <p class="mt-2"><strong>Antibiótico não é rotina:</strong> reservar para suspeita de pneumonia bacteriana associada, coinfecção, aspiração ou infecção hospitalar conforme contexto clínico e protocolo institucional.</p>
           </div>
 
           <div class="grid gap-4 lg:grid-cols-2">
