@@ -20,6 +20,13 @@ import {
   ANAPHYLAXIS_HOME_ORIENTATIONS,
   calculateAnaphylaxisAdrenalineDose
 } from '@/lib/anaphylaxis'
+import {
+  INFLUENZA_ICU_CRITERIA,
+  INFLUENZA_RISK_FACTORS,
+  INFLUENZA_SEVERITY_SIGNS,
+  INFLUENZA_WORSENING_SIGNS,
+  getOseltamivirDoseText
+} from '@/lib/influenza'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -1160,83 +1167,155 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const worseningSigns = uniqueItems(Array.isArray(riskData?.sinaisPioraSelecionados) ? riskData.sinaisPioraSelecionados : [])
       const icuCriteria = uniqueItems(Array.isArray(icuData?.criteriosUTISelecionados) ? icuData.criteriosUTISelecionados : [])
 
-      const classificationText = (() => {
-        switch (currentStep) {
-          case 'influenza_ambulatorial_sintomaticos':
-            return 'Síndrome gripal sem sinais de gravidade, sem fator de risco relevante e sem sinais documentados de piora clínica.'
-          case 'influenza_ambulatorial_oseltamivir':
-            return 'Síndrome gripal sem sinais de gravidade imediata, porém com fator de risco e/ou sinal de piora clínica, com indicação ambulatorial de oseltamivir.'
-          case 'influenza_internacao_enfermaria':
-            return 'Síndrome respiratória aguda grave (SRAG), sem critério imediato de terapia intensiva, com necessidade de internação em enfermaria.'
-          case 'influenza_internacao_uti':
-            return 'Síndrome respiratória aguda grave (SRAG) com critério de unidade intensiva.'
-          default:
-            return 'Quadro em avaliação dentro do protocolo institucional de influenza/síndrome gripal.'
-        }
+      const hasSRAG = Boolean(severityData?.classificadoComoSRAG || severitySigns.length > 0)
+      const hasOseltamivirIndication = Boolean(riskData?.indicarOseltamivir || riskFactors.length > 0 || worseningSigns.length > 0 || hasSRAG)
+      const needsICU = Boolean(icuData?.indicarUTI || icuCriteria.length > 0 || currentStep === 'influenza_internacao_uti')
+      const oseltamivirDose = getOseltamivirDoseText(patientForReport)
+      const stepLabels: Record<string, string> = {
+        influenza_inicio: 'abertura do protocolo de influenza/síndrome gripal',
+        influenza_sinais_gravidade: 'avaliação de sinais de gravidade e definição de SRAG',
+        influenza_fatores_risco: 'avaliação de fatores de risco e sinais de piora para indicação de oseltamivir',
+        influenza_criterios_uti: 'avaliação de critérios de terapia intensiva',
+        influenza_ambulatorial_sintomaticos: 'desfecho ambulatorial sintomático',
+        influenza_ambulatorial_oseltamivir: 'desfecho ambulatorial com oseltamivir',
+        influenza_internacao_enfermaria: 'desfecho de internação em enfermaria',
+        influenza_internacao_uti: 'desfecho de internação/avaliação em UTI'
+      }
+      const pathItems = uniqueItems([
+        ...history.map((step) => stepLabels[step] || step),
+        currentStep ? stepLabels[currentStep] || currentStep : null
+      ])
+
+      const destination = (() => {
+        if (needsICU) return 'uti'
+        if (currentStep === 'influenza_internacao_enfermaria') return 'enfermaria'
+        if (currentStep === 'influenza_ambulatorial_oseltamivir') return 'ambulatorial_oseltamivir'
+        if (currentStep === 'influenza_ambulatorial_sintomaticos') return 'ambulatorial_sintomatico'
+        if (hasSRAG) return 'srag_em_avaliacao'
+        if (hasOseltamivirIndication) return 'avaliacao_oseltamivir'
+        return 'avaliacao'
       })()
 
-      const historyText = [
-        `Paciente admitido em ${formatDate(patient.admission.date)} para avaliação de quadro respiratório compatível com síndrome gripal / influenza.`,
-        symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : 'Sem descrição estruturada suficiente dos sintomas na admissão.',
-        observations.length > 0 ? `Observações adicionais: ${observations.join('; ')}.` : null
+      const title = destination === 'uti'
+        ? 'PRONTUÁRIO MÉDICO – INFLUENZA / SRAG COM AVALIAÇÃO PARA UTI'
+        : destination === 'enfermaria'
+          ? 'PRONTUÁRIO MÉDICO – INFLUENZA / SRAG COM INTERNAÇÃO EM ENFERMARIA'
+          : destination === 'ambulatorial_oseltamivir'
+            ? 'PRONTUÁRIO MÉDICO – SÍNDROME GRIPAL COM OSELTAMIVIR'
+            : destination === 'ambulatorial_sintomatico'
+              ? 'PRONTUÁRIO MÉDICO – SÍNDROME GRIPAL / MANEJO AMBULATORIAL'
+              : 'PRONTUÁRIO MÉDICO – INFLUENZA / SÍNDROME GRIPAL'
+
+      const diagnosisText = (() => {
+        if (destination === 'uti') {
+          return 'Paciente com síndrome gripal/SRAG e critérios de gravidade compatíveis com necessidade de avaliação intensiva. A decisão considera os critérios de UTI assinalados no fluxo, risco de insuficiência respiratória grave, choque, alteração neurológica ou falência orgânica.'
+        }
+        if (destination === 'enfermaria') {
+          return 'Paciente com síndrome respiratória aguda grave (SRAG), sem critério imediato de terapia intensiva no momento da decisão, com indicação de internação em enfermaria para antiviral, monitorização, suporte clínico, exames e reavaliação seriada.'
+        }
+        if (destination === 'ambulatorial_oseltamivir') {
+          return 'Paciente com síndrome gripal sem sinais atuais de SRAG registrados no fluxo, porém com fator de risco e/ou sinal de piora clínica, definindo indicação de oseltamivir e seguimento ambulatorial com retorno precoce.'
+        }
+        if (destination === 'ambulatorial_sintomatico') {
+          return 'Paciente com síndrome gripal sem sinais de gravidade, sem fatores de risco relevantes ou sinais de piora assinalados no fluxo, com manejo ambulatorial sintomático e orientações de alarme.'
+        }
+        if (destination === 'srag_em_avaliacao') {
+          return 'Paciente classificado como SRAG no fluxo de influenza/síndrome gripal, ainda sem desfecho final estruturado de enfermaria ou UTI no registro atual.'
+        }
+        return 'Paciente em avaliação por quadro compatível com síndrome gripal/influenza, com fluxo ainda sem desfecho final documentado.'
+      })()
+
+      const clinicalHistoryText = [
+        `Paciente admitido em ${formatDate(patientForReport.admission.date)} para avaliação de quadro respiratório compatível com síndrome gripal / influenza.`,
+        symptoms.length > 0
+          ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.`
+          : 'Sintomas específicos não foram lançados em campo estruturado.',
+        observations.length > 0 ? `Observações adicionais: ${observations.join('; ')}.` : null,
+        pathItems.length > 0 ? `Caminho percorrido no fluxo: ${pathItems.join(' -> ')}.` : null
       ].filter(Boolean).join(' ')
 
-      const evaluationItems = uniqueItems([
-        severitySigns.length > 0 ? `Sinais de gravidade assinalados: ${severitySigns.join('; ')}.` : 'Sem sinais de gravidade registrados na etapa específica do fluxo.',
-        riskFactors.length > 0 ? `Fatores de risco documentados: ${riskFactors.join('; ')}.` : null,
-        worseningSigns.length > 0 ? `Sinais de piora clínica documentados: ${worseningSigns.join('; ')}.` : null,
-        icuCriteria.length > 0 ? `Critérios de UTI assinalados: ${icuCriteria.join('; ')}.` : null,
-        classificationText
+      const severityItems = uniqueItems([
+        hasSRAG
+          ? 'Classificação pelo fluxo: síndrome respiratória aguda grave (SRAG) por presença de pelo menos um sinal de gravidade.'
+          : 'Classificação pelo fluxo: síndrome gripal sem sinais de gravidade assinalados na etapa específica.',
+        severitySigns.length > 0 ? `Sinais de gravidade selecionados: ${severitySigns.join('; ')}.` : null,
+        severitySigns.length === 0 && answers.influenza_sinais_gravidade ? `Sinais avaliados e não selecionados: ${INFLUENZA_SEVERITY_SIGNS.join('; ')}.` : null,
+        riskFactors.length > 0 ? `Fatores de risco selecionados: ${riskFactors.join('; ')}.` : null,
+        riskFactors.length === 0 && answers.influenza_fatores_risco ? `Fatores de risco avaliados e não selecionados: ${INFLUENZA_RISK_FACTORS.join('; ')}.` : null,
+        worseningSigns.length > 0 ? `Sinais de piora clínica selecionados: ${worseningSigns.join('; ')}.` : null,
+        worseningSigns.length === 0 && answers.influenza_fatores_risco ? `Sinais de piora avaliados e não selecionados: ${INFLUENZA_WORSENING_SIGNS.join('; ')}.` : null,
+        answers.influenza_fatores_risco ? `Indicação de oseltamivir pelo fluxo: ${hasOseltamivirIndication ? 'sim' : 'não'}.` : null,
+        icuCriteria.length > 0 ? `Critérios para UTI selecionados: ${icuCriteria.join('; ')}.` : null,
+        icuCriteria.length === 0 && answers.influenza_criterios_uti ? `Critérios de UTI avaliados e não selecionados: ${INFLUENZA_ICU_CRITERIA.join('; ')}.` : null
+      ])
+
+      const examAndImagingItems = uniqueItems([
+        labItems.length > 0
+          ? `Exames laboratoriais registrados: ${labItems.join(' ')}`
+          : 'Sem exames laboratoriais estruturados registrados no sistema.',
+        destination === 'enfermaria' || destination === 'uti' || hasSRAG
+          ? 'Exames laboratoriais iniciais recomendados no contexto de SRAG/internação: hemograma completo, ureia, creatinina, sódio, potássio, TGO, TGP, PCR e glicemia; gasometria se hipoxemia; lactato se suspeita de sepse; coagulograma em casos moderados/graves; teste para Influenza/RT-PCR/painel viral conforme disponibilidade.'
+          : 'Em manejo ambulatorial, exames complementares devem ser individualizados conforme gravidade, comorbidades, duração dos sintomas e disponibilidade local.',
+        destination === 'enfermaria' || destination === 'uti' || hasSRAG
+          ? 'Radiografia de tórax indicada se dispneia, SpO2 <95%, ausculta alterada, febre persistente, suspeita de pneumonia ou necessidade de internação.'
+          : 'Radiografia de tórax não é rotina em síndrome gripal leve; solicitar se dispneia, SpO2 <95%, ausculta alterada, febre persistente, piora clínica, imunossupressão ou suspeita de pneumonia.',
+        destination === 'enfermaria' || destination === 'uti'
+          ? 'Considerar tomografia de tórax se RX inconclusivo, hipoxemia desproporcional aos achados, suspeita de complicações, imunossupressão, piora clínica sem causa evidente ou suspeita de tromboembolismo pulmonar.'
+          : null
       ])
 
       const conductItems = uniqueItems([
-        currentStep === 'influenza_ambulatorial_sintomaticos'
-          ? 'Definido manejo ambulatorial sintomático, com aumento da ingestão de líquidos e vigilância clínica.'
-          : null,
-        currentStep === 'influenza_ambulatorial_oseltamivir'
-          ? 'Definido manejo ambulatorial com oseltamivir, sintomáticos e retorno precoce.'
-          : null,
-        currentStep === 'influenza_internacao_enfermaria'
-          ? 'Indicada internação em enfermaria com antiviral, suporte clínico, exames radiográficos e complementares conforme necessidade.'
-          : null,
-        currentStep === 'influenza_internacao_uti'
-          ? 'Indicada internação em unidade intensiva com antiviral e suporte avançado conforme gravidade.'
-          : null,
+        destination === 'ambulatorial_sintomatico' ? 'Definido manejo ambulatorial sintomático, com hidratação oral, controle de febre/dor conforme prescrição e vigilância de sinais de alarme.' : null,
+        destination === 'ambulatorial_oseltamivir' ? `Definido manejo ambulatorial com oseltamivir (${oseltamivirDose}), sintomáticos, hidratação e retorno precoce.` : null,
+        destination === 'enfermaria' ? `Indicada internação em enfermaria. Conduta: oseltamivir (${oseltamivirDose}), isolamento por gotículas, monitorização de sinais vitais e saturação, suporte clínico, oxigenoterapia se necessário, hidratação conforme avaliação e exames iniciais.` : null,
+        destination === 'uti' ? `Indicada avaliação/admissão em UTI. Conduta: oseltamivir (${oseltamivirDose}), isolamento, monitorização intensiva, suporte ventilatório/hemodinâmico conforme necessidade, investigação laboratorial e imagem conforme gravidade.` : null,
+        destination === 'srag_em_avaliacao' ? `Classificado como SRAG; manter oseltamivir (${oseltamivirDose}), oxigenoterapia se necessária, exames iniciais e definição de destino entre enfermaria e UTI conforme critérios clínicos.` : null,
+        hasOseltamivirIndication && destination === 'avaliacao' ? `Há indicação de oseltamivir pelo contexto registrado; dose sugerida conforme dados do paciente: ${oseltamivirDose}.` : null,
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
       ])
 
-      const inpatientWardItems = currentStep === 'influenza_internacao_enfermaria'
+      const antibioticItems = uniqueItems([
+        destination === 'enfermaria' || destination === 'uti' || hasSRAG
+          ? 'Antibioticoterapia não deve ser usada rotineiramente em todos os pacientes com influenza.'
+          : 'Sem indicação automática de antibiótico em síndrome gripal sem evidência de pneumonia bacteriana.',
+        'Iniciar antibiótico se houver suspeita de pneumonia bacteriana associada/coinfecção: consolidação lobar, escarro purulento, leucocitose importante, procalcitonina elevada quando disponível, piora após melhora inicial ou infiltrado focal ao RX.',
+        destination === 'enfermaria' || destination === 'uti'
+          ? 'Esquema sugerido para pneumonia comunitária associada, conforme protocolo/local: ceftriaxona 2 g IV/dia + azitromicina 500 mg/dia; considerar ampicilina/sulbactam se suspeita de aspiração; em suspeita de infecção hospitalar, seguir protocolo institucional.'
+          : null
+      ])
+
+      const wardProtocolItems = destination === 'enfermaria'
         ? [
-            'Internação indicada por síndrome gripal/SRAG com necessidade de manejo hospitalar em enfermaria, sem critério imediato de terapia intensiva.',
-            'Critérios clínicos que sustentam internação em enfermaria incluem: saturação de O2 <95% em ar ambiente, dispneia moderada, taquipneia persistente, necessidade de oxigenoterapia, desidratação, incapacidade de alimentação adequada, descompensação de doença de base, idoso frágil, imunossupressão, suspeita de pneumonia viral/bacteriana ou critério clínico médico.',
-            'Ausência de critérios imediatos para UTI: sem necessidade de ventilação mecânica, sem choque, sem vasopressores e sem insuficiência respiratória grave no momento da decisão.',
-            'Antiviral: oseltamivir 75 mg VO 12/12h por 5 dias em adulto, iniciar preferencialmente nas primeiras 48 horas, mantendo indicação em paciente hospitalizado independentemente do tempo de sintomas. Ajustar dose conforme função renal e considerar prolongamento em imunossuprimidos, casos graves ou persistência de replicação viral.',
-            'Oxigenoterapia: meta de saturação >=92% na maioria dos pacientes; considerar 88-92% em retenção crônica de CO2/DPOC grave. Iniciar com cateter nasal 1-5 L/min e escalonar para máscara simples, máscara não reinalante ou cânula nasal de alto fluxo conforme evolução.',
-            'Exames laboratoriais iniciais sugeridos: hemograma completo, ureia, creatinina, sódio, potássio, TGO, TGP, PCR, glicemia; gasometria se hipoxemia; lactato se suspeita de sepse; coagulograma em casos moderados/graves; teste para Influenza, RT-PCR viral ou painel viral conforme disponibilidade.',
-            'Imagem: radiografia de tórax se dispneia, saturação <95%, ausculta pulmonar alterada, febre persistente, suspeita de pneumonia ou necessidade de internação. Considerar tomografia se RX inconclusivo, hipoxemia desproporcional, suspeita de complicações, imunossupressão, piora sem causa evidente ou suspeita de TEP.',
-            'Antibiótico não deve ser usado rotineiramente em toda Influenza; iniciar quando houver suspeita de pneumonia bacteriana associada, como consolidação lobar, escarro purulento, leucocitose importante, procalcitonina elevada quando disponível, piora após melhora inicial ou infiltrado focal ao RX.',
-            'Solicitar avaliação da UTI se saturação <90% apesar de oxigênio suplementar, FR >30 irpm persistente, uso de musculatura acessória, alteração do nível de consciência, hipotensão, lactato elevado, necessidade de VNI, necessidade de alto fluxo, choque ou falência orgânica.'
+            'Critérios que sustentam internação em enfermaria podem incluir SpO2 <95% em ar ambiente, dispneia moderada, taquipneia persistente, necessidade de oxigenoterapia, desidratação, incapacidade de alimentação adequada, descompensação de doença de base, fragilidade, imunossupressão, suspeita de pneumonia viral/bacteriana ou critério clínico médico.',
+            'Ausência de critérios imediatos para UTI no fluxo: sem necessidade de ventilação mecânica, sem choque, sem vasopressores e sem insuficiência respiratória grave documentada na decisão.',
+            'Oxigenoterapia: meta de SpO2 >=92% na maioria dos pacientes; 88-92% em retenção crônica de CO2/DPOC grave. Iniciar cateter nasal 1-5 L/min e escalonar para máscara simples, máscara não reinalante ou cânula nasal de alto fluxo conforme evolução.',
+            'Reavaliar UTI se necessidade crescente de oxigênio, FiO2 elevada, desconforto respiratório importante, relação SpO2/FiO2 progressivamente reduzida, hipotensão, lactato elevado, alteração do nível de consciência, necessidade de VNI/alto fluxo, choque ou falência orgânica.'
           ]
         : []
 
       const planItems = uniqueItems([
-        currentStep === 'influenza_ambulatorial_sintomaticos' || currentStep === 'influenza_ambulatorial_oseltamivir'
+        destination === 'ambulatorial_sintomatico' || destination === 'ambulatorial_oseltamivir'
           ? 'Orientado retorno em 48 a 72 horas ou antes em caso de piora clínica.'
-          : 'Manter reavaliação hospitalar seriada conforme estabilidade clínica e respiratória.',
-        currentStep === 'influenza_ambulatorial_sintomaticos' || currentStep === 'influenza_ambulatorial_oseltamivir'
-          ? 'Orientado retorno imediato em dispneia, desconforto respiratório, queda da saturação, confusão, desidratação ou persistência/agravamento da febre.'
-          : 'Manter isolamento por gotículas, máscara em transporte/contato, hidratação conforme necessidade, controle sintomático e monitorização de sinais vitais.',
-        currentStep === 'influenza_ambulatorial_oseltamivir' || currentStep === 'influenza_internacao_enfermaria' || currentStep === 'influenza_internacao_uti'
-          ? 'Manter adesão ao esquema antiviral prescrito e ajustar dose em disfunção renal, quando aplicável.'
-          : null
+          : null,
+        destination === 'ambulatorial_sintomatico' || destination === 'ambulatorial_oseltamivir'
+          ? 'Orientado retorno imediato se dispneia, desconforto respiratório, queda da saturação, confusão, sonolência excessiva, desidratação, hipotensão, febre persistente/agravada ou piora do estado geral.'
+          : null,
+        destination === 'enfermaria'
+          ? 'Manter reavaliação hospitalar seriada, isolamento por gotículas, máscara em transporte/contato, monitorização de sinais vitais, balanço clínico, controle sintomático e vigilância para deterioração respiratória/hemodinâmica.'
+          : null,
+        destination === 'uti'
+          ? 'Manter acompanhamento intensivo com reavaliação seriada de oxigenação, ventilação, perfusão, lactato, disfunções orgânicas e necessidade de suporte ventilatório/hemodinâmico.'
+          : null,
+        hasOseltamivirIndication ? 'Manter adesão ao esquema antiviral e ajustar dose em disfunção renal, quando aplicável.' : null,
+        patientForReport.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patientForReport.treatment.nextEvaluation)}.` : null
       ])
 
       return {
-        title: 'PRONTUÁRIO MÉDICO – INFLUENZA / SÍNDROME GRIPAL',
+        title,
         sections: [
           {
             title: 'Identificação do Paciente',
-            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}.`
           },
           {
             title: 'Queixa Principal',
@@ -1244,37 +1323,51 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           {
             title: 'História da Doença Atual',
-            text: historyText
+            text: clinicalHistoryText
+          },
+          ...(symptoms.length > 0 || vitalItems.length > 0 || observations.length > 0
+            ? [{
+                title: 'Dados Clínicos Registrados',
+                items: uniqueItems([
+                  symptoms.length > 0 ? `Sintomas: ${symptoms.join('; ')}.` : null,
+                  vitalItems.length > 0 ? `Sinais vitais: ${vitalItems.join('; ')}.` : null,
+                  observations.length > 0 ? `Observações clínicas: ${observations.join('; ')}.` : null
+                ])
+              }]
+            : []),
+          {
+            title: 'Impressão Diagnóstica e Destino',
+            text: diagnosisText
           },
           {
-            title: 'Sinais e Sintomas',
-            items: symptoms.length > 0 ? symptoms : ['Sem sinais e sintomas estruturados registrados no sistema.']
+            title: 'Estratificação no Fluxo',
+            items: severityItems
           },
           {
-            title: 'Exame Físico',
-            items: vitalItems.length > 0 ? vitalItems : ['Sem dados estruturados de exame físico ou sinais vitais no sistema.']
+            title: 'Exames Complementares e Imagem',
+            items: examAndImagingItems
           },
           {
-            title: 'Avaliação Clínica',
-            items: evaluationItems
+            title: 'Conduta e Tratamento',
+            items: conductItems.length > 0 ? conductItems : ['Conduta final ainda não registrada; completar o fluxo de influenza/síndrome gripal para definição de destino.']
           },
           {
-            title: 'Exames Complementares',
-            items: labItems.length > 0 ? labItems : ['Sem exames complementares estruturados registrados no sistema.']
+            title: 'Antibioticoterapia',
+            items: antibioticItems
           },
-          {
-            title: 'Conduta',
-            items: conductItems
-          },
-          ...(inpatientWardItems.length > 0
+          ...(wardProtocolItems.length > 0
             ? [{
                 title: 'Protocolo de Internação em Enfermaria',
-                items: inpatientWardItems
+                items: wardProtocolItems
               }]
             : []),
           {
             title: 'Plano / Acompanhamento',
             items: planItems
+          },
+          {
+            title: 'Médico responsável',
+            text: doctorSignatureText
           }
         ]
       }
