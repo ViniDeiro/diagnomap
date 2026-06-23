@@ -34,7 +34,7 @@ export default function Home() {
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [previousState, setPreviousState] = useState<AppState>('dashboard')
   const [isFading, setIsFading] = useState(false)
-  const [acceptedSafetyAlertKey, setAcceptedSafetyAlertKey] = useState<string | null>(null)
+  const [safetyAlertRequired, setSafetyAlertRequired] = useState(false)
   const [safetyAlertChecks, setSafetyAlertChecks] = useState({
     read: false,
     aware: false,
@@ -128,6 +128,8 @@ export default function Home() {
         vitalSigns: {}
       })
       setCurrentPatient(quickPatient)
+      setSafetyAlertRequired(true)
+      setSafetyAlertChecks({ read: false, aware: false, committed: false })
       setAppState('flowchart')
       return
     }
@@ -176,6 +178,8 @@ export default function Home() {
     } as EmergencyPatient
     setCurrentEmergencyPatient(emergencyPatient)
 
+    setSafetyAlertRequired(true)
+    setSafetyAlertChecks({ read: false, aware: false, committed: false })
     setAppState('emergency-flowchart')
   }
 
@@ -183,6 +187,8 @@ export default function Home() {
     const newPatient = patientService.createPatient(formData)
     setCurrentPatient(newPatient)
     setRefreshTrigger(prev => prev + 1)
+    setSafetyAlertRequired(true)
+    setSafetyAlertChecks({ read: false, aware: false, committed: false })
     setAppState('flowchart')
   }
 
@@ -201,6 +207,8 @@ export default function Home() {
     const fresh = patientService.getPatientById(newPatient.id) || newPatient
     setCurrentPatient(fresh)
     setRefreshTrigger(prev => prev + 1)
+    setSafetyAlertRequired(true)
+    setSafetyAlertChecks({ read: false, aware: false, committed: false })
     setAppState('flowchart')
   }
 
@@ -210,6 +218,8 @@ export default function Home() {
 
   const handleSelectPatient = (patient: Patient) => {
     setCurrentPatient(patient)
+    setSafetyAlertRequired(true)
+    setSafetyAlertChecks({ read: false, aware: false, committed: false })
     setAppState('flowchart')
   }
 
@@ -259,6 +269,8 @@ export default function Home() {
     const updated = patientService.updatePatientFromForm(currentPatient.id, formData)
     if (updated) {
       setCurrentPatient(updated)
+      setSafetyAlertRequired(true)
+      setSafetyAlertChecks({ read: false, aware: false, committed: false })
       setAppState('flowchart')
     }
   }
@@ -269,12 +281,14 @@ export default function Home() {
   }
 
   const handleFlowchartComplete = () => {
+    setSafetyAlertRequired(false)
     setAppState('dashboard')
     setCurrentPatient(null)
     setRefreshTrigger(prev => prev + 1)
   }
 
   const handleEmergencyFlowchartComplete = () => {
+    setSafetyAlertRequired(false)
     setAppState('dashboard')
     setCurrentEmergencyPatient(null)
     setSelectedFlowchart(null)
@@ -392,21 +406,14 @@ export default function Home() {
     }
   }
 
-  const currentFlowSafetyKey =
-    appState === 'emergency-flowchart' && currentEmergencyPatient && selectedFlowchart
-      ? `emergency:${currentEmergencyPatient.id}:${selectedFlowchart.id}`
-      : appState === 'flowchart' && currentPatient
-        ? `patient:${currentPatient.id}:${currentPatient.selectedFlowchart || 'dengue'}`
-        : null
   const shouldShowSafetyAlert = Boolean(
-    currentFlowSafetyKey &&
-    acceptedSafetyAlertKey !== currentFlowSafetyKey &&
+    safetyAlertRequired &&
     (appState === 'flowchart' || appState === 'emergency-flowchart')
   )
   const canConfirmSafetyAlert = safetyAlertChecks.read && safetyAlertChecks.aware && safetyAlertChecks.committed
   const handleConfirmSafetyAlert = () => {
-    if (!currentFlowSafetyKey || !canConfirmSafetyAlert) return
-    setAcceptedSafetyAlertKey(currentFlowSafetyKey)
+    if (!canConfirmSafetyAlert) return
+    setSafetyAlertRequired(false)
     setSafetyAlertChecks({ read: false, aware: false, committed: false })
   }
 
