@@ -1158,6 +1158,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pneumoniaComorbidities, setPneumoniaComorbidities] = useState<string[]>([])
   const [pneumoniaPseudomonasRisk, setPneumoniaPseudomonasRisk] = useState<string[]>([])
   const [pneumoniaCrbCriteria, setPneumoniaCrbCriteria] = useState<string[]>([])
+  const [pneumoniaRxInfoOpen, setPneumoniaRxInfoOpen] = useState(false)
+  const [pneumoniaRxImageOpen, setPneumoniaRxImageOpen] = useState(false)
+  const [pneumoniaCtInfoOpen, setPneumoniaCtInfoOpen] = useState(false)
   const [pneumoniaAtsIdsaMajorCriteria, setPneumoniaAtsIdsaMajorCriteria] = useState<string[]>([])
   const [pneumoniaAtsIdsaMinorCriteria, setPneumoniaAtsIdsaMinorCriteria] = useState<string[]>([])
   const [pneumoniaSmartCopCriteria, setPneumoniaSmartCopCriteria] = useState<string[]>([])
@@ -1875,6 +1878,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaPrescriptionCopied(false)
     setInfluenzaPrescriptionGeneratedSteps({})
     setPneumoniaCrbCriteria([])
+    setPneumoniaRxInfoOpen(false)
+    setPneumoniaRxImageOpen(false)
+    setPneumoniaCtInfoOpen(false)
     setPneumoniaAtsIdsaMajorCriteria([])
     setPneumoniaAtsIdsaMinorCriteria([])
     setPneumoniaSmartCopCriteria([])
@@ -2156,7 +2162,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaAtsIdsaStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_ats_idsa_gravidade'
   const isPneumoniaDripStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStepData?.id || '')
   const isPneumoniaSmartCopStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStepData?.id || '')
-  const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
+  const isPneumoniaAmbulatoryConductStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_conduta_ambulatorial'
+  const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_destino_ambulatorial', 'pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
+  const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep || isPneumoniaAmbulatoryFinalStep
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
   const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
   const isMonoartritePrescriptionFinalStep = flowchart.id === 'monoartrite' && ['mono_gota_tratamento', 'mono_artrite_septica_internacao'].includes(currentStepData?.id || '')
@@ -2350,7 +2358,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [patient])
 
   const handleOpenPneumoniaPrescription = useCallback(() => {
-    if (!isPneumoniaAmbulatoryFinalStep) return
+    if (!isPneumoniaAmbulatoryPrescriptionStep) return
 
     const draftItems = buildPneumoniaPrescriptionItems(patient, hasPneumoniaComorbidityOrRecentAtb)
     const persisted = getPersistedPneumoniaPrescriptions()
@@ -2374,7 +2382,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     getPersistedPneumoniaPrescriptions,
     hasPneumoniaComorbidityOrRecentAtb,
     history,
-    isPneumoniaAmbulatoryFinalStep,
+    isPneumoniaAmbulatoryPrescriptionStep,
     onUpdate,
     patient,
     progress
@@ -4417,14 +4425,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isPneumoniaCurbStep, patient])
 
   useEffect(() => {
-    if (!isPneumoniaAmbulatoryFinalStep) {
+    if (!isPneumoniaAmbulatoryPrescriptionStep) {
       setPneumoniaComorbidities([])
       setPneumoniaPseudomonasRisk([])
       setPneumoniaPrescriptionPreview(null)
       setPneumoniaPrescriptionCopied(false)
       setPneumoniaPrescriptionGenerated(false)
     }
-  }, [isPneumoniaAmbulatoryFinalStep])
+  }, [isPneumoniaAmbulatoryPrescriptionStep])
 
   useEffect(() => {
     if (!isSinusitisPrescriptionFinalStep) {
@@ -5644,7 +5652,21 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </button>
                     </div>
                   )}
-                  <div className="prose prose-sm max-w-none">
+                  <div
+                    className="prose prose-sm max-w-none"
+                    onClick={(event) => {
+                      const target = event.target as HTMLElement
+                      if (target.closest('[data-pac-rx-info="true"]')) {
+                        setPneumoniaRxInfoOpen(true)
+                      }
+                      if (target.closest('[data-pac-rx-image="true"]')) {
+                        setPneumoniaRxImageOpen(true)
+                      }
+                      if (target.closest('[data-pac-ct-info="true"]')) {
+                        setPneumoniaCtInfoOpen(true)
+                      }
+                    }}
+                  >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
                   {isBellCriteriaStep && (
@@ -7990,7 +8012,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isPneumoniaAmbulatoryFinalStep && (
+              {isPneumoniaAmbulatoryPrescriptionStep && (
                 <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
                   <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
@@ -8023,6 +8045,46 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       )
                     })}
                   </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-emerald-200 bg-white p-4 text-sm text-emerald-950">
+                      <p className="font-bold">Sem comorbidades / sem antibiótico recente</p>
+                      <p className="mt-1">Amoxicilina 1 g VO de 8/8h por 7 dias, conforme perfil clínico e protocolo local.</p>
+                    </div>
+                    <div className="rounded-xl border border-amber-200 bg-white p-4 text-sm text-amber-950">
+                      <p className="font-bold">Com comorbidades ou antibiótico recente</p>
+                      <p className="mt-1">Amoxicilina + clavulanato 875/125 mg VO 12/12h por 7 dias + azitromicina 500 mg VO 1x/dia por 5 dias, ajustando a alergias e função renal.</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 rounded-xl border border-red-200 bg-white p-4 text-sm text-red-900">
+                    <p className="font-bold">Orientações de retorno</p>
+                    <p className="mt-1">Retornar imediatamente em piora da dispneia, queda de saturação, confusão, hipotensão, febre persistente, vômitos/intolerância oral, prostração importante, dor torácica, cianose, síncope ou ausência de melhora clínica. Reavaliar em 48 a 72 horas ou antes se piora.</p>
+                  </div>
+                  {isPneumoniaAmbulatoryConductStep && (
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={handleOpenPneumoniaPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          pneumoniaPrescriptionGenerated || hasPneumoniaPrescriptionSet(getPersistedPneumoniaPrescriptions(), hasPneumoniaComorbidityOrRecentAtb)
+                            ? 'border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        )}
+                      >
+                        {pneumoniaPrescriptionGenerated || hasPneumoniaPrescriptionSet(getPersistedPneumoniaPrescriptions(), hasPneumoniaComorbidityOrRecentAtb) ? 'Prescrição' : 'Gerar prescrição'}
+                      </button>
+                      <motion.button
+                        type="button"
+                        onClick={() => handleAnswer('pac_destino_ambulatorial', 'conduta_ambulatorial_definida')}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        Finalizar manejo ambulatorial
+                        <ChevronRight className="h-4 w-4" />
+                      </motion.button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -10709,7 +10771,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         ? [tvpAlertInterruptionOption]
                         : isBellTreatmentStep
                           ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
-                        : currentStepData.options
+                        : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && pneumoniaAtsIdsaSevere
+                          ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
+                          : currentStepData.options
                 if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
@@ -11538,6 +11602,156 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </figure>
                   ))}
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pneumoniaRxInfoOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h4 className="text-lg font-extrabold text-slate-950">Radiografia de Tórax (RX de Tórax)</h4>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    Exame tradicional na avaliação da PAC, amplamente disponível, rápido e útil para confirmar infiltrado pulmonar compatível com infecção.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPneumoniaRxInfoOpen(false)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                  title="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-4 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                <div className="rounded-xl border border-sky-200 bg-sky-50 p-4">
+                  <p>
+                    A radiografia de tórax é o exame de imagem mais tradicional na avaliação da pneumonia adquirida na comunidade (PAC), sendo amplamente disponível, de rápida execução e útil para confirmar a presença de infiltrado pulmonar compatível com infecção.
+                  </p>
+                </div>
+                <div>
+                  <h5 className="font-bold text-slate-950">Está indicada principalmente nos seguintes cenários:</h5>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li>Suspeita clínica de pneumonia adquirida na comunidade.</li>
+                    <li>Avaliação inicial de pacientes com sintomas respiratórios moderados ou graves, especialmente quando há necessidade de confirmação diagnóstica.</li>
+                    <li>Estratificação de gravidade e investigação de complicações, como derrame pleural ou acometimento multilobar.</li>
+                    <li>Pacientes hospitalizados com suspeita de PAC.</li>
+                    <li>Casos em que o diagnóstico diferencial é relevante, incluindo insuficiência cardíaca, atelectasia, neoplasias ou outras doenças pulmonares.</li>
+                  </ul>
+                </div>
+                <div>
+                  <h5 className="font-bold text-slate-950">Limitações do RX de Tórax</h5>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li>Menor sensibilidade quando comparado ao ultrassom pulmonar (POCUS) e à tomografia computadorizada.</li>
+                    <li>Pode não detectar pneumonias pequenas, periféricas, basais ou retrocardíacas.</li>
+                    <li>Exames realizados em leito (AP portátil) apresentam menor qualidade diagnóstica.</li>
+                    <li>Um RX inicial normal não exclui completamente pneumonia, especialmente nas fases precoces da doença.</li>
+                  </ul>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <h5 className="font-bold text-emerald-950">Mensagem prática para o fluxograma</h5>
+                  <p className="mt-1">RX de tórax: exame de primeira linha para confirmação por imagem da PAC na maioria dos pacientes, devido à ampla disponibilidade e baixo custo.</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <h5 className="font-bold text-amber-950">Conceito-chave</h5>
+                  <p className="mt-1">O RX de tórax continua sendo o exame de imagem inicial mais utilizado na PAC, porém um resultado normal não exclui pneumonia quando a suspeita clínica é elevada. Nesses casos, o POCUS pulmonar ou a TC de tórax podem ser necessários para esclarecimento diagnóstico.</p>
+                </div>
+              </div>
+              <div className="border-t border-slate-200 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => setPneumoniaRxInfoOpen(false)}
+                  className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800 sm:w-auto"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pneumoniaRxImageOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <h4 className="text-lg font-extrabold text-slate-950">RX de Tórax</h4>
+                <button
+                  type="button"
+                  onClick={() => setPneumoniaRxImageOpen(false)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                  title="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto bg-slate-950 p-4">
+                <img
+                  src="/rx.jpeg"
+                  alt="Imagem de referência de RX de tórax"
+                  className="mx-auto max-h-[72vh] w-auto max-w-full rounded-xl bg-white object-contain"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pneumoniaCtInfoOpen && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <div>
+                  <h4 className="text-lg font-extrabold text-slate-950">TC de Tórax</h4>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                    Exame reservado para esclarecer dúvidas diagnósticas, identificar complicações e investigar diagnósticos alternativos na PAC.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPneumoniaCtInfoOpen(false)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                  title="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-4 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                  <p>
+                    A tomografia computadorizada (TC) de tórax não deve ser realizada rotineiramente em todos os pacientes com pneumonia adquirida na comunidade (PAC). Seu principal papel é esclarecer dúvidas diagnósticas, identificar complicações e investigar diagnósticos alternativos.
+                  </p>
+                </div>
+                <div>
+                  <h5 className="font-bold text-slate-950">Está indicada principalmente nos seguintes cenários:</h5>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li>Suspeita clínica de pneumonia com radiografia ou POCUS inconclusivos, especialmente quando a probabilidade clínica permanece elevada.</li>
+                    <li>Discordância entre quadro clínico e imagem inicial, como hipoxemia importante ou sepse sem infiltrado evidente.</li>
+                    <li>Falha terapêutica, definida como ausência de melhora clínica ou piora após 48-72 horas de tratamento adequado.</li>
+                    <li>Suspeita de pneumonia complicada, incluindo derrame pleural complicado ou empiema, abscesso pulmonar e pneumonia necrotizante.</li>
+                    <li>Pacientes imunossuprimidos, nos quais infecções oportunistas e diagnósticos diferenciais são mais frequentes.</li>
+                    <li>Suspeita de diagnósticos alternativos, como tromboembolismo pulmonar, neoplasia pulmonar, doença intersticial pulmonar, atelectasia ou hemorragia alveolar.</li>
+                    <li>Pneumonia recorrente no mesmo local anatômico, sugerindo lesão obstrutiva endobrônquica.</li>
+                  </ul>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <h5 className="font-bold text-emerald-950">Mensagem prática para o fluxograma</h5>
+                  <p className="mt-1">TC de tórax: reservar para casos com dúvida diagnóstica, falha terapêutica, suspeita de complicações ou diagnósticos alternativos. Não indicada rotineiramente em todos os pacientes com PAC.</p>
+                </div>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <h5 className="font-bold text-amber-950">Conceito-chave</h5>
+                  <p className="mt-1">A TC é o exame de imagem mais sensível para pneumonia, porém seu uso deve ser direcionado, pois raramente modifica a conduta em pacientes com PAC típica e confirmação adequada por radiografia ou POCUS. Baseado em recomendações da American Thoracic Society, Infectious Diseases Society of America, European Respiratory Society e Sociedade Brasileira de Pneumologia e Tisiologia.</p>
+                </div>
+              </div>
+              <div className="border-t border-slate-200 px-5 py-4">
+                <button
+                  type="button"
+                  onClick={() => setPneumoniaCtInfoOpen(false)}
+                  className="w-full rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800 sm:w-auto"
+                >
+                  Fechar
+                </button>
               </div>
             </div>
           </div>

@@ -1289,6 +1289,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         const parsed = safeParse(value) as { score?: number } | null
         return typeof parsed?.score === 'number' ? parsed.score : undefined
       }
+      const getDecisionAnswer = (value: string | undefined) => {
+        const parsed = safeParse(value) as { decision?: string } | null
+        return parsed?.decision || value || ''
+      }
       const formatScore = (score: number | undefined, max: number) =>
         score != null ? `${score}/${max}` : 'não registrado'
       const criteriaFromObject = (criteria: unknown, labels: Record<string, string>) => {
@@ -1337,7 +1341,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const effectiveCurbScore = curb65Score ?? curbLegacyData?.score
       const atsSevere = atsData?.pacGrave ?? answers.pac_ats_idsa_gravidade === 'ats_idsa_pac_grave'
-      const destinationAnswer = answers.pac_destino_protocolo || ''
+      const destinationAnswer = getDecisionAnswer(answers.pac_destino_protocolo)
       const psiGroup = psiData?.grupo || (currentStep === 'pac_psi_baixo'
         ? 'PORT I/II'
         : currentStep === 'pac_psi_intermediario'
@@ -1480,6 +1484,35 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
       ])
 
+      const destinationText = destination === 'ambulatorial'
+        ? 'Manejo ambulatorial'
+        : destination === 'enfermaria'
+          ? 'Internação em enfermaria/unidade intermediária'
+          : destination === 'uti'
+            ? 'Avaliação/admissão em UTI'
+            : destination === 'estabilizacao'
+              ? 'Estabilização imediata'
+              : destination === 'limitador'
+                ? 'Internação por limitador de segurança ambulatorial'
+                : 'Destino ainda não definido'
+
+      const examAndImagingItems = uniqueItems([
+        labItems.length > 0
+          ? `Exames laboratoriais registrados: ${labItems.join(' ')}`
+          : 'Não há exames laboratoriais estruturados registrados no sistema para este atendimento.',
+        'Imagem na PAC: radiografia de tórax permanece exame inicial amplamente disponível para confirmação de infiltrado e avaliação de derrame pleural ou acometimento multilobar.',
+        'POCUS pulmonar pode ser utilizado à beira-leito para pesquisa de consolidação subpleural, broncograma aéreo dinâmico, linhas B focais e derrame pleural, especialmente quando se deseja avaliação rápida sem radiação.',
+        destination === 'ambulatorial'
+          ? 'TC de tórax não é exame de rotina em PAC típica ambulatorial; reservar para dúvida diagnóstica, discordância clínico-radiológica, imunossupressão, falha terapêutica ou suspeita de complicações/diagnósticos alternativos.'
+          : 'Em paciente hospitalizado, revisar RX/POCUS e considerar TC de tórax se imagem inicial for inconclusiva, houver hipoxemia desproporcional, falha terapêutica em 48-72 horas, suspeita de empiema/abscesso/pneumonia necrotizante ou diagnóstico alternativo.'
+      ])
+
+      const clinicalDataItems = uniqueItems([
+        symptoms.length > 0 ? `Sintomas registrados: ${symptoms.join('; ')}.` : null,
+        vitalItems.length > 0 ? `Sinais vitais registrados: ${vitalItems.join('; ')}.` : null,
+        observations.length > 0 ? `Observações clínicas: ${observations.join('; ')}.` : null
+      ])
+
       const assessmentItems = uniqueItems([
         `CRB-65: ${formatScore(crb65Score, 4)} (${crbRisk}).`,
         crbCriteria.length > 0 ? `Critérios marcados no CRB-65: ${crbCriteria.join('; ')}.` : null,
@@ -1510,54 +1543,61 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const historyText = [
         `Paciente admitido em ${formatDate(patientForReport.admission.date)} para avaliação de quadro respiratório compatível com pneumonia adquirida na comunidade.`,
-        symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : 'Sintomas da admissão não foram registrados de forma estruturada.',
-        observations.length > 0 ? `Observações clínicas adicionais: ${observations.join('; ')}.` : null
+        symptoms.length > 0
+          ? `Refere/apresenta ${symptoms.join('; ')}, sendo conduzido conforme protocolo institucional de PAC.`
+          : 'Quadro conduzido como suspeita clínica de PAC pelo protocolo institucional; sintomas específicos não foram lançados em campo estruturado.',
+        observations.length > 0 ? `Observações clínicas adicionais: ${observations.join('; ')}.` : null,
+        `Após aplicação das etapas do fluxo, o destino assistencial registrado foi: ${destinationText}.`
       ].filter(Boolean).join(' ')
+
+      const sections: ReportSection[] = [
+        {
+          title: 'Identificação do Paciente',
+          text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}.`
+        },
+        {
+          title: 'Queixa Principal',
+          text: symptoms[0] || 'Quadro respiratório sugestivo de pneumonia adquirida na comunidade.'
+        },
+        {
+          title: 'História da Doença Atual',
+          text: historyText
+        },
+        ...(clinicalDataItems.length > 0
+          ? [{
+              title: 'Dados Clínicos Registrados',
+              items: clinicalDataItems
+            }]
+          : []),
+        {
+          title: 'Impressão Diagnóstica e Destino',
+          text: diagnosisText
+        },
+        {
+          title: 'Estratificação de Gravidade',
+          items: assessmentItems
+        },
+        {
+          title: 'Exames Complementares e Imagem',
+          items: examAndImagingItems
+        },
+        {
+          title: 'Conduta e Tratamento',
+          items: conductItems.length > 0 ? conductItems : ['Conduta final ainda não registrada; completar fluxo de PAC para definição de destino.']
+        },
+        {
+          title: 'Plano Terapêutico e Orientações',
+          items: planItems
+        },
+        {
+          title: 'Médico responsável',
+          text: doctorSignatureText
+        }
+      ]
 
       return {
         title,
-        sections: [
-          {
-            title: 'Identificação do Paciente',
-            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}.`
-          },
-          {
-            title: 'Queixa Principal',
-            text: symptoms[0] || 'Tosse, febre, dispneia ou outro quadro respiratório sugestivo de PAC.'
-          },
-          {
-            title: 'História da Doença Atual',
-            text: historyText
-          },
-          {
-            title: 'Sinais Vitais Registrados na Admissão',
-            items: vitalItems.length > 0 ? vitalItems : ['Sinais vitais não preenchidos no cadastro inicial deste atendimento. O fluxo de PAC não possui campo próprio para exame físico completo.']
-          },
-          {
-            title: 'Exames Complementares',
-            items: labItems.length > 0 ? labItems : ['Sem exames laboratoriais estruturados registrados no sistema. Radiografia de tórax e exames complementares devem ser interpretados conforme disponibilidade e evolução clínica.']
-          },
-          {
-            title: 'Impressão Diagnóstica',
-            text: diagnosisText
-          },
-          {
-            title: 'Estratificação de Gravidade',
-            items: assessmentItems
-          },
-          {
-            title: 'Conduta e Destino',
-            items: conductItems.length > 0 ? conductItems : ['Conduta final ainda não registrada; completar fluxo de PAC para definição de destino.']
-          },
-          {
-            title: 'Plano Terapêutico e Orientações',
-            items: planItems
-          },
-          {
-            title: 'Médico responsável',
-            text: doctorSignatureText
-          }
-        ]
+        sections
       }
     }
 

@@ -4041,9 +4041,51 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
           </div>
           <ul class="list-disc pl-5 space-y-1">
             <li><strong>Idosos:</strong> frequentemente podem ter apresentações atípicas, com sintomas frustros ou pouco exuberantes, como mal estar, fraqueza, rebaixamento do nível de consciência ou diminuição da cognição.</li>
-            <li><strong>RX de tórax:</strong> exame que deve ser realizado em todos os pacientes, possibilitando a confirmação do diagnóstico e avaliação da presença de derrame pleural e doença extensa ou multilobar.</li>
+            <li><strong>Imagem no PS:</strong> usar POCUS pulmonar quando disponível para avaliação à beira-leito; solicitar <strong>RX de tórax</strong> <button type="button" data-pac-rx-info="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-sky-300 bg-white text-xs font-black text-sky-700 align-middle hover:bg-sky-100" title="Ver orientação sobre RX de tórax">i</button> <button type="button" data-pac-rx-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-white text-xs font-black text-emerald-700 align-middle hover:bg-emerald-100" title="Ver imagem de RX de tórax">i</button> conforme disponibilidade, dúvida diagnóstica, extensão da doença, derrame pleural, necessidade de documentação ou internação; reservar <strong>TC de tórax</strong> <button type="button" data-pac-ct-info="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-violet-300 bg-white text-xs font-black text-violet-700 align-middle hover:bg-violet-100" title="Ver orientação sobre TC de tórax">i</button> para dúvida diagnóstica, falha terapêutica, complicações ou diagnósticos alternativos.</li>
             <li><strong>Sequência institucional:</strong> confirmar suspeita de PAC, aplicar CRB-65 na triagem, CURB-65 após exames, ATS/IDSA para destino, DRIP para antibiótico e SMART-COP para risco de deterioração.</li>
           </ul>
+          <details class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <summary class="cursor-pointer font-semibold text-sky-950">POCUS pulmonar na suspeita de PAC</summary>
+            <div class="mt-4 space-y-4 text-slate-800">
+              <div class="rounded-lg border border-sky-200 bg-white p-3">
+                <h5 class="font-bold text-sky-950">Objetivo</h5>
+                <p class="mt-1">Identificar rapidamente consolidações pulmonares, broncogramas aéreos, padrão intersticial focal e derrames pleurais associados à pneumonia, sem exposição à radiação e à beira-leito.</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-white p-3">
+                <h5 class="font-bold text-slate-950">Preparo e equipamento</h5>
+                <p class="mt-1"><strong>Posição:</strong> sentado ou semi-Fowler 30-45 graus sempre que possível; decúbito dorsal se restrito ao leito. Avaliar regiões posteriores aumenta a sensibilidade, principalmente em pneumonias basais.</p>
+                <p class="mt-1"><strong>Transdutor:</strong> convexo 2-5 MHz para avaliação global; linear 7-12 MHz pode ser usado para linha pleural e pequenas consolidações subpleurais.</p>
+              </div>
+              <div class="rounded-lg border border-slate-200 bg-white p-3">
+                <h5 class="font-bold text-slate-950">Técnica</h5>
+                <p class="mt-1"><strong>Varredura em 12 zonas:</strong> anterior superior/inferior, lateral superior/inferior e posterior superior/inferior em ambos os hemitóraces.</p>
+                <p class="mt-1"><strong>Transdutor:</strong> longitudinal, marcador cefálico, visualizando duas costelas, sombras acústicas e linha pleural entre elas, formando o Bat Sign.</p>
+              </div>
+              <div class="rounded-lg border border-emerald-200 bg-white p-3">
+                <h5 class="font-bold text-emerald-950">Achados a pesquisar</h5>
+                <ul class="mt-2 list-disc pl-5 space-y-1">
+                  <li><strong>Deslizamento pleural:</strong> normalmente presente.</li>
+                  <li><strong>Linhas A:</strong> horizontais, paralelas à pleura, sugerem pulmão aerado.</li>
+                  <li><strong>Linhas B:</strong> na pneumonia tendem a ser focais, assimétricas e adjacentes à consolidação.</li>
+                  <li><strong>Consolidação subpleural:</strong> achado principal, com aspecto de pulmão hepatizado.</li>
+                  <li><strong>Broncograma aéreo dinâmico:</strong> focos hiperecogênicos móveis dentro da consolidação durante a respiração, sugestivo de pneumonia bacteriana.</li>
+                  <li><strong>Derrame pleural:</strong> avaliar recessos costofrênicos; derrame septado pode sugerir complicação/empiema.</li>
+                </ul>
+              </div>
+              <div class="rounded-lg border border-amber-200 bg-white p-3">
+                <h5 class="font-bold text-amber-950">Interpretação</h5>
+                <p class="mt-1"><strong>POCUS positivo:</strong> consolidação subpleural associada a broncograma aéreo dinâmico, linhas B focais adjacentes e/ou derrame pleural aumenta fortemente a probabilidade de PAC.</p>
+                <p class="mt-1"><strong>POCUS negativo:</strong> predomínio de linhas A, sem consolidação e sem derrame reduz a probabilidade de pneumonia, devendo ser correlacionado com febre, tosse, dispneia, hipoxemia e marcadores inflamatórios.</p>
+              </div>
+              <div class="rounded-lg border border-violet-200 bg-white p-3">
+                <h5 class="font-bold text-violet-950">Laudo padronizado sugerido</h5>
+                <p class="mt-1">POCUS pulmonar realizado em 12 zonas pulmonares. Identificada consolidação subpleural em __________ medindo aproximadamente ___ cm, associada à presença de broncograma aéreo dinâmico e linhas B focais adjacentes. Derrame pleural: ausente / laminar / moderado / septado. Achados ultrassonográficos compatíveis com pneumonia. Correlacionar com dados clínicos e laboratoriais.</p>
+              </div>
+              <div class="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p><strong>Mensagem prática:</strong> o achado ultrassonográfico mais importante para pneumonia é consolidação subpleural com broncograma aéreo dinâmico.</p>
+              </div>
+            </div>
+          </details>
           <div class="rounded-xl border border-slate-200 bg-white p-4">
             <h4 class="font-bold text-slate-950">Fluxo lógico do protocolo</h4>
             <div class="mt-3 grid gap-3 md:grid-cols-2">
@@ -4168,7 +4210,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Ambulatório', nextStep: 'pac_destino_ambulatorial', value: 'ambulatorio' },
+        { text: 'Ambulatório', nextStep: 'pac_conduta_ambulatorial', value: 'ambulatorio' },
         { text: 'Enfermaria / unidade intermediária', nextStep: 'pac_drip_enfermaria', value: 'enfermaria', critical: true },
         { text: 'UTI', nextStep: 'pac_drip_uti', value: 'uti', critical: true }
       ]
@@ -4223,6 +4265,28 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
           <p><strong>Objetivo:</strong> documentar risco de ventilação mecânica, vasopressor e suporte intensivo.</p>
           <p class="mt-2"><strong>Na UTI:</strong> usar como apoio de gravidade e monitorização, junto de SOFA/SAPS 3 conforme rotina institucional.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_conduta_ambulatorial: {
+      id: 'pac_conduta_ambulatorial',
+      title: 'Conduta Ambulatorial da PAC',
+      description: 'Definir antibioticoterapia, receita e orientações de retorno antes da alta ambulatorial.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <p><strong>Antes da alta:</strong> definir esquema antibiótico, gerar receita, orientar sinais de piora e garantir possibilidade de retorno/reavaliação.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <p><strong>Previamente hígido, sem comorbidades e sem antibiótico recente:</strong> amoxicilina VO como primeira opção conforme protocolo local.</p>
+            <p class="mt-2"><strong>Com comorbidades ou uso recente de antibiótico:</strong> beta-lactâmico associado a macrolídeo, por exemplo amoxicilina/clavulanato + azitromicina, ajustando a alergias, função renal, perfil epidemiológico e julgamento clínico.</p>
+          </div>
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <p><strong>Orientar retorno imediato se:</strong> piora da dispneia, queda de saturação, confusão, hipotensão, febre persistente, vômitos/intolerância oral, prostração importante, dor torácica, cianose, síncope ou ausência de melhora clínica.</p>
+            <p class="mt-2"><strong>Reavaliação:</strong> preferencialmente em 48 a 72 horas, ou antes se houver piora.</p>
+          </div>
         </div>
       `,
       options: []
