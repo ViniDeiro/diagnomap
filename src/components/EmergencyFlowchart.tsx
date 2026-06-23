@@ -254,6 +254,30 @@ type AnaphylaxisCriteriaInfo = {
   }>
 }
 
+type PneumoniaReferenceImageKey = 'ct' | 'pocus' | 'blue'
+
+const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
+  title: string
+  src: string
+  alt: string
+}> = {
+  ct: {
+    title: 'TC de Tórax',
+    src: '/tc de torax.jpeg',
+    alt: 'Imagem de referência de TC de tórax'
+  },
+  pocus: {
+    title: 'POCUS Pulmonar',
+    src: '/pocus.jpeg',
+    alt: 'Imagem de referência de POCUS pulmonar'
+  },
+  blue: {
+    title: 'Protocolo BLUE',
+    src: '/protocolo blue.jpeg',
+    alt: 'Imagem de referência do protocolo BLUE'
+  }
+}
+
 const ANAPHYLAXIS_REFERENCE_IMAGES = {
   skin: {
     src: '/anaphylaxis-skin-mucosa.png',
@@ -1229,6 +1253,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pneumoniaRxInfoOpen, setPneumoniaRxInfoOpen] = useState(false)
   const [pneumoniaRxImageOpen, setPneumoniaRxImageOpen] = useState(false)
   const [pneumoniaCtInfoOpen, setPneumoniaCtInfoOpen] = useState(false)
+  const [pneumoniaReferenceImage, setPneumoniaReferenceImage] = useState<PneumoniaReferenceImageKey | null>(null)
   const [pneumoniaAtsIdsaMajorCriteria, setPneumoniaAtsIdsaMajorCriteria] = useState<string[]>([])
   const [pneumoniaAtsIdsaMinorCriteria, setPneumoniaAtsIdsaMinorCriteria] = useState<string[]>([])
   const [pneumoniaSmartCopCriteria, setPneumoniaSmartCopCriteria] = useState<string[]>([])
@@ -5754,13 +5779,34 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     onClick={(event) => {
                       const target = event.target as HTMLElement
                       if (target.closest('[data-pac-rx-info="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
                         setPneumoniaRxInfoOpen(true)
                       }
                       if (target.closest('[data-pac-rx-image="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
                         setPneumoniaRxImageOpen(true)
                       }
                       if (target.closest('[data-pac-ct-info="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
                         setPneumoniaCtInfoOpen(true)
+                      }
+                      if (target.closest('[data-pac-ct-image="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPneumoniaReferenceImage('ct')
+                      }
+                      if (target.closest('[data-pac-pocus-image="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPneumoniaReferenceImage('pocus')
+                      }
+                      if (target.closest('[data-pac-blue-image="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPneumoniaReferenceImage('blue')
                       }
                     }}
                   >
@@ -11835,10 +11881,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <li>Um RX inicial normal não exclui completamente pneumonia, especialmente nas fases precoces da doença.</li>
                   </ul>
                 </div>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <h5 className="font-bold text-emerald-950">Mensagem prática para o fluxograma</h5>
-                  <p className="mt-1">RX de tórax: exame de primeira linha para confirmação por imagem da PAC na maioria dos pacientes, devido à ampla disponibilidade e baixo custo.</p>
-                </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <h5 className="font-bold text-amber-950">Conceito-chave</h5>
                   <p className="mt-1">O RX de tórax continua sendo o exame de imagem inicial mais utilizado na PAC, porém um resultado normal não exclui pneumonia quando a suspeita clínica é elevada. Nesses casos, o POCUS pulmonar ou a TC de tórax podem ser necessários para esclarecimento diagnóstico.</p>
@@ -11919,10 +11961,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <li>Pneumonia recorrente no mesmo local anatômico, sugerindo lesão obstrutiva endobrônquica.</li>
                   </ul>
                 </div>
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                  <h5 className="font-bold text-emerald-950">Mensagem prática para o fluxograma</h5>
-                  <p className="mt-1">TC de tórax: reservar para casos com dúvida diagnóstica, falha terapêutica, suspeita de complicações ou diagnósticos alternativos. Não indicada rotineiramente em todos os pacientes com PAC.</p>
-                </div>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                   <h5 className="font-bold text-amber-950">Conceito-chave</h5>
                   <p className="mt-1">A TC é o exame de imagem mais sensível para pneumonia, porém seu uso deve ser direcionado, pois raramente modifica a conduta em pacientes com PAC típica e confirmação adequada por radiografia ou POCUS. Baseado em recomendações da American Thoracic Society, Infectious Diseases Society of America, European Respiratory Society e Sociedade Brasileira de Pneumologia e Tisiologia.</p>
@@ -11936,6 +11974,31 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 >
                   Fechar
                 </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {pneumoniaReferenceImage && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <h4 className="text-lg font-extrabold text-slate-950">{PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].title}</h4>
+                <button
+                  type="button"
+                  onClick={() => setPneumoniaReferenceImage(null)}
+                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                  title="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="overflow-y-auto bg-slate-950 p-4">
+                <img
+                  src={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].src}
+                  alt={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].alt}
+                  className="mx-auto max-h-[72vh] w-auto max-w-full rounded-xl bg-white object-contain"
+                />
               </div>
             </div>
           </div>

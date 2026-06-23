@@ -4041,11 +4041,11 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
           </div>
           <ul class="list-disc pl-5 space-y-1">
             <li><strong>Idosos:</strong> frequentemente podem ter apresentações atípicas, com sintomas frustros ou pouco exuberantes, como mal estar, fraqueza, rebaixamento do nível de consciência ou diminuição da cognição.</li>
-            <li><strong>Imagem no PS:</strong> usar POCUS pulmonar quando disponível para avaliação à beira-leito; solicitar <strong>RX de tórax</strong> <button type="button" data-pac-rx-info="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-sky-300 bg-white text-xs font-black text-sky-700 align-middle hover:bg-sky-100" title="Ver orientação sobre RX de tórax">i</button> <button type="button" data-pac-rx-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-white text-xs font-black text-emerald-700 align-middle hover:bg-emerald-100" title="Ver imagem de RX de tórax">i</button> conforme disponibilidade, dúvida diagnóstica, extensão da doença, derrame pleural, necessidade de documentação ou internação; reservar <strong>TC de tórax</strong> <button type="button" data-pac-ct-info="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-violet-300 bg-white text-xs font-black text-violet-700 align-middle hover:bg-violet-100" title="Ver orientação sobre TC de tórax">i</button> para dúvida diagnóstica, falha terapêutica, complicações ou diagnósticos alternativos.</li>
+            <li><strong>Imagem no PS:</strong> usar POCUS pulmonar <button type="button" data-pac-pocus-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-teal-300 bg-white text-xs font-black text-teal-700 align-middle hover:bg-teal-100" title="Ver imagem de POCUS pulmonar">i</button> quando disponível para avaliação à beira-leito; solicitar <strong>RX de tórax</strong> <button type="button" data-pac-rx-info="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-sky-300 bg-white text-xs font-black text-sky-700 align-middle hover:bg-sky-100" title="Ver orientação sobre RX de tórax">i</button> <button type="button" data-pac-rx-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-white text-xs font-black text-emerald-700 align-middle hover:bg-emerald-100" title="Ver imagem de RX de tórax">i</button> conforme disponibilidade, dúvida diagnóstica, extensão da doença, derrame pleural, necessidade de documentação ou internação; reservar <strong>TC de tórax</strong> <button type="button" data-pac-ct-info="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-violet-300 bg-white text-xs font-black text-violet-700 align-middle hover:bg-violet-100" title="Ver orientação sobre TC de tórax">i</button> <button type="button" data-pac-ct-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-300 bg-white text-xs font-black text-emerald-700 align-middle hover:bg-emerald-100" title="Ver imagem de TC de tórax">i</button> para dúvida diagnóstica, falha terapêutica, complicações ou diagnósticos alternativos.</li>
             <li><strong>Sequência institucional:</strong> confirmar suspeita de PAC, aplicar CRB-65 na triagem, CURB-65 após exames, ATS/IDSA para destino, DRIP para antibiótico e SMART-COP para risco de deterioração.</li>
           </ul>
           <details class="rounded-xl border border-sky-200 bg-sky-50 p-4">
-            <summary class="cursor-pointer font-semibold text-sky-950">POCUS pulmonar na suspeita de PAC</summary>
+            <summary class="cursor-pointer font-semibold text-sky-950">POCUS pulmonar na suspeita de PAC <button type="button" data-pac-pocus-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-teal-300 bg-white text-xs font-black text-teal-700 align-middle hover:bg-teal-100" title="Ver imagem de POCUS pulmonar">i</button></summary>
             <div class="mt-4 space-y-4 text-slate-800">
               <div class="rounded-lg border border-sky-200 bg-white p-3">
                 <h5 class="font-bold text-sky-950">Objetivo</h5>
@@ -4073,7 +4073,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
                 </ul>
               </div>
               <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
-                <h5 class="font-bold text-cyan-950">Interpretação pelo BLUE Protocol</h5>
+                <h5 class="font-bold text-cyan-950">Interpretação pelo BLUE Protocol <button type="button" data-pac-blue-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300 bg-white text-xs font-black text-cyan-700 align-middle hover:bg-cyan-100" title="Ver imagem do Protocolo BLUE">i</button></h5>
                 <p class="mt-1"><strong>Objetivo:</strong> protocolo ultrassonográfico à beira-leito para investigar insuficiência respiratória aguda e diferenciar pneumonia, edema pulmonar cardiogênico, DPOC/asma, TEP e pneumotórax.</p>
                 <p class="mt-2"><strong>Componentes principais:</strong> deslizamento pleural, linhas A e linhas B.</p>
                 <p class="mt-2"><strong>Pontos de avaliação:</strong> BLUE point superior, BLUE point inferior e PLAPS point bilateral, com pesquisa posterolateral de consolidação, pneumonia e derrame pleural.</p>
@@ -4127,9 +4127,6 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
               <div class="rounded-lg border border-violet-200 bg-white p-3">
                 <h5 class="font-bold text-violet-950">Laudo padronizado sugerido</h5>
                 <p class="mt-1">POCUS pulmonar realizado em 12 zonas pulmonares. Identificada consolidação subpleural em __________ medindo aproximadamente ___ cm, associada à presença de broncograma aéreo dinâmico e linhas B focais adjacentes. Derrame pleural: ausente / laminar / moderado / septado. Achados ultrassonográficos compatíveis com pneumonia. Correlacionar com dados clínicos e laboratoriais.</p>
-              </div>
-              <div class="rounded-lg border border-red-200 bg-red-50 p-3">
-                <p><strong>Mensagem prática:</strong> o achado ultrassonográfico mais importante para pneumonia é consolidação subpleural com broncograma aéreo dinâmico.</p>
               </div>
             </div>
           </details>
