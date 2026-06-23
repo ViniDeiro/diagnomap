@@ -141,7 +141,6 @@ import {
   buildCholecystitisPrescriptionItems,
   calculateCholecystitisSeverity,
   defaultCholecystitisSeverityValues,
-  getCholecystitisAntibioticOptions,
   hasCholecystitisPrescriptionSet
 } from '@/lib/cholecystitis'
 import {
@@ -368,6 +367,43 @@ type CholecystitisPrescriptionPreview = {
   severity: CholecystitisSeverity
   antibioticScheme: CholecystitisAntibioticScheme
   content: string[]
+}
+
+type CholecystitisSurgeryConsultPreview = {
+  title: string
+  content: string[]
+}
+
+const getCholecystitisAntibioticChoices = (stepId?: string): Array<{
+  value: CholecystitisAntibioticScheme
+  label: string
+  group: 'Monoterapia' | 'Associação'
+}> => {
+  if (stepId === 'cole_grave') {
+    return [
+      { value: 'piperacillin_tazobactam', label: 'Piperacilina + Tazobactam 4,5 g EV de 6/6 horas', group: 'Monoterapia' },
+      { value: 'ertapenem', label: 'Ertapeném 1 g EV de 24/24 horas', group: 'Monoterapia' },
+      { value: 'meropenem', label: 'Meropeném 1 g EV de 8/8 horas', group: 'Monoterapia' },
+      { value: 'cefepime_metronidazole', label: 'Metronidazol 500 mg EV de 8/8 horas + Cefepime 2 g EV de 8/8 horas', group: 'Associação' },
+      { value: 'ceftazidime_metronidazole', label: 'Metronidazol 500 mg EV de 8/8 horas + Ceftazidima 2 g EV de 8/8 horas', group: 'Associação' }
+    ]
+  }
+
+  if (stepId === 'cole_moderada') {
+    return [
+      { value: 'piperacillin_tazobactam', label: 'Piperacilina + Tazobactam 4,5 g EV de 6/6 horas', group: 'Monoterapia' },
+      { value: 'ertapenem', label: 'Ertapeném 1 g EV de 24/24 horas', group: 'Monoterapia' },
+      { value: 'ceftriaxone_metronidazole', label: 'Metronidazol 500 mg EV de 8/8 horas + Ceftriaxona 2 g EV de 24/24 horas', group: 'Associação' },
+      { value: 'ciprofloxacin_metronidazole', label: 'Metronidazol 500 mg EV de 8/8 horas + Ciprofloxacino 500 mg EV de 12/12 horas', group: 'Associação' }
+    ]
+  }
+
+  return [
+    { value: 'ampicillin_sulbactam', label: 'Ampicilina + Sulbactam 3 g EV de 6/6 horas', group: 'Monoterapia' },
+    { value: 'ertapenem', label: 'Ertapeném 1 g EV de 24/24 horas', group: 'Monoterapia' },
+    { value: 'ceftriaxone_metronidazole', label: 'Metronidazol 500 mg EV de 8/8 horas + Ceftriaxona 2 g EV de 24/24 horas', group: 'Associação' },
+    { value: 'ciprofloxacin_metronidazole', label: 'Metronidazol 500 mg EV de 8/8 horas + Ciprofloxacino 500 mg EV de 12/12 horas', group: 'Associação' }
+  ]
 }
 
 type AppendicitisPrescriptionPreview = {
@@ -969,13 +1005,6 @@ const tvpTherapeuticOptions = [
   { id: 'varfarina', group: 'VKA', text: 'Varfarina: alvo INR 2–3; sobrepor com heparina por ≥5 dias e INR terapêutico por 24h' }
 ]
 
-const tvpTreatmentDurations = [
-  { id: 'duracao_provocada', text: 'Provocada por fator transitório: 3 meses' },
-  { id: 'duracao_nao_provocada', text: 'Não provocada/trombofilia persistente: considerar estendido/indefinido se baixo-moderado risco de sangramento' },
-  { id: 'duracao_cancer', text: 'Câncer ativo: DOAC (apixabana/rivaroxabana/edoxabana) ou LMWH enquanto câncer/tratamento ativos' },
-  { id: 'duracao_gravidez', text: 'Gravidez: LMWH até 6 semanas pós-parto (mínimo 3 meses); evitar varfarina e DOACs na gestação' }
-]
-
 const tvpAnticoagulationConsiderations = [
   {
     id: 'consideracoes_tratamento_tvp',
@@ -1323,6 +1352,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [cholecystitisPrescriptionPreview, setCholecystitisPrescriptionPreview] = useState<CholecystitisPrescriptionPreview | null>(null)
   const [cholecystitisPrescriptionCopied, setCholecystitisPrescriptionCopied] = useState(false)
   const [cholecystitisPrescriptionGenerated, setCholecystitisPrescriptionGenerated] = useState(false)
+  const [cholecystitisSurgeryConsultPreview, setCholecystitisSurgeryConsultPreview] = useState<CholecystitisSurgeryConsultPreview | null>(null)
+  const [cholecystitisSurgeryConsultCopied, setCholecystitisSurgeryConsultCopied] = useState(false)
   const [appendicitisAlvaradoValues, setAppendicitisAlvaradoValues] = useState<Record<AppendicitisAlvaradoKey, boolean>>(() => defaultAppendicitisAlvaradoValues())
   const [appendicitisAntibioticScheme, setAppendicitisAntibioticScheme] = useState<AppendicitisAntibioticScheme>('ceftriaxone_metronidazole')
   const [appendicitisIncludeAntibiotics, setAppendicitisIncludeAntibiotics] = useState(true)
@@ -2286,7 +2317,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_tratamento_adjunto'
   const isAnaphylaxisDischargeStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_observacao_alta'
   const isAnaphylaxisRepeatAdrenalineFinalStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_repetir_adrenalina_internacao'
-  const isAnaphylaxisCriticalAirwayFinalStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_internacao_via_aerea_choque'
   const isPancreatitisBisapStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_bisap'
   const isPancreatitisMarshallStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_marshall_atlanta'
   const isPancreatitisTreatmentFinalStep = flowchart.id === 'pancreatitis' && ['pan_leve', 'pan_moderada', 'pan_grave', 'pan_uti'].includes(currentStepData?.id || '')
@@ -3614,11 +3644,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       : currentStepData?.id === 'cole_moderada'
         ? 'moderada'
         : 'leve'
-    const antibioticScheme = currentStepData?.id === 'cole_grave'
-      ? cholecystitisAntibioticScheme
-      : currentStepData?.id === 'cole_moderada'
-        ? cholecystitisAntibioticScheme
-        : 'ceftriaxone_metronidazole'
+    const antibioticScheme = cholecystitisAntibioticScheme
 
     const draftItems = buildCholecystitisPrescriptionItems(severity, antibioticScheme)
     const persisted = getPersistedCholecystitisPrescriptions()
@@ -3660,6 +3686,49 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       alert('Não foi possível copiar a prescrição. Tente novamente.')
     }
   }, [cholecystitisPrescriptionPreview])
+
+  const buildCholecystitisSurgeryConsultPreview = useCallback((): CholecystitisSurgeryConsultPreview => {
+    return {
+      title: 'Interconsulta - Cirurgia Geral',
+      content: [
+        'INTERCONSULTA - CIRURGIA GERAL',
+        '',
+        'Solicito avaliação da Cirurgia Geral.',
+        '',
+        `Paciente ${patient.name || '________________________________'} com quadro clínico compatível com colecistite aguda, apresentando dor em hipocôndrio direito, associada a náuseas e/ou vômitos, com evolução há _____ horas/dias. Ao exame físico, apresenta dor à palpação em hipocôndrio direito, com sinal de Murphy clínico positivo.`,
+        '',
+        'Exames laboratoriais evidenciam leucocitose de ________, PCR de ________, bilirrubina total de ________ mg/dL, bilirrubina direta de ________ mg/dL, AST ________ U/L, ALT ________ U/L, FA ________ U/L e GGT ________ U/L.',
+        '',
+        'Ultrassonografia abdominal demonstra presença de colelitíase associada a espessamento da parede vesicular de _____ mm, distensão vesicular, líquido perivesicular e/ou Murphy ultrassonográfico positivo, compatível com colecistite aguda.',
+        '',
+        'Paciente encontra-se em jejum, recebendo hidratação venosa, analgesia, antieméticos e antibioticoterapia empírica.',
+        '',
+        'Solicito avaliação especializada para definição de conduta cirúrgica e programação terapêutica.',
+        '',
+        'Atenciosamente,',
+        '',
+        'Dr(a). ____________________',
+        'CRM ____________________'
+      ]
+    }
+  }, [patient.name])
+
+  const handleOpenCholecystitisSurgeryConsult = useCallback(() => {
+    setCholecystitisSurgeryConsultPreview(buildCholecystitisSurgeryConsultPreview())
+    setCholecystitisSurgeryConsultCopied(false)
+  }, [buildCholecystitisSurgeryConsultPreview])
+
+  const copyCholecystitisSurgeryConsultText = useCallback(async () => {
+    if (!cholecystitisSurgeryConsultPreview) return
+    try {
+      await navigator.clipboard.writeText(cholecystitisSurgeryConsultPreview.content.join('\n'))
+      setCholecystitisSurgeryConsultCopied(true)
+      setTimeout(() => setCholecystitisSurgeryConsultCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar interconsulta da colecistite:', error)
+      alert('Não foi possível copiar a interconsulta. Tente novamente.')
+    }
+  }, [cholecystitisSurgeryConsultPreview])
 
   const buildAppendicitisPrescriptionPreview = useCallback((
     antibioticScheme: AppendicitisAntibioticScheme,
@@ -4884,8 +4953,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setCholecystitisPrescriptionPreview(null)
       setCholecystitisPrescriptionCopied(false)
       setCholecystitisPrescriptionGenerated(false)
+      return
     }
-  }, [isCholecystitisTreatmentFinalStep])
+
+    const choices = getCholecystitisAntibioticChoices(currentStepData?.id)
+    if (!choices.some((option) => option.value === cholecystitisAntibioticScheme)) {
+      setCholecystitisAntibioticScheme(choices[0]?.value || 'ceftriaxone_metronidazole')
+    }
+  }, [cholecystitisAntibioticScheme, currentStepData?.id, isCholecystitisTreatmentFinalStep])
 
   useEffect(() => {
     if (!isAppendicitisAlvaradoStep) {
@@ -7831,15 +7906,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     {cholecystitisSeverityResult.note}
                   </div>
 
-                  <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                    <h5 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-800">Opções de antibiótico por gravidade</h5>
-                    <ul className="list-disc space-y-1 pl-5 text-sm text-slate-700">
-                      {getCholecystitisAntibioticOptions(cholecystitisSeverityResult.severity).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </div>
-
                   <div className="mt-4 flex justify-end">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -10380,9 +10446,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {cholecystitisPrescriptionPreview && (
-                <div className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-3xl max-h-[88vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col">
-                    <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-lime-700 to-emerald-700 text-white">
+                <div
+                  className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4"
+                  onClick={() => {
+                    setCholecystitisPrescriptionPreview(null)
+                    setCholecystitisPrescriptionCopied(false)
+                  }}
+                >
+                  <div
+                    className="w-full max-w-3xl max-h-[82vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-lime-700 to-emerald-700 text-white">
                       <div>
                         <h4 className="font-bold">{cholecystitisPrescriptionPreview.title}</h4>
                         <p className="mt-1 text-sm text-lime-50">
@@ -10410,8 +10485,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                             setCholecystitisPrescriptionPreview(null)
                             setCholecystitisPrescriptionCopied(false)
                           }}
-                          className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
-                          title="Fechar"
+                          className="w-9 h-9 shrink-0 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Minimizar prescrição"
+                          aria-label="Minimizar prescrição"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -10425,6 +10501,91 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           </p>
                         ))}
                       </div>
+                    </div>
+                    <div className="border-t border-slate-200 bg-white px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCholecystitisPrescriptionPreview(null)
+                          setCholecystitisPrescriptionCopied(false)
+                        }}
+                        className="w-full rounded-xl bg-lime-700 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-lime-800 sm:w-auto"
+                      >
+                        Minimizar prescrição e voltar ao fluxo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {cholecystitisSurgeryConsultPreview && (
+                <div
+                  className="fixed inset-0 z-[60] bg-slate-900/45 backdrop-blur-sm flex items-center justify-center p-4"
+                  onClick={() => {
+                    setCholecystitisSurgeryConsultPreview(null)
+                    setCholecystitisSurgeryConsultCopied(false)
+                  }}
+                >
+                  <div
+                    className="w-full max-w-3xl max-h-[82vh] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl flex flex-col"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex items-start justify-between gap-3 px-5 py-4 bg-gradient-to-r from-slate-800 to-slate-700 text-white">
+                      <div>
+                        <h4 className="font-bold">{cholecystitisSurgeryConsultPreview.title}</h4>
+                        <p className="mt-1 text-sm text-slate-100">
+                          Modelo copiável para solicitação à Cirurgia Geral.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={copyCholecystitisSurgeryConsultText}
+                          className={clsx(
+                            'inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold transition-colors',
+                            cholecystitisSurgeryConsultCopied
+                              ? 'bg-emerald-500/20 text-emerald-50'
+                              : 'bg-white/20 hover:bg-white/30 text-white'
+                          )}
+                          title="Copiar interconsulta"
+                        >
+                          {cholecystitisSurgeryConsultCopied ? <ClipboardCheck className="w-4 h-4" /> : <Clipboard className="w-4 h-4" />}
+                          {cholecystitisSurgeryConsultCopied ? 'Copiado' : 'Copiar'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCholecystitisSurgeryConsultPreview(null)
+                            setCholecystitisSurgeryConsultCopied(false)
+                          }}
+                          className="w-9 h-9 shrink-0 rounded-lg bg-white/20 hover:bg-white/30 inline-flex items-center justify-center transition-colors"
+                          title="Minimizar interconsulta"
+                          aria-label="Minimizar interconsulta"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="overflow-y-auto p-5">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                        {cholecystitisSurgeryConsultPreview.content.map((line, index) => (
+                          <p key={`${line}-${index}`} className="text-sm leading-relaxed text-slate-800 whitespace-pre-wrap">
+                            {line}
+                          </p>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-200 bg-white px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCholecystitisSurgeryConsultPreview(null)
+                          setCholecystitisSurgeryConsultCopied(false)
+                        }}
+                        className="w-full rounded-xl bg-slate-800 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-900 sm:w-auto"
+                      >
+                        Minimizar interconsulta e voltar ao fluxo
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -10650,7 +10811,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                     <div className="p-5 space-y-4 text-sm text-slate-800">
                       <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                        <p className="font-bold text-emerald-900">1) PERGUNTE: "EMBOLIZA?"</p>
+                        <p className="font-bold text-emerald-900">1) PERGUNTE: &quot;EMBOLIZA?&quot;</p>
                         <p className="mt-1 font-semibold">Avalie risco tromboembólico:</p>
                         <ul className="list-disc pl-5 mt-1 space-y-1 text-emerald-900">
                           <li>TVP proximal (femoral/iliaca/poplitea).</li>
@@ -10662,7 +10823,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </div>
 
                       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-                        <p className="font-bold text-amber-900">2) PERGUNTE: "SANGRA?"</p>
+                        <p className="font-bold text-amber-900">2) PERGUNTE: &quot;SANGRA?&quot;</p>
                         <p className="mt-1 font-semibold">Avalie risco hemorrágico:</p>
                         <ul className="list-disc pl-5 mt-1 space-y-1 text-amber-900">
                           <li>Sangramento ativo (GI, intracraniano, hemoptise significativa).</li>
@@ -10676,7 +10837,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </div>
 
                       <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
-                        <p className="font-bold text-cyan-900">3) COMPARE: "O QUE PESA MAIS?"</p>
+                        <p className="font-bold text-cyan-900">3) COMPARE: &quot;O QUE PESA MAIS?&quot;</p>
                         <ul className="list-disc pl-5 mt-1 space-y-1 text-cyan-900">
                           <li>Emboliza &gt; sangra: anticoagular.</li>
                           <li>Sangra &gt; emboliza: corrigir fator e reavaliar (controlar HAS, otimizar funcao renal, tratar fonte de sangramento, transfusao/plaquetas).</li>
@@ -11537,46 +11698,94 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           Dieta zero, hidratação EV, analgesia, antibiótico e avaliação da cirurgia geral.
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleOpenCholecystitisPrescription}
-                        className={clsx(
-                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
-                          cholecystitisPrescriptionGenerated || hasCholecystitisPrescriptionSet(getPersistedCholecystitisPrescriptions())
-                            ? 'border border-lime-300 bg-white text-lime-800 hover:bg-lime-100'
-                            : 'bg-lime-600 text-white hover:bg-lime-700'
-                        )}
-                      >
-                        {cholecystitisPrescriptionGenerated || hasCholecystitisPrescriptionSet(getPersistedCholecystitisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
-                      </button>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={handleOpenCholecystitisPrescription}
+                          className={clsx(
+                            'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                            cholecystitisPrescriptionGenerated || hasCholecystitisPrescriptionSet(getPersistedCholecystitisPrescriptions())
+                              ? 'border border-lime-300 bg-white text-lime-800 hover:bg-lime-100'
+                              : 'bg-lime-600 text-white hover:bg-lime-700'
+                          )}
+                        >
+                          {cholecystitisPrescriptionGenerated || hasCholecystitisPrescriptionSet(getPersistedCholecystitisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleOpenCholecystitisSurgeryConsult}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-lime-300 bg-white px-4 py-2.5 text-sm font-semibold text-lime-800 transition-colors hover:bg-lime-100"
+                        >
+                          Interconsulta
+                        </button>
+                      </div>
                     </div>
 
-                    {currentStepData?.id !== 'cole_leve' && (
-                      <div className="rounded-xl border border-lime-200 bg-white p-4">
-                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-lime-900">Esquema antibiótico sugerido</h5>
-                        <div className="grid gap-2 md:grid-cols-2">
-                          {[
-                            { value: 'ceftriaxone_metronidazole' as const, label: 'Ceftriaxona + Metronidazol' },
-                            { value: 'piperacillin_tazobactam' as const, label: 'Piperacilina + Tazobactam' },
-                            { value: 'cefepime_metronidazole' as const, label: 'Cefepime + Metronidazol' }
-                          ].map((option) => (
-                            <label key={option.value} className={clsx(
-                              'flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm',
-                              cholecystitisAntibioticScheme === option.value ? 'border-lime-300 bg-lime-50 text-lime-950' : 'border-slate-100 bg-slate-50 text-slate-700 hover:bg-white'
-                            )}>
-                              <input
-                                type="radio"
-                                name="cholecystitis-antibiotic"
-                                checked={cholecystitisAntibioticScheme === option.value}
-                                onChange={() => setCholecystitisAntibioticScheme(option.value)}
-                                className="h-4 w-4 border-lime-300 text-lime-600 focus:ring-lime-500"
-                              />
-                              <span>{option.label}</span>
-                            </label>
-                          ))}
+                    {currentStepData?.id === 'cole_grave' && (
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                        <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-red-900">
+                          Critérios para avaliação de UTI
+                        </h5>
+                        <p className="text-sm font-semibold text-red-950">
+                          Todo paciente com Colecistite Aguda Grau III (Tokyo Guidelines) ou necessidade de suporte avançado de órgãos deve ser considerado para avaliação e internação em UTI.
+                        </p>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <ul className="list-disc space-y-1 pl-5 text-sm text-red-900">
+                            <li>PAS &lt; 90 mmHg, PAM &lt; 65 mmHg ou necessidade de vasopressor.</li>
+                            <li>VM invasiva, VNI contínua, CNAF, hipoxemia importante ou PaO₂/FiO₂ &lt; 300.</li>
+                            <li>Rebaixamento do nível de consciência, delirium séptico ou Glasgow reduzido.</li>
+                            <li>IRA significativa ou creatinina &gt; 2 mg/dL.</li>
+                          </ul>
+                          <ul className="list-disc space-y-1 pl-5 text-sm text-red-900">
+                            <li>INR &gt; 1,5 não relacionado a anticoagulantes.</li>
+                            <li>Plaquetas &lt; 100.000/mm³.</li>
+                            <li>Sepse, choque séptico ou lactato elevado com disfunção orgânica.</li>
+                            <li>Gangrena, perfuração, empiema, colecistite enfisematosa, peritonite biliar ou abscesso perivesicular.</li>
+                          </ul>
                         </div>
+                        <p className="mt-3 text-xs text-red-800">
+                          Paciente frágil, cardiopata grave, cirrótico avançado, oncológico ou imunossuprimido pode demandar monitorização intensiva mesmo antes de disfunção orgânica estabelecida.
+                        </p>
                       </div>
                     )}
+
+                    <div className="rounded-xl border border-lime-200 bg-white p-4">
+                      <h5 className="mb-3 text-xs font-bold uppercase tracking-wide text-lime-900">
+                        Opções de antibiótico conforme classificação de Tokyo
+                      </h5>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {(['Monoterapia', 'Associação'] as const).map((group) => {
+                          const options = getCholecystitisAntibioticChoices(currentStepData?.id).filter((option) => option.group === group)
+                          if (options.length === 0) return null
+
+                          return (
+                            <div key={group} className="rounded-lg border border-slate-100 bg-slate-50 p-3">
+                              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-700">{group}</p>
+                              <div className="space-y-2">
+                                {options.map((option) => (
+                                  <label key={option.value} className={clsx(
+                                    'flex cursor-pointer items-start gap-2 rounded-lg border p-3 text-sm',
+                                    cholecystitisAntibioticScheme === option.value ? 'border-lime-300 bg-lime-50 text-lime-950' : 'border-slate-100 bg-white text-slate-700 hover:bg-lime-50'
+                                  )}>
+                                    <input
+                                      type="radio"
+                                      name="cholecystitis-antibiotic"
+                                      checked={cholecystitisAntibioticScheme === option.value}
+                                      onChange={() => setCholecystitisAntibioticScheme(option.value)}
+                                      className="mt-1 h-4 w-4 border-lime-300 text-lime-600 focus:ring-lime-500"
+                                    />
+                                    <span>{option.label}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                      <p className="mt-3 text-xs text-slate-600">
+                        Escolher um dos esquemas conforme alergias, função renal, perfil de susceptibilidade microbiológica, culturas e protocolo institucional.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

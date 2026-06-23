@@ -7028,18 +7028,18 @@ export const cholecystitisFlowchart: EmergencyFlowchart = {
     cole_inicio: {
       id: 'cole_inicio',
       title: 'Suspeita de Colecistite Aguda no PS',
-      description: 'Dor em hipocôndrio direito associada a náuseas/vômitos, febre e anorexia.',
+      description: 'Dor em hipocôndrio direito com duração superior a 6 horas, possivelmente irradiada para dorso ou ombro direito, podendo estar associada a náuseas/vômitos, febre e anorexia.',
       type: 'question',
       critical: true,
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-lime-50 p-3 rounded border-l-4 border-lime-500">
-            <p><strong>Quadro típico:</strong> dor abdominal em hipocôndrio direito, geralmente associada a náuseas/vômitos, febre e anorexia.</p>
+            <p><strong>Quadro típico:</strong> dor em hipocôndrio direito com duração superior a 6 horas, possivelmente irradiada para dorso ou ombro direito, podendo estar associada a náuseas/vômitos, febre e anorexia.</p>
           </div>
           <ul class="list-disc pl-5 space-y-1">
-            <li>Solicitar USG abdominal para avaliar cálculo impactado, espessamento da parede vesicular e sinais inflamatórios.</li>
-            <li><strong>Murphy ultrassonográfico:</strong> dor quando a sonda comprime a parede abdominal no ponto da vesícula; associado a cálculos, tem alta positividade diagnóstica.</li>
-            <li>Manter acesso venoso, dieta zero, hidratação, analgesia e avaliação cirúrgica.</li>
+            <li>Solicitar USG abdominal.</li>
+            <li>Solicitar exames laboratoriais.</li>
+            <li>Medidas gerais iniciais: jejum, analgesia adequada, hidratação, acesso venoso, verificar sinais de instabilidade/gravidade.</li>
           </ul>
         </div>
       `,
@@ -7050,19 +7050,37 @@ export const cholecystitisFlowchart: EmergencyFlowchart = {
     cole_medidas_iniciais: {
       id: 'cole_medidas_iniciais',
       title: 'Medidas Iniciais',
-      description: 'Coleta de exames, dieta zero, ABCDE, hidratação e acesso venoso.',
+      description: 'ABCDE, monitorização, exames, imagem, suporte, analgesia, antiemético, antibiótico precoce e cirurgia geral.',
       type: 'question',
       critical: true,
       content: `
-        <div class="grid gap-3 md:grid-cols-2 text-sm">
-          <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
-            <p><strong>Exames iniciais:</strong> hemograma completo, PCR, EAS, função renal, beta-hCG se aplicável, TGO/TGP, FA/GGT, bilirrubina total e frações, amilase/lipase e coagulograma.</p>
+        <div class="space-y-3 text-sm">
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="bg-sky-50 p-3 rounded border-l-4 border-sky-500">
+              <p><strong>Avaliação inicial:</strong> ABCDE, via aérea, respiração, SatO₂, FR, PA, FC, temperatura, Glasgow e avaliação da dor.</p>
+            </div>
+            <div class="bg-indigo-50 p-3 rounded border-l-4 border-indigo-500">
+              <p><strong>Monitorização:</strong> monitor cardíaco, oximetria contínua, PA seriada e dois acessos venosos periféricos, preferencialmente 18G ou 20G.</p>
+            </div>
           </div>
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p><strong>Suporte:</strong> dieta zero até definição, estabilização clínica ABCDE, hidratação adequada e acesso venoso.</p>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-500">
+              <p><strong>Exames laboratoriais:</strong> hemograma, PCR, função renal, eletrólitos, perfil hepático completo, coagulograma, amilase/lipase. Lactato, gasometria e hemoculturas se grave, febre, sepse ou suspeita de colangite.</p>
+            </div>
+            <div class="bg-violet-50 p-3 rounded border-l-4 border-violet-500">
+              <p><strong>Imagem:</strong> solicitar USG abdominal. Se disponível, realizar POCUS para buscar cálculo, parede espessada, Murphy ultrassonográfico, líquido perivesicular e dilatação do colédoco.</p>
+            </div>
           </div>
-          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 md:col-span-2">
-            <p>Se houver instabilidade ou sinais de gravidade, priorizar suporte intensivo, antibióticos e drenagem percutânea e/ou colecistectomia.</p>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+              <p><strong>Suporte imediato:</strong> jejum absoluto, hidratação venosa com cristaloide, analgesia adequada e antiemético se náuseas/vômitos.</p>
+            </div>
+            <div class="bg-rose-50 p-3 rounded border-l-4 border-rose-500">
+              <p><strong>Antibioticoterapia:</strong> se suspeita clínica moderada/alta, iniciar antes da confirmação por USG. Leve/moderada: ceftriaxona + metronidazol. Grave: piperacilina-tazobactam ou protocolo local.</p>
+            </div>
+          </div>
+          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
+            <p><strong>Gravidade e acionamento:</strong> pesquisar hipotensão, vasopressor, disfunção renal, alteração neurológica, hipoxemia/taquipneia, icterícia, bilirrubina elevada ou colédoco dilatado. Acionar cirurgia geral para avaliação precoce.</p>
           </div>
         </div>
       `,
@@ -7148,6 +7166,9 @@ export const cholecystitisFlowchart: EmergencyFlowchart = {
             <li>Acionar cirurgia geral e considerar UTI conforme disfunções.</li>
             <li>Escolher antibiótico conforme perfil de suscetibilidade, culturas, função renal e discussão com CCIH.</li>
           </ul>
+          <div class="bg-red-50 p-3 rounded border border-red-200">
+            <p><strong>Avaliação de UTI:</strong> todo paciente com Colecistite Aguda Grau III (Tokyo Guidelines) ou com necessidade de suporte avançado de órgãos deve ser considerado elegível para avaliação e internação em Unidade de Terapia Intensiva.</p>
+          </div>
         </div>
       `,
       options: []

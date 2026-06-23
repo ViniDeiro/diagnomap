@@ -17,9 +17,14 @@ export type CholecystitisSeverityKey =
 export type CholecystitisSeverity = 'leve' | 'moderada' | 'grave'
 
 export type CholecystitisAntibioticScheme =
+  | 'ampicillin_sulbactam'
+  | 'ertapenem'
   | 'ceftriaxone_metronidazole'
+  | 'ciprofloxacin_metronidazole'
   | 'piperacillin_tazobactam'
+  | 'meropenem'
   | 'cefepime_metronidazole'
+  | 'ceftazidime_metronidazole'
 
 export const CHOLECYSTITIS_INITIAL_EXAMS = [
   'Hemograma completo',
@@ -134,6 +139,26 @@ export const buildCholecystitisPrescriptionItems = (
   antibioticScheme: CholecystitisAntibioticScheme = severity === 'grave' ? 'piperacillin_tazobactam' : 'ceftriaxone_metronidazole'
 ): PrescriptionDraft[] => {
   const antibiotics: Record<CholecystitisAntibioticScheme, PrescriptionDraft[]> = {
+    ampicillin_sulbactam: [
+      {
+        medication: 'Ampicilina + Sulbactam',
+        dosage: '3 g EV',
+        frequency: '6/6 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Opção de monoterapia para colecistite aguda leve conforme perfil local.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      }
+    ],
+    ertapenem: [
+      {
+        medication: 'Ertapeném',
+        dosage: '1 g EV',
+        frequency: '24/24 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Opção de monoterapia; individualizar conforme perfil microbiológico local.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      }
+    ],
     ceftriaxone_metronidazole: [
       {
         medication: 'Ceftriaxona',
@@ -152,6 +177,24 @@ export const buildCholecystitisPrescriptionItems = (
         prescribedBy: 'Fluxograma Colecistite Aguda'
       }
     ],
+    ciprofloxacin_metronidazole: [
+      {
+        medication: 'Ciprofloxacino',
+        dosage: '500 mg EV',
+        frequency: '12/12 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Associar a metronidazol; ajustar conforme função renal, alergias e perfil local.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      },
+      {
+        medication: 'Metronidazol',
+        dosage: '500 mg EV',
+        frequency: '8/8 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Associado ao ciprofloxacino no esquema sugerido.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      }
+    ],
     piperacillin_tazobactam: [
       {
         medication: 'Piperacilina + Tazobactam',
@@ -159,6 +202,16 @@ export const buildCholecystitisPrescriptionItems = (
         frequency: '6/6 horas',
         duration: 'Conforme protocolo e culturas',
         instructions: 'Opção para colecistite moderada/grave; ajustar à função renal e microbiologia local.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      }
+    ],
+    meropenem: [
+      {
+        medication: 'Meropeném',
+        dosage: '1 g EV',
+        frequency: '8/8 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Opção para colecistite grave conforme perfil microbiológico local.',
         prescribedBy: 'Fluxograma Colecistite Aguda'
       }
     ],
@@ -177,6 +230,24 @@ export const buildCholecystitisPrescriptionItems = (
         frequency: '8/8 horas',
         duration: 'Conforme protocolo e culturas',
         instructions: 'Associado ao cefepime no esquema sugerido.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      }
+    ],
+    ceftazidime_metronidazole: [
+      {
+        medication: 'Ceftazidima',
+        dosage: '2 g EV',
+        frequency: '8/8 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Associar a metronidazol; opção para quadros graves conforme perfil local.',
+        prescribedBy: 'Fluxograma Colecistite Aguda'
+      },
+      {
+        medication: 'Metronidazol',
+        dosage: '500 mg EV',
+        frequency: '8/8 horas',
+        duration: 'Conforme protocolo e culturas',
+        instructions: 'Associado à ceftazidima no esquema sugerido.',
         prescribedBy: 'Fluxograma Colecistite Aguda'
       }
     ]
@@ -233,5 +304,14 @@ export const hasCholecystitisPrescriptionSet = (prescriptions: Prescription[]) =
       .filter((item) => item.prescribedBy === 'Fluxograma Colecistite Aguda')
       .map((item) => item.medication)
   )
-  return names.has('Dieta oral zero') && names.has('Dipirona') && (names.has('Ceftriaxona') || names.has('Piperacilina + Tazobactam') || names.has('Cefepime'))
+  return names.has('Dieta oral zero') && names.has('Dipirona') && (
+    names.has('Ampicilina + Sulbactam') ||
+    names.has('Ertapeném') ||
+    names.has('Ceftriaxona') ||
+    names.has('Ciprofloxacino') ||
+    names.has('Piperacilina + Tazobactam') ||
+    names.has('Meropeném') ||
+    names.has('Cefepime') ||
+    names.has('Ceftazidima')
+  )
 }
