@@ -1255,6 +1255,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [selectedDurationPlan, setSelectedDurationPlan] = useState<string>('')
   const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({})
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
+  const [tvpOtherLocationsImageOpen, setTVPOtherLocationsImageOpen] = useState(false)
   const [tvpWellsIntroOpen, setTVPWellsIntroOpen] = useState(false)
   const [pendingTVPWellsOption, setPendingTVPWellsOption] = useState<{ nextStep: string; value?: string } | null>(null)
   const [tvpConfirmadaOpen, setTVPConfirmadaOpen] = useState(false)
@@ -8759,16 +8760,39 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                             </motion.button>
                           )
                         })}
-                        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-3 text-left">
-                          <div className="overflow-hidden rounded-xl bg-slate-50">
-                            <TVPLegIllustration side="other" selected={false} />
+                        <div className="flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-4 text-left">
+                          <div>
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-extrabold text-slate-800">Outras localizações</p>
+                                <p className="mt-2 text-xs leading-relaxed text-slate-600">
+                                  A trombose venosa também pode acometer membros superiores, veias cerebrais e território abdominal.
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setTVPOtherLocationsImageOpen(true)}
+                                className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-300 bg-cyan-50 text-cyan-700 transition-colors hover:bg-cyan-100"
+                                title="Ver imagem de outras localizações de trombose"
+                                aria-label="Ver imagem de outras localizações de trombose"
+                              >
+                                <Info className="h-4 w-4" />
+                              </button>
+                            </div>
+                            <div className="mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-3">
+                              <p className="text-xs leading-relaxed text-cyan-950">
+                                Este fluxograma permanece direcionado à investigação de TVP em membros inferiores. Outras apresentações exigem avaliação específica conforme o território afetado.
+                              </p>
+                            </div>
                           </div>
-                          <div className="mt-3">
-                            <p className="text-sm font-extrabold text-slate-700">Outras localizações</p>
-                            <p className="mt-1 text-xs leading-relaxed text-slate-500">
-                              Imagem informativa. Este fluxo segue a avaliação de TVP em membro inferior.
-                            </p>
-                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setTVPOtherLocationsImageOpen(true)}
+                            className="mt-4 inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition-colors hover:border-cyan-300 hover:bg-cyan-50 hover:text-cyan-800"
+                          >
+                            <Info className="h-4 w-4" />
+                            Ver imagem
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -11189,6 +11213,35 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         <span className="font-semibold text-slate-800">Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular</span>
                         <ChevronRight className="w-5 h-5 text-slate-500" />
                       </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tvpOtherLocationsImageOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                      <div>
+                        <h4 className="text-lg font-extrabold text-slate-950">Outras localizações de trombose venosa</h4>
+                        <p className="mt-1 text-sm text-slate-600">Imagem de referência para territórios além dos membros inferiores.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTVPOtherLocationsImageOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                        title="Fechar"
+                        aria-label="Fechar imagem"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div className="overflow-auto bg-white p-4">
+                      <img
+                        src="/outras%20localidades.png"
+                        alt="Outras localizações de trombose venosa"
+                        className="mx-auto block h-auto max-w-none rounded-xl"
+                      />
                     </div>
                   </div>
                 </div>
