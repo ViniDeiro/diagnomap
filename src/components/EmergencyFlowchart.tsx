@@ -1209,8 +1209,8 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
     <img
       src={
         side === 'left'
-          ? '/tvp-right-leg.png'
-          : '/tvp-left-leg.png'
+          ? '/tvp-left-leg.png'
+          : '/tvp-right-leg.png'
       }
       alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
       className={clsx(
@@ -5313,12 +5313,12 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         {[
                           {
                             label: 'Lado direito',
-                            src: '/paralisia%20de%20bell/Lado%20esquerdo.png',
+                            src: '/paralisia%20de%20bell/Lado%20direito.png',
                             value: 'lado_direito'
                           },
                           {
                             label: 'Lado esquerdo',
-                            src: '/paralisia%20de%20bell/Lado%20direito.png',
+                            src: '/paralisia%20de%20bell/Lado%20esquerdo.png',
                             value: 'lado_esquerdo'
                           }
                         ].map((item) => (
