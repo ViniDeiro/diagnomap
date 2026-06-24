@@ -1209,8 +1209,8 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
     <img
       src={
         side === 'left'
-          ? '/tvp-left-leg.png'
-          : '/tvp-right-leg.png'
+          ? '/tvp-right-leg.png'
+          : '/tvp-left-leg.png'
       }
       alt={side === 'left' ? 'Perna esquerda com sinais de trombose venosa profunda' : 'Perna direita com sinais de trombose venosa profunda'}
       className={clsx(
