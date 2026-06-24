@@ -1438,6 +1438,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const effectiveCurbScore = curb65Score ?? curbLegacyData?.score
       const atsSevere = atsData?.pacGrave ?? answers.pac_ats_idsa_gravidade === 'ats_idsa_pac_grave'
+      const atsMinorCount = atsData?.criteriosMenoresSelecionados?.length || 0
+      const atsMajorCount = atsData?.criteriosMaioresSelecionados?.length || 0
       const destinationAnswer = getDecisionAnswer(answers.pac_destino_protocolo)
       const psiGroup = psiData?.grupo || (currentStep === 'pac_psi_baixo'
         ? 'PORT I/II'
@@ -1643,7 +1645,13 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         psiData?.score != null ? `PSI/PORT: ${psiData.score} pontos, ${psiGroup || 'grupo não informado'}, destino sugerido: ${psiData.destino || 'não informado'}.` : null,
         psiCriteria.length > 0 ? `Critérios pontuados no PSI: ${psiCriteria.join('; ')}.` : null,
         curbCriteria.length > 0 ? `Critérios pontuados no CURB-65: ${curbCriteria.join('; ')}.` : null,
-        answers.pac_ats_idsa_gravidade ? `ATS/IDSA: ${atsSevere ? 'PAC grave identificada, por critério maior ou >=3 critérios menores' : 'sem critérios atuais para PAC grave/UTI pelo registro do fluxo'}.` : null,
+        answers.pac_ats_idsa_gravidade
+          ? `ATS/IDSA: ${atsSevere
+            ? 'indicação de UTI por critério maior ou >=3 critérios menores'
+            : atsMinorCount === 2 && atsMajorCount === 0
+              ? '2 critérios menores, com indicação de internação em enfermaria'
+              : 'sem destino automático pelo ATS/IDSA; correlacionar com os demais escores e julgamento clínico'}.`
+          : null,
         atsMajorCriteria.length > 0 ? `Critérios maiores ATS/IDSA: ${atsMajorCriteria.join('; ')}.` : null,
         atsMinorCriteria.length > 0 ? `Critérios menores ATS/IDSA: ${atsMinorCriteria.join('; ')}.` : null,
         `DRIP Score: ${formatScore(dripScore, 8)} (${dripRisk}).`,

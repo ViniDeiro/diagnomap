@@ -2363,6 +2363,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       ? 'Considerar avaliação hospitalar'
       : 'Alto risco - internação recomendada'
   const pneumoniaAtsIdsaSevere = pneumoniaAtsIdsaMajorCriteria.length > 0 || pneumoniaAtsIdsaMinorCriteria.length >= 3
+  const pneumoniaAtsIdsaNextStep = pneumoniaAtsIdsaSevere
+    ? 'pac_drip_uti'
+    : pneumoniaAtsIdsaMinorCriteria.length === 2
+      ? 'pac_drip_enfermaria'
+      : 'pac_destino_protocolo'
+  const pneumoniaAtsIdsaActionLabel = pneumoniaAtsIdsaSevere
+    ? 'Seguir para UTI'
+    : pneumoniaAtsIdsaMinorCriteria.length === 2
+      ? 'Seguir para enfermaria'
+      : 'Definir destino'
   const pneumoniaSmartCopScore = pneumoniaSmartCopCriteria.reduce((total, label) => {
     const item = pneumoniaSmartCopItems.find((criterion) => criterion.label === label)
     return total + (item?.points || 0)
@@ -6656,8 +6666,19 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <h4 className="text-sm font-bold uppercase tracking-wide text-rose-950">Etapa 3 - ATS/IDSA</h4>
                       <p className="text-sm text-rose-900">Score central para definir necessidade de UTI.</p>
                     </div>
-                    <div className={clsx('rounded-xl px-4 py-3 text-sm font-bold', pneumoniaAtsIdsaSevere ? 'bg-red-600 text-white' : 'bg-white text-rose-900')}>
-                      {pneumoniaAtsIdsaSevere ? 'PAC grave' : 'Sem PAC grave'}
+                    <div className={clsx(
+                      'rounded-xl px-4 py-3 text-sm font-bold',
+                      pneumoniaAtsIdsaSevere
+                        ? 'bg-red-600 text-white'
+                        : pneumoniaAtsIdsaMinorCriteria.length === 2
+                          ? 'bg-amber-100 text-amber-900'
+                          : 'bg-white text-rose-900'
+                    )}>
+                      {pneumoniaAtsIdsaSevere
+                        ? 'Indicação de UTI'
+                        : pneumoniaAtsIdsaMinorCriteria.length === 2
+                          ? 'Indicação de enfermaria'
+                          : 'Sem destino automático'}
                       <div className="text-xs font-semibold">{pneumoniaAtsIdsaMajorCriteria.length} maior(es), {pneumoniaAtsIdsaMinorCriteria.length} menor(es)</div>
                     </div>
                   </div>
@@ -6691,14 +6712,42 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </div>
                     </div>
                   </div>
+                  <div className={clsx(
+                    'mt-4 rounded-xl border p-3 text-sm font-semibold',
+                    pneumoniaAtsIdsaSevere
+                      ? 'border-red-200 bg-red-100 text-red-950'
+                      : pneumoniaAtsIdsaMinorCriteria.length === 2
+                        ? 'border-amber-200 bg-amber-50 text-amber-950'
+                        : 'border-slate-200 bg-white text-slate-700'
+                  )}>
+                    {pneumoniaAtsIdsaSevere
+                      ? 'Três ou mais critérios menores, ou ao menos um critério maior: encaminhar diretamente para UTI.'
+                      : pneumoniaAtsIdsaMinorCriteria.length === 2
+                        ? 'Dois critérios menores: encaminhar diretamente para internação em enfermaria.'
+                        : 'Com zero ou um critério menor e nenhum critério maior, definir o destino conforme os demais escores e o julgamento clínico.'}
+                  </div>
                   <div className="mt-4 flex justify-end">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => handleAnswer('pac_destino_protocolo', pneumoniaAtsIdsaSevere ? 'ats_idsa_pac_grave' : 'ats_idsa_sem_pac_grave')}
-                      className="rounded-xl bg-rose-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-rose-700"
+                      onClick={() => handleAnswer(
+                        pneumoniaAtsIdsaNextStep,
+                        pneumoniaAtsIdsaSevere
+                          ? 'ats_idsa_uti'
+                          : pneumoniaAtsIdsaMinorCriteria.length === 2
+                            ? 'ats_idsa_enfermaria'
+                            : 'ats_idsa_definir_destino'
+                      )}
+                      className={clsx(
+                        'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                        pneumoniaAtsIdsaSevere
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : pneumoniaAtsIdsaMinorCriteria.length === 2
+                            ? 'bg-amber-600 hover:bg-amber-700'
+                            : 'bg-rose-600 hover:bg-rose-700'
+                      )}
                     >
-                      Definir destino
+                      {pneumoniaAtsIdsaActionLabel}
                     </motion.button>
                   </div>
                 </div>

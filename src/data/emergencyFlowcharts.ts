@@ -4258,6 +4258,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-950">
           <p><strong>Objetivo:</strong> determinar se há PAC grave e necessidade de UTI.</p>
           <p class="mt-2"><strong>Pergunta:</strong> esse paciente precisa de terapia intensiva?</p>
+          <p class="mt-2"><strong>Destino automático:</strong> 2 critérios menores indicam enfermaria; 3 ou mais critérios menores, ou qualquer critério maior, indicam UTI.</p>
         </div>
       `,
       options: []
