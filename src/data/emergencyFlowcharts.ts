@@ -3745,7 +3745,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
     'influenza_ambulatorial_sintomaticos',
     'influenza_ambulatorial_oseltamivir',
     'influenza_internacao_enfermaria',
-    'influenza_internacao_uti'
+    'influenza_uti_protocolo_concluido'
   ],
   steps: {
     start: {
@@ -3990,18 +3990,96 @@ export const influenzaFlowchart: EmergencyFlowchart = {
     },
     influenza_internacao_uti: {
       id: 'influenza_internacao_uti',
-      title: 'Internação em unidade intensiva',
-      description: 'Paciente com SRAG e indicação de terapia intensiva.',
-      type: 'result',
+      title: 'SRAG grave aguardando leito de UTI',
+      description: 'Estabilização e monitorização contínua no pronto-socorro até a transferência.',
+      type: 'action',
       critical: true,
       content: `
-        <div class="space-y-3 text-sm">
+        <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-red-200 bg-red-50 p-4">
-            <p><strong>Conduta:</strong> oseltamivir, considerar antibioticoterapia de amplo espectro quando houver suspeita de pneumonia/coinfecção bacteriana, exames radiográficos, sintomáticos, hidratação venosa, oxigenoterapia se necessária e exames complementares, com monitorização intensiva.</p>
-            <p class="mt-2">Priorizar suporte ventilatório/hemodinâmico conforme necessidade e manutenção de monitorização intensiva contínua.</p>
+            <h4 class="font-bold text-red-950">PROTOCOLO DE MANEJO DA SRAG GRAVE NO PRONTO-SOCORRO AGUARDANDO LEITO DE UTI</h4>
+            <p class="mt-2"><strong>Objetivo:</strong> garantir assistência adequada durante o período entre a indicação de terapia intensiva e a transferência efetiva para a UTI.</p>
+            <p class="mt-2 font-semibold text-red-950">A solicitação de vaga não substitui as medidas de estabilização e monitorização contínua.</p>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h5 class="font-bold text-slate-950">Medidas imediatas e monitorização</h5>
+            <p class="mt-2">Instalar imediatamente monitor cardíaco contínuo, oximetria contínua, frequência respiratória seriada, pressão arterial não invasiva seriada, controle rigoroso de temperatura e controle de diurese quando indicado.</p>
+            <p class="mt-2"><strong>Registro:</strong> sinais vitais pelo menos a cada 1 hora ou em intervalo menor conforme gravidade clínica.</p>
+          </div>
+
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <h5 class="font-bold text-blue-950">Oxigenoterapia e suporte respiratório</h5>
+            <p class="mt-2"><strong>Metas:</strong> SpO2 ≥92% na maioria dos pacientes; 88-92% em retenção crônica de CO2.</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-blue-950">
+              <li>Cateter nasal: 1 a 5 L/min.</li>
+              <li>Máscara simples: 5 a 10 L/min.</li>
+              <li>Máscara não reinalante: 10 a 15 L/min.</li>
+              <li>Cânula nasal de alto fluxo se necessidade crescente de oxigênio, hipoxemia persistente ou desconforto respiratório moderado.</li>
+              <li>Ventilação não invasiva principalmente em DPOC exacerbado, edema agudo pulmonar ou casos selecionados sob monitorização rigorosa.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+            <h5 class="font-bold text-cyan-950">Antiviral</h5>
+            <p class="mt-2"><strong>Oseltamivir 75 mg VO ou por sonda a cada 12 horas por 5 dias</strong> em adultos, com ajuste conforme função renal.</p>
+            <p class="mt-2">Iniciar o mais precocemente possível e não aguardar resultado laboratorial. Considerar prolongamento em casos críticos, imunossuprimidos ou persistência de replicação viral.</p>
+          </div>
+
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <h5 class="font-bold text-amber-950">Antibioticoterapia</h5>
+            <p class="mt-2">Não utilizar antibiótico apenas pela presença de Influenza. Iniciar cobertura para pneumonia bacteriana quando houver consolidação pulmonar, infiltrado focal, escarro purulento, leucocitose importante, piora após melhora inicial ou suspeita clínica de coinfecção.</p>
+            <p class="mt-2"><strong>Esquema inicial sugerido:</strong> ceftriaxona 2 g IV ao dia + azitromicina 500 mg IV ou VO ao dia. Avaliar ampliação conforme perfil epidemiológico e risco de infecção hospitalar.</p>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <h5 class="font-bold text-slate-950">Exames laboratoriais na admissão</h5>
+              <p class="mt-2">Hemograma completo, ureia, creatinina, sódio, potássio, magnésio, TGO, TGP, bilirrubinas, PCR, gasometria arterial, lactato, coagulograma e glicemia.</p>
+              <p class="mt-2">Troponina se indicada. Considerar hemoculturas antes dos antibióticos, pesquisa para Influenza, RT-PCR viral e painel respiratório.</p>
+            </div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <h5 class="font-bold text-violet-950">Exames de imagem</h5>
+              <p class="mt-2"><strong>Radiografia de tórax:</strong> solicitar para todo paciente com SRAG internado ou com indicação de UTI, pesquisando pneumonia, consolidações, derrame pleural e progressão radiológica.</p>
+              <p class="mt-2"><strong>Tomografia de tórax:</strong> considerar se RX inconclusivo, hipoxemia desproporcional, suspeita de complicações, imunossupressão, piora sem explicação ou suspeita de tromboembolismo pulmonar.</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <h5 class="font-bold text-emerald-950">Hidratação</h5>
+            <p class="mt-2">Avaliar individualmente e evitar hidratação excessiva. Preferir estratégia conservadora em hipoxemia, pneumonia extensa, SDRA ou disfunção cardíaca.</p>
+            <p class="mt-2">Reavaliar frequentemente perfusão periférica, diurese, lactato e sinais de congestão pulmonar.</p>
+          </div>
+
+          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <h5 class="font-bold text-orange-950">Critérios de deterioração clínica</h5>
+            <p class="mt-2">Comunicar imediatamente a equipe médica e reavaliar suporte avançado se houver SpO2 &lt;90% apesar de oxigênio, aumento progressivo da necessidade de O2, FR &gt;30 irpm, uso de musculatura acessória, tiragem importante, alteração do nível de consciência, sonolência ou agitação, hipotensão, choque, oligúria, lactato crescente, piora gasométrica ou hipercapnia progressiva.</p>
+          </div>
+
+          <div class="rounded-xl border border-rose-300 bg-rose-100 p-4">
+            <h5 class="font-bold text-rose-950">Critérios de intervenção imediata</h5>
+            <p class="mt-2">Avaliar prontamente intubação orotraqueal diante de falência respiratória iminente, exaustão respiratória, hipoxemia refratária, rebaixamento do nível de consciência, instabilidade hemodinâmica ou incapacidade de proteger as vias aéreas.</p>
+            <p class="mt-2 font-semibold">Manter contato contínuo com a equipe da UTI até a transferência definitiva.</p>
           </div>
         </div>
       `,
+      options: [
+        {
+          text: 'Confirmar manejo e seguir para finalização',
+          description: 'Registra a aplicação do protocolo enquanto o paciente aguarda a transferência para a UTI.',
+          nextStep: 'influenza_uti_protocolo_concluido',
+          value: 'protocolo_srag_uti_aplicado',
+          critical: true
+        }
+      ]
+    },
+    influenza_uti_protocolo_concluido: {
+      id: 'influenza_uti_protocolo_concluido',
+      title: 'Protocolo de SRAG grave concluído',
+      description: 'Manejo no pronto-socorro confirmado enquanto aguarda leito de UTI.',
+      type: 'result',
+      critical: true,
+      content: '',
       options: []
     }
   }

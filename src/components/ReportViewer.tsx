@@ -1169,7 +1169,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const hasSRAG = Boolean(severityData?.classificadoComoSRAG || severitySigns.length > 0)
       const hasOseltamivirIndication = Boolean(riskData?.indicarOseltamivir || riskFactors.length > 0 || worseningSigns.length > 0 || hasSRAG)
-      const needsICU = Boolean(icuData?.indicarUTI || icuCriteria.length > 0 || currentStep === 'influenza_internacao_uti')
+      const icuProtocolApplied = answers.influenza_internacao_uti === 'protocolo_srag_uti_aplicado'
+        || history.includes('influenza_internacao_uti')
+        || currentStep === 'influenza_uti_protocolo_concluido'
+      const needsICU = Boolean(
+        icuData?.indicarUTI
+        || icuCriteria.length > 0
+        || currentStep === 'influenza_internacao_uti'
+        || currentStep === 'influenza_uti_protocolo_concluido'
+      )
       const oseltamivirDose = getOseltamivirDoseText(patientForReport)
       const stepLabels: Record<string, string> = {
         influenza_inicio: 'abertura do protocolo de influenza/síndrome gripal',
@@ -1179,7 +1187,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         influenza_ambulatorial_sintomaticos: 'desfecho ambulatorial sintomático',
         influenza_ambulatorial_oseltamivir: 'desfecho ambulatorial com oseltamivir',
         influenza_internacao_enfermaria: 'desfecho de internação em enfermaria',
-        influenza_internacao_uti: 'desfecho de internação/avaliação em UTI'
+        influenza_internacao_uti: 'estabilização da SRAG grave no pronto-socorro enquanto aguarda leito de UTI',
+        influenza_uti_protocolo_concluido: 'protocolo de SRAG grave confirmado e transferência para UTI pendente'
       }
       const pathItems = uniqueItems([
         ...history.map((step) => stepLabels[step] || step),
@@ -1268,7 +1277,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         destination === 'ambulatorial_sintomatico' ? 'Definido manejo ambulatorial sintomático, com hidratação oral, controle de febre/dor conforme prescrição e vigilância de sinais de alarme.' : null,
         destination === 'ambulatorial_oseltamivir' ? `Definido manejo ambulatorial com oseltamivir (${oseltamivirDose}), sintomáticos, hidratação e retorno precoce.` : null,
         destination === 'enfermaria' ? `Indicada internação em enfermaria. Conduta: oseltamivir (${oseltamivirDose}), isolamento por gotículas, monitorização de sinais vitais e saturação, suporte clínico, oxigenoterapia se necessário, hidratação conforme avaliação e exames iniciais.` : null,
-        destination === 'uti' ? `Indicada avaliação/admissão em UTI. Conduta: oseltamivir (${oseltamivirDose}), isolamento, monitorização intensiva, suporte ventilatório/hemodinâmico conforme necessidade, investigação laboratorial e imagem conforme gravidade.` : null,
+        destination === 'uti' ? `Indicada admissão em UTI. Enquanto aguarda o leito, manter oseltamivir (${oseltamivirDose}), isolamento, monitorização contínua, oxigenoterapia escalonada, suporte ventilatório/hemodinâmico conforme necessidade e reavaliação frequente.` : null,
+        icuProtocolApplied ? 'Protocolo de manejo da SRAG grave no pronto-socorro confirmado no fluxo antes da finalização do atendimento.' : null,
         destination === 'srag_em_avaliacao' ? `Classificado como SRAG; manter oseltamivir (${oseltamivirDose}), oxigenoterapia se necessária, exames iniciais e definição de destino entre enfermaria e UTI conforme critérios clínicos.` : null,
         hasOseltamivirIndication && destination === 'avaliacao' ? `Há indicação de oseltamivir pelo contexto registrado; dose sugerida conforme dados do paciente: ${oseltamivirDose}.` : null,
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
@@ -1293,6 +1303,21 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           ]
         : []
 
+      const icuProtocolItems = destination === 'uti'
+        ? [
+            'Manter monitor cardíaco e oximetria contínuos, frequência respiratória e pressão arterial seriadas, controle rigoroso de temperatura e diurese quando indicada; registrar sinais vitais pelo menos a cada 1 hora ou conforme gravidade.',
+            'Oxigenoterapia com meta de SpO2 >=92% na maioria dos pacientes ou 88-92% em retenção crônica de CO2: cateter nasal 1-5 L/min, máscara simples 5-10 L/min, máscara não reinalante 10-15 L/min e cânula nasal de alto fluxo quando indicada.',
+            'Considerar ventilação não invasiva principalmente em DPOC exacerbado, edema agudo pulmonar ou casos selecionados sob monitorização rigorosa.',
+            `Iniciar oseltamivir sem aguardar resultado laboratorial (${oseltamivirDose}); considerar prolongamento em caso crítico, imunossupressão ou persistência de replicação viral e ajustar à função renal.`,
+            'Solicitar hemograma, ureia, creatinina, sódio, potássio, magnésio, TGO, TGP, bilirrubinas, PCR, gasometria arterial, lactato, coagulograma e glicemia; considerar troponina, hemoculturas antes dos antibióticos, teste para Influenza, RT-PCR e painel respiratório.',
+            'Solicitar radiografia de tórax para o paciente com SRAG e indicação de UTI. Considerar TC se RX inconclusivo, hipoxemia desproporcional, complicação, imunossupressão, piora inexplicada ou suspeita de tromboembolismo pulmonar.',
+            'Evitar hidratação excessiva e preferir estratégia conservadora em hipoxemia, pneumonia extensa, SDRA ou disfunção cardíaca, reavaliando perfusão, diurese, lactato e congestão pulmonar.',
+            'Reavaliar imediatamente suporte avançado diante de SpO2 <90% apesar de oxigênio, aumento da necessidade de O2, FR >30 irpm, uso de musculatura acessória, alteração da consciência, hipotensão, choque, oligúria, lactato crescente, piora gasométrica ou hipercapnia progressiva.',
+            'Avaliar intubação orotraqueal diante de falência respiratória iminente, exaustão, hipoxemia refratária, rebaixamento da consciência, instabilidade hemodinâmica ou incapacidade de proteger vias aéreas.',
+            'Manter contato contínuo com a equipe da UTI até a transferência definitiva.'
+          ]
+        : []
+
       const planItems = uniqueItems([
         destination === 'ambulatorial_sintomatico' || destination === 'ambulatorial_oseltamivir'
           ? 'Orientado retorno em 48 a 72 horas ou antes em caso de piora clínica.'
@@ -1304,7 +1329,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           ? 'Manter reavaliação hospitalar seriada, isolamento por gotículas, máscara em transporte/contato, monitorização de sinais vitais, balanço clínico, controle sintomático e vigilância para deterioração respiratória/hemodinâmica.'
           : null,
         destination === 'uti'
-          ? 'Manter acompanhamento intensivo com reavaliação seriada de oxigenação, ventilação, perfusão, lactato, disfunções orgânicas e necessidade de suporte ventilatório/hemodinâmico.'
+          ? 'Permanecer no pronto-socorro sob estabilização e monitorização contínua até a transferência efetiva para a UTI; a solicitação de vaga não substitui as medidas assistenciais.'
           : null,
         hasOseltamivirIndication ? 'Manter adesão ao esquema antiviral e ajustar dose em disfunção renal, quando aplicável.' : null,
         patientForReport.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patientForReport.treatment.nextEvaluation)}.` : null
@@ -1359,6 +1384,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             ? [{
                 title: 'Protocolo de Internação em Enfermaria',
                 items: wardProtocolItems
+              }]
+            : []),
+          ...(icuProtocolItems.length > 0
+            ? [{
+                title: 'Protocolo de SRAG Grave Aguardando Leito de UTI',
+                items: icuProtocolItems
               }]
             : []),
           {
