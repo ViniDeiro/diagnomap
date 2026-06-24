@@ -512,7 +512,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const hasNegativeUS = answers.us_compressiva === 'us_negative' || answers.repetir_us === 'repeat_negative'
       const hasPositiveDdimer = answers.baixa_probabilidade === 'ddimer_positive'
       const hasNegativeDdimer = answers.baixa_probabilidade === 'ddimer_negative'
+      const vascularEmergencyProtocolApplied = answers.tvp_urgencia_vascular_imediata === 'protocolo_flegmasia_aplicado'
+        || history.includes('tvp_urgencia_vascular_imediata')
+        || currentStep === 'tvp_urgencia_vascular_concluida'
       const isUrgentVascular = currentStep === 'tvp_urgencia_vascular_imediata'
+        || currentStep === 'tvp_urgencia_vascular_concluida'
       const isMandatoryAdmissionInvestigation = currentStep === 'tvp_internacao_investigacao_clinica'
       const isTEPInvestigation = currentStep === 'tvp_internacao_investigar_tep'
       const isExcluded = currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial'
@@ -580,10 +584,26 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         currentStep === 'anticoagulacao_iniciada' ? 'Paciente anticoagulado.' : null,
         currentStep === 'encaminhamento_urgente' ? 'Solicitada avaliação da Cirurgia Vascular.' : null,
         isUrgentVascular ? 'Indicação de internação hospitalar imediata e acionamento urgente da Cirurgia Vascular.' : null,
+        vascularEmergencyProtocolApplied ? 'Protocolo de Flegmasia Cerulea Dolens/ameaça ao membro confirmado no fluxo antes da finalização.' : null,
         isMandatoryAdmissionInvestigation ? 'Indicada internação hospitalar mandatória para aprofundamento e seguimento da investigação clínica.' : null,
         isTEPInvestigation ? 'Indicada internação hospitalar mandatória com investigação imediata de possível tromboembolismo pulmonar.' : null,
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
       ])
+
+      const vascularEmergencyItems = isUrgentVascular
+        ? [
+            'Realizar ABCDE, monitorização cardíaca contínua, ECG, pressão arterial e frequência respiratória seriadas e oximetria.',
+            'Obter dois acessos venosos calibrosos, idealmente 18G ou maior, considerando acesso central conforme necessidade clínica.',
+            'Solicitar hemograma, coagulograma, TP, TTPA, fibrinogênio, função renal, eletrólitos, lactato, gasometria e CK.',
+            'Solicitar ultrassom Doppler urgente para definir extensão da TVP e comprometimento iliofemoral; se indisponível ou insuficiente, considerar angio-TC venosa ou TC contrastada.',
+            'Na ausência de contraindicações, iniciar heparina não fracionada IV, preferida no quadro grave pela reversibilidade e facilidade para intervenção: bolus 80 UI/kg seguido de 18 UI/kg/h, com ajuste pelo TTPA e protocolo institucional.',
+            'Considerar SF 0,9% 250-500 mL com reavaliação, evitando sobrecarga em insuficiência cardíaca, doença renal crônica ou hipoxemia.',
+            'Instituir analgesia conforme intensidade e manter o membro elevado em 30-45 graus, acima do nível do coração.',
+            'Não realizar massagem, compressão agressiva ou deambulação precoce antes da avaliação especializada.',
+            'Acionar avaliação presencial imediata da Cirurgia Vascular. Considerar trombólise dirigida por cateter, trombectomia mecânica ou fasciotomia conforme extensão, risco hemorrágico, ameaça ao membro e síndrome compartimental.',
+            'Considerar UTI se instabilidade hemodinâmica, TEP associado, dor refratária, necessidade de heparina IV com monitorização intensiva, trombólise, síndrome compartimental, lactato elevado ou disfunção renal.'
+          ]
+        : []
 
       const planItems = uniqueItems([
         treatmentData?.planoDuracaoSelecionado
@@ -634,6 +654,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             title: 'Conduta',
             items: conductItems.length > 0 ? conductItems : ['Conduta ainda não registrada de forma estruturada no sistema.']
           },
+          ...(vascularEmergencyItems.length > 0
+            ? [{
+                title: 'Protocolo de Urgência Vascular / Flegmasia',
+                items: vascularEmergencyItems
+              }]
+            : []),
           {
             title: 'Plano / Acompanhamento',
             items: planItems

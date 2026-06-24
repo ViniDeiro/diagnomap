@@ -2876,7 +2876,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
   icon: 'activity',
   color: 'from-indigo-600 to-blue-800',
   initialStep: 'start',
-  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_imediata', 'tvp_internacao_investigacao_clinica', 'tvp_internacao_investigar_tep'],
+  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_concluida', 'tvp_internacao_investigacao_clinica', 'tvp_internacao_investigar_tep'],
   steps: {
     start: {
       id: 'start',
@@ -3168,26 +3168,115 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     tvp_urgencia_vascular_imediata: {
       id: 'tvp_urgencia_vascular_imediata',
-      title: 'URGÊNCIA VASCULAR + INTERNAÇÃO IMEDIATA',
-      description: 'Presença de sinal de alerta com gravidade local do membro, compatível com necessidade de avaliação vascular urgente.',
-      type: 'result',
+      title: 'Flegmasia / ameaça ao membro - manejo imediato',
+      description: 'Estabilização, anticoagulação e avaliação vascular presencial sem atraso.',
+      type: 'action',
       critical: true,
       timeSensitive: true,
       content: `
-        <div class="space-y-3">
-          <div class="bg-red-100 p-4 rounded border-l-4 border-red-700 text-red-950">
-            <h4 class="font-bold text-red-900">Interromper fluxo ambulatorial</h4>
-            <p class="text-sm mt-1">Os <strong>quatro primeiros sinais de alerta</strong> desta caixa exigem <strong>internação hospitalar mandatória</strong> e <strong>acionamento urgente da Cirurgia Vascular</strong>.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-red-300 bg-red-100 p-4 text-red-950">
+            <h4 class="font-bold text-red-950">URGÊNCIA VASCULAR + INTERNAÇÃO IMEDIATA</h4>
+            <p class="mt-2">Edema maciço, dor intensa e cianose sugerem <strong>Flegmasia Cerulea Dolens</strong>, TVP iliofemoral extensa e possível ameaça ao membro.</p>
+            <p class="mt-2 font-semibold">Interromper o fluxo ambulatorial, iniciar estabilização e acionar presencialmente a Cirurgia Vascular. Não postergar a avaliação para o dia seguinte.</p>
           </div>
-          <div class="bg-red-50 p-4 rounded border border-red-300 text-sm text-red-900">
-            <ul class="list-disc pl-5 space-y-1">
-              <li>Suspeitar flegmasia cerulea dolens/TVP iliofemoral em edema súbito importante, dor intensa e cianose.</li>
-              <li>Acionar avaliação vascular imediata e priorizar leito hospitalar.</li>
-              <li>Persistindo suspeita de TEP associada, conduzir investigação em paralelo conforme estabilidade clínica.</li>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h5 class="font-bold text-slate-950">ABCDE e monitorização contínua</h5>
+            <p class="mt-2">Realizar ABCDE como primeira etapa e instalar monitorização cardíaca contínua, ECG, pressão arterial seriada, frequência respiratória e oximetria.</p>
+            <p class="mt-2">Obter <strong>dois acessos venosos calibrosos</strong>, idealmente 18G ou maior. Considerar acesso central se necessário conforme instabilidade, suporte e estratégia terapêutica.</p>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <h5 class="font-bold text-blue-950">Exames imediatos</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5 text-blue-950">
+                <li>Hemograma completo.</li>
+                <li>Coagulograma, TP, TTPA e fibrinogênio.</li>
+                <li>Função renal e eletrólitos.</li>
+                <li>Lactato e gasometria.</li>
+                <li>CK para avaliação de lesão muscular/rabdomiólise.</li>
+              </ul>
+            </div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <h5 class="font-bold text-violet-950">Imagem urgente</h5>
+              <p class="mt-2"><strong>Ultrassom Doppler urgente:</strong> confirmar extensão da TVP e comprometimento iliofemoral.</p>
+              <p class="mt-2">Se Doppler indisponível ou insuficiente, considerar angio-TC venosa ou TC contrastada conforme estabilidade e protocolo institucional.</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <h5 class="font-bold text-rose-950">Anticoagulação imediata</h5>
+            <p class="mt-2">Na ausência de contraindicações, preferir <strong>heparina não fracionada IV</strong> nos casos graves por ser reversível e facilitar trombólise ou cirurgia.</p>
+            <div class="mt-3 rounded-lg border border-rose-200 bg-white p-3 text-center font-semibold text-rose-950">
+              Bolus 80 UI/kg → infusão 18 UI/kg/h, com ajuste pelo TTPA e protocolo institucional.
+            </div>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-3">
+            <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+              <h5 class="font-bold text-cyan-950">Hidratação</h5>
+              <p class="mt-2">Considerar SF 0,9% 250-500 mL e reavaliar. Objetivos: evitar hemoconcentração, preservar função renal e reduzir risco de lesão renal por rabdomiólise.</p>
+              <p class="mt-2">Evitar excesso em insuficiência cardíaca, doença renal crônica ou hipoxemia.</p>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <h5 class="font-bold text-amber-950">Analgesia</h5>
+              <p class="mt-2">Tratar conforme intensidade da dor, com opções como dipirona, tramadol ou morfina, considerando contraindicações e monitorização.</p>
+            </div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <h5 class="font-bold text-emerald-950">Posicionamento</h5>
+              <p class="mt-2">Manter o membro elevado em 30-45 graus, acima do nível do coração, para favorecer retorno venoso e reduzir edema.</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <h5 class="font-bold text-orange-950">Não realizar</h5>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-orange-950">
+              <li>Massagem do membro.</li>
+              <li>Compressão agressiva.</li>
+              <li>Deambulação precoce antes da avaliação especializada.</li>
             </ul>
+          </div>
+
+          <div class="rounded-xl border border-purple-200 bg-purple-50 p-4">
+            <h5 class="font-bold text-purple-950">Tratamento invasivo</h5>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-purple-950">
+              <li><strong>Trombólise dirigida por cateter:</strong> considerar em paciente jovem, baixo risco hemorrágico e TVP iliofemoral extensa.</li>
+              <li><strong>Trombectomia mecânica:</strong> considerar quando houver ameaça ao membro ou Flegmasia Cerulea Dolens.</li>
+              <li><strong>Fasciotomia:</strong> avaliar se houver síndrome compartimental associada.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-red-300 bg-red-50 p-4">
+            <h5 class="font-bold text-red-950">Critérios para UTI</h5>
+            <p class="mt-2">Considerar internação em UTI diante de instabilidade hemodinâmica, TEP associado, dor refratária, necessidade de heparina IV com monitorização intensiva, trombólise, síndrome compartimental, Flegmasia Cerulea Dolens, lactato elevado ou disfunção renal.</p>
+          </div>
+
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <h5 class="font-bold text-slate-950">Sequência assistencial</h5>
+            <p class="mt-2">ABCDE → monitorização e acessos → exames laboratoriais → Doppler urgente → heparina IV → elevação, analgesia e hidratação → avaliação vascular imediata → trombólise/trombectomia se ameaça ao membro.</p>
+            <p class="mt-2">Se houver suspeita concomitante de TEP, conduzir a investigação em paralelo conforme estabilidade clínica.</p>
           </div>
         </div>
       `,
+      options: [
+        {
+          text: 'Confirmar manejo de urgência vascular',
+          description: 'Registra estabilização, anticoagulação e acionamento imediato da Cirurgia Vascular.',
+          nextStep: 'tvp_urgencia_vascular_concluida',
+          value: 'protocolo_flegmasia_aplicado',
+          critical: true,
+          requiresImmediateAction: true
+        }
+      ]
+    },
+    tvp_urgencia_vascular_concluida: {
+      id: 'tvp_urgencia_vascular_concluida',
+      title: 'Manejo da urgência vascular confirmado',
+      description: 'Protocolo de Flegmasia/ameaça ao membro aplicado e avaliação vascular acionada.',
+      type: 'result',
+      critical: true,
+      content: '',
       options: []
     },
     tvp_internacao_investigacao_clinica: {
