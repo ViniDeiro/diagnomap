@@ -12202,11 +12202,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <X className="h-5 w-5" />
                 </button>
               </div>
-              <div className="overflow-y-auto bg-slate-950 p-4">
+              <div className="overflow-auto bg-white p-4">
                 <img
                   src={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].src}
                   alt={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].alt}
-                  className="mx-auto max-h-[72vh] w-auto max-w-full rounded-xl bg-white object-contain"
+                  className="mx-auto block h-auto max-w-none rounded-xl"
                 />
               </div>
             </div>
