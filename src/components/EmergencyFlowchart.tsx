@@ -21,6 +21,7 @@ import {
   Microscope,
   ArrowLeft,
   Info,
+  ScanLine,
   Clipboard,
   ClipboardCheck,
   X
@@ -1256,6 +1257,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [sectionOpen, setSectionOpen] = useState<Record<string, boolean>>({})
   const [wellsInfoOpen, setWellsInfoOpen] = useState(false)
   const [tvpOtherLocationsImageOpen, setTVPOtherLocationsImageOpen] = useState(false)
+  const [tvpPocusInfoOpen, setTVPPocusInfoOpen] = useState(false)
   const [tvpWellsIntroOpen, setTVPWellsIntroOpen] = useState(false)
   const [pendingTVPWellsOption, setPendingTVPWellsOption] = useState<{ nextStep: string; value?: string } | null>(null)
   const [tvpConfirmadaOpen, setTVPConfirmadaOpen] = useState(false)
@@ -8814,6 +8816,28 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </div>
                     </div>
 
+                    <div className="mt-4 flex flex-col gap-4 rounded-xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white">
+                          <ScanLine className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <h5 className="text-sm font-extrabold text-blue-950">POCUS vascular para TVP</h5>
+                          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-900">
+                            Ultrassom compressivo limitado à beira-leito para rastrear TVP proximal. O principal achado é a incapacidade de compressão completa da veia.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTVPPocusInfoOpen(true)}
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-xs font-bold text-blue-800 transition-colors hover:bg-blue-100"
+                      >
+                        <Info className="h-4 w-4" />
+                        Ver protocolo
+                      </button>
+                    </div>
+
                     <div className="mt-5 flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                       <span className={clsx(
                         'text-sm font-semibold',
@@ -11242,6 +11266,124 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         alt="Outras localizações de trombose venosa"
                         className="mx-auto block h-auto max-w-none rounded-xl"
                       />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {tvpPocusInfoOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                      <div>
+                        <h4 className="text-lg font-extrabold text-slate-950">POCUS vascular para TVP</h4>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                          Ultrassonografia compressiva limitada para rastreamento de trombose venosa profunda proximal à beira-leito.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setTVPPocusInfoOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                        title="Fechar"
+                        aria-label="Fechar protocolo de POCUS vascular"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                      <section className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                        <h5 className="font-extrabold text-blue-950">Princípio diagnóstico</h5>
+                        <p className="mt-2">
+                          O médico treinado realiza ultrassom compressivo limitado (CUS) para rastrear TVP proximal. A incapacidade de compressão é o principal sinal diagnóstico.
+                        </p>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                          <div className="rounded-xl border border-emerald-200 bg-white p-4">
+                            <p className="font-bold text-emerald-900">Veia normal</p>
+                            <p className="mt-1">Ao pressionar com o transdutor, a veia colaba completamente.</p>
+                            <div className="mt-3 flex items-center justify-center gap-8 rounded-lg bg-emerald-50 p-3 font-mono text-emerald-950">
+                              <span>Antes: O</span>
+                              <span>Depois: |</span>
+                            </div>
+                          </div>
+                          <div className="rounded-xl border border-red-200 bg-white p-4">
+                            <p className="font-bold text-red-900">Veia trombosada</p>
+                            <p className="mt-1">Mesmo após a compressão, a veia não colaba.</p>
+                            <div className="mt-3 flex items-center justify-center gap-8 rounded-lg bg-red-50 p-3 font-mono text-red-950">
+                              <span>Antes: O</span>
+                              <span>Depois: O</span>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="grid gap-4 lg:grid-cols-2">
+                        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                          <h5 className="font-extrabold text-cyan-950">Protocolo de 2 pontos</h5>
+                          <p className="mt-2">Método rápido, avaliando:</p>
+                          <ol className="mt-2 list-decimal space-y-2 pl-5">
+                            <li><strong>Veia femoral comum:</strong> região inguinal, identificando veia e artéria femorais comuns e aplicando compressão.</li>
+                            <li><strong>Veia poplítea:</strong> fossa poplítea, identificando veia e artéria poplíteas e aplicando compressão.</li>
+                          </ol>
+                          <p className="mt-3 font-semibold text-cyan-950">Se a veia não colabar, considerar POCUS positivo para TVP.</p>
+                        </div>
+                        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                          <h5 className="font-extrabold text-violet-950">Protocolo de 3 pontos</h5>
+                          <p className="mt-2">Avaliar em sequência:</p>
+                          <ol className="mt-2 list-decimal space-y-2 pl-5">
+                            <li>Veia femoral comum.</li>
+                            <li>Junção safeno-femoral.</li>
+                            <li>Veia poplítea.</li>
+                          </ol>
+                          <p className="mt-3">É uma abordagem frequentemente ensinada para ampliar a avaliação compressiva proximal na emergência.</p>
+                        </div>
+                      </section>
+
+                      <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <h5 className="font-extrabold text-slate-950">Integração com o escore de Wells</h5>
+                        <div className="mt-3 grid gap-3 md:grid-cols-3">
+                          <div className="rounded-lg border border-slate-200 bg-white p-3">
+                            <p className="font-bold text-slate-950">Suspeita clínica</p>
+                            <p className="mt-1">Aplicar Wells e definir a probabilidade pré-teste.</p>
+                          </div>
+                          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+                            <p className="font-bold text-emerald-950">POCUS positivo</p>
+                            <p className="mt-1">Veia não compressível: TVP proximal confirmada no contexto clínico e início da conduta correspondente.</p>
+                          </div>
+                          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                            <p className="font-bold text-amber-950">POCUS negativo</p>
+                            <p className="mt-1">Se a probabilidade clínica continuar alta, solicitar Doppler vascular formal ou repetir ultrassom em 5-7 dias.</p>
+                          </div>
+                        </div>
+                      </section>
+
+                      <section className="rounded-xl border border-orange-200 bg-orange-50 p-4">
+                        <h5 className="font-extrabold text-orange-950">Quando o POCUS limitado não é suficiente?</h5>
+                        <p className="mt-2">
+                          A avaliação compressiva pode não identificar adequadamente TVP ilíaca. Suspeitar diante de edema importante de toda a perna, dor inguinal ou pélvica, veia femoral comum dilatada, fluxo reduzido ou edema unilateral expressivo.
+                        </p>
+                        <p className="mt-2 font-semibold">
+                          Nesses cenários, considerar Doppler vascular formal, angio-TC venosa ou angio-RM conforme disponibilidade e contexto clínico.
+                        </p>
+                      </section>
+
+                      <section className="rounded-xl border border-rose-200 bg-rose-50 p-4">
+                        <h5 className="font-extrabold text-rose-950">Mensagem prática</h5>
+                        <p className="mt-2">
+                          Em paciente com Wells elevado e edema unilateral, a ausência de compressibilidade da veia femoral comum ou poplítea é um achado de grande impacto imediato. Um exame negativo não exclui TVP quando a probabilidade clínica permanece alta.
+                        </p>
+                      </section>
+                    </div>
+
+                    <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setTVPPocusInfoOpen(false)}
+                        className="rounded-xl bg-blue-700 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-800"
+                      >
+                        Fechar
+                      </button>
                     </div>
                   </div>
                 </div>
