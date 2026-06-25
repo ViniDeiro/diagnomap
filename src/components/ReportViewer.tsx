@@ -15,6 +15,7 @@ import { Patient } from '@/types/patient'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
+import type { PhysicalExamData } from './PhysicalExamForm'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
@@ -1417,6 +1418,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const criteriaFromArray = (items: unknown) => Array.isArray(items) ? uniqueItems(items.map((item) => String(item))) : []
 
       const crbData = safeParse(answers.pac_crb65_triagem) as { score?: number; criteriosSelecionados?: string[] } | null
+      const physicalExamData = (safeParse(answers.pac_exame_fisico) as { exameFisico?: PhysicalExamData } | null)?.exameFisico
       const examRequestData = safeParse(answers.pac_solicitacao_exames) as {
         examesSelecionados?: string[]
         grupos?: Record<string, string[]>
@@ -1559,6 +1561,34 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const dripMajorCriteria = criteriaFromArray(dripData?.criteriosMaioresSelecionados)
       const dripMinorCriteria = criteriaFromArray(dripData?.criteriosMenoresSelecionados)
       const smartCopCriteria = criteriaFromArray(smartCopData?.criteriosSelecionados)
+      const physicalExamItems = (() => {
+        if (!physicalExamData) return [] as string[]
+        const grade = (value?: number) => value ? ` ${value}/4+` : ''
+        const generalStateLabels: Record<PhysicalExamData['generalState'], string> = {
+          bom: 'bom estado geral',
+          regular: 'regular estado geral',
+          mal: 'mal estado geral',
+          grave: 'grave estado geral',
+          pessimo: 'péssimo estado geral'
+        }
+        const respiration = physicalExamData.respiration.status === 'eupneico'
+          ? 'eupneico'
+          : physicalExamData.respiration.status === 'taquipneico'
+            ? 'taquipneico'
+            : `dispneico${grade(physicalExamData.respiration.grade)}`
+
+        return uniqueItems([
+          `Estado geral: ${generalStateLabels[physicalExamData.generalState]}.`,
+          `Coloração e hidratação: ${physicalExamData.coloration.status === 'corado' ? 'corado' : `descorado${grade(physicalExamData.coloration.grade)}`}, ${physicalExamData.hydration.status === 'hidratado' ? 'hidratado' : `desidratado${grade(physicalExamData.hydration.grade)}`}.`,
+          `Cianose e icterícia: ${physicalExamData.cyanosis.status === 'acianotico' ? 'acianótico' : `cianótico${grade(physicalExamData.cyanosis.grade)}`}, ${physicalExamData.jaundice.status === 'anicterico' ? 'anictérico' : `ictérico${grade(physicalExamData.jaundice.grade)}`}.`,
+          `Temperatura e respiração: ${physicalExamData.temperature.status === 'afebril' ? 'afebril' : 'febril'}${physicalExamData.temperature.value != null ? `, temperatura de ${physicalExamData.temperature.value} °C` : ''}; ${respiration}.`,
+          `Neurológico: Glasgow ${physicalExamData.neuro.glasgow ?? 'não informado'}; ${physicalExamData.neuro.altered?.trim() || 'consciente, contactuante, pupilas isocóricas e fotorreagentes'}.`,
+          `Aparelho cardiovascular: ${physicalExamData.cardiac.altered?.trim() || 'bulhas rítmicas, normofonéticas, sem sopros audíveis'}.`,
+          `Aparelho respiratório: ${physicalExamData.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}.`,
+          `Abdome: ${physicalExamData.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, sem sinais de irritação peritoneal'}.`,
+          `Extremidades e perfusão: ${physicalExamData.extremities.altered?.trim() || 'pulsos periféricos simétricos, perfusão preservada, sem edema ou empastamento'}.`
+        ])
+      })()
 
       const title = destination === 'uti'
         ? 'PRONTUÁRIO MÉDICO – PAC GRAVE / AVALIAÇÃO PARA UTI'
@@ -1718,6 +1748,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           ? [{
               title: 'Dados Clínicos Registrados',
               items: clinicalDataItems
+            }]
+          : []),
+        ...(physicalExamItems.length > 0
+          ? [{
+              title: 'Exame Físico',
+              items: physicalExamItems
             }]
           : []),
         {

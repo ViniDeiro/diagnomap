@@ -4373,8 +4373,16 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Iniciar com CRB-65', nextStep: 'pac_crb65_triagem', value: 'iniciar_crb65' }
+        { text: 'Realizar exame físico', nextStep: 'pac_exame_fisico', value: 'iniciar_exame_fisico' }
       ]
+    },
+    pac_exame_fisico: {
+      id: 'pac_exame_fisico',
+      title: 'Exame Físico Direcionado',
+      description: 'Registrar os achados clínicos antes da aplicação dos escores de gravidade.',
+      type: 'action',
+      content: '',
+      options: []
     },
     pac_crb65_triagem: {
       id: 'pac_crb65_triagem',
