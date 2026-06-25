@@ -2081,7 +2081,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
-  const isCurrentStepFinal = flowchart.finalSteps.includes(currentStep)
   const tvpSelectedLegFromAnswers = useMemo(() => parseTVPSelectedLeg(answers.start), [answers])
   const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : tvpSelectedLegFromAnswers === 'other' ? 'Outras Localizações' : ''
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
@@ -2306,8 +2305,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaDripStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStepData?.id || '')
   const isPneumoniaSmartCopStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStepData?.id || '')
   const isPneumoniaAmbulatoryConductStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_conduta_ambulatorial'
-  const isPneumoniaAmbulatoryFinalStep = flowchart.id === 'pneumonia' && ['pac_destino_ambulatorial', 'pac_psi_baixo', 'pac_curb_baixo'].includes(currentStepData?.id || '')
-  const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep || isPneumoniaAmbulatoryFinalStep
+  const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
   const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
   const isMonoartritePrescriptionFinalStep = flowchart.id === 'monoartrite' && ['mono_gota_tratamento', 'mono_artrite_septica_internacao'].includes(currentStepData?.id || '')
@@ -5219,51 +5217,44 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             transition={{ duration: 0.3 }}
             className="flowchart-card overflow-hidden"
           >
-            {!isCurrentStepFinal && (
-              <>
-                {/* Header do Step */}
-                <div className={clsx(
-                  "p-6 text-white",
-                  `bg-gradient-to-r ${getStepColor(currentStepData)}`
-                )}>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      {getStepIcon(currentStepData)}
-                      <div>
-                        <h2 className="text-xl font-bold">{currentStepData.title}</h2>
-                        <p className="text-sm opacity-90">{currentStepData.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {currentStepData.critical && (
-                        <div className="flex items-center space-x-1 bg-red-500 bg-opacity-20 px-2 py-1 rounded">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span className="text-xs">CRÍTICO</span>
-                        </div>
-                      )}
-                      {currentStepData.timeSensitive && (
-                        <div className="flex items-center space-x-1 bg-orange-500 bg-opacity-20 px-2 py-1 rounded">
-                          <Timer className="w-4 h-4" />
-                          <span className="text-xs">TEMPO</span>
-                        </div>
-                      )}
-                      {currentStepData.requiresSpecialist && (
-                        <div className="flex items-center space-x-1 bg-purple-500 bg-opacity-20 px-2 py-1 rounded">
-                          <UserCheck className="w-4 h-4" />
-                          <span className="text-xs">ESPECIALISTA</span>
-                        </div>
-                      )}
-                    </div>
+            {/* Header do Step */}
+            <div className={clsx(
+              "p-6 text-white",
+              `bg-gradient-to-r ${getStepColor(currentStepData)}`
+            )}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {getStepIcon(currentStepData)}
+                  <div>
+                    <h2 className="text-xl font-bold">{currentStepData.title}</h2>
+                    <p className="text-sm opacity-90">{currentStepData.description}</p>
                   </div>
                 </div>
-              </>
-            )}
+                <div className="flex items-center space-x-2">
+                  {currentStepData.critical && (
+                    <div className="flex items-center space-x-1 bg-red-500 bg-opacity-20 px-2 py-1 rounded">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="text-xs">CRÍTICO</span>
+                    </div>
+                  )}
+                  {currentStepData.timeSensitive && (
+                    <div className="flex items-center space-x-1 bg-orange-500 bg-opacity-20 px-2 py-1 rounded">
+                      <Timer className="w-4 h-4" />
+                      <span className="text-xs">TEMPO</span>
+                    </div>
+                  )}
+                  {currentStepData.requiresSpecialist && (
+                    <div className="flex items-center space-x-1 bg-purple-500 bg-opacity-20 px-2 py-1 rounded">
+                      <UserCheck className="w-4 h-4" />
+                      <span className="text-xs">ESPECIALISTA</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Conteúdo do Step */}
-            <div className={clsx(
-              "p-6",
-              isCurrentStepFinal && "[&>*:not(.flow-completion)]:hidden"
-            )}>
+            <div className="p-6">
               {isBellSideSelection && (
                 <div className="mb-8 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
                   <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
@@ -11520,33 +11511,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isPneumoniaAmbulatoryFinalStep && (
-                <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold uppercase tracking-wide text-emerald-900">
-                        Prescrição ambulatorial da PAC
-                      </h4>
-                      <p className="mt-1 text-sm text-emerald-900">
-                        Gera a receita conforme comorbidades marcadas e registra no receituário do dashboard.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleOpenPneumoniaPrescription}
-                      className={clsx(
-                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
-                        pneumoniaPrescriptionGenerated || hasPneumoniaPrescriptionSet(getPersistedPneumoniaPrescriptions(), hasPneumoniaComorbidityOrRecentAtb)
-                          ? 'border border-emerald-300 bg-white text-emerald-800 hover:bg-emerald-100'
-                          : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                      )}
-                    >
-                      {pneumoniaPrescriptionGenerated || hasPneumoniaPrescriptionSet(getPersistedPneumoniaPrescriptions(), hasPneumoniaComorbidityOrRecentAtb) ? 'Prescrição' : 'Gerar prescrição'}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {isSinusitisPrescriptionFinalStep && (
                 <div className="mt-6 rounded-2xl border border-teal-200 bg-teal-50 p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -12200,23 +12164,60 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   className={clsx(
-                    "flow-completion rounded-2xl border border-green-200 bg-green-50 p-6"
+                    "mt-6 rounded-2xl p-6",
+                    isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                      ? 'border border-amber-200 bg-amber-50'
+                      : 'border border-green-200 bg-green-50'
                   )}
                 >
                   <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                      <CheckCircle className="h-8 w-8 text-green-600" />
+                    <div className={clsx(
+                      "flex h-16 w-16 items-center justify-center rounded-full",
+                      isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                        ? 'bg-amber-100'
+                        : 'bg-green-100'
+                    )}>
+                      {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? (
+                        <AlertTriangle className="h-8 w-8 text-amber-600" />
+                      ) : (
+                        <CheckCircle className="h-8 w-8 text-green-600" />
+                      )}
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-green-800">
-                        Fluxograma Concluído
+                      <h3 className={clsx(
+                        "text-xl font-bold",
+                        isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'text-amber-800'
+                          : 'text-green-800'
+                      )}>
+                        {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'Distúrbio Misto Identificado'
+                          : 'Fluxograma Concluído'}
                       </h3>
                     </div>
+                    {flowchart.id === 'anafilaxia' && ['ana_observacao_alta', 'ana_internacao_via_aerea_choque'].includes(currentStep) && (
+                      <figure className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                        <img
+                          src={currentStep === 'ana_observacao_alta' ? '/alta-apos-melhora.png' : '/paciente-critico.png'}
+                          alt={currentStep === 'ana_observacao_alta' ? 'Alta após melhora clínica da anafilaxia' : 'Paciente crítico em manejo avançado'}
+                          className="h-44 w-full object-contain sm:h-52"
+                        />
+                      </figure>
+                    )}
                     <button
                       onClick={onComplete}
-                      className="mt-4 flex items-center space-x-2 rounded-xl bg-green-600 px-8 py-3 font-bold text-white shadow-lg transition-all duration-200 hover:bg-green-700 hover:shadow-xl"
+                      className={clsx(
+                        "mt-4 flex items-center space-x-2 rounded-xl px-8 py-3 font-bold text-white shadow-lg transition-all duration-200 hover:shadow-xl",
+                        isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto')
+                          ? 'bg-amber-600 hover:bg-amber-700'
+                          : 'bg-green-600 hover:bg-green-700'
+                      )}
                     >
-                      <CheckCircle className="h-5 w-5" />
+                      {isGasometryFlow && currentStepData.title.toLowerCase().includes('distúrbio misto') ? (
+                        <AlertTriangle className="h-5 w-5" />
+                      ) : (
+                        <CheckCircle className="h-5 w-5" />
+                      )}
                       <span>Finalizar Atendimento</span>
                     </button>
                   </div>
