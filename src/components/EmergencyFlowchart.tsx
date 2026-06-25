@@ -1292,6 +1292,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [influenzaPrescriptionPreview, setInfluenzaPrescriptionPreview] = useState<InfluenzaPrescriptionPreview | null>(null)
   const [influenzaPrescriptionCopied, setInfluenzaPrescriptionCopied] = useState(false)
   const [influenzaPrescriptionGeneratedSteps, setInfluenzaPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
+  const [influenzaPhysicalExam, setInfluenzaPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
   const [pneumoniaPhysicalExam, setPneumoniaPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
   const [pneumoniaPsiValues, setPneumoniaPsiValues] = useState<PneumoniaPsiValues>(() => defaultPsiValues(patient))
   const [pneumoniaCurbValues, setPneumoniaCurbValues] = useState<PneumoniaCurbValues>(() => defaultCurbValues(patient))
@@ -1513,6 +1514,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStep === 'influenza_sinais_gravidade'
     const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStep === 'influenza_fatores_risco'
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
+    const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStep === 'influenza_exame_fisico'
     const isPneumoniaPhysicalExamStep = flowchart.id === 'pneumonia' && currentStep === 'pac_exame_fisico'
     const isPneumoniaCrbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_crb65_triagem'
     const isPneumoniaExamRequestStep = flowchart.id === 'pneumonia' && currentStep === 'pac_solicitacao_exames'
@@ -1588,6 +1590,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       criteriosUTISelecionados: influenzaICUCriteria,
       indicarUTI: influenzaICUCriteria.length > 0
+    })
+    const influenzaPhysicalExamAnswer = JSON.stringify({
+      decision: value || nextStep,
+      exameFisico: influenzaPhysicalExam
     })
     const pneumoniaPhysicalExamAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -1738,10 +1744,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                     ? influenzaRiskAnswer
                     : isInfluenzaICUStep
                       ? influenzaICUAnswer
-                      : isPneumoniaPhysicalExamStep
-                        ? pneumoniaPhysicalExamAnswer
-                        : isPneumoniaCrbProtocolStep
-                          ? pneumoniaCrbProtocolAnswer
+                      : isInfluenzaPhysicalExamStep
+                        ? influenzaPhysicalExamAnswer
+                        : isPneumoniaPhysicalExamStep
+                          ? pneumoniaPhysicalExamAnswer
+                          : isPneumoniaCrbProtocolStep
+                            ? pneumoniaCrbProtocolAnswer
                           : isPneumoniaExamRequestStep
                             ? pneumoniaExamRequestAnswer
                           : isPneumoniaCurbProtocolStep
@@ -2041,6 +2049,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaPrescriptionPreview(null)
     setInfluenzaPrescriptionCopied(false)
     setInfluenzaPrescriptionGeneratedSteps({})
+    setInfluenzaPhysicalExam(defaultPneumoniaPhysicalExam())
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
     setPneumoniaCrbCriteria([])
     setPneumoniaSelectedExams(pneumoniaInitialLabPackage)
@@ -2319,6 +2328,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_sinais_gravidade'
   const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_fatores_risco'
   const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_criterios_uti'
+  const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_exame_fisico'
   const isInfluenzaAmbulatoryFinalStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
   const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_psi'
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
@@ -4640,6 +4650,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isPneumoniaCurbStep, patient])
 
   useEffect(() => {
+    if (!isInfluenzaPhysicalExamStep) return
+    const saved = answers[currentStep]
+    if (!saved) {
+      setInfluenzaPhysicalExam(defaultPneumoniaPhysicalExam())
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.exameFisico) {
+        setInfluenzaPhysicalExam({
+          ...defaultPneumoniaPhysicalExam(),
+          ...parsed.exameFisico
+        })
+      }
+    } catch {
+      setInfluenzaPhysicalExam(defaultPneumoniaPhysicalExam())
+    }
+  }, [answers, currentStep, isInfluenzaPhysicalExamStep])
+
+  useEffect(() => {
     if (!isPneumoniaPhysicalExamStep) return
     const saved = answers[currentStep]
     if (!saved) {
@@ -5892,7 +5922,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isPneumoniaPhysicalExamStep && (
+              {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep) && (
                 <div className="mb-8 space-y-6">
                   <div className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
                     <div className="bg-sky-950 px-5 py-5 text-white sm:px-6">
@@ -5903,7 +5933,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         <div>
                           <h3 className="text-xl font-extrabold">Exame físico antes da estratificação</h3>
                           <p className="mt-1 max-w-4xl text-sm leading-relaxed text-sky-100">
-                            Registre o estado geral e os sistemas examinados. Na suspeita de PAC, descreva especialmente padrão respiratório, ausculta pulmonar, perfusão, nível de consciência e sinais de esforço respiratório.
+                            Registre o estado geral e os sistemas examinados. Descreva especialmente padrão respiratório, ausculta pulmonar, perfusão, nível de consciência e sinais de esforço respiratório.
                           </p>
                         </div>
                       </div>
@@ -5924,24 +5954,30 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                   </div>
 
-                  <PhysicalExamForm value={pneumoniaPhysicalExam} onChange={setPneumoniaPhysicalExam} />
+                  <PhysicalExamForm
+                    value={isInfluenzaPhysicalExamStep ? influenzaPhysicalExam : pneumoniaPhysicalExam}
+                    onChange={isInfluenzaPhysicalExamStep ? setInfluenzaPhysicalExam : setPneumoniaPhysicalExam}
+                  />
 
                   <div className="flex justify-end rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <motion.button
                       type="button"
-                      onClick={() => handleAnswer('pac_crb65_triagem', 'exame_fisico_registrado')}
+                      onClick={() => handleAnswer(
+                        isInfluenzaPhysicalExamStep ? 'influenza_sinais_gravidade' : 'pac_crb65_triagem',
+                        'exame_fisico_registrado'
+                      )}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-sky-700 px-6 py-3 font-bold text-white transition-colors hover:bg-sky-800 sm:w-auto"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      Salvar exame e iniciar CRB-65
+                      {isInfluenzaPhysicalExamStep ? 'Salvar exame e avaliar gravidade' : 'Salvar exame e iniciar CRB-65'}
                       <ChevronRight className="h-5 w-5" />
                     </motion.button>
                   </div>
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">

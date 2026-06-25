@@ -3883,8 +3883,16 @@ export const influenzaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Iniciar avaliação clínica', nextStep: 'influenza_sinais_gravidade', value: 'start_influenza' }
+        { text: 'Realizar exame físico', nextStep: 'influenza_exame_fisico', value: 'iniciar_exame_fisico' }
       ]
+    },
+    influenza_exame_fisico: {
+      id: 'influenza_exame_fisico',
+      title: 'Exame Físico Direcionado',
+      description: 'Registrar os achados clínicos antes da classificação de gravidade.',
+      type: 'action',
+      content: '',
+      options: []
     },
     influenza_sinais_gravidade: {
       id: 'influenza_sinais_gravidade',
@@ -4189,7 +4197,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
     'pac_internacao_limitacao',
     'pac_destino_ambulatorial',
     'pac_destino_enfermaria',
-    'pac_destino_uti',
+    'pac_uti_protocolo_concluido',
     'pac_psi_baixo',
     'pac_psi_intermediario',
     'pac_psi_alto',
@@ -4565,20 +4573,86 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
     },
     pac_destino_uti: {
       id: 'pac_destino_uti',
-      title: 'Destino - UTI',
-      description: 'PAC grave com necessidade de terapia intensiva.',
-      type: 'result',
+      title: 'PAC grave aguardando leito de UTI',
+      description: 'Estabilização e tratamento contínuos no pronto-socorro até a transferência.',
+      type: 'action',
       critical: true,
       group: 'UTI',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="rounded-xl border border-red-200 bg-red-50 p-4">
-            <p><strong>Destino:</strong> terapia intensiva, com suporte ventilatório/hemodinâmico conforme necessidade, coleta de culturas e antibioticoterapia precoce.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-red-300 bg-red-100 p-4">
+            <h4 class="font-bold text-red-950">PROTOCOLO DE PAC GRAVE NO PRONTO-SOCORRO AGUARDANDO LEITO DE UTI</h4>
+            <p class="mt-2">A indicação e a solicitação da vaga de UTI não encerram o atendimento. Manter estabilização, tratamento antimicrobiano e monitorização contínua até a transferência efetiva.</p>
           </div>
-          <p><strong>Após admissão em UTI:</strong> aplicar SOFA para disfunção orgânica/sepses e SAPS 3 para prognóstico e indicadores de qualidade conforme rotina institucional.</p>
-          <p><strong>Antibiótico:</strong> ajustar conforme risco de MRSA/Pseudomonas, DRIP, culturas, epidemiologia local e protocolo institucional.</p>
+
+          <div class="rounded-xl border border-slate-200 bg-white p-4">
+            <h5 class="font-bold text-slate-950">Monitorização e acessos</h5>
+            <p class="mt-2">Manter monitor cardíaco, oximetria contínua, pressão arterial e frequência respiratória seriadas, controle de temperatura, nível de consciência, perfusão periférica e diurese.</p>
+            <p class="mt-2">Garantir acesso venoso adequado. Considerar acesso arterial ou central conforme instabilidade, necessidade de vasopressor, gasometrias seriadas e protocolo institucional.</p>
+          </div>
+
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <h5 class="font-bold text-blue-950">Oxigenação e suporte ventilatório</h5>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-blue-950">
+              <li>Ofertar oxigênio para corrigir hipoxemia, com alvo individualizado; em retenção crônica de CO2, manter faixa de 88-92%.</li>
+              <li>Escalonar cateter nasal, máscara, cânula nasal de alto fluxo ou ventilação não invasiva conforme necessidade e etiologia.</li>
+              <li>Reavaliar frequentemente trabalho respiratório, gasometria, relação PaO2/FiO2 ou SpO2/FiO2 e sinais de fadiga.</li>
+              <li>Avaliar intubação diante de hipoxemia refratária, falência respiratória iminente, exaustão, rebaixamento do sensório, instabilidade hemodinâmica ou incapacidade de proteger vias aéreas.</li>
+            </ul>
+          </div>
+
+          <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+            <h5 class="font-bold text-rose-950">Antibioticoterapia precoce</h5>
+            <p class="mt-2">Iniciar tratamento empírico sem atraso após culturas quando a coleta for viável e não postergar a primeira dose.</p>
+            <p class="mt-2"><strong>Sem risco de MRSA/Pseudomonas:</strong> considerar beta-lactâmico associado a macrolídeo, como ceftriaxona + azitromicina, conforme protocolo institucional.</p>
+            <p class="mt-2"><strong>Com risco de resistência:</strong> ampliar cobertura conforme DRIP, culturas prévias, internações, antibiótico recente, epidemiologia local e fatores ATS/IDSA. Descalonar após resultados microbiológicos e evolução clínica.</p>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <h5 class="font-bold text-violet-950">Exames e microbiologia</h5>
+              <p class="mt-2">Revisar hemograma, função renal, eletrólitos, função hepática, glicemia, PCR, gasometria arterial e lactato. Solicitar coagulograma e troponina conforme contexto.</p>
+              <p class="mt-2">Em PAC grave, considerar hemoculturas, cultura de secreção respiratória e testes virais antes do antibiótico quando possível, sem atrasar tratamento.</p>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <h5 class="font-bold text-amber-950">Imagem e complicações</h5>
+              <p class="mt-2">Revisar radiografia e/ou POCUS pulmonar, pesquisando consolidação multilobar, derrame pleural e congestão.</p>
+              <p class="mt-2">Considerar TC de tórax se imagem inicial inconclusiva, hipoxemia desproporcional, suspeita de empiema, abscesso, necrose, obstrução, tromboembolismo pulmonar ou outro diagnóstico alternativo.</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+            <h5 class="font-bold text-emerald-950">Hemodinâmica e sepse</h5>
+            <p class="mt-2">Se houver sepse ou choque, medir e acompanhar lactato, coletar culturas, administrar cristaloide de forma individualizada e reavaliar responsividade, perfusão, congestão e diurese.</p>
+            <p class="mt-2">Na hipotensão persistente após reposição adequada, iniciar vasopressor conforme protocolo, geralmente noradrenalina, visando perfusão e pressão arterial média adequadas.</p>
+          </div>
+
+          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <h5 class="font-bold text-orange-950">Reavaliação enquanto aguarda a UTI</h5>
+            <p class="mt-2">Reavaliar de forma seriada sinais vitais, necessidade de oxigênio, estado mental, perfusão, lactato, diurese e disfunções orgânicas. Documentar intercorrências e comunicar imediatamente qualquer deterioração à equipe da UTI.</p>
+            <p class="mt-2">Aplicar SOFA no contexto de sepse/disfunção orgânica e SAPS 3 após admissão na UTI, conforme rotina institucional.</p>
+          </div>
         </div>
       `,
+      options: [
+        {
+          text: 'Confirmar estabilização e manejo enquanto aguarda UTI',
+          description: 'Registra a continuidade do cuidado no pronto-socorro antes da conclusão.',
+          nextStep: 'pac_uti_protocolo_concluido',
+          value: 'protocolo_pac_uti_aplicado',
+          critical: true,
+          requiresImmediateAction: true
+        }
+      ]
+    },
+    pac_uti_protocolo_concluido: {
+      id: 'pac_uti_protocolo_concluido',
+      title: 'Manejo da PAC grave confirmado',
+      description: 'Estabilização mantida no pronto-socorro enquanto aguarda transferência para UTI.',
+      type: 'result',
+      critical: true,
+      group: 'UTI',
+      content: '',
       options: []
     },
     pac_sepse_insuficiencia: {

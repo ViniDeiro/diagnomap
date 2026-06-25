@@ -1184,6 +1184,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         criteriosUTISelecionados?: string[]
         indicarUTI?: boolean
       } | null
+      const influenzaPhysicalExam = (safeParse(answers.influenza_exame_fisico) as { exameFisico?: PhysicalExamData } | null)?.exameFisico
 
       const severitySigns = uniqueItems(Array.isArray(severityData?.sinaisGravidadeSelecionados) ? severityData.sinaisGravidadeSelecionados : [])
       const riskFactors = uniqueItems(Array.isArray(riskData?.fatoresRiscoSelecionados) ? riskData.fatoresRiscoSelecionados : [])
@@ -1228,6 +1229,31 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         if (items.length === 1) return items[0]
         return `${items.slice(0, -1).join(', ')} e ${items.at(-1)}`
       }
+      const influenzaPhysicalExamNarrative = (() => {
+        if (!influenzaPhysicalExam) return ''
+        const grade = (value?: number) => value ? ` ${value}/4+` : ''
+        const generalStateLabels: Record<PhysicalExamData['generalState'], string> = {
+          bom: 'bom estado geral',
+          regular: 'regular estado geral',
+          mal: 'mal estado geral',
+          grave: 'grave estado geral',
+          pessimo: 'péssimo estado geral'
+        }
+        const respiration = influenzaPhysicalExam.respiration.status === 'eupneico'
+          ? 'eupneico'
+          : influenzaPhysicalExam.respiration.status === 'taquipneico'
+            ? 'taquipneico'
+            : `dispneico${grade(influenzaPhysicalExam.respiration.grade)}`
+
+        return [
+          `Ao exame físico, encontrava-se em ${generalStateLabels[influenzaPhysicalExam.generalState]}, ${influenzaPhysicalExam.coloration.status === 'corado' ? 'corado' : `descorado${grade(influenzaPhysicalExam.coloration.grade)}`}, ${influenzaPhysicalExam.hydration.status === 'hidratado' ? 'hidratado' : `desidratado${grade(influenzaPhysicalExam.hydration.grade)}`}, ${influenzaPhysicalExam.cyanosis.status === 'acianotico' ? 'acianótico' : `cianótico${grade(influenzaPhysicalExam.cyanosis.grade)}`} e ${influenzaPhysicalExam.jaundice.status === 'anicterico' ? 'anictérico' : `ictérico${grade(influenzaPhysicalExam.jaundice.grade)}`}.`,
+          `${influenzaPhysicalExam.temperature.status === 'afebril' ? 'Afebril' : 'Febril'}${influenzaPhysicalExam.temperature.value != null ? `, com temperatura de ${influenzaPhysicalExam.temperature.value} °C` : ''}, ${respiration}.`,
+          `Glasgow ${influenzaPhysicalExam.neuro.glasgow ?? 'não informado'}; ${influenzaPhysicalExam.neuro.altered?.trim() || 'consciente e contactuante'}.`,
+          `Ausculta pulmonar: ${influenzaPhysicalExam.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}.`,
+          `Aparelho cardiovascular: ${influenzaPhysicalExam.cardiac.altered?.trim() || 'bulhas rítmicas, normofonéticas, sem sopros audíveis'}.`,
+          influenzaPhysicalExam.extremities.altered?.trim() ? `Extremidades: ${influenzaPhysicalExam.extremities.altered.trim()}.` : null
+        ].filter(Boolean).join(' ')
+      })()
 
       const destination = (() => {
         if (needsICU) return 'uti'
@@ -1274,6 +1300,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           ? `Relatava ${formatClinicalList(symptoms)}.`
           : 'Os sintomas específicos não foram detalhados no registro de admissão.',
         vitalItems.length > 0 ? `Na avaliação inicial, apresentava ${formatClinicalList(vitalItems)}.` : null,
+        influenzaPhysicalExamNarrative || null,
         severitySigns.length > 0
           ? `Foram identificados ${formatClinicalList(severitySigns)}, caracterizando sinais de gravidade e enquadramento como síndrome respiratória aguda grave.`
           : 'Não foram identificados sinais de gravidade respiratória ou sistêmica na avaliação registrada.',
@@ -1462,6 +1489,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const atsSevere = atsData?.pacGrave ?? answers.pac_ats_idsa_gravidade === 'ats_idsa_pac_grave'
       const atsMinorCount = atsData?.criteriosMenoresSelecionados?.length || 0
       const atsMajorCount = atsData?.criteriosMaioresSelecionados?.length || 0
+      const pacICUProtocolApplied = answers.pac_destino_uti === 'protocolo_pac_uti_aplicado'
+        || history.includes('pac_destino_uti')
+        || currentStep === 'pac_uti_protocolo_concluido'
       const destinationAnswer = getDecisionAnswer(answers.pac_destino_protocolo)
       const psiGroup = psiData?.grupo || (currentStep === 'pac_psi_baixo'
         ? 'PORT I/II'
@@ -1475,7 +1505,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         if (currentStep === 'pac_estabilizacao_seguir_sepse') return 'estabilizacao'
         if (currentStep === 'pac_internacao_limitacao') return 'limitador'
         if (destinationAnswer === 'ambulatorio' || currentStep === 'pac_destino_ambulatorial' || currentStep === 'pac_psi_baixo' || currentStep === 'pac_curb_baixo') return 'ambulatorial'
-        if (destinationAnswer === 'uti' || currentStep === 'pac_destino_uti' || currentStep === 'pac_psi_alto') return 'uti'
+        if (destinationAnswer === 'uti' || currentStep === 'pac_destino_uti' || currentStep === 'pac_uti_protocolo_concluido' || currentStep === 'pac_psi_alto') return 'uti'
         if (destinationAnswer === 'enfermaria' || currentStep === 'pac_destino_enfermaria' || currentStep === 'pac_psi_intermediario' || currentStep === 'pac_curb_intermediario') return 'enfermaria'
         if (currentStep === 'pac_curb_alto') return effectiveCurbScore != null && effectiveCurbScore >= 4 ? 'uti' : 'enfermaria'
         if (atsSevere) return 'uti'
@@ -1637,6 +1667,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         destination === 'ambulatorial' ? 'Tratamento ambulatorial, com antibiótico conforme prescrição, sintomáticos quando indicados e retorno programado em 48 a 72 horas.' : null,
         destination === 'enfermaria' ? 'Indicada internação hospitalar em enfermaria/unidade intermediária, com antibioticoterapia venosa ou oral conforme gravidade, monitorização clínica seriada e suporte de oxigênio se necessário.' : null,
         destination === 'uti' ? 'Solicitada avaliação de terapia intensiva, com monitorização contínua, suporte respiratório/hemodinâmico conforme necessidade, coleta de culturas quando possível e antibioticoterapia precoce.' : null,
+        pacICUProtocolApplied ? 'Mantido protocolo de estabilização da PAC grave no pronto-socorro enquanto aguarda transferência efetiva para a UTI.' : null,
         destination === 'estabilizacao' ? 'Priorizada estabilização imediata: monitorização, oxigenoterapia, acesso venoso, avaliação de lactato/culturas, ressuscitação volêmica quando indicada, vasopressor se choque e antibioticoterapia precoce.' : null,
         destination === 'limitador' ? 'Internação indicada por insegurança para tratamento ambulatorial, garantindo via de administração, observação clínica e adesão terapêutica.' : null,
         prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null
@@ -1719,6 +1750,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         destination === 'enfermaria' ? 'Solicitar ou revisar radiografia de tórax, hemograma, função renal, eletrólitos, marcadores inflamatórios e culturas conforme gravidade e protocolo institucional.' : null,
         destination === 'enfermaria' ? 'Escalonar para UTI se houver aumento da necessidade de oxigênio, desconforto respiratório, hipotensão, alteração do sensório, lactato elevado, choque ou falência orgânica.' : null,
         destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, necessidade de ventilação mecânica, vasopressor, SOFA e acompanhamento intensivo seriado.' : null,
+        destination === 'uti' ? 'Manter monitorização e tratamento no pronto-socorro até a transferência, com comunicação contínua com a equipe da UTI e reavaliação imediata diante de deterioração.' : null,
         patientForReport.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patientForReport.treatment.nextEvaluation)}.` : null
       ])
 
