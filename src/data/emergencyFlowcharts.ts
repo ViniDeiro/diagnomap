@@ -3821,6 +3821,117 @@ export const dpocFlowchart: EmergencyFlowchart = {
   }
 }
 
+const influenzaViralPanelContent = `
+  <div class="space-y-4 text-sm">
+    <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+      <h4 class="font-bold text-cyan-950">Investigação laboratorial do paciente hospitalizado com SRAG</h4>
+      <p class="mt-2">Todo paciente hospitalizado por SRAG deve ter coleta precoce de amostra respiratória para investigação laboratorial, preferencialmente logo na admissão, sem atrasar o início do tratamento.</p>
+      <p class="mt-2 font-semibold">A coleta para RT-PCR ou painel viral multiplex não deve atrasar oseltamivir, oxigenoterapia, antibioticoterapia quando indicada ou demais medidas terapêuticas.</p>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-3">
+      <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <h5 class="font-bold text-slate-950">Exames obrigatórios na admissão</h5>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Amostra respiratória para RT-PCR.</li>
+          <li>Swab nasofaríngeo preferencial.</li>
+          <li>Swab orofaríngeo quando indicado pelo método.</li>
+          <li>Aspirado de nasofaringe em situações selecionadas.</li>
+          <li>Em intubados: secreção traqueal ou lavado broncoalveolar conforme indicação clínica.</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+        <h5 class="font-bold text-violet-950">Painel viral quando disponível</h5>
+        <p class="mt-2">O conteúdo varia conforme a plataforma do laboratório.</p>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Influenza A, H1N1, H3N2 e Influenza B.</li>
+          <li>COVID-19.</li>
+          <li>Vírus sincicial respiratório.</li>
+          <li>Metapneumovírus humano.</li>
+          <li>Parainfluenza 1-4.</li>
+          <li>Adenovírus, rinovírus/enterovírus e coronavírus sazonais quando incluídos.</li>
+          <li>Alguns painéis incluem Mycoplasma pneumoniae, Chlamydia pneumoniae e Bordetella pertussis.</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <h5 class="font-bold text-emerald-950">Conforme gravidade e suspeitas associadas</h5>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Hemoculturas antes do antibiótico, se não atrasar o tratamento.</li>
+          <li>Cultura de escarro quando houver amostra adequada.</li>
+          <li>Aspirado traqueal ou lavado broncoalveolar nos pacientes intubados quando indicado.</li>
+          <li>Hemograma, função renal, eletrólitos, função hepática, gasometria, lactato e marcadores inflamatórios.</li>
+          <li>Radiografia de tórax e, quando necessário, tomografia ou ultrassom pulmonar.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <h5 class="font-bold text-amber-950">Mensagem prática</h5>
+      <p class="mt-2">Todo paciente hospitalizado com SRAG deve ter coleta precoce de amostra respiratória para RT-PCR, ou painel viral multiplex quando disponível. A investigação etiológica organiza o cuidado e a vigilância, mas não pode atrasar o início do oseltamivir nem as medidas de suporte indicadas.</p>
+    </div>
+  </div>
+`
+
+const influenzaBoardingCareContent = `
+  <div class="space-y-4 text-sm">
+    <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+      <h4 class="font-bold text-sky-950">Cuidados enquanto aguarda leito - Boarding do paciente com SRAG/Influenza</h4>
+      <p class="mt-2">Enquanto aguarda um leito, o paciente já deve receber todos os cuidados compatíveis com o nível de complexidade de destino. A ausência de vaga não pode significar atraso no tratamento nem redução da intensidade da monitorização.</p>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <h5 class="font-bold text-slate-950">Reavaliação frequente</h5>
+        <p class="mt-2">Registrar sinais vitais completos, frequência respiratória, saturação, escala de consciência, PA, FC, temperatura, diurese, dor e esforço respiratório.</p>
+        <p class="mt-2"><strong>Periodicidade:</strong> paciente grave a cada 1 hora ou contínua se instável; paciente moderado a cada 2-4 horas conforme estabilidade.</p>
+      </div>
+
+      <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <h5 class="font-bold text-blue-950">Monitorização e oxigenoterapia</h5>
+        <p class="mt-2">Manter monitor cardíaco, oximetria contínua, pressão arterial seriada, controle de débito urinário quando indicado e balanço hídrico.</p>
+        <p class="mt-2">Reavaliar continuamente se o suporte atual é suficiente e escalonar cateter nasal, máscara, máscara com reservatório, cânula nasal de alto fluxo, VNI ou intubação quando indicado.</p>
+      </div>
+
+      <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+        <h5 class="font-bold text-cyan-950">Antiviral e antibiótico</h5>
+        <p class="mt-2">Iniciar oseltamivir imediatamente quando houver suspeita de influenza grave, sem aguardar confirmação laboratorial, registrando o horário da primeira dose.</p>
+        <p class="mt-2">Reavaliar possibilidade de pneumonia bacteriana associada; colher culturas antes quando possível e iniciar antibiótico precocemente sem atrasar pacientes sépticos.</p>
+      </div>
+
+      <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+        <h5 class="font-bold text-violet-950">Exames seriados e hidratação</h5>
+        <p class="mt-2">Conforme gravidade, acompanhar hemograma, função renal, eletrólitos, gasometria, lactato, PCR, procalcitonina quando disponível e imagem pulmonar para reavaliação.</p>
+        <p class="mt-2">Evitar excesso de volume pelo risco de SDRA; reavaliar perfusão frequentemente e adotar estratégia conservadora após estabilização hemodinâmica.</p>
+      </div>
+
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <h5 class="font-bold text-emerald-950">Profilaxias, nutrição e isolamento</h5>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Tromboprofilaxia se não houver contraindicação.</li>
+          <li>Prevenção de úlcera de estresse quando indicada.</li>
+          <li>Mudança de decúbito e prevenção de lesão por pressão.</li>
+          <li>Suporte nutricional se não conseguir alimentar-se.</li>
+          <li>Precaução para gotículas, aerossóis em procedimentos geradores, higiene de mãos e uso correto de EPIs.</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+        <h5 class="font-bold text-red-950">Prevenção de deterioração</h5>
+        <p class="mt-2">A cada reavaliação, perguntar se o paciente está respirando mais rápido, precisando de mais oxigênio, ficando sonolento, hipotenso, com lactato em elevação, diurese em queda, gasometria piorando ou trabalho respiratório aumentando.</p>
+        <p class="mt-2 font-semibold">Se qualquer resposta for sim, reclassificar imediatamente e avaliar necessidade de UTI.</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <h5 class="font-bold text-amber-950">Checklist assistencial e comunicação</h5>
+      <p class="mt-2">Manter cabeceira elevada 30-45 graus, higiene oral, aspiração quando necessária, controle glicêmico, controle térmico, balanço hídrico e registro de intercorrências.</p>
+      <p class="mt-2">Registrar motivo da internação, indicação de UTI ou enfermaria, pendência de vaga, plano terapêutico, critérios de piora e quando acionar imediatamente a equipe médica.</p>
+    </div>
+  </div>
+`
+
 export const influenzaFlowchart: EmergencyFlowchart = {
   id: 'influenza',
   name: 'Influenza / Síndrome Gripal',
@@ -3831,8 +3942,8 @@ export const influenzaFlowchart: EmergencyFlowchart = {
   color: 'from-sky-600 to-cyan-800',
   initialStep: 'start',
   finalSteps: [
-    'influenza_ambulatorial_sintomaticos',
-    'influenza_ambulatorial_oseltamivir',
+    'influenza_ambulatorial_sintomaticos_concluido',
+    'influenza_ambulatorial_oseltamivir_concluido',
     'influenza_internacao_enfermaria',
     'influenza_uti_protocolo_concluido'
   ],
@@ -3888,8 +3999,8 @@ export const influenzaFlowchart: EmergencyFlowchart = {
     },
     influenza_exame_fisico: {
       id: 'influenza_exame_fisico',
-      title: 'Exame Físico Direcionado',
-      description: 'Registrar os achados clínicos antes da classificação de gravidade.',
+      title: 'Sinais Vitais e Exame Físico',
+      description: 'Registrar sinais vitais completos e achados clínicos antes da classificação de gravidade.',
       type: 'action',
       content: '',
       options: []
@@ -3955,16 +4066,34 @@ export const influenzaFlowchart: EmergencyFlowchart = {
     },
     influenza_ambulatorial_sintomaticos: {
       id: 'influenza_ambulatorial_sintomaticos',
-      title: 'Ambulatorial',
-      description: 'Tratamento sintomático e vigilância clínica.',
-      type: 'result',
+      title: 'Conduta ambulatorial - tratamento sintomático',
+      description: 'Prescrição sintomática, orientações e critérios de retorno antes da alta.',
+      type: 'action',
       generatesPrescription: true,
       content: `
-        <div class="space-y-3 text-sm">
+        <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-            <p><strong>Conduta:</strong> sintomáticos, aumento da ingestão de líquidos e retorno apenas se houver piora do quadro ou sinais de gravidade.</p>
-            <p class="mt-2"><strong>Orientações respiratórias:</strong> usar máscara enquanto sintomático, cobrir boca e nariz ao tossir/espirrar, higienizar as mãos, evitar contato próximo com pessoas vulneráveis e manter ambientes ventilados.</p>
-            <p class="mt-2">Reavaliar se febre persistente por mais de 3 dias, piora da febre, dispneia, saturação baixa, confusão, sonolência excessiva, vômitos persistentes ou sinais de desidratação.</p>
+            <h4 class="font-bold text-emerald-950">Manejo ambulatorial da síndrome gripal sem sinais de gravidade</h4>
+            <p class="mt-2"><strong>Conduta:</strong> prescrever sintomáticos, orientar hidratação, repouso relativo e vigilância clínica. Neste cenário não há indicação imediata de antiviral pelo checklist atual, salvo julgamento clínico individual.</p>
+          </div>
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <h5 class="font-bold text-slate-950">Medicações sintomáticas esperadas</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Antitérmico/analgésico se febre, mialgia ou cefaleia.</li>
+                <li>Lavagem nasal com soro fisiológico e medidas para congestão nasal.</li>
+                <li>Antiemético se náuseas ou vômitos.</li>
+                <li>Mucolítico/sintomático respiratório conforme avaliação clínica.</li>
+              </ul>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <h5 class="font-bold text-amber-950">Orientações de retorno</h5>
+              <p class="mt-2">Retornar imediatamente se dispneia, desconforto respiratório, saturação baixa, confusão, sonolência excessiva, desidratação, vômitos persistentes, hipotensão, febre persistente por mais de 3 dias, piora da febre ou piora do estado geral.</p>
+            </div>
+          </div>
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+            <h5 class="font-bold text-cyan-950">Orientações respiratórias</h5>
+            <p class="mt-2">Usar máscara enquanto sintomático, cobrir boca e nariz ao tossir/espirrar, higienizar as mãos, evitar contato próximo com pessoas vulneráveis e manter ambientes ventilados.</p>
           </div>
         </div>
       `,
@@ -3972,24 +4101,92 @@ export const influenzaFlowchart: EmergencyFlowchart = {
     },
     influenza_ambulatorial_oseltamivir: {
       id: 'influenza_ambulatorial_oseltamivir',
-      title: 'Ambulatorial com oseltamivir',
-      description: 'Paciente sem gravidade imediata, mas com fator de risco ou piora clínica.',
-      type: 'result',
+      title: 'Conduta ambulatorial com oseltamivir',
+      description: 'Antiviral, sintomáticos, orientações e critérios de retorno antes da alta.',
+      type: 'action',
       generatesPrescription: true,
       content: `
-        <div class="space-y-3 text-sm">
+        <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p><strong>Conduta:</strong> oseltamivir, sintomáticos, aumento da ingestão de líquidos e retorno em 48 horas ou antes se piora clínica/sinais de gravidade.</p>
-            <p class="mt-2">Fatores de risco e sinais de piora clínica justificam início do antiviral mesmo sem SRAG.</p>
-            <div class="mt-3 rounded-lg border border-amber-200 bg-white p-3">
-              <p class="font-semibold text-amber-950">Quando solicitar exame de imagem?</p>
-              <p class="mt-2">Não solicitar radiografia de rotina para toda síndrome gripal. Solicitar radiografia de tórax quando houver suspeita de acometimento pulmonar ou complicação: dispneia, taquipneia, saturação &lt;95%, dor torácica, ausculta pulmonar alterada, febre persistente por vários dias, piora clínica após melhora inicial, imunossupressão com sintomas respiratórios mais intensos ou necessidade de internação.</p>
-              <p class="mt-2">Considerar tomografia de tórax quando o RX for inconclusivo com forte suspeita clínica, houver hipoxemia desproporcional ao RX, suspeita de complicações, imunossupressão, casos graves/internados ou suspeita de tromboembolismo pulmonar.</p>
+            <h4 class="font-bold text-amber-950">Manejo ambulatorial com antiviral</h4>
+            <p class="mt-2"><strong>Conduta:</strong> prescrever oseltamivir, sintomáticos, hidratação e retorno em 48 horas ou antes se houver piora clínica/sinais de gravidade.</p>
+            <p class="mt-2">Fatores de risco ou sinais de piora clínica justificam início do antiviral mesmo sem SRAG, desde que não haja critério atual de internação.</p>
+          </div>
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+              <h5 class="font-bold text-cyan-950">Antiviral e sintomáticos</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Oseltamivir conforme idade, peso e função renal.</li>
+                <li>Antitérmico/analgésico se febre, mialgia ou cefaleia.</li>
+                <li>Antiemético se náuseas ou vômitos.</li>
+                <li>Lavagem nasal, medidas respiratórias e hidratação.</li>
+              </ul>
             </div>
+            <div class="rounded-xl border border-red-200 bg-red-50 p-4">
+              <h5 class="font-bold text-red-950">Critérios de retorno imediato</h5>
+              <p class="mt-2">Dispneia, desconforto respiratório, saturação baixa, confusão, sonolência excessiva, desidratação, vômitos persistentes, hipotensão, febre persistente ou piora do estado geral.</p>
+            </div>
+          </div>
+          <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <p class="font-semibold text-sky-950">Quando solicitar exame de imagem?</p>
+            <p class="mt-2">Não solicitar radiografia de rotina para toda síndrome gripal. Solicitar RX de tórax quando houver suspeita de acometimento pulmonar ou complicação: dispneia, taquipneia, saturação &lt;95%, dor torácica, ausculta pulmonar alterada, febre persistente, piora após melhora inicial, imunossupressão com sintomas respiratórios mais intensos ou necessidade de internação.</p>
+            <p class="mt-2">Considerar TC se RX inconclusivo com forte suspeita clínica, hipoxemia desproporcional, suspeita de complicações, imunossupressão, caso grave/internado ou suspeita de tromboembolismo pulmonar.</p>
           </div>
         </div>
       `,
       options: []
+    },
+    influenza_ambulatorial_sintomaticos_concluido: {
+      id: 'influenza_ambulatorial_sintomaticos_concluido',
+      title: 'Manejo ambulatorial concluído',
+      description: 'Prescrição sintomática e orientações registradas.',
+      type: 'result',
+      generatesPrescription: true,
+      content: '',
+      options: []
+    },
+    influenza_ambulatorial_oseltamivir_concluido: {
+      id: 'influenza_ambulatorial_oseltamivir_concluido',
+      title: 'Manejo ambulatorial com oseltamivir concluído',
+      description: 'Antiviral, sintomáticos e orientações registrados.',
+      type: 'result',
+      generatesPrescription: true,
+      content: '',
+      options: []
+    },
+    influenza_painel_viral_enfermaria: {
+      id: 'influenza_painel_viral_enfermaria',
+      title: 'Coleta respiratória e painel viral',
+      description: 'Investigação etiológica obrigatória do paciente hospitalizado por SRAG antes da enfermaria.',
+      type: 'action',
+      critical: true,
+      content: influenzaViralPanelContent,
+      options: [
+        {
+          text: 'Confirmar coleta e seguir para cuidados enquanto aguarda leito',
+          description: 'Registra a coleta respiratória sem atrasar o tratamento.',
+          nextStep: 'influenza_boarding_enfermaria',
+          value: 'painel_viral_enfermaria_coletado',
+          critical: true
+        }
+      ]
+    },
+    influenza_boarding_enfermaria: {
+      id: 'influenza_boarding_enfermaria',
+      title: 'Cuidados enquanto aguarda leito',
+      description: 'Boarding do paciente com SRAG aguardando enfermaria.',
+      type: 'action',
+      critical: true,
+      content: influenzaBoardingCareContent,
+      options: [
+        {
+          text: 'Confirmar cuidados e seguir para internação em enfermaria',
+          description: 'Registra reavaliação, monitorização e tratamento enquanto aguarda leito.',
+          nextStep: 'influenza_internacao_enfermaria',
+          value: 'boarding_enfermaria_aplicado',
+          critical: true
+        }
+      ]
     },
     influenza_internacao_enfermaria: {
       id: 'influenza_internacao_enfermaria',
@@ -4084,6 +4281,42 @@ export const influenzaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: []
+    },
+    influenza_painel_viral_uti: {
+      id: 'influenza_painel_viral_uti',
+      title: 'Coleta respiratória e painel viral',
+      description: 'Investigação etiológica obrigatória do paciente hospitalizado por SRAG antes da UTI.',
+      type: 'action',
+      critical: true,
+      content: influenzaViralPanelContent,
+      options: [
+        {
+          text: 'Confirmar coleta e seguir para cuidados enquanto aguarda UTI',
+          description: 'Registra a coleta respiratória sem atrasar estabilização e antiviral.',
+          nextStep: 'influenza_boarding_uti',
+          value: 'painel_viral_uti_coletado',
+          critical: true,
+          requiresImmediateAction: true
+        }
+      ]
+    },
+    influenza_boarding_uti: {
+      id: 'influenza_boarding_uti',
+      title: 'Cuidados enquanto aguarda leito',
+      description: 'Boarding do paciente com SRAG grave aguardando UTI.',
+      type: 'action',
+      critical: true,
+      content: influenzaBoardingCareContent,
+      options: [
+        {
+          text: 'Confirmar cuidados e seguir para protocolo de UTI',
+          description: 'Registra monitorização intensiva e prevenção de deterioração enquanto aguarda leito.',
+          nextStep: 'influenza_internacao_uti',
+          value: 'boarding_uti_aplicado',
+          critical: true,
+          requiresImmediateAction: true
+        }
+      ]
     },
     influenza_internacao_uti: {
       id: 'influenza_internacao_uti',
@@ -4181,6 +4414,67 @@ export const influenzaFlowchart: EmergencyFlowchart = {
     }
   }
 }
+
+const pacWaitingAdmissionCareContent = `
+  <div class="space-y-4 text-sm">
+    <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+      <h4 class="font-bold text-sky-950">Cuidados do Paciente com PAC enquanto Aguarda Internação</h4>
+      <p class="mt-2">Após definida a necessidade de internação, o paciente deve permanecer em monitorização e receber tratamento precoce enquanto aguarda disponibilidade de leito.</p>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-2">
+      <div class="rounded-xl border border-slate-200 bg-white p-4">
+        <h5 class="font-bold text-slate-950">Monitorização contínua</h5>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Pressão arterial, frequência cardíaca e frequência respiratória.</li>
+          <li>Saturação periférica de oxigênio (SpO2) e temperatura.</li>
+          <li>Nível de consciência e reavaliação clínica periódica.</li>
+          <li>Reavaliar idealmente a cada 2-4 horas, ou antes se houver piora.</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+        <h5 class="font-bold text-rose-950">Antibioticoterapia precoce</h5>
+        <p class="mt-2">Administrar o antibiótico empírico o mais precocemente possível, preferencialmente nas primeiras horas após o diagnóstico.</p>
+        <p class="mt-2">Não aguardar resultado de culturas quando houver indicação clínica de tratamento imediato.</p>
+      </div>
+
+      <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+        <h5 class="font-bold text-blue-950">Oxigenoterapia titulada</h5>
+        <p class="mt-2">Manter SpO2 entre 92-96% na maioria dos pacientes.</p>
+        <p class="mt-2">Em DPOC ou retenção crônica de CO2, manter SpO2 entre 88-92%.</p>
+        <p class="mt-2">Ajustar dispositivo conforme necessidade: cateter nasal, máscara, Venturi ou cânula nasal de alto fluxo, se indicada.</p>
+      </div>
+
+      <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+        <h5 class="font-bold text-emerald-950">Hidratação e controle de sintomas</h5>
+        <ul class="mt-2 list-disc space-y-1 pl-5">
+          <li>Corrigir desidratação quando presente.</li>
+          <li>Evitar sobrecarga hídrica, especialmente em idosos, insuficiência cardíaca ou doença renal.</li>
+          <li>Monitorar balanço hídrico.</li>
+          <li>Usar antitérmicos, analgesia, tratamento da dispneia e broncodilatadores apenas se houver broncoespasmo associado.</li>
+        </ul>
+      </div>
+
+      <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+        <h5 class="font-bold text-violet-950">Profilaxias</h5>
+        <p class="mt-2">Se não houver contraindicações, instituir profilaxia para tromboembolismo venoso.</p>
+        <p class="mt-2">Prevenir lesão por pressão em pacientes restritos ao leito e estimular mobilização precoce sempre que possível.</p>
+      </div>
+
+      <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+        <h5 class="font-bold text-orange-950">Reavaliação e critérios para escalonamento</h5>
+        <p class="mt-2">Monitorar necessidade crescente de oxigênio, frequência respiratória, fadiga respiratória, instabilidade hemodinâmica, alteração do nível de consciência, sepse ou choque séptico.</p>
+        <p class="mt-2"><strong>Reavaliar UTI imediatamente se:</strong> hipoxemia refratária, aumento progressivo do trabalho respiratório, necessidade de ventilação não invasiva ou invasiva, hipotensão persistente, lactato elevado, disfunção de órgãos ou rebaixamento do nível de consciência.</p>
+      </div>
+    </div>
+
+    <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+      <h5 class="font-bold text-amber-950">Mensagem prática para o protocolo</h5>
+      <p class="mt-2">O paciente internado no pronto-socorro deve permanecer monitorizado, receber antibioticoterapia precoce, oxigenoterapia titulada, suporte clínico e reavaliações frequentes até a transferência para a enfermaria ou UTI, conforme evolução clínica.</p>
+    </div>
+  </div>
+`
 
 // Fluxograma de Pneumonia Adquirida na Comunidade (PAC)
 export const pneumoniaFlowchart: EmergencyFlowchart = {
@@ -4554,6 +4848,23 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
       `,
       options: []
     },
+    pac_cuidados_aguarda_enfermaria: {
+      id: 'pac_cuidados_aguarda_enfermaria',
+      title: 'Cuidados iniciais enquanto aguarda leito',
+      description: 'Monitorização, antibioticoterapia precoce, oxigenoterapia e reavaliação até transferência para enfermaria.',
+      type: 'action',
+      group: 'Enfermaria',
+      content: pacWaitingAdmissionCareContent,
+      options: [
+        {
+          text: 'Confirmar cuidados e seguir para enfermaria',
+          description: 'Registra o cuidado no pronto-socorro enquanto aguarda leito de enfermaria.',
+          nextStep: 'pac_destino_enfermaria',
+          value: 'cuidados_aguarda_enfermaria_aplicados',
+          critical: true
+        }
+      ]
+    },
     pac_destino_enfermaria: {
       id: 'pac_destino_enfermaria',
       title: 'Destino - Enfermaria',
@@ -4570,6 +4881,25 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: []
+    },
+    pac_cuidados_aguarda_uti: {
+      id: 'pac_cuidados_aguarda_uti',
+      title: 'Cuidados iniciais enquanto aguarda leito',
+      description: 'Monitorização, antibioticoterapia precoce, oxigenoterapia e reavaliação até transferência para UTI.',
+      type: 'action',
+      critical: true,
+      group: 'UTI',
+      content: pacWaitingAdmissionCareContent,
+      options: [
+        {
+          text: 'Confirmar cuidados e seguir para protocolo de UTI',
+          description: 'Registra o cuidado no pronto-socorro antes do protocolo específico de PAC grave.',
+          nextStep: 'pac_destino_uti',
+          value: 'cuidados_aguarda_uti_aplicados',
+          critical: true,
+          requiresImmediateAction: true
+        }
+      ]
     },
     pac_destino_uti: {
       id: 'pac_destino_uti',

@@ -1184,7 +1184,33 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         criteriosUTISelecionados?: string[]
         indicarUTI?: boolean
       } | null
-      const influenzaPhysicalExam = (safeParse(answers.influenza_exame_fisico) as { exameFisico?: PhysicalExamData } | null)?.exameFisico
+      const influenzaPhysicalExamAnswer = safeParse(answers.influenza_exame_fisico) as {
+        sinaisVitais?: {
+          temperature?: number
+          feverDays?: number
+          bloodPressure?: string
+          heartRate?: number
+          respiratoryRate?: number
+          oxygenSaturation?: number
+          glucose?: string
+        }
+        exameFisico?: PhysicalExamData
+      } | null
+      const influenzaPhysicalExam = influenzaPhysicalExamAnswer?.exameFisico
+      const influenzaFlowVitalItems = (() => {
+        const vitalSigns = influenzaPhysicalExamAnswer?.sinaisVitais
+        if (!vitalSigns) return [] as string[]
+        return uniqueItems([
+          vitalSigns.temperature != null ? `Temperatura: ${vitalSigns.temperature} °C` : null,
+          vitalSigns.feverDays != null ? `Tempo de febre: ${vitalSigns.feverDays} dia(s)` : null,
+          vitalSigns.heartRate != null ? `Frequência cardíaca: ${vitalSigns.heartRate} bpm` : null,
+          vitalSigns.respiratoryRate != null ? `Frequência respiratória: ${vitalSigns.respiratoryRate} irpm` : null,
+          vitalSigns.bloodPressure ? `Pressão arterial: ${vitalSigns.bloodPressure} mmHg` : null,
+          vitalSigns.oxygenSaturation != null ? `Saturação de oxigênio: ${vitalSigns.oxygenSaturation}%` : null,
+          vitalSigns.glucose ? `Glicemia capilar: ${vitalSigns.glucose} mg/dL` : null
+        ])
+      })()
+      const influenzaVitalItems = influenzaFlowVitalItems.length > 0 ? influenzaFlowVitalItems : vitalItems
 
       const severitySigns = uniqueItems(Array.isArray(severityData?.sinaisGravidadeSelecionados) ? severityData.sinaisGravidadeSelecionados : [])
       const riskFactors = uniqueItems(Array.isArray(riskData?.fatoresRiscoSelecionados) ? riskData.fatoresRiscoSelecionados : [])
@@ -1201,9 +1227,21 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const icuProtocolApplied = answers.influenza_internacao_uti === 'protocolo_srag_uti_aplicado'
         || history.includes('influenza_internacao_uti')
         || currentStep === 'influenza_uti_protocolo_concluido'
+      const viralPanelCollected = Boolean(answers.influenza_painel_viral_enfermaria || answers.influenza_painel_viral_uti)
+        || history.includes('influenza_painel_viral_enfermaria')
+        || history.includes('influenza_painel_viral_uti')
+        || currentStep === 'influenza_painel_viral_enfermaria'
+        || currentStep === 'influenza_painel_viral_uti'
+      const boardingCareApplied = Boolean(answers.influenza_boarding_enfermaria || answers.influenza_boarding_uti)
+        || history.includes('influenza_boarding_enfermaria')
+        || history.includes('influenza_boarding_uti')
+        || currentStep === 'influenza_boarding_enfermaria'
+        || currentStep === 'influenza_boarding_uti'
       const needsICU = Boolean(
         icuData?.indicarUTI
         || icuCriteria.length > 0
+        || currentStep === 'influenza_painel_viral_uti'
+        || currentStep === 'influenza_boarding_uti'
         || currentStep === 'influenza_internacao_uti'
         || currentStep === 'influenza_uti_protocolo_concluido'
       )
@@ -1257,9 +1295,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const destination = (() => {
         if (needsICU) return 'uti'
-        if (currentStep === 'influenza_internacao_enfermaria') return 'enfermaria'
-        if (currentStep === 'influenza_ambulatorial_oseltamivir') return 'ambulatorial_oseltamivir'
-        if (currentStep === 'influenza_ambulatorial_sintomaticos') return 'ambulatorial_sintomatico'
+        if (currentStep === 'influenza_painel_viral_enfermaria' || currentStep === 'influenza_boarding_enfermaria' || currentStep === 'influenza_internacao_enfermaria') return 'enfermaria'
+        if (currentStep === 'influenza_ambulatorial_oseltamivir' || currentStep === 'influenza_ambulatorial_oseltamivir_concluido') return 'ambulatorial_oseltamivir'
+        if (currentStep === 'influenza_ambulatorial_sintomaticos' || currentStep === 'influenza_ambulatorial_sintomaticos_concluido') return 'ambulatorial_sintomatico'
         if (hasSRAG) return 'srag_em_avaliacao'
         if (hasOseltamivirIndication) return 'avaliacao_oseltamivir'
         return 'avaliacao'
@@ -1299,7 +1337,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         symptoms.length > 0
           ? `Relatava ${formatClinicalList(symptoms)}.`
           : 'Os sintomas específicos não foram detalhados no registro de admissão.',
-        vitalItems.length > 0 ? `Na avaliação inicial, apresentava ${formatClinicalList(vitalItems)}.` : null,
+        influenzaVitalItems.length > 0 ? `Na avaliação inicial, apresentava ${formatClinicalList(influenzaVitalItems)}.` : null,
         influenzaPhysicalExamNarrative || null,
         severitySigns.length > 0
           ? `Foram identificados ${formatClinicalList(severitySigns)}, caracterizando sinais de gravidade e enquadramento como síndrome respiratória aguda grave.`
@@ -1328,6 +1366,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         destination === 'uti'
           ? 'Programada investigação de SRAG grave com hemograma, função renal, eletrólitos, magnésio, transaminases, bilirrubinas, PCR, gasometria arterial, lactato, coagulograma e glicemia; considerar troponina, hemoculturas e painel viral conforme indicação.'
           : null,
+        viralPanelCollected
+          ? 'Registrada coleta precoce de amostra respiratória para RT-PCR ou painel viral multiplex quando disponível, incluindo investigação de Influenza, COVID-19 e outros vírus respiratórios conforme plataforma do serviço, sem atrasar o início do tratamento.'
+          : destination === 'enfermaria' || destination === 'uti'
+            ? 'Indicar coleta precoce de amostra respiratória para RT-PCR ou painel viral multiplex quando disponível, sem atrasar oseltamivir ou suporte clínico.'
+            : null,
         destination === 'enfermaria' || destination === 'uti'
           ? 'O plano de investigação inclui radiografia de tórax. Tomografia fica reservada para radiografia inconclusiva, hipoxemia desproporcional, complicações, imunossupressão, piora sem causa definida ou suspeita de tromboembolismo pulmonar.'
           : null
@@ -1353,6 +1396,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         icuProtocolApplied
           ? 'Registrada aplicação do protocolo de estabilização da SRAG grave no pronto-socorro enquanto aguarda leito de UTI.'
           : null,
+        boardingCareApplied
+          ? 'Registrado protocolo de boarding do paciente com SRAG/Influenza, mantendo cuidados compatíveis com o nível de complexidade de destino enquanto aguarda leito.'
+          : null,
         influenzaPrescriptionItems.length > 0
           ? `Prescrição emitida: ${influenzaPrescriptionItems.join('; ')}.`
           : null,
@@ -1374,6 +1420,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           : null,
         destination === 'uti'
           ? 'Manter estabilização e monitorização contínua no pronto-socorro até a transferência efetiva para a UTI, com avaliação imediata de intubação se houver falência respiratória iminente, hipoxemia refratária, rebaixamento da consciência ou instabilidade hemodinâmica.'
+          : null,
+        boardingCareApplied
+          ? 'Durante a espera por leito, manter reavaliação frequente, monitorização adequada, oxigenoterapia escalonada conforme necessidade, controle de hidratação, profilaxias, isolamento respiratório, prevenção de deterioração e comunicação clara de critérios de piora.'
           : null,
         hasOseltamivirIndication ? 'Ajustar a dose do oseltamivir à função renal, quando aplicável.' : null,
         patientForReport.treatment.nextEvaluation ? `Reavaliação programada para ${formatDateOnly(patientForReport.treatment.nextEvaluation)}.` : null
@@ -1445,7 +1494,33 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const criteriaFromArray = (items: unknown) => Array.isArray(items) ? uniqueItems(items.map((item) => String(item))) : []
 
       const crbData = safeParse(answers.pac_crb65_triagem) as { score?: number; criteriosSelecionados?: string[] } | null
-      const physicalExamData = (safeParse(answers.pac_exame_fisico) as { exameFisico?: PhysicalExamData } | null)?.exameFisico
+      const pacPhysicalExamAnswer = safeParse(answers.pac_exame_fisico) as {
+        sinaisVitais?: {
+          temperature?: number
+          feverDays?: number
+          bloodPressure?: string
+          heartRate?: number
+          respiratoryRate?: number
+          oxygenSaturation?: number
+          glucose?: string
+        }
+        exameFisico?: PhysicalExamData
+      } | null
+      const physicalExamData = pacPhysicalExamAnswer?.exameFisico
+      const pacFlowVitalItems = (() => {
+        const vitalSigns = pacPhysicalExamAnswer?.sinaisVitais
+        if (!vitalSigns) return [] as string[]
+        return uniqueItems([
+          vitalSigns.temperature != null ? `Temperatura: ${vitalSigns.temperature} °C` : null,
+          vitalSigns.feverDays != null ? `Tempo de febre: ${vitalSigns.feverDays} dia(s)` : null,
+          vitalSigns.heartRate != null ? `Frequência cardíaca: ${vitalSigns.heartRate} bpm` : null,
+          vitalSigns.respiratoryRate != null ? `Frequência respiratória: ${vitalSigns.respiratoryRate} irpm` : null,
+          vitalSigns.bloodPressure ? `Pressão arterial: ${vitalSigns.bloodPressure} mmHg` : null,
+          vitalSigns.oxygenSaturation != null ? `Saturação de oxigênio: ${vitalSigns.oxygenSaturation}%` : null,
+          vitalSigns.glucose ? `Glicemia capilar: ${vitalSigns.glucose} mg/dL` : null
+        ])
+      })()
+      const pacVitalItems = pacFlowVitalItems.length > 0 ? pacFlowVitalItems : vitalItems
       const examRequestData = safeParse(answers.pac_solicitacao_exames) as {
         examesSelecionados?: string[]
         grupos?: Record<string, string[]>
@@ -1492,6 +1567,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const pacICUProtocolApplied = answers.pac_destino_uti === 'protocolo_pac_uti_aplicado'
         || history.includes('pac_destino_uti')
         || currentStep === 'pac_uti_protocolo_concluido'
+      const pacWaitingCareApplied = Boolean(answers.pac_cuidados_aguarda_enfermaria || answers.pac_cuidados_aguarda_uti)
+        || history.includes('pac_cuidados_aguarda_enfermaria')
+        || history.includes('pac_cuidados_aguarda_uti')
+        || currentStep === 'pac_cuidados_aguarda_enfermaria'
+        || currentStep === 'pac_cuidados_aguarda_uti'
       const destinationAnswer = getDecisionAnswer(answers.pac_destino_protocolo)
       const psiGroup = psiData?.grupo || (currentStep === 'pac_psi_baixo'
         ? 'PORT I/II'
@@ -1505,8 +1585,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         if (currentStep === 'pac_estabilizacao_seguir_sepse') return 'estabilizacao'
         if (currentStep === 'pac_internacao_limitacao') return 'limitador'
         if (destinationAnswer === 'ambulatorio' || currentStep === 'pac_destino_ambulatorial' || currentStep === 'pac_psi_baixo' || currentStep === 'pac_curb_baixo') return 'ambulatorial'
-        if (destinationAnswer === 'uti' || currentStep === 'pac_destino_uti' || currentStep === 'pac_uti_protocolo_concluido' || currentStep === 'pac_psi_alto') return 'uti'
-        if (destinationAnswer === 'enfermaria' || currentStep === 'pac_destino_enfermaria' || currentStep === 'pac_psi_intermediario' || currentStep === 'pac_curb_intermediario') return 'enfermaria'
+        if (destinationAnswer === 'uti' || currentStep === 'pac_cuidados_aguarda_uti' || currentStep === 'pac_destino_uti' || currentStep === 'pac_uti_protocolo_concluido' || currentStep === 'pac_psi_alto') return 'uti'
+        if (destinationAnswer === 'enfermaria' || currentStep === 'pac_cuidados_aguarda_enfermaria' || currentStep === 'pac_destino_enfermaria' || currentStep === 'pac_psi_intermediario' || currentStep === 'pac_curb_intermediario') return 'enfermaria'
         if (currentStep === 'pac_curb_alto') return effectiveCurbScore != null && effectiveCurbScore >= 4 ? 'uti' : 'enfermaria'
         if (atsSevere) return 'uti'
         if (effectiveCurbScore != null && effectiveCurbScore >= 3) return effectiveCurbScore >= 4 ? 'uti' : 'enfermaria'
@@ -1715,7 +1795,6 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const clinicalDataItems = uniqueItems([
         symptoms.length > 0 ? `Sintomas registrados: ${symptoms.join('; ')}.` : null,
-        vitalItems.length > 0 ? `Sinais vitais registrados: ${vitalItems.join('; ')}.` : null,
         observations.length > 0 ? `Observações clínicas: ${observations.join('; ')}.` : null
       ])
 
@@ -1747,6 +1826,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         antibioticText,
         destination === 'ambulatorial' ? 'Orientar retorno imediato em dispneia, queda de saturação, confusão, hipotensão, piora do estado geral, febre persistente, intolerância oral ou ausência de melhora clínica.' : null,
         destination === 'ambulatorial' ? 'Reavaliar em 48 a 72 horas ou antes se houver piora.' : null,
+        pacWaitingCareApplied ? 'Enquanto aguarda leito hospitalar, manter monitorização clínica, antibioticoterapia precoce, oxigenoterapia titulada, hidratação individualizada, controle de sintomas, profilaxia para tromboembolismo venoso quando não houver contraindicação e reavaliação periódica com critérios de escalonamento.' : null,
         destination === 'enfermaria' ? 'Solicitar ou revisar radiografia de tórax, hemograma, função renal, eletrólitos, marcadores inflamatórios e culturas conforme gravidade e protocolo institucional.' : null,
         destination === 'enfermaria' ? 'Escalonar para UTI se houver aumento da necessidade de oxigênio, desconforto respiratório, hipotensão, alteração do sensório, lactato elevado, choque ou falência orgânica.' : null,
         destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, necessidade de ventilação mecânica, vasopressor, SOFA e acompanhamento intensivo seriado.' : null,
@@ -1780,6 +1860,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           ? [{
               title: 'Dados Clínicos Registrados',
               items: clinicalDataItems
+            }]
+          : []),
+        ...(pacVitalItems.length > 0
+          ? [{
+              title: 'Sinais Vitais',
+              items: pacVitalItems
             }]
           : []),
         ...(physicalExamItems.length > 0

@@ -15,6 +15,7 @@ import {
   Zap,
   RotateCcw,
   Timer,
+  Thermometer,
   UserCheck,
   Pill,
   Syringe,
@@ -24,6 +25,8 @@ import {
   ScanLine,
   Clipboard,
   ClipboardCheck,
+  ZoomIn,
+  ZoomOut,
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -276,6 +279,117 @@ const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
     title: 'Protocolo BLUE',
     src: '/protocolo blue.jpeg',
     alt: 'Imagem de referência do protocolo BLUE'
+  }
+}
+
+type ZoomableImageModalProps = {
+  title: string
+  description?: string
+  src: string
+  alt: string
+  onClose: () => void
+  maxWidthClassName?: string
+}
+
+const ZoomableImageModal: React.FC<ZoomableImageModalProps> = ({
+  title,
+  description,
+  src,
+  alt,
+  onClose,
+  maxWidthClassName = 'max-w-6xl'
+}) => {
+  const [zoom, setZoom] = useState(100)
+  const canZoomOut = zoom > 75
+  const canZoomIn = zoom < 300
+
+  const imageStyle: React.CSSProperties = {
+    width: `${zoom}%`
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+      <div className={clsx('flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl', maxWidthClassName)}>
+        <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
+            <h4 className="text-lg font-extrabold text-slate-950">{title}</h4>
+            {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setZoom(value => Math.max(75, value - 25))}
+              disabled={!canZoomOut}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+              title="Diminuir zoom"
+              aria-label="Diminuir zoom"
+            >
+              <ZoomOut className="h-5 w-5" />
+            </button>
+            <span className="min-w-14 text-center text-sm font-bold tabular-nums text-slate-700">{zoom}%</span>
+            <button
+              type="button"
+              onClick={() => setZoom(value => Math.min(300, value + 25))}
+              disabled={!canZoomIn}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+              title="Aumentar zoom"
+              aria-label="Aumentar zoom"
+            >
+              <ZoomIn className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setZoom(100)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-700 transition-colors hover:bg-slate-200"
+              title="Restaurar zoom"
+              aria-label="Restaurar zoom"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+              title="Fechar"
+              aria-label="Fechar imagem"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto bg-white p-4">
+          <img
+            src={src}
+            alt={alt}
+            style={imageStyle}
+            className="mx-auto block h-auto min-w-0 rounded-xl"
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+type FlowVitalSigns = {
+  temperature?: number
+  feverDays?: number
+  bloodPressure?: string
+  heartRate?: number
+  respiratoryRate?: number
+  oxygenSaturation?: number
+  glucose?: string
+}
+
+const defaultFlowVitalSigns = (patient: EmergencyPatient): FlowVitalSigns => {
+  const vitalSigns = patient.admission?.vitalSigns || {}
+
+  return {
+    temperature: typeof vitalSigns.temperature === 'number' ? vitalSigns.temperature : undefined,
+    bloodPressure: typeof vitalSigns.bloodPressure === 'string' ? vitalSigns.bloodPressure : undefined,
+    heartRate: typeof vitalSigns.heartRate === 'number' ? vitalSigns.heartRate : undefined,
+    respiratoryRate: typeof vitalSigns.respiratoryRate === 'number' ? vitalSigns.respiratoryRate : undefined,
+    oxygenSaturation: typeof vitalSigns.oxygenSaturation === 'number' ? vitalSigns.oxygenSaturation : undefined,
+    glucose: vitalSigns.glucose != null ? String(vitalSigns.glucose) : undefined
   }
 }
 
@@ -1293,7 +1407,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [influenzaPrescriptionCopied, setInfluenzaPrescriptionCopied] = useState(false)
   const [influenzaPrescriptionGeneratedSteps, setInfluenzaPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
   const [influenzaPhysicalExam, setInfluenzaPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
+  const [influenzaVitalSigns, setInfluenzaVitalSigns] = useState<FlowVitalSigns>(() => defaultFlowVitalSigns(patient))
   const [pneumoniaPhysicalExam, setPneumoniaPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
+  const [pneumoniaVitalSigns, setPneumoniaVitalSigns] = useState<FlowVitalSigns>(() => defaultFlowVitalSigns(patient))
   const [pneumoniaPsiValues, setPneumoniaPsiValues] = useState<PneumoniaPsiValues>(() => defaultPsiValues(patient))
   const [pneumoniaCurbValues, setPneumoniaCurbValues] = useState<PneumoniaCurbValues>(() => defaultCurbValues(patient))
   const [pneumoniaComorbidities, setPneumoniaComorbidities] = useState<string[]>([])
@@ -1440,6 +1556,130 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   // DPOC States
   const [dpocSinaisGravidade, setDpocSinaisGravidade] = useState<string[]>([])
   const [dpocAnthonisen, setDpocAnthonisen] = useState<string[]>([])
+
+  const updatePneumoniaVitalSign = <K extends keyof FlowVitalSigns>(key: K, value: FlowVitalSigns[K]) => {
+    setPneumoniaVitalSigns(prev => ({ ...prev, [key]: value }))
+  }
+
+  const updateInfluenzaVitalSign = <K extends keyof FlowVitalSigns>(key: K, value: FlowVitalSigns[K]) => {
+    setInfluenzaVitalSigns(prev => ({ ...prev, [key]: value }))
+  }
+
+  const parseOptionalNumber = (value: string) => {
+    if (!value.trim()) return undefined
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+
+  const vitalBadge = (label: string, tone: 'blue' | 'blue-dark' | 'yellow' | 'orange' | 'red' | 'black') => {
+    const tones: Record<typeof tone, string> = {
+      blue: 'bg-blue-100 text-blue-700 border-blue-200',
+      'blue-dark': 'bg-blue-200 text-blue-900 border-blue-300',
+      yellow: 'bg-yellow-100 text-yellow-700 border-yellow-200',
+      orange: 'bg-orange-100 text-orange-700 border-orange-200',
+      red: 'bg-red-100 text-red-700 border-red-200',
+      black: 'bg-black text-white border-black'
+    } as Record<typeof tone, string>
+
+    return (
+      <span className={clsx('mt-2 inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold', tones[tone])}>
+        {label}
+      </span>
+    )
+  }
+
+  const classifyTemperature = (temperature?: number) => {
+    if (temperature == null || Number.isNaN(temperature)) return null
+    if (temperature < 28) return vitalBadge('Hipotermia grave', 'red')
+    if (temperature <= 31.9) return vitalBadge('Hipotermia moderada', 'orange')
+    if (temperature <= 35.9) return vitalBadge('Hipotermia leve', 'yellow')
+    if (temperature >= 36 && temperature <= 37.2) return vitalBadge('Normal', 'blue')
+    if (temperature <= 37.7) return vitalBadge('Subfebril', 'yellow')
+    if (temperature <= 40) return vitalBadge('Febre', 'orange')
+    return vitalBadge('Hipertermia', 'red')
+  }
+
+  const classifyHeartRate = (heartRate?: number) => {
+    if (heartRate == null) return null
+    if (heartRate >= 160) return vitalBadge('Taquicardia severa', 'red')
+    if (heartRate >= 131) return vitalBadge('Taquicardia moderada', 'orange')
+    if (heartRate > 100) return vitalBadge('Taquicardia leve', 'yellow')
+    if (heartRate >= 60) return vitalBadge('Normal', 'blue')
+    if (heartRate >= 50) return vitalBadge('Bradicardia leve', 'yellow')
+    if (heartRate >= 35) return vitalBadge('Bradicardia moderada', 'orange')
+    return vitalBadge('Bradicardia severa', 'red')
+  }
+
+  const classifyRespiratoryRate = (respiratoryRate?: number) => {
+    if (respiratoryRate == null) return null
+    if (respiratoryRate >= 40) return vitalBadge('Taquipneia severa', 'red')
+    if (respiratoryRate >= 31) return vitalBadge('Taquipneia moderada', 'orange')
+    if (respiratoryRate >= 21) return vitalBadge('Taquipneia leve', 'yellow')
+    if (respiratoryRate >= 14) return vitalBadge('Normal', 'blue')
+    if (respiratoryRate >= 12) return vitalBadge('Bradipneia leve', 'yellow')
+    if (respiratoryRate >= 9) return vitalBadge('Bradipneia moderada', 'orange')
+    return vitalBadge('Bradipneia severa', 'red')
+  }
+
+  const classifyOxygenSaturation = (oxygenSaturation?: number) => {
+    if (oxygenSaturation == null) return null
+    if (oxygenSaturation <= 85) return vitalBadge('Hipoxemia severa', 'red')
+    if (oxygenSaturation <= 89) return vitalBadge('Hipoxemia moderada', 'orange')
+    if (oxygenSaturation <= 94) return vitalBadge('Hipoxemia leve', 'yellow')
+    return vitalBadge('Normal', 'blue')
+  }
+
+  const calculateMeanArterialPressure = (bloodPressure?: string) => {
+    if (!bloodPressure) return undefined
+    const [systolicText, diastolicText] = bloodPressure.split('/')
+    const systolic = Number.parseInt(systolicText, 10)
+    const diastolic = Number.parseInt(diastolicText, 10)
+    if (!Number.isFinite(systolic) || !Number.isFinite(diastolic)) return undefined
+    return Math.round((systolic + 2 * diastolic) / 3)
+  }
+
+  const classifyBloodPressure = (bloodPressure?: string) => {
+    if (!bloodPressure) return null
+    const [systolicText, diastolicText] = bloodPressure.split('/')
+    const systolic = Number.parseInt(systolicText, 10)
+    const diastolic = Number.parseInt(diastolicText, 10)
+    if (!Number.isFinite(systolic) || !Number.isFinite(diastolic)) return null
+
+    if (systolic < 70 || diastolic < 49) return vitalBadge('Hipotensão severa', 'red')
+    if ((systolic >= 70 && systolic <= 84) || (diastolic >= 49 && diastolic <= 54)) return vitalBadge('Hipotensão moderada', 'orange')
+    if ((systolic >= 85 && systolic <= 99) || (diastolic >= 55 && diastolic <= 59)) return vitalBadge('Hipotensão leve', 'yellow')
+    if (systolic >= 180 || diastolic >= 110) return vitalBadge('Hipertensão grave', 'red')
+    if ((systolic >= 160 && systolic <= 179) || (diastolic >= 100 && diastolic <= 109)) return vitalBadge('Hipertensão moderada', 'orange')
+    if ((systolic >= 140 && systolic <= 159) || (diastolic >= 90 && diastolic <= 99)) return vitalBadge('Hipertensão leve', 'yellow')
+    if ((systolic >= 120 && systolic <= 139) || (diastolic >= 80 && diastolic <= 89)) return vitalBadge('PA aumentada', 'blue-dark')
+    if (systolic >= 100 && systolic <= 119 && diastolic >= 60 && diastolic <= 79) return vitalBadge('PA normal', 'blue')
+    return null
+  }
+
+  const classifyGlucoseValue = (glucose?: string) => {
+    if (!glucose) return null
+    const normalized = glucose.trim().toUpperCase()
+    if (normalized === 'HI') return vitalBadge('Hiperglicemia extrema', 'black')
+    if (normalized === 'LO') return vitalBadge('Hipoglicemia extrema', 'black')
+    const value = Number.parseFloat(normalized)
+    if (!Number.isFinite(value)) return null
+    if (value > 200) return vitalBadge('Hiperglicemia severa', 'red')
+    if (value >= 151) return vitalBadge('Hiperglicemia moderada', 'orange')
+    if (value >= 126) return vitalBadge('Hiperglicemia leve', 'yellow')
+    if (value >= 100) return vitalBadge('Glicemia elevada', 'blue-dark')
+    if (value >= 75) return vitalBadge('Glicemia normal', 'blue')
+    if (value >= 60) return vitalBadge('Hipoglicemia leve', 'yellow')
+    if (value >= 45) return vitalBadge('Hipoglicemia moderada', 'orange')
+    return vitalBadge('Hipoglicemia severa', 'red')
+  }
+
+  const formatBloodPressureInput = (value: string) => {
+    const digits = value.replace(/[^\d]/g, '').slice(0, 6)
+    if (digits.length <= 3) return digits
+    const firstThree = Number.parseInt(digits.slice(0, 3), 10)
+    const systolicLength = firstThree > 299 ? 2 : 3
+    return `${digits.slice(0, systolicLength)}/${digits.slice(systolicLength)}`
+  }
 
   // Carregar estado do paciente na inicialização
   useEffect(() => {
@@ -1593,10 +1833,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     const influenzaPhysicalExamAnswer = JSON.stringify({
       decision: value || nextStep,
+      sinaisVitais: influenzaVitalSigns,
       exameFisico: influenzaPhysicalExam
     })
     const pneumoniaPhysicalExamAnswer = JSON.stringify({
       decision: value || nextStep,
+      sinaisVitais: pneumoniaVitalSigns,
       exameFisico: pneumoniaPhysicalExam
     })
     const pneumoniaCrbProtocolAnswer = JSON.stringify({
@@ -2050,7 +2292,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaPrescriptionCopied(false)
     setInfluenzaPrescriptionGeneratedSteps({})
     setInfluenzaPhysicalExam(defaultPneumoniaPhysicalExam())
+    setInfluenzaVitalSigns(defaultFlowVitalSigns(patient))
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
+    setPneumoniaVitalSigns(defaultFlowVitalSigns(patient))
     setPneumoniaCrbCriteria([])
     setPneumoniaSelectedExams(pneumoniaInitialLabPackage)
     setPneumoniaRxInfoOpen(false)
@@ -2329,7 +2573,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_fatores_risco'
   const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_criterios_uti'
   const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_exame_fisico'
-  const isInfluenzaAmbulatoryFinalStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
+  const isInfluenzaAmbulatoryConductStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
+  const isInfluenzaAmbulatoryFinalStep = isInfluenzaAmbulatoryConductStep
   const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_psi'
   const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_curb65'
   const isPneumoniaIntroStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_inicio'
@@ -2342,6 +2587,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaSmartCopStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStepData?.id || '')
   const isPneumoniaAmbulatoryConductStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_conduta_ambulatorial'
   const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep
+  const currentRespiratoryVitalSigns = isInfluenzaPhysicalExamStep ? influenzaVitalSigns : pneumoniaVitalSigns
+  const updateCurrentRespiratoryVitalSign = isInfluenzaPhysicalExamStep ? updateInfluenzaVitalSign : updatePneumoniaVitalSign
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
   const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
   const isMonoartritePrescriptionFinalStep = flowchart.id === 'monoartrite' && ['mono_gota_tratamento', 'mono_artrite_septica_internacao'].includes(currentStepData?.id || '')
@@ -2393,6 +2640,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : 'moderada_oral'
   const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
   const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
+  const savedPneumoniaCurbScore = useMemo(() => {
+    const raw = answers.pac_curb65_protocolo || answers.pac_calcular_curb65
+    if (!raw) return undefined
+    try {
+      const parsed = JSON.parse(raw) as { score?: unknown }
+      return typeof parsed.score === 'number' ? parsed.score : undefined
+    } catch {
+      const match = String(raw).match(/curb65_(\d+)/)
+      return match ? Number(match[1]) : undefined
+    }
+  }, [answers.pac_calcular_curb65, answers.pac_curb65_protocolo])
+  const effectivePneumoniaCurbScore = savedPneumoniaCurbScore ?? pneumoniaCurbResult.score
   const pneumoniaCrbScore = pneumoniaCrbCriteria.length
   const pneumoniaCrbInterpretation = pneumoniaCrbScore === 0
     ? 'Baixo risco'
@@ -2400,14 +2659,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       ? 'Considerar avaliação hospitalar'
       : 'Alto risco - internação recomendada'
   const pneumoniaAtsIdsaSevere = pneumoniaAtsIdsaMajorCriteria.length > 0 || pneumoniaAtsIdsaMinorCriteria.length >= 3
+  const pneumoniaCurbIndicatesHospitalization = effectivePneumoniaCurbScore >= 2
   const pneumoniaAtsIdsaNextStep = pneumoniaAtsIdsaSevere
     ? 'pac_drip_uti'
     : pneumoniaAtsIdsaMinorCriteria.length === 2
       ? 'pac_drip_enfermaria'
-      : 'pac_destino_protocolo'
+      : pneumoniaCurbIndicatesHospitalization
+        ? 'pac_drip_enfermaria'
+        : 'pac_destino_protocolo'
   const pneumoniaAtsIdsaActionLabel = pneumoniaAtsIdsaSevere
     ? 'Seguir para UTI'
-    : pneumoniaAtsIdsaMinorCriteria.length === 2
+    : pneumoniaAtsIdsaMinorCriteria.length === 2 || pneumoniaCurbIndicatesHospitalization
       ? 'Seguir para enfermaria'
       : 'Definir destino'
   const pneumoniaSmartCopScore = pneumoniaSmartCopCriteria.reduce((total, label) => {
@@ -2455,6 +2717,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : pneumoniaSoarScore === 2
       ? 'Risco intermediário'
       : 'Alto risco de mortalidade hospitalar'
+  const influenzaWorseningSuggestsSRAG = influenzaWorseningSigns.some((item) =>
+    item.includes('Alterações do estado mental') || item.includes('Desidratação')
+  )
   const anaphylaxisAdrenalineDose = useMemo(() => calculateAnaphylaxisAdrenalineDose(patient), [patient])
   const pancreatitisBisapResult = useMemo(() => calculatePancreatitisBisap(pancreatitisBisapValues), [pancreatitisBisapValues])
   const pancreatitisMarshallResult = useMemo(() => calculatePancreatitisMarshall(pancreatitisMarshallValues), [pancreatitisMarshallValues])
@@ -4654,10 +4919,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const saved = answers[currentStep]
     if (!saved) {
       setInfluenzaPhysicalExam(defaultPneumoniaPhysicalExam())
+      setInfluenzaVitalSigns(defaultFlowVitalSigns(patient))
       return
     }
     try {
       const parsed = JSON.parse(saved)
+      if (parsed?.sinaisVitais) {
+        setInfluenzaVitalSigns({
+          ...defaultFlowVitalSigns(patient),
+          ...parsed.sinaisVitais
+        })
+      }
       if (parsed?.exameFisico) {
         setInfluenzaPhysicalExam({
           ...defaultPneumoniaPhysicalExam(),
@@ -4666,18 +4938,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       }
     } catch {
       setInfluenzaPhysicalExam(defaultPneumoniaPhysicalExam())
+      setInfluenzaVitalSigns(defaultFlowVitalSigns(patient))
     }
-  }, [answers, currentStep, isInfluenzaPhysicalExamStep])
+  }, [answers, currentStep, isInfluenzaPhysicalExamStep, patient])
 
   useEffect(() => {
     if (!isPneumoniaPhysicalExamStep) return
     const saved = answers[currentStep]
     if (!saved) {
       setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
+      setPneumoniaVitalSigns(defaultFlowVitalSigns(patient))
       return
     }
     try {
       const parsed = JSON.parse(saved)
+      if (parsed?.sinaisVitais) {
+        setPneumoniaVitalSigns({
+          ...defaultFlowVitalSigns(patient),
+          ...parsed.sinaisVitais
+        })
+      }
       if (parsed?.exameFisico) {
         setPneumoniaPhysicalExam({
           ...defaultPneumoniaPhysicalExam(),
@@ -4686,8 +4966,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       }
     } catch {
       setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
+      setPneumoniaVitalSigns(defaultFlowVitalSigns(patient))
     }
-  }, [answers, currentStep, isPneumoniaPhysicalExamStep])
+  }, [answers, currentStep, isPneumoniaPhysicalExamStep, patient])
 
   useEffect(() => {
     if (!isPneumoniaExamRequestStep) return
@@ -5931,9 +6212,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           <Stethoscope className="h-6 w-6" />
                         </span>
                         <div>
-                          <h3 className="text-xl font-extrabold">Exame físico antes da estratificação</h3>
+                          <h3 className="text-xl font-extrabold">
+                            {isPneumoniaPhysicalExamStep ? 'Sinais vitais e exame físico antes do CRB-65' : 'Sinais vitais e exame físico antes da classificação de SRAG'}
+                          </h3>
                           <p className="mt-1 max-w-4xl text-sm leading-relaxed text-sky-100">
-                            Registre o estado geral e os sistemas examinados. Descreva especialmente padrão respiratório, ausculta pulmonar, perfusão, nível de consciência e sinais de esforço respiratório.
+                            Registre primeiro os sinais vitais completos e, em seguida, estado geral e sistemas examinados. Descreva especialmente padrão respiratório, ausculta pulmonar, perfusão, nível de consciência e sinais de esforço respiratório.
                           </p>
                         </div>
                       </div>
@@ -5953,6 +6236,159 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </div>
                     </div>
                   </div>
+
+                  {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep) && (
+                    <div className="overflow-hidden rounded-2xl border border-sky-300 bg-white shadow-sm ring-1 ring-sky-100">
+                      <div className="border-b border-sky-200 bg-sky-50 px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100 text-sky-700">
+                            <Activity className="h-5 w-5" />
+                          </span>
+                          <div>
+                            <h4 className="text-lg font-extrabold text-slate-950">Sinais vitais obrigatórios</h4>
+                            <p className="text-sm text-slate-600">
+                              {isInfluenzaPhysicalExamStep ? 'Esses dados entram no resumo médico e orientam a classificação de SRAG.' : 'Registre os dados antes de iniciar o CRB-65.'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid gap-5 p-5 md:grid-cols-2">
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Temperatura (°C)
+                          </label>
+                          <div className="relative">
+                            <Thermometer className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="number"
+                              value={currentRespiratoryVitalSigns.temperature ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('temperature', parseOptionalNumber(event.target.value))}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 38.5"
+                              step="0.1"
+                              min="30"
+                              max="45"
+                            />
+                          </div>
+                          {classifyTemperature(currentRespiratoryVitalSigns.temperature)}
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Há quantos dias de febre?
+                          </label>
+                          <div className="relative">
+                            <Timer className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="number"
+                              value={currentRespiratoryVitalSigns.feverDays ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('feverDays', parseOptionalNumber(event.target.value))}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 3"
+                              min="0"
+                              max="30"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Pressão arterial (mmHg)
+                          </label>
+                          <div className="relative">
+                            <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="text"
+                              value={currentRespiratoryVitalSigns.bloodPressure ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('bloodPressure', formatBloodPressureInput(event.target.value))}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 120/80"
+                              inputMode="numeric"
+                              maxLength={7}
+                            />
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {classifyBloodPressure(currentRespiratoryVitalSigns.bloodPressure)}
+                            {calculateMeanArterialPressure(currentRespiratoryVitalSigns.bloodPressure) != null && vitalBadge(`PAM ≈ ${calculateMeanArterialPressure(currentRespiratoryVitalSigns.bloodPressure)} mmHg`, 'blue-dark')}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Frequência cardíaca (bpm)
+                          </label>
+                          <div className="relative">
+                            <Heart className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="number"
+                              value={currentRespiratoryVitalSigns.heartRate ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('heartRate', parseOptionalNumber(event.target.value))}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 96"
+                              min="30"
+                              max="220"
+                            />
+                          </div>
+                          {classifyHeartRate(currentRespiratoryVitalSigns.heartRate)}
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Frequência respiratória (irpm)
+                          </label>
+                          <div className="relative">
+                            <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="number"
+                              value={currentRespiratoryVitalSigns.respiratoryRate ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('respiratoryRate', parseOptionalNumber(event.target.value))}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 24"
+                              min="5"
+                              max="80"
+                            />
+                          </div>
+                          {classifyRespiratoryRate(currentRespiratoryVitalSigns.respiratoryRate)}
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Saturação de O2 (SpO2 %)
+                          </label>
+                          <div className="relative">
+                            <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="number"
+                              value={currentRespiratoryVitalSigns.oxygenSaturation ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('oxygenSaturation', parseOptionalNumber(event.target.value))}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 94"
+                              min="50"
+                              max="100"
+                            />
+                          </div>
+                          {classifyOxygenSaturation(currentRespiratoryVitalSigns.oxygenSaturation)}
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
+                            Glicemia capilar (mg/dL)
+                          </label>
+                          <div className="relative">
+                            <Activity className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                            <input
+                              type="text"
+                              value={currentRespiratoryVitalSigns.glucose ?? ''}
+                              onChange={(event) => updateCurrentRespiratoryVitalSign('glucose', event.target.value)}
+                              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-4 pl-12 pr-5 font-medium text-slate-800 transition-all focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20"
+                              placeholder="Ex: 95 ou LO/HI"
+                            />
+                          </div>
+                          {classifyGlucoseValue(currentRespiratoryVitalSigns.glucose)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <PhysicalExamForm
                     value={isInfluenzaPhysicalExamStep ? influenzaPhysicalExam : pneumoniaPhysicalExam}
@@ -6849,6 +7285,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       ? 'Três ou mais critérios menores, ou ao menos um critério maior: encaminhar diretamente para UTI.'
                       : pneumoniaAtsIdsaMinorCriteria.length === 2
                         ? 'Dois critérios menores: encaminhar diretamente para internação em enfermaria.'
+                        : pneumoniaCurbIndicatesHospitalization
+                          ? 'CURB-65 já indicou internação hospitalar; com zero ou um critério menor no ATS/IDSA e nenhum critério maior, seguir para enfermaria.'
                         : 'Com zero ou um critério menor e nenhum critério maior, definir o destino conforme os demais escores e o julgamento clínico.'}
                   </div>
                   <div className="mt-4 flex justify-end">
@@ -6861,6 +7299,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           ? 'ats_idsa_uti'
                           : pneumoniaAtsIdsaMinorCriteria.length === 2
                             ? 'ats_idsa_enfermaria'
+                            : pneumoniaCurbIndicatesHospitalization
+                              ? 'ats_idsa_enfermaria_por_curb65'
                             : 'ats_idsa_definir_destino'
                       )}
                       className={clsx(
@@ -6973,10 +7413,10 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <motion.button
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      onClick={() => handleAnswer(currentStepData.id === 'pac_smartcop_uti' ? 'pac_destino_uti' : 'pac_destino_enfermaria', `smartcop_${pneumoniaSmartCopScore}`)}
+                      onClick={() => handleAnswer(currentStepData.id === 'pac_smartcop_uti' ? 'pac_cuidados_aguarda_uti' : 'pac_cuidados_aguarda_enfermaria', `smartcop_${pneumoniaSmartCopScore}`)}
                       className="rounded-xl bg-orange-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-orange-700"
                     >
-                      Finalizar protocolo
+                      Seguir para cuidados enquanto aguarda leito
                     </motion.button>
                   </div>
                 </div>
@@ -8360,16 +8800,27 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
                   <div className={clsx(
                     'mt-4 rounded-xl border p-4 text-sm',
-                    influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                    influenzaWorseningSuggestsSRAG
+                      ? 'border-red-200 bg-red-50 text-red-900'
+                      : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
                       ? 'border-amber-200 bg-amber-50 text-amber-900'
                       : 'border-emerald-200 bg-emerald-50 text-emerald-900'
                   )}>
-                    {influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                    {influenzaWorseningSuggestsSRAG
+                      ? 'Há sinal de piora com potencial de gravidade: reavaliar como possível SRAG antes de decidir alta ambulatorial.'
+                      : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
                       ? 'Há indicação de oseltamivir em manejo ambulatorial, com retorno precoce e vigilância mais estreita.'
                       : 'Sem fator de risco ou piora clínica registrados: seguir com manejo sintomático ambulatorial.'}
                   </div>
 
-                  {influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0 ? (
+                  {influenzaWorseningSuggestsSRAG ? (
+                    <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm leading-relaxed text-red-950">
+                      <h5 className="font-bold text-red-950">Antes da alta, reclassificar gravidade</h5>
+                      <p className="mt-2">
+                        Alteração do estado mental ou desidratação relevante pode representar deterioração sistêmica. O fluxo deve voltar para SRAG para decidir internação, enfermaria ou UTI conforme sinais clínicos.
+                      </p>
+                    </div>
+                  ) : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0 ? (
                     <div className="mt-4 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-relaxed text-sky-950">
                       <h5 className="font-bold text-sky-950">Quando pedir exame de imagem?</h5>
                       <p className="mt-2">
@@ -8386,21 +8837,29 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleAnswer(
-                        influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                        influenzaWorseningSuggestsSRAG
+                          ? 'influenza_sinais_gravidade'
+                          : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
                           ? 'influenza_ambulatorial_oseltamivir'
                           : 'influenza_ambulatorial_sintomaticos',
-                        influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                        influenzaWorseningSuggestsSRAG
+                          ? 'reavaliar_srag_por_piora'
+                          : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
                           ? 'ambulatorial_oseltamivir'
                           : 'ambulatorial_sintomaticos'
                       )}
                       className={clsx(
                         'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
-                        influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                        influenzaWorseningSuggestsSRAG
+                          ? 'bg-red-600 hover:bg-red-700'
+                          : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
                           ? 'bg-amber-600 hover:bg-amber-700'
                           : 'bg-emerald-600 hover:bg-emerald-700'
                       )}
                     >
-                      {influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
+                      {influenzaWorseningSuggestsSRAG
+                        ? 'Reavaliar como possível SRAG'
+                        : influenzaRiskFactors.length > 0 || influenzaWorseningSigns.length > 0
                         ? 'Indicar oseltamivir ambulatorial'
                         : 'Seguir com tratamento sintomático'}
                     </motion.button>
@@ -8476,7 +8935,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleAnswer(
-                        influenzaICUCriteria.length > 0 ? 'influenza_internacao_uti' : 'influenza_internacao_enfermaria',
+                        influenzaICUCriteria.length > 0 ? 'influenza_painel_viral_uti' : 'influenza_painel_viral_enfermaria',
                         influenzaICUCriteria.length > 0 ? 'uti' : 'enfermaria'
                       )}
                       className={clsx(
@@ -11365,32 +11824,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {tvpOtherLocationsImageOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-                  <div className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                    <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                      <div>
-                        <h4 className="text-lg font-extrabold text-slate-950">Outras localizações de trombose venosa</h4>
-                        <p className="mt-1 text-sm text-slate-600">Imagem de referência para territórios além dos membros inferiores.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setTVPOtherLocationsImageOpen(false)}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
-                        title="Fechar"
-                        aria-label="Fechar imagem"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div className="overflow-auto bg-white p-4">
-                      <img
-                        src="/outras%20localidades.png"
-                        alt="Outras localizações de trombose venosa"
-                        className="mx-auto block h-auto max-w-none rounded-xl"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <ZoomableImageModal
+                  title="Outras localizações de trombose venosa"
+                  description="Imagem de referência para territórios além dos membros inferiores."
+                  src="/outras%20localidades.png"
+                  alt="Outras localizações de trombose venosa"
+                  onClose={() => setTVPOtherLocationsImageOpen(false)}
+                  maxWidthClassName="max-w-6xl"
+                />
               )}
 
               {tvpPocusInfoOpen && (
@@ -11536,7 +11977,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         ? [tvpAlertInterruptionOption]
                         : isBellTreatmentStep
                           ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
-                        : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && pneumoniaAtsIdsaSevere
+                        : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
                 if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
@@ -11616,28 +12057,70 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {isInfluenzaAmbulatoryFinalStep && (
-                <div className="mt-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-900">
-                        Prescrição ambulatorial da influenza
-                      </h4>
-                      <p className="mt-1 text-sm text-cyan-900">
-                        Gere a prescrição para visualizar, copiar e também deixar registrada no receituário do dashboard.
-                      </p>
+                <div className="mt-6 space-y-4">
+                  <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-900">
+                          Prescrição ambulatorial da influenza
+                        </h4>
+                        <p className="mt-1 text-sm text-cyan-900">
+                          Gere a prescrição para visualizar, copiar e também deixar registrada no receituário do dashboard antes de finalizar.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleOpenInfluenzaPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          hasInfluenzaPrescriptionForCurrentStep
+                            ? 'border border-cyan-300 bg-white text-cyan-800 hover:bg-cyan-100'
+                            : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                        )}
+                      >
+                        {hasInfluenzaPrescriptionForCurrentStep ? 'Ver prescrição' : 'Gerar prescrição'}
+                      </button>
                     </div>
-                    <button
+                  </div>
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-slate-800">Orientações registradas</h4>
+                    <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                      <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                        <strong>Cuidados domiciliares</strong>
+                        <p className="mt-1">Hidratação, alimentação conforme tolerância, repouso relativo, controle de febre/dor e higiene nasal.</p>
+                      </div>
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                        <strong>Retorno imediato</strong>
+                        <p className="mt-1">Dispneia, queda de saturação, confusão, sonolência excessiva, desidratação, vômitos persistentes, febre persistente ou piora do estado geral.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <motion.button
                       type="button"
-                      onClick={handleOpenInfluenzaPrescription}
-                      className={clsx(
-                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
-                        hasInfluenzaPrescriptionForCurrentStep
-                          ? 'border border-cyan-300 bg-white text-cyan-800 hover:bg-cyan-100'
-                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
+                      disabled={!hasInfluenzaPrescriptionForCurrentStep}
+                      onClick={() => handleAnswer(
+                        currentStepData.id === 'influenza_ambulatorial_oseltamivir'
+                          ? 'influenza_ambulatorial_oseltamivir_concluido'
+                          : 'influenza_ambulatorial_sintomaticos_concluido',
+                        currentStepData.id === 'influenza_ambulatorial_oseltamivir'
+                          ? 'alta_ambulatorial_oseltamivir_prescrita'
+                          : 'alta_ambulatorial_sintomatica_prescrita'
                       )}
+                      className={clsx(
+                        'inline-flex w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-colors sm:w-auto',
+                        hasInfluenzaPrescriptionForCurrentStep
+                          ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                          : 'cursor-not-allowed bg-slate-200 text-slate-500'
+                      )}
+                      whileHover={hasInfluenzaPrescriptionForCurrentStep ? { scale: 1.02 } : {}}
+                      whileTap={hasInfluenzaPrescriptionForCurrentStep ? { scale: 0.98 } : {}}
                     >
-                      {hasInfluenzaPrescriptionForCurrentStep ? 'Prescrição' : 'Gerar prescrição'}
-                    </button>
+                      Finalizar atendimento ambulatorial
+                      <CheckCircle className="h-4 w-4" />
+                    </motion.button>
                   </div>
                 </div>
               )}
@@ -12458,28 +12941,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
         )}
 
         {pneumoniaRxImageOpen && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-              <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                <h4 className="text-lg font-extrabold text-slate-950">RX de Tórax</h4>
-                <button
-                  type="button"
-                  onClick={() => setPneumoniaRxImageOpen(false)}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
-                  title="Fechar"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="overflow-y-auto bg-slate-950 p-4">
-                <img
-                  src="/rx.jpeg"
-                  alt="Imagem de referência de RX de tórax"
-                  className="mx-auto max-h-[72vh] w-auto max-w-full rounded-xl bg-white object-contain"
-                />
-              </div>
-            </div>
-          </div>
+          <ZoomableImageModal
+            title="RX de Tórax"
+            src="/rx.jpeg"
+            alt="Imagem de referência de RX de tórax"
+            onClose={() => setPneumoniaRxImageOpen(false)}
+            maxWidthClassName="max-w-5xl"
+          />
         )}
 
         {pneumoniaCtInfoOpen && (
@@ -12538,28 +13006,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
         )}
 
         {pneumoniaReferenceImage && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-            <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-              <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                <h4 className="text-lg font-extrabold text-slate-950">{PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].title}</h4>
-                <button
-                  type="button"
-                  onClick={() => setPneumoniaReferenceImage(null)}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
-                  title="Fechar"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="overflow-auto bg-white p-4">
-                <img
-                  src={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].src}
-                  alt={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].alt}
-                  className="mx-auto block h-auto max-w-none rounded-xl"
-                />
-              </div>
-            </div>
-          </div>
+          <ZoomableImageModal
+            title={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].title}
+            src={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].src}
+            alt={PNEUMONIA_REFERENCE_IMAGES[pneumoniaReferenceImage].alt}
+            onClose={() => setPneumoniaReferenceImage(null)}
+            maxWidthClassName="max-w-5xl"
+          />
         )}
 
         {/* Removed redundant bottom navigation */}
