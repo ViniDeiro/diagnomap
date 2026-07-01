@@ -449,6 +449,214 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       ...(patientForReport.treatment.observations || [])
     ])
 
+    if (flowId === 'atendimento_antirrabico') {
+      const contactAnswer = answers.raiva_tipo_contato
+      const batAnswer = answers.raiva_indireto_morcego
+      const speciesAnswer = answers.raiva_especie
+      const observationAnswer = answers.raiva_cao_gato_observavel
+      const animalEvolutionAnswer = answers.raiva_observacao_10_dias
+      const severityAnswer = answers.raiva_gravidade
+      const finalStep = currentStep || history[history.length - 1] || ''
+      const vaccineAndSerum = finalStep === 'raiva_vacina_soro'
+      const vaccineOnly = finalStep === 'raiva_vacina'
+      const noProphylaxis = finalStep === 'raiva_sem_profilaxia'
+
+      const speciesLabel: Record<string, string> = {
+        cao_gato: 'cão ou gato',
+        mamifero_domestico: 'mamífero doméstico de interesse econômico',
+        animal_silvestre: 'animal silvestre'
+      }
+      const exposureDescription = contactAnswer === 'contato_indireto'
+        ? `Foi caracterizado contato indireto${batAnswer === 'morcego' ? ' envolvendo morcego' : ' com animal não quiróptero'}, sem mordedura ou arranhadura registrada no fluxo.`
+        : `Foi caracterizada exposição direta ou potencialmente direta a ${speciesLabel[speciesAnswer] || 'animal'}, com risco de inoculação viral por lesão de pele ou mucosa.`
+      const animalAssessment = speciesAnswer === 'cao_gato'
+        ? observationAnswer === 'observavel_sadio'
+          ? animalEvolutionAnswer === 'vivo_saudavel'
+            ? 'O cão/gato encontrava-se sem sinais sugestivos de raiva, foi mantido em observação por 10 dias e permaneceu vivo e saudável durante o período.'
+            : 'O cão/gato era inicialmente observável, porém desapareceu, morreu ou apresentou sinais sugestivos de raiva durante o acompanhamento.'
+          : 'O cão/gato não era passível de observação por 10 dias ou apresentava sinais clínicos sugestivos de raiva.'
+        : speciesAnswer
+          ? `O animal foi classificado como ${speciesLabel[speciesAnswer] || 'animal de risco epidemiológico'}.`
+          : batAnswer === 'morcego'
+            ? 'Houve envolvimento de morcego, situação considerada de risco para exposição não percebida.'
+            : 'Não houve identificação de animal com indicação de profilaxia antirrábica no percurso registrado.'
+      const severityDescription = severityAnswer === 'grave'
+        ? 'O acidente foi classificado como grave em razão da localização, profundidade, multiplicidade ou extensão da exposição selecionada no protocolo.'
+        : severityAnswer === 'leve'
+          ? 'O acidente foi classificado como leve, compatível com lesão superficial fora de mãos, pés, segmento cefálico e mucosas.'
+          : 'A classificação entre acidente leve e grave não foi necessária para a conduta final deste percurso.'
+      const outcomeDescription = vaccineAndSerum
+        ? 'Indicada profilaxia pós-exposição com vacina antirrábica nos dias 0, 3, 7 e 14, associada a soro ou imunoglobulina antirrábica.'
+        : vaccineOnly
+          ? 'Indicada profilaxia pós-exposição com vacina antirrábica nos dias 0, 3, 7 e 14, sem indicação de soro neste percurso.'
+          : noProphylaxis
+            ? 'Não houve indicação de vacina ou soro antirrábico após a avaliação epidemiológica registrada.'
+            : 'Avaliação antirrábica ainda em andamento, sem conduta final registrada.'
+      const serumDoseItems = vaccineAndSerum && typeof patientForReport.weight === 'number' && patientForReport.weight > 0
+        ? [
+            `SAR (40 UI/kg): dose total calculada de ${(patientForReport.weight * 40).toLocaleString('pt-BR')} UI.`,
+            `IGHAR (20 UI/kg): dose total calculada de ${(patientForReport.weight * 20).toLocaleString('pt-BR')} UI.`
+          ]
+        : vaccineAndSerum
+          ? ['Peso não registrado; calcular SAR a 40 UI/kg ou IGHAR a 20 UI/kg antes da administração.']
+          : []
+
+      return {
+        title: 'PRONTUÁRIO MÉDICO – MORDEDURA',
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'História da Exposição',
+            text: `${exposureDescription} ${animalAssessment}`
+          },
+          {
+            title: 'Avaliação de Risco',
+            text: severityDescription
+          },
+          {
+            title: 'Cuidados Realizados e Segurança',
+            items: [
+              'Orientada lavagem imediata e abundante do ferimento com água corrente e sabão.',
+              'Avaliada necessidade de profilaxia antitetânica e antibioticoterapia conforme características da lesão.',
+              'Evitar sutura; quando indispensável, realizar após limpeza adequada e infiltração do imunobiológico, se indicado.',
+              'Exposição de notificação compulsória: registrar o atendimento no SINAN.'
+            ]
+          },
+          {
+            title: 'Conduta Antirrábica',
+            text: outcomeDescription,
+            items: serumDoseItems.length > 0
+              ? [...serumDoseItems, 'Infiltrar o máximo possível do soro/imunoglobulina ao redor e no interior das lesões; aplicar eventual restante por via IM, em sítio distinto da vacina.']
+              : undefined
+          },
+          {
+            title: 'Plano e Orientações',
+            items: uniqueItems([
+              vaccineOnly || vaccineAndSerum ? 'Registrar a dose do dia 0 e agendar as doses subsequentes nos dias 3, 7 e 14.' : null,
+              vaccineAndSerum ? 'Administrar soro/imunoglobulina preferencialmente no dia 0 e, se indisponível, até o 7º dia após a primeira dose vacinal.' : null,
+              speciesAnswer === 'cao_gato' && observationAnswer === 'observavel_sadio' ? 'Manter ou documentar observação do animal por 10 dias a partir da agressão.' : null,
+              'Reavaliar a conduta em caso de tratamento antirrábico prévio, imunossupressão ou mudança da condição epidemiológica do animal.',
+              'Orientado retorno imediato diante de sinais de infecção local, reação ao imunobiológico ou nova informação sobre adoecimento, morte ou desaparecimento do animal.'
+            ])
+          }
+        ]
+      }
+    }
+
+    if (flowId === 'itu') {
+      const presentation = answers.itu_apresentacao
+      const cystitisProfile = answers.itu_cistite_complicadores
+      const bacteriuriaDecision = answers.itu_bacteriuria_excecoes
+      const sepsisDecision = answers.itu_pielo_sepse
+      const admissionDecision = answers.itu_criterios_internacao
+      const ambulatoryAntibiotic = answers.itu_antibiotico_ambulatorial
+      const hospitalAntibiotic = answers.itu_antibiotico_hospitalar
+      const cystitisAntibiotic = answers.itu_cistite_antibiotico
+      const reevaluation = answers.itu_reavaliacao_ambulatorial
+      const dischargeDecision = answers.itu_criterios_alta
+
+      const antibioticLabels: Record<string, string> = {
+        fosfomicina: 'fosfomicina trometamol 3 g VO, dose única',
+        nitrofurantoina: 'nitrofurantoína 100 mg VO de 6/6 horas por 5 dias',
+        cefuroxima: 'cefuroxima 250 mg VO de 12/12 horas por 5 dias',
+        sulfametoxazol_trimetoprim: 'sulfametoxazol-trimetoprim 800/160 mg VO de 12/12 horas por 3 dias',
+        ciprofloxacino_vo: 'ciprofloxacino 500 mg VO de 12/12 horas por 7 dias',
+        levofloxacino_vo: 'levofloxacino 750 mg VO uma vez ao dia por 5 dias',
+        amoxicilina_clavulanato_vo: 'amoxicilina-clavulanato 875/125 mg VO de 12/12 horas por 7 dias',
+        ceftriaxona_ev: 'ceftriaxona 1 g EV uma vez ao dia',
+        ciprofloxacino_ev: 'ciprofloxacino 400 mg EV de 12/12 horas',
+        piperacilina_tazobactam: 'piperacilina-tazobactam 4,5 g EV de 6/6 horas',
+        meropenem: 'meropenem 1 g EV de 8/8 horas'
+      }
+      const chosenAntibiotic = antibioticLabels[hospitalAntibiotic || ambulatoryAntibiotic || cystitisAntibiotic] || ''
+      const isSepsis = sepsisDecision === 'sepse'
+        || history.includes('itu_estabilizacao_sepse')
+        || currentStep === 'itu_sepse_encaminhada'
+      const isHospital = admissionDecision === 'internar'
+        || reevaluation === 'falha_ambulatorial'
+        || history.includes('itu_antibiotico_hospitalar')
+        || ['itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar'].includes(currentStep)
+      const isPyelonephritis = presentation === 'pielonefrite'
+        || cystitisProfile === 'possivel_pielonefrite'
+        || history.includes('itu_pielo_sepse')
+      const isAsymptomaticBacteriuria = presentation === 'bacteriuria_assintomatica'
+      const diagnosis = isSepsis
+        ? 'Pielonefrite/infecção urinária complicada com suspeita de sepse de foco urinário.'
+        : isPyelonephritis
+          ? `Pielonefrite aguda${isHospital ? ' com indicação de tratamento hospitalar' : ' em manejo ambulatorial assistido'}.`
+          : isAsymptomaticBacteriuria
+            ? 'Bacteriúria assintomática em avaliação de indicação específica de tratamento.'
+            : 'Cistite aguda não complicada, sem sinais clínicos atuais de acometimento do trato urinário superior.'
+      const clinicalNarrative = isPyelonephritis
+        ? 'Paciente avaliado por quadro compatível com infecção do trato urinário superior, apresentando febre/calafrios, dor lombar ou em flanco, punho-percussão lombar dolorosa, náuseas ou vômitos conforme dados selecionados no fluxo. Foram pesquisados sinais de sepse, intolerância oral, obstrução e demais critérios de internação.'
+        : isAsymptomaticBacteriuria
+          ? `Urocultura/bacteriúria identificada sem sintomas urinários estruturados. ${bacteriuriaDecision === 'grupo_especial' ? 'Paciente enquadrado em situação que exige protocolo específico e tratamento guiado por cultura.' : 'Sem indicação registrada para antibioticoterapia.'}`
+          : 'Paciente com sintomas de trato urinário inferior compatíveis com cistite, como disúria, polaciúria, urgência urinária ou dor suprapúbica, sem febre, dor lombar ou repercussão sistêmica registrada.'
+
+      return {
+        title: 'PRONTUÁRIO MÉDICO – INFECÇÃO DO TRATO URINÁRIO',
+        sections: [
+          {
+            title: 'Identificação do Paciente',
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}.`
+          },
+          {
+            title: 'Impressão Diagnóstica',
+            text: diagnosis
+          },
+          {
+            title: 'História Clínica',
+            text: clinicalNarrative
+          },
+          {
+            title: 'Sinais Vitais e Exame Físico',
+            items: vitalItems.length > 0 ? vitalItems : ['Sinais vitais não estruturados no sistema. Correlacionar com avaliação clínica registrada no atendimento.']
+          },
+          {
+            title: 'Investigação',
+            items: isPyelonephritis
+              ? [
+                  'Solicitados EAS e urocultura com teste de sensibilidade aos antimicrobianos, preferencialmente antes do antibiótico quando isso não atrasar o tratamento.',
+                  'Solicitados hemograma, ureia, creatinina e eletrólitos; hemoculturas e imagem direcionada conforme gravidade, internação, obstrução ou evolução desfavorável.',
+                  ...labItems
+                ]
+              : ['Na cistite típica não complicada, exames complementares podem ser dispensados conforme avaliação clínica; solicitar cultura em recorrência, falha, gestação ou contexto complicado.', ...labItems]
+          },
+          {
+            title: 'Estratificação e Destino',
+            items: uniqueItems([
+              isSepsis ? 'Presença de suspeita de sepse/instabilidade, com estabilização e internação imediatas.' : null,
+              admissionDecision === 'internar' ? 'Identificado critério clínico para internação hospitalar.' : null,
+              admissionDecision === 'ambulatorial' ? 'Sem critério atual de internação, com condições para tratamento ambulatorial e retorno em 48–72 horas.' : null,
+              reevaluation === 'falha_ambulatorial' ? 'Ausência de melhora ou piora em 48–72 horas, indicando escalonamento para tratamento hospitalar.' : null,
+              dischargeDecision === 'alta' ? 'Critérios de alta hospitalar preenchidos.' : null,
+              dischargeDecision === 'manter_internacao' ? 'Critérios de alta ainda não preenchidos; mantida internação.' : null
+            ])
+          },
+          {
+            title: 'Tratamento',
+            items: uniqueItems([
+              chosenAntibiotic ? `Antibioticoterapia selecionada: ${chosenAntibiotic}.` : null,
+              isSepsis ? 'Iniciadas medidas do protocolo de sepse, com monitorização, culturas quando viáveis, antimicrobiano EV precoce, suporte hemodinâmico e pesquisa de obstrução urinária.' : null,
+              prescriptions.length > 0 ? `Prescrições registradas no sistema: ${prescriptions.join('; ')}.` : null,
+              isPyelonephritis ? 'Nitrofurantoína e fosfomicina não são adequadas para tratamento de pielonefrite.' : null
+            ])
+          },
+          {
+            title: 'Plano e Orientações',
+            items: uniqueItems([
+              !isHospital && !isSepsis ? 'Reavaliação clínica em 48–72 horas, ou antes se houver piora.' : null,
+              'Revisar urocultura/TSA e ajustar ou descalonar o antimicrobiano conforme resultado, função renal e resposta clínica.',
+              'Orientado retorno imediato em caso de febre, calafrios, dor lombar intensa, vômitos, hipotensão, confusão, redução da diurese ou piora do estado geral.'
+            ])
+          }
+        ]
+      }
+    }
+
     if (flowId === 'tvp') {
       const startData = safeParse(answers.start) as { selectedLeg?: string; selectedLegLabel?: string } | null
       const clinicalData = safeParse(answers.avaliacao_clinica) as { sinaisEAchados?: string[]; outrosAchados?: string } | null
@@ -507,6 +715,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const hasPositiveUS = answers.us_compressiva === 'us_positive' || answers.repetir_us === 'repeat_positive'
       const hasNegativeUS = answers.us_compressiva === 'us_negative' || answers.repetir_us === 'repeat_negative'
+      const hasInconclusiveUS = answers.us_compressiva === 'us_inconclusive'
       const hasPositiveDdimer = answers.baixa_probabilidade === 'ddimer_positive'
       const hasNegativeDdimer = answers.baixa_probabilidade === 'ddimer_negative'
       const vascularEmergencyProtocolApplied = answers.tvp_urgencia_vascular_imediata === 'protocolo_flegmasia_aplicado'
@@ -514,10 +723,13 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         || currentStep === 'tvp_urgencia_vascular_concluida'
       const isUrgentVascular = currentStep === 'tvp_urgencia_vascular_imediata'
         || currentStep === 'tvp_urgencia_vascular_concluida'
+        || history.includes('tvp_urgencia_vascular_imediata')
+      const isWaitingVascular = currentStep === 'tvp_aguarda_avaliacao_vascular'
+        || history.includes('tvp_aguarda_avaliacao_vascular')
       const isMandatoryAdmissionInvestigation = currentStep === 'tvp_internacao_investigacao_clinica'
       const isTEPInvestigation = currentStep === 'tvp_internacao_investigar_tep'
       const isExcluded = currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial'
-      const isConfirmed = hasPositiveUS || currentStep === 'anticoagulacao_iniciada' || currentStep === 'encaminhamento_urgente'
+      const isConfirmed = hasPositiveUS || currentStep === 'anticoagulacao_iniciada' || currentStep === 'encaminhamento_urgente' || isWaitingVascular
 
       const title = isConfirmed
         ? 'PRONTUÁRIO MÉDICO – TROMBOSE VENOSA PROFUNDA (TVP)'
@@ -560,9 +772,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         hasNegativeDdimer ? 'D-dímero: negativo.' : null,
         hasPositiveDdimer ? 'D-dímero: positivo.' : null,
         answers.moderada_probabilidade ? 'D-dímero não utilizado nesta etapa, devido à probabilidade clínica moderada/alta.' : null,
-        hasPositiveUS ? 'Ultrassonografia Doppler venosa: positiva para trombose venosa profunda.' : null,
-        hasNegativeUS ? 'Ultrassonografia Doppler venosa: sem evidência de trombose venosa profunda.' : null,
-        answers.us_negativa_conduta === 'high_suspicion' ? 'Mantida suspeita clínica após ultrassonografia inicial negativa, com indicação de repetição do exame em 5 a 7 dias.' : null,
+        hasPositiveUS ? 'POCUS vascular compressivo de 3 pontos positivo, com ausência de colabamento venoso, achado compatível com trombose venosa profunda proximal.' : null,
+        hasNegativeUS ? 'POCUS vascular compressivo de 3 pontos negativo, com compressibilidade preservada nas janelas avaliadas.' : null,
+        hasInconclusiveUS ? 'POCUS vascular compressivo de 3 pontos inconclusivo ou tecnicamente limitado, sem condições para exclusão de TVP.' : null,
+        answers.us_negativa_conduta === 'high_suspicion' ? 'Mantida suspeita clínica após POCUS inicial negativo ou inconclusivo, com indicação de varredura venosa completa ou repetição da ultrassonografia em 5 a 7 dias.' : null,
         ...labItems
       ])
 
@@ -580,6 +793,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         therapies.length > 1 ? `Opções terapêuticas selecionadas: ${therapies.join('; ')}.` : null,
         currentStep === 'anticoagulacao_iniciada' ? 'Paciente anticoagulado.' : null,
         currentStep === 'encaminhamento_urgente' ? 'Solicitada avaliação da Cirurgia Vascular.' : null,
+        isWaitingVascular ? 'Paciente mantido internado ou em observação monitorizada enquanto aguarda transferência formal do caso para a Cirurgia Vascular.' : null,
+        isWaitingVascular && contraData?.possuiContraindicacaoAbsoluta ? 'Anticoagulação não iniciada devido a contraindicação absoluta documentada; considerar filtro de veia cava ou intervenção vascular conforme avaliação especializada.' : null,
+        isWaitingVascular && therapies.length > 0 ? 'Manter anticoagulação já instituída, com vigilância de sangramento e reavaliação clínica seriada até nova definição.' : null,
         isUrgentVascular ? 'Indicação de internação hospitalar imediata e acionamento urgente da Cirurgia Vascular.' : null,
         vascularEmergencyProtocolApplied ? 'Protocolo de Flegmasia Cerulea Dolens/ameaça ao membro confirmado no fluxo antes da finalização.' : null,
         isMandatoryAdmissionInvestigation ? 'Indicada internação hospitalar mandatória para aprofundamento e seguimento da investigação clínica.' : null,
@@ -885,6 +1101,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         && history.includes('evaluate_labs_b')
         && alarmSigns.length === 0
         && gravitySigns.length === 0
+        && (!answers.evaluate_labs_b || answers.evaluate_labs_b === 'hemoconcentracao_confirmada' || answers.evaluate_labs_b === 'auto')
 
       const chiefComplaint = symptoms.length > 0
         ? symptoms[0]
@@ -1086,7 +1303,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           case 'A':
             return 'Classificado como Grupo A, compatível com dengue sem sinais de alarme, sem comorbidades ou condições especiais descompensadoras no fluxo atual.'
           case 'B':
-            return `Classificado como Grupo B, pela presença de fatores de risco/condições associadas${riskFactors.length > 0 ? `: ${riskFactors.join('; ')}` : ''}.`
+            return `Classificado como Grupo B, pela presença de fatores de risco/condições associadas${riskFactors.length > 0 ? `: ${riskFactors.join('; ')}` : ''}.${answers.evaluate_labs_b === 'hemoconcentracao_nao_confirmada' ? ' Relação Ht/Hb ou hematócrito elevados foram interpretados como achado isolado, sem confirmação clínica de hemoconcentração, mantendo-se acompanhamento seriado.' : ''}`
           default:
             return 'Caso em avaliação clínica dentro do protocolo institucional de dengue.'
         }
@@ -1232,6 +1449,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         || history.includes('influenza_painel_viral_uti')
         || currentStep === 'influenza_painel_viral_enfermaria'
         || currentStep === 'influenza_painel_viral_uti'
+      const influenzaExamRequestData = safeParse(answers.influenza_painel_viral_enfermaria || answers.influenza_painel_viral_uti) as {
+        examesSolicitados?: string[]
+      } | null
+      const influenzaRequestedExams = uniqueItems(influenzaExamRequestData?.examesSolicitados || [])
       const boardingCareApplied = Boolean(answers.influenza_boarding_enfermaria || answers.influenza_boarding_uti)
         || history.includes('influenza_boarding_enfermaria')
         || history.includes('influenza_boarding_uti')
@@ -1371,6 +1592,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           : destination === 'enfermaria' || destination === 'uti'
             ? 'Indicar coleta precoce de amostra respiratória para RT-PCR ou painel viral multiplex quando disponível, sem atrasar oseltamivir ou suporte clínico.'
             : null,
+        influenzaRequestedExams.length > 0
+          ? `Exames selecionados no fluxo: ${influenzaRequestedExams.join('; ')}.`
+          : null,
+        influenzaRequestedExams.length > 0
+          ? `Exames selecionados para solicitação: ${influenzaRequestedExams.join('; ')}.`
+          : null,
         destination === 'enfermaria' || destination === 'uti'
           ? 'O plano de investigação inclui radiografia de tórax. Tomografia fica reservada para radiografia inconclusiva, hipoxemia desproporcional, complicações, imunossupressão, piora sem causa definida ou suspeita de tromboembolismo pulmonar.'
           : null
@@ -1525,6 +1752,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         examesSelecionados?: string[]
         grupos?: Record<string, string[]>
       } | null
+      const labResultData = safeParse(answers.pac_resultados_exames) as {
+        resultados?: Record<string, string>
+      } | null
       const curbProtocolData = safeParse(answers.pac_curb65_protocolo) as {
         score?: number
         destino?: string
@@ -1656,6 +1886,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
       const crbCriteria = criteriaFromArray(crbData?.criteriosSelecionados)
       const selectedExamItems = criteriaFromArray(examRequestData?.examesSelecionados)
+      const recordedLabResultItems = labResultData?.resultados && typeof labResultData.resultados === 'object'
+        ? Object.entries(labResultData.resultados)
+          .filter(([, result]) => String(result || '').trim())
+          .map(([exam, result]) => `${exam}: ${String(result).trim()}`)
+        : []
       const selectedExamGroups = examRequestData?.grupos && typeof examRequestData.grupos === 'object'
         ? Object.entries(examRequestData.grupos)
           .map(([group, items]) => ({
@@ -1781,6 +2016,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                   : entry.group
           return `${groupLabel}: ${entry.items.join('; ')}.`
         }),
+        recordedLabResultItems.length > 0
+          ? `Resultados disponíveis: ${recordedLabResultItems.join('; ')}.`
+          : null,
         labItems.length > 0
           ? `Exames laboratoriais registrados: ${labItems.join(' ')}`
           : selectedExamItems.length > 0
@@ -1826,7 +2064,11 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         antibioticText,
         destination === 'ambulatorial' ? 'Orientar retorno imediato em dispneia, queda de saturação, confusão, hipotensão, piora do estado geral, febre persistente, intolerância oral ou ausência de melhora clínica.' : null,
         destination === 'ambulatorial' ? 'Reavaliar em 48 a 72 horas ou antes se houver piora.' : null,
-        pacWaitingCareApplied ? 'Enquanto aguarda leito hospitalar, manter monitorização clínica, antibioticoterapia precoce, oxigenoterapia titulada, hidratação individualizada, controle de sintomas, profilaxia para tromboembolismo venoso quando não houver contraindicação e reavaliação periódica com critérios de escalonamento.' : null,
+        pacWaitingCareApplied && destination === 'uti'
+          ? 'Enquanto aguarda leito de UTI, manter monitorização contínua, antibioticoterapia precoce, oxigenoterapia titulada, suporte clínico e reavaliação a cada 30 minutos a 1 hora, ou imediatamente diante de deterioração.'
+          : pacWaitingCareApplied
+            ? 'Enquanto aguarda leito hospitalar, manter monitorização clínica, antibioticoterapia precoce, oxigenoterapia titulada, hidratação individualizada, controle de sintomas, profilaxia para tromboembolismo venoso quando não houver contraindicação e reavaliação a cada 30 minutos a 1 hora, com critérios de escalonamento.'
+            : null,
         destination === 'enfermaria' ? 'Solicitar ou revisar radiografia de tórax, hemograma, função renal, eletrólitos, marcadores inflamatórios e culturas conforme gravidade e protocolo institucional.' : null,
         destination === 'enfermaria' ? 'Escalonar para UTI se houver aumento da necessidade de oxigênio, desconforto respiratório, hipotensão, alteração do sensório, lactato elevado, choque ou falência orgânica.' : null,
         destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, necessidade de ventilação mecânica, vasopressor, SOFA e acompanhamento intensivo seriado.' : null,
@@ -1911,6 +2153,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const supportData = safeParse(answers.bell_suporte_diagnostico) as { criteriosSuporteSelecionados?: string[] } | null
       const redFlagsData = safeParse(answers.bell_red_flags_ramsay) as { redFlagsSelecionadas?: string[]; possuiRedFlag?: boolean } | null
       const houseData = safeParse(answers.bell_house_brackmann) as { houseBrackmann?: string; houseBrackmannLabel?: string } | null
+      const treatmentData = safeParse(answers.bell_tratamento_clinico) as {
+        within72Hours?: boolean | null
+        corticosteroid?: boolean
+        antiviral?: 'none' | 'valaciclovir' | 'aciclovir' | 'famciclovir'
+        eyeCare?: boolean
+      } | null
       const bellMandatoryCriteriaLabels: Record<string, string> = {
         periferica_unilateral: 'Fraqueza ou paralisia facial periférica unilateral, envolvendo fronte, fechamento ocular e comissura labial',
         inicio_agudo: 'Início agudo, com progressão até o pico em 72 horas ou menos',
@@ -1994,11 +2242,30 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const supportCriteriaText = supportCriteriaItems.length > 0
         ? `Critérios de suporte registrados: ${supportCriteriaItems.join('; ')}.`
         : 'Não foram registrados critérios de suporte adicionais no fluxo.'
+      const antiviralLabels: Record<string, string> = {
+        valaciclovir: 'valaciclovir 1.000 mg VO a cada 8 horas por 7 dias',
+        aciclovir: 'aciclovir 400 mg VO cinco vezes ao dia por 10 dias',
+        famciclovir: 'famciclovir 500 mg VO a cada 8 horas por 7 dias'
+      }
+      const treatmentNarrative = houseValue === 'house_i'
+        ? 'A escala demonstrou função facial normal (House-Brackmann I), sem indicação de tratamento farmacológico específico para Paralisia de Bell.'
+        : [
+            treatmentData?.corticosteroid
+              ? 'Foi selecionado tratamento com prednisona 60 mg VO ao dia por 5 dias, seguido de redução de 10 mg ao dia até completar 10 dias.'
+              : 'O corticosteroide não foi selecionado no fluxo, devendo a justificativa clínica ser registrada.',
+            treatmentData?.antiviral && treatmentData.antiviral !== 'none'
+              ? `Foi associado ${antiviralLabels[treatmentData.antiviral]}, sempre em conjunto com o corticosteroide.`
+              : 'Não foi selecionado antiviral associado.',
+            treatmentData?.eyeCare
+              ? 'Foram prescritos cuidados de proteção ocular com lágrimas artificiais, pomada lubrificante noturna, oclusão palpebral cuidadosa e proteção contra vento e poeira.'
+              : 'Cuidados oculares não foram selecionados no fluxo.',
+            `Janela terapêutica registrada: ${treatmentData?.within72Hours === true ? 'até 72 horas do início' : treatmentData?.within72Hours === false ? 'mais de 72 horas do início' : 'não informada'}.`
+          ].join(' ')
       const bellEvolutionText = [
         `Paciente ${patient.name || 'não identificado'}, admitido na unidade com quadro sugestivo de neuropatia periférica do nervo facial, de instalação aguda, apresentando paralisia facial periférica unilateral ${sideLabel}. ${diagnosticCriteriaText}`,
         `Durante o exame físico, foram registrados sinais e sintomas adicionais compatíveis com o diagnóstico, incluindo ${additionalFindingsText}, os quais reforçaram a hipótese de paralisia facial periférica idiopática. ${supportCriteriaText} ${centralInvestigationText}`,
         `${redFlagsText} Em seguida, procedeu-se à avaliação do grau de disfunção motora facial por meio da escala de House-Brackmann, classificando o paciente como ${houseLabel}.`,
-        'O paciente foi devidamente informado sobre a natureza da patologia, seu curso clínico esperado, possibilidades terapêuticas e prognóstico. Foi instituído tratamento medicamentoso com corticosteroides e antivirais, conforme diretrizes usuais, além de orientações específicas para cuidados oculares locais, visando proteção da superfície ocular durante o período de fechamento palpebral incompleto. Foram realizados também os encaminhamentos pertinentes para acompanhamento e suporte terapêutico adequado.'
+        `O paciente foi informado sobre a natureza da patologia, curso clínico esperado, possibilidades terapêuticas e prognóstico. ${treatmentNarrative}`
       ].join('\n\n')
 
       return {
@@ -2031,6 +2298,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Classificação House-Brackmann',
             text: houseLabel
+          },
+          {
+            title: 'Conduta Terapêutica Selecionada',
+            text: treatmentNarrative
           }
         ]
       }

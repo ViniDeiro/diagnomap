@@ -66,6 +66,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
   const [answers, setAnswers] = useState<Record<string, string>>(patient.flowchartState.answers || {})
   const [progress, setProgress] = useState(patient.flowchartState.progress || 0)
   const [isTransitioning, setIsTransitioning] = useState(false)
+  const [hemoconcentrationInfoOpen, setHemoconcentrationInfoOpen] = useState(false)
   const [hydrationObservPrescribed, setHydrationObservPrescribed] = useState(false)
   const [antipyreticChoiceB, setAntipyreticChoiceB] = useState<string>(
     typeof window !== 'undefined' ? (localStorage.getItem(`antipyretic_b_${patient.id}`) || '') : ''
@@ -128,7 +129,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
         ratioShort,
         ratioPrecise,
         level: 'significant' as const,
-        summary: `Razão Ht/Hb ${ratioShort}x - Hemoconcentração significativa (>= 3,6x)`
+        summary: `Razão Ht/Hb ${ratioShort}x - Suspeita de hemoconcentração (≥ 3,6x); confirmar clinicamente`
       }
     }
 
@@ -959,7 +960,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
           })()}
         </div>
       ),
-      options: (() => {
+      options: ((): NonNullable<FlowchartStep['options']> => {
         // Nas 1ª a 7ª reavaliações, navegamos entre abas sem acionar decisões finais
         if (dReevalTab < 8) {
           const nextLabel = `${dReevalTab + 1}ª reavaliação`
@@ -2740,14 +2741,16 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
               let previewText = 'Preencha Hematócrito e Hemoglobina para avaliar hemoconcentração e prever a classificação.'
               let highlightClass = 'text-slate-700'
               let bgClass = 'bg-slate-50 border-slate-200'
+              let suspectedHemoconcentration = false
 
               if (ratio !== undefined) {
                 const ratioStatus = getHtHbStatus(ht, hb)
                 const ratioStr = `${ratio.toFixed(2)}x`
                 if (ratio >= 3.6) {
-                  previewText = `Classificado para o Grupo C — hemoconcentração (Razão Ht/Hb ${ratioStr})`
+                  previewText = `Suspeita de hemoconcentração (Razão Ht/Hb ${ratioStr}) — requer confirmação médica antes da reclassificação`
                   highlightClass = 'text-amber-800'
                   bgClass = 'bg-amber-50 border-amber-200'
+                  suspectedHemoconcentration = true
                 } else if (ratioStatus?.level === 'borderline') {
                   previewText = `Classificado para o Grupo B — razão Ht/Hb limítrofe (${ratioStr}), ainda sem hemoconcentração significativa`
                   highlightClass = 'text-yellow-800'
@@ -2759,9 +2762,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
                 }
               } else if (ht != null) {
                 if (ht >= 45) {
-                  previewText = `Classificado para o Grupo C — hematócrito elevado (${ht}%)`
+                  previewText = `Hematócrito elevado (${ht}%) — suspeita de hemoconcentração que requer confirmação clínica e evolutiva`
                   highlightClass = 'text-amber-800'
                   bgClass = 'bg-amber-50 border-amber-200'
+                  suspectedHemoconcentration = true
                 } else {
                   previewText = `Classificado para o Grupo B — hematócrito dentro do esperado (${ht}%)`
                   highlightClass = 'text-green-800'
@@ -2771,9 +2775,20 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
               return (
                 <div className={clsx('mt-4 p-3 border rounded-md', bgClass)}>
-                  <p className={clsx('text-sm font-medium', highlightClass)}>
-                    {previewText}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className={clsx('text-sm font-medium', highlightClass)}>{previewText}</p>
+                    {suspectedHemoconcentration && (
+                      <button
+                        type="button"
+                        onClick={() => setHemoconcentrationInfoOpen(true)}
+                        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-amber-300 bg-white text-amber-800 shadow-sm transition-colors hover:bg-amber-100"
+                        title="Como interpretar hemoconcentração"
+                        aria-label="Ver interpretação da hemoconcentração"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })()}
@@ -2788,20 +2803,21 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
           </div>
         </div>
       ),
-      options: [
-        (() => {
+      options: (() => {
           const hb = labsB?.hb
           const ht = labsB?.ht
           const ratio = hb != null && ht != null ? ht / hb : undefined
 
-          // Texto e próximo passo dinâmicos com base no Ht/Hb (ou apenas Ht se Hb ausente)
+          // O cálculo sinaliza suspeita; a reclassificação exige confirmação médica.
           let text = 'Classificar automaticamente (Ht/Hb)'
           let nextStep: 'group_c' | 'end_group_b' | 'auto_classify_labs_b' = 'auto_classify_labs_b'
 
           if (ratio !== undefined) {
             if (ratio >= 3.6) {
-              text = 'Classificado para o Grupo C por hemoconcentração'
-              nextStep = 'group_c'
+              return [
+                { text: 'Confirmar hemoconcentração e conduzir como Grupo C', nextStep: 'group_c', value: 'hemoconcentracao_confirmada' },
+                { text: 'Não confirmar por achado isolado e manter Grupo B', nextStep: 'end_group_b', value: 'hemoconcentracao_nao_confirmada' }
+              ]
             } else {
               text = 'Classificado para o Grupo B'
               nextStep = 'end_group_b'
@@ -2809,17 +2825,18 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
           } else if (ht != null) {
             // Fallback: se só houver Ht, usar limiar absoluto clássico
             if (ht >= 45) {
-              text = 'Classificado para o Grupo C'
-              nextStep = 'group_c'
+              return [
+                { text: 'Confirmar hemoconcentração e conduzir como Grupo C', nextStep: 'group_c', value: 'hemoconcentracao_confirmada' },
+                { text: 'Não confirmar por hematócrito isolado e manter Grupo B', nextStep: 'end_group_b', value: 'hemoconcentracao_nao_confirmada' }
+              ]
             } else {
               text = 'Classificado para o Grupo B'
               nextStep = 'end_group_b'
             }
           }
 
-          return { text, nextStep, value: 'auto' }
-        })()
-      ]
+          return [{ text, nextStep, value: 'auto' }]
+        })(),
     },
 
     end_group_b: {
@@ -5369,21 +5386,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     // Classificação automática baseada em hemoconcentração (Ht/Hb) no Grupo B
     if (nextStep === 'auto_classify_labs_b') {
       // Usar os valores já mantidos no estado local (labsB)
-      const hb = labsB?.hb
-      const ht = labsB?.ht
-      const ratio = hb && ht ? ht / hb : undefined
-
-      let finalStep: 'group_c' | 'end_group_b' = 'end_group_b'
-      let group: 'B' | 'C' = 'B'
-
-      // Regra solicitada: hemoconcentração leva ao Grupo C; caso contrário, manter Grupo B
-      if (ratio !== undefined && ratio >= 3.6) {
-        finalStep = 'group_c'
-        group = 'C'
-      } else if (ratio === undefined && ht !== undefined && ht >= 45) {
-        finalStep = 'group_c'
-        group = 'C'
-      }
+      // A classificação automática nunca confirma hemoconcentração por valor isolado.
+      // A passagem ao Grupo C ocorre apenas pela opção explícita de confirmação médica.
+      const finalStep = 'end_group_b' as const
+      const group = 'B' as const
 
       // Simular pequeno processamento para feedback visual, alinhado aos outros auto_classify
       setTimeout(() => {
@@ -5576,6 +5582,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
   const restart = () => {
     setIsTransitioning(true)
+    setHemoconcentrationInfoOpen(false)
     setCurrentStep('alarm_check')
     setHistory([])
     setAnswers({})
@@ -5606,6 +5613,79 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+
+      {hemoconcentrationInfoOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-amber-700 to-orange-700 px-5 py-4 text-white">
+              <div>
+                <h3 className="text-lg font-extrabold">Interpretação da hemoconcentração na dengue</h3>
+                <p className="mt-1 text-sm text-amber-50">A decisão deve considerar evolução clínica e laboratorial, sem utilizar um valor absoluto isolado.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHemoconcentrationInfoOpen(false)}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-xl font-bold transition-colors hover:bg-white/25"
+                title="Fechar"
+                aria-label="Fechar interpretação da hemoconcentração"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5 text-sm leading-relaxed text-slate-800">
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                <p className="font-bold">Quando conduzir como Grupo C?</p>
+                <p className="mt-1">Considerar hemoconcentração significativa quando houver um ou mais dos critérios abaixo, sempre correlacionados ao contexto clínico.</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <section className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                  <h4 className="font-extrabold text-blue-950">1. Critério evolutivo (preferencial)</h4>
+                  <p className="mt-2">Aumento progressivo do hematócrito em exames seriados, especialmente durante a fase crítica, entre o 3º e o 7º dia de doença.</p>
+                </section>
+
+                <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                  <h4 className="font-extrabold text-cyan-950">2. Critério comparativo (OMS/OPAS)</h4>
+                  <p className="mt-2">Quando houver hematócrito basal conhecido, pré-doença ou após recuperação, aumento ≥20% em relação ao valor basal.</p>
+                </section>
+
+                <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <h4 className="font-extrabold text-emerald-950">3. Critério clínico-laboratorial</h4>
+                  <p className="mt-2">Elevação do hematócrito associada a queda progressiva das plaquetas, sinais de alarme ou evidências de extravasamento plasmático.</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    <li>Ascite ou derrame pleural.</li>
+                    <li>Espessamento da parede da vesícula biliar.</li>
+                    <li>Hipoalbuminemia.</li>
+                  </ul>
+                </section>
+
+                <section className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                  <h4 className="font-extrabold text-violet-950">4. Critério de suspeição sem basal</h4>
+                  <p className="mt-2">Hematócrito acima do esperado para sexo e idade ou relação Ht/Hb acima da habitual, aproximadamente 3:1, especialmente próxima ou superior a 3,6:1, deve levantar suspeita.</p>
+                  <p className="mt-2 font-semibold">Esse achado não deve ser usado isoladamente para reclassificar o paciente.</p>
+                </section>
+              </div>
+
+              <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-slate-800">
+                <p className="font-extrabold">Nota técnica</p>
+                <p className="mt-2">O Ministério da Saúde utiliza hemoconcentração como marcador de extravasamento plasmático, mas não estabelece ponto de corte percentual isolado para o hematócrito. A OMS recomenda aumento ≥20% em relação ao basal quando esse valor estiver disponível.</p>
+                <p className="mt-2">Sem hematócrito basal, a decisão deve se apoiar na tendência evolutiva, nos achados clínicos e nos demais resultados laboratoriais.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setHemoconcentrationInfoOpen(false)}
+                className="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-amber-800"
+              >
+                Entendi e vou decidir clinicamente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Premium Medical Header */}
       <div className="relative bg-white shadow-xl border-b border-slate-200/50 sticky top-0 z-50">

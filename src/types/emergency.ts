@@ -59,6 +59,8 @@ export type EmergencyType =
   | 'pep_hiv'
   | 'lombalgia'
   | 'anafilaxia'
+  | 'atendimento_antirrabico'
+  | 'itu'
 
 export interface EmergencyFlowchart {
   id: EmergencyType

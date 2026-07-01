@@ -272,7 +272,7 @@ const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
   },
   pocus: {
     title: 'POCUS Pulmonar',
-    src: '/pocus.jpeg',
+    src: '/Novo%20POCUS%20pulmao.png',
     alt: 'Imagem de referência de POCUS pulmonar'
   },
   blue: {
@@ -379,6 +379,8 @@ type FlowVitalSigns = {
   oxygenSaturation?: number
   glucose?: string
 }
+
+type PneumoniaLabResults = Record<string, string>
 
 const defaultFlowVitalSigns = (patient: EmergencyPatient): FlowVitalSigns => {
   const vitalSigns = patient.admission?.vitalSigns || {}
@@ -710,6 +712,8 @@ const bellHouseGradeLabels: Record<string, string> = {
   house_vi: 'Grau VI'
 }
 
+type BellAntiviralChoice = 'none' | 'valaciclovir' | 'aciclovir' | 'famciclovir'
+
 const gasometryFieldConfig: Array<{ key: GasometryFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
   { key: 'ph', label: 'pH', unit: '', min: 6.8, max: 7.8, required: true },
   { key: 'pco2', label: 'PaCO2', unit: 'mmHg', min: 10, max: 120, required: true },
@@ -835,7 +839,7 @@ const pneumoniaCurbItems: Array<{ key: PneumoniaCurbFieldKey; label: string }> =
   { key: 'ureiaMaior43', label: 'Ureia > 43 mg/dL' },
   { key: 'frMaior30', label: 'Frequência respiratória > 30 irpm' },
   { key: 'paBaixa', label: 'PAS < 90 mmHg ou PAD < 60 mmHg' },
-  { key: 'idadeMaior65', label: 'Idade maior que 65 anos' }
+  { key: 'idadeMaior65', label: 'Idade ≥ 65 anos' }
 ]
 
 const pneumoniaCrbItems = [
@@ -911,6 +915,90 @@ const pneumoniaInitialLabPackage = [
   'Glicemia',
   'Proteína C Reativa (PCR)'
 ]
+
+const influenzaExamRequestGroups = [
+  {
+    title: 'Coleta respiratória e microbiologia',
+    tone: 'border-cyan-200 bg-cyan-50',
+    items: [
+      'RT-PCR para vírus respiratórios / painel viral multiplex',
+      'Hemoculturas (2 pares)',
+      'Cultura e bacterioscopia de escarro',
+      'Aspirado traqueal ou lavado broncoalveolar, se intubado'
+    ]
+  },
+  {
+    title: 'Laboratório inicial e gravidade',
+    tone: 'border-blue-200 bg-blue-50',
+    items: [
+      'Hemograma completo',
+      'Ureia e creatinina',
+      'Sódio, potássio e magnésio',
+      'Função hepática e bilirrubinas',
+      'Proteína C Reativa (PCR)',
+      'Procalcitonina',
+      'Gasometria arterial',
+      'Lactato sérico',
+      'Coagulograma',
+      'Glicemia',
+      'Troponina, se indicada'
+    ]
+  },
+  {
+    title: 'Imagem',
+    tone: 'border-violet-200 bg-violet-50',
+    items: [
+      'Radiografia de tórax',
+      'Tomografia de tórax, se indicada',
+      'Ultrassom pulmonar / POCUS, se indicado'
+    ]
+  }
+]
+
+const influenzaDefaultRequestedExams = [
+  'RT-PCR para vírus respiratórios / painel viral multiplex',
+  'Hemograma completo',
+  'Ureia e creatinina',
+  'Sódio, potássio e magnésio',
+  'Função hepática e bilirrubinas',
+  'Proteína C Reativa (PCR)',
+  'Gasometria arterial',
+  'Lactato sérico',
+  'Coagulograma',
+  'Glicemia',
+  'Radiografia de tórax'
+]
+
+const pneumoniaLabResultConfig: Record<string, { placeholder: string; unit?: string; inputMode?: 'decimal' | 'numeric' | 'text' }> = {
+  'Hemograma completo': { placeholder: 'Ex.: Hb 12,5; leucócitos 14.200; plaquetas 180.000', inputMode: 'text' },
+  'Ureia': { placeholder: 'Ex.: 52', unit: 'mg/dL', inputMode: 'decimal' },
+  'Creatinina': { placeholder: 'Ex.: 1,2', unit: 'mg/dL', inputMode: 'decimal' },
+  'Sódio': { placeholder: 'Ex.: 136', unit: 'mEq/L', inputMode: 'decimal' },
+  'Potássio': { placeholder: 'Ex.: 4,1', unit: 'mEq/L', inputMode: 'decimal' },
+  'Glicemia': { placeholder: 'Ex.: 118', unit: 'mg/dL', inputMode: 'decimal' },
+  'Proteína C Reativa (PCR)': { placeholder: 'Ex.: 86', unit: 'mg/L', inputMode: 'decimal' },
+  'Gasometria arterial': { placeholder: 'Ex.: pH 7,34; PaO2 58; PaCO2 42; HCO3 22', inputMode: 'text' },
+  'Lactato sérico': { placeholder: 'Ex.: 2,4', unit: 'mmol/L', inputMode: 'decimal' },
+  'Procalcitonina (PCT)': { placeholder: 'Ex.: 0,8', unit: 'ng/mL', inputMode: 'decimal' },
+  'Função hepática (AST, ALT, bilirrubinas, FA, GGT)': { placeholder: 'Informe os resultados disponíveis', inputMode: 'text' },
+  'Coagulograma (TP/INR, TTPA)': { placeholder: 'Ex.: INR 1,1; TTPA 31 s', inputMode: 'text' },
+  'Albumina': { placeholder: 'Ex.: 3,2', unit: 'g/dL', inputMode: 'decimal' }
+}
+
+const parseClinicalNumber = (value?: string | number) => {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (!value?.trim()) return undefined
+  const normalized = value.trim().replace(/\s/g, '').replace(',', '.').match(/-?\d+(?:\.\d+)?/)
+  if (!normalized) return undefined
+  const parsed = Number(normalized[0])
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+const parseBloodPressure = (value?: string) => {
+  const matches = value?.match(/(\d{2,3})\s*[xX\/]\s*(\d{2,3})/)
+  if (!matches) return { systolic: undefined, diastolic: undefined }
+  return { systolic: Number(matches[1]), diastolic: Number(matches[2]) }
+}
 
 const defaultPneumoniaPhysicalExam = (): PhysicalExamData => ({
   generalState: 'bom',
@@ -1081,9 +1169,7 @@ const tvpVascularSurgeryAlertSigns = tvpAlertSigns.slice(0, 4)
 const tvpRespiratoryTEPAlertSigns = [tvpAlertSigns[5]]
 
 const flegmasiaReferenceImages = [
-  '/flegmasia-1.jpg',
-  '/flegmasia-3.jpeg',
-  '/flegmasia-4.jpg'
+  '/flegmasia%20NOVO.jpeg'
 ]
 
 const dpocSinaisGravidadeItems = [
@@ -1403,6 +1489,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [influenzaWorseningSigns, setInfluenzaWorseningSigns] = useState<string[]>([])
   const [influenzaICUCriteria, setInfluenzaICUCriteria] = useState<string[]>([])
   const [influenzaICUInfoOpen, setInfluenzaICUInfoOpen] = useState<string | null>(null)
+  const [influenzaExamRequestOpen, setInfluenzaExamRequestOpen] = useState(false)
+  const [influenzaSelectedExams, setInfluenzaSelectedExams] = useState<string[]>(influenzaDefaultRequestedExams)
   const [influenzaPrescriptionPreview, setInfluenzaPrescriptionPreview] = useState<InfluenzaPrescriptionPreview | null>(null)
   const [influenzaPrescriptionCopied, setInfluenzaPrescriptionCopied] = useState(false)
   const [influenzaPrescriptionGeneratedSteps, setInfluenzaPrescriptionGeneratedSteps] = useState<Record<string, boolean>>({})
@@ -1416,6 +1504,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pneumoniaPseudomonasRisk, setPneumoniaPseudomonasRisk] = useState<string[]>([])
   const [pneumoniaCrbCriteria, setPneumoniaCrbCriteria] = useState<string[]>([])
   const [pneumoniaSelectedExams, setPneumoniaSelectedExams] = useState<string[]>(pneumoniaInitialLabPackage)
+  const [pneumoniaLabResults, setPneumoniaLabResults] = useState<PneumoniaLabResults>({})
   const [pneumoniaRxInfoOpen, setPneumoniaRxInfoOpen] = useState(false)
   const [pneumoniaRxImageOpen, setPneumoniaRxImageOpen] = useState(false)
   const [pneumoniaCtInfoOpen, setPneumoniaCtInfoOpen] = useState(false)
@@ -1513,8 +1602,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [selectedBellHouseGrade, setSelectedBellHouseGrade] = useState('')
   const [bellTreatmentTimingOpen, setBellTreatmentTimingOpen] = useState(false)
   const [bellDocumentCopied, setBellDocumentCopied] = useState(false)
-  const [bellTreatmentPrescriptionOpen, setBellTreatmentPrescriptionOpen] = useState(false)
-  const [bellTreatmentPrescriptionGenerated, setBellTreatmentPrescriptionGenerated] = useState(false)
+  const [bellWithin72Hours, setBellWithin72Hours] = useState<boolean | null>(null)
+  const [bellUseCorticosteroid, setBellUseCorticosteroid] = useState(false)
+  const [bellAntiviralChoice, setBellAntiviralChoice] = useState<BellAntiviralChoice>('none')
+  const [bellUseEyeCare, setBellUseEyeCare] = useState(false)
   const [gasometryDraft, setGasometryDraft] = useState<Record<GasometryFieldKey, string>>({
     ph: '',
     pco2: '',
@@ -1755,9 +1846,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStep === 'influenza_fatores_risco'
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
     const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStep === 'influenza_exame_fisico'
+    const isInfluenzaViralPanelStep = flowchart.id === 'influenza' && ['influenza_painel_viral_enfermaria', 'influenza_painel_viral_uti'].includes(currentStep)
     const isPneumoniaPhysicalExamStep = flowchart.id === 'pneumonia' && currentStep === 'pac_exame_fisico'
     const isPneumoniaCrbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_crb65_triagem'
     const isPneumoniaExamRequestStep = flowchart.id === 'pneumonia' && currentStep === 'pac_solicitacao_exames'
+    const isPneumoniaLabResultsStep = flowchart.id === 'pneumonia' && currentStep === 'pac_resultados_exames'
     const isPneumoniaCurbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_curb65_protocolo'
     const isPneumoniaAtsIdsaProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_ats_idsa_gravidade'
     const isPneumoniaDripProtocolStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStep)
@@ -1807,7 +1900,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       contraindicacoesSelecionadas: selectedContraindications,
       possuiContraindicacaoAbsoluta: hasAbsoluteContraindication,
       possuiContraindicacaoRelativa: hasRelativeContraindication,
-      solicitarAvaliacaoCirurgiaoVascular: hasAbsoluteContraindication || (hasRelativeContraindication && nextStep === 'encaminhamento_urgente')
+      solicitarAvaliacaoCirurgiaoVascular: hasAbsoluteContraindication || (hasRelativeContraindication && nextStep === 'tvp_aguarda_avaliacao_vascular')
     })
     const treatmentAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -1836,6 +1929,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       sinaisVitais: influenzaVitalSigns,
       exameFisico: influenzaPhysicalExam
     })
+    const influenzaViralPanelAnswer = JSON.stringify({
+      decision: value || nextStep,
+      examesSolicitados: influenzaSelectedExams
+    })
     const pneumoniaPhysicalExamAnswer = JSON.stringify({
       decision: value || nextStep,
       sinaisVitais: pneumoniaVitalSigns,
@@ -1855,6 +1952,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           group.items.filter((item) => pneumoniaSelectedExams.includes(item))
         ])
       )
+    })
+    const pneumoniaLabResultsAnswer = JSON.stringify({
+      decision: value || nextStep,
+      resultados: pneumoniaLabResults,
+      criteriosCurbPreenchidosAutomaticamente: pneumoniaAutomaticCurbValues
     })
     const pneumoniaCurbProtocolAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -1988,12 +2090,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                       ? influenzaICUAnswer
                       : isInfluenzaPhysicalExamStep
                         ? influenzaPhysicalExamAnswer
-                        : isPneumoniaPhysicalExamStep
+                      : isInfluenzaViralPanelStep
+                        ? influenzaViralPanelAnswer
+                      : isPneumoniaPhysicalExamStep
                           ? pneumoniaPhysicalExamAnswer
                           : isPneumoniaCrbProtocolStep
                             ? pneumoniaCrbProtocolAnswer
                           : isPneumoniaExamRequestStep
                             ? pneumoniaExamRequestAnswer
+                          : isPneumoniaLabResultsStep
+                            ? pneumoniaLabResultsAnswer
                           : isPneumoniaCurbProtocolStep
                             ? pneumoniaCurbProtocolAnswer
                             : isPneumoniaAtsIdsaProtocolStep
@@ -2288,6 +2394,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaRiskFactors([])
     setInfluenzaWorseningSigns([])
     setInfluenzaICUCriteria([])
+    setInfluenzaExamRequestOpen(false)
+    setInfluenzaSelectedExams(influenzaDefaultRequestedExams)
     setInfluenzaPrescriptionPreview(null)
     setInfluenzaPrescriptionCopied(false)
     setInfluenzaPrescriptionGeneratedSteps({})
@@ -2297,6 +2405,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setPneumoniaVitalSigns(defaultFlowVitalSigns(patient))
     setPneumoniaCrbCriteria([])
     setPneumoniaSelectedExams(pneumoniaInitialLabPackage)
+    setPneumoniaLabResults({})
     setPneumoniaRxInfoOpen(false)
     setPneumoniaRxImageOpen(false)
     setPneumoniaCtInfoOpen(false)
@@ -2353,8 +2462,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setSelectedBellHouseGrade('')
     setBellTreatmentTimingOpen(false)
     setBellDocumentCopied(false)
-    setBellTreatmentPrescriptionOpen(false)
-    setBellTreatmentPrescriptionGenerated(false)
+    setBellWithin72Hours(null)
+    setBellUseCorticosteroid(false)
+    setBellAntiviralChoice('none')
+    setBellUseEyeCare(false)
     onUpdate(patient.id, flowchart.initialStep, [], {}, 0)
   }
 
@@ -2395,24 +2506,58 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     } catch {}
     return bellHouseGradeLabels[raw] || 'não informado'
   }, [answers.bell_house_brackmann, selectedBellHouseGrade])
+  const bellSelectedHouseValue = useMemo(() => {
+    const raw = answers.bell_house_brackmann || selectedBellHouseGrade
+    try {
+      const parsed = raw ? JSON.parse(raw) : null
+      if (parsed?.houseBrackmann) return parsed.houseBrackmann as string
+    } catch {}
+    return raw
+  }, [answers.bell_house_brackmann, selectedBellHouseGrade])
+  const bellIsNormalFunction = bellSelectedHouseValue === 'house_i'
+  const bellHasIncompleteEyeClosure = ['house_iv', 'house_v', 'house_vi'].includes(bellSelectedHouseValue)
+  const bellAntiviralMayBenefit = ['house_iv', 'house_v', 'house_vi'].includes(bellSelectedHouseValue)
+  const bellAntiviralStronglyConsider = ['house_v', 'house_vi'].includes(bellSelectedHouseValue)
+  const bellTreatmentSelection = useMemo(() => ({
+    houseBrackmann: bellSelectedHouseValue,
+    within72Hours: bellWithin72Hours,
+    corticosteroid: bellUseCorticosteroid,
+    antiviral: bellAntiviralChoice,
+    eyeCare: bellUseEyeCare
+  }), [bellAntiviralChoice, bellSelectedHouseValue, bellUseCorticosteroid, bellUseEyeCare, bellWithin72Hours])
   const bellAdmissionDateLabel = useMemo(() => {
     const date = patient.admission?.date ? new Date(patient.admission.date) : null
     if (!date || Number.isNaN(date.getTime())) return 'data não informada'
     return date.toLocaleDateString('pt-BR')
   }, [patient.admission?.date])
-  const bellPrescriptionText = useMemo(() => [
-    'Prescrição e cuidados - Paralisia de Bell',
-    '',
-    '1. Prednisona 60 mg VO 1x/dia por 7 a 10 dias; ou prednisolona 25 mg VO 12/12h por 7 a 10 dias.',
-    '2. Considerar aciclovir 400 mg VO 5x/dia por 10 dias em casos moderados a graves ou suspeita viral associada.',
-    '3. Lágrimas artificiais sem conservantes de 1/1h a 2/2h durante o dia.',
-    '4. Pomada lubrificante oftálmica à noite.',
-    '5. Oclusão palpebral noturna com fita adesiva hipoalergênica.',
-    '6. Óculos de proteção contra vento e poeira.',
-    '7. Encaminhar ao oftalmologista se houver sinais de exposição ou lesão corneana.',
-    '',
-    'Ajustar doses, contraindicações, comorbidades e alergias conforme avaliação clínica individual.'
-  ].join('\n'), [])
+  const bellPrescriptionText = useMemo(() => {
+    const lines = ['Prescrição e cuidados - Paralisia de Bell', '', `Classificação: House-Brackmann ${bellSelectedHouseLabel}.`]
+    let item = 1
+    if (bellIsNormalFunction) {
+      lines.push(`${item++}. Função facial normal (House-Brackmann I): sem indicação de tratamento farmacológico para Paralisia de Bell.`)
+    } else if (bellUseCorticosteroid) {
+      lines.push(`${item++}. Prednisona 60 mg VO 1x/dia por 5 dias, seguida de redução de 10 mg/dia até completar 10 dias.`)
+    } else {
+      lines.push(`${item++}. Corticosteroide não selecionado pelo médico; registrar justificativa clínica.`)
+    }
+
+    const antiviralLines: Record<Exclude<BellAntiviralChoice, 'none'>, string> = {
+      valaciclovir: 'Valaciclovir 1.000 mg VO a cada 8 horas por 7 dias.',
+      aciclovir: 'Aciclovir 400 mg VO cinco vezes ao dia por 10 dias.',
+      famciclovir: 'Famciclovir 500 mg VO a cada 8 horas por 7 dias.'
+    }
+    if (bellAntiviralChoice !== 'none') lines.push(`${item++}. ${antiviralLines[bellAntiviralChoice]} Usar somente associado ao corticosteroide.`)
+
+    if (bellUseEyeCare) {
+      lines.push(`${item++}. Lágrimas artificiais sem conservantes: 1 gota no olho acometido a cada 1 a 2 horas durante o dia.`)
+      lines.push(`${item++}. Pomada lubrificante oftálmica à noite.`)
+      lines.push(`${item++}. Oclusão palpebral noturna cuidadosa com fita hipoalergênica e óculos de proteção contra vento e poeira.`)
+      lines.push(`${item++}. Avaliação oftalmológica se dor ocular, hiperemia, fotofobia, alteração visual ou sinais de exposição/lesão corneana.`)
+    }
+    lines.push('', `Janela terapêutica registrada: ${bellWithin72Hours === true ? 'até 72 horas' : bellWithin72Hours === false ? 'mais de 72 horas' : 'não informada'}.`)
+    lines.push('Ajustar doses à função renal quando aplicável e revisar contraindicações, comorbidades, gestação, alergias e interações medicamentosas.')
+    return lines.join('\n')
+  }, [bellAntiviralChoice, bellIsNormalFunction, bellSelectedHouseLabel, bellUseCorticosteroid, bellUseEyeCare, bellWithin72Hours])
   const bellReferralText = useMemo(() => {
     const specialty = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologia' : 'Neurologia'
     const specialist = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologista' : 'Neurologista'
@@ -2434,11 +2579,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     ].join('\n')
   }, [bellAdmissionDateLabel, bellSelectedHouseLabel, bellSelectedSideLabel, currentStepData?.id, patient.name])
   const currentBellDocumentText = isBellPrescriptionStep || isBellTreatmentStep ? bellPrescriptionText : bellReferralText
-  const getPersistedBellPrescriptions = useCallback(() => {
-    const livePatient = patientService.getPatientById(patient.id) || patient
-    return livePatient.treatment.prescriptions.filter(item => item.prescribedBy === 'Fluxograma Paralisia de Bell')
-  }, [patient])
-  const hasBellTreatmentPrescription = bellTreatmentPrescriptionGenerated || getPersistedBellPrescriptions().length > 0
   const copyBellDocumentText = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(currentBellDocumentText)
@@ -2449,60 +2589,91 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       alert('Não foi possível copiar o texto. Tente novamente.')
     }
   }, [currentBellDocumentText])
-  const handleGenerateBellTreatmentPrescription = useCallback(() => {
-    const prescriptionItems = [
-      {
+  const handleGenerateBellTreatmentPrescription = () => {
+    const prescriptionItems = []
+    if (bellUseCorticosteroid && !bellIsNormalFunction) {
+      prescriptionItems.push({
         medication: 'Prednisona',
         dosage: '60 mg VO',
         frequency: '1 vez ao dia',
-        duration: '7 a 10 dias',
-        instructions: 'Iniciar preferencialmente nas primeiras 72 horas. Ajustar conforme contraindicações, comorbidades e avaliação médica.',
+        duration: '10 dias com desmame',
+        instructions: 'Usar 60 mg/dia por 5 dias e reduzir 10 mg/dia até completar 10 dias. Iniciar preferencialmente nas primeiras 72 horas.',
         prescribedBy: 'Fluxograma Paralisia de Bell'
-      },
-      {
-        medication: 'Aciclovir',
-        dosage: '400 mg VO',
-        frequency: '5 vezes ao dia',
-        duration: '10 dias',
-        instructions: 'Considerar em casos moderados a graves ou suspeita viral associada; avaliar indicação individual.',
+      })
+    }
+    const antiviralPrescriptions = {
+      valaciclovir: { medication: 'Valaciclovir', dosage: '1.000 mg VO', frequency: 'a cada 8 horas', duration: '7 dias' },
+      aciclovir: { medication: 'Aciclovir', dosage: '400 mg VO', frequency: '5 vezes ao dia', duration: '10 dias' },
+      famciclovir: { medication: 'Famciclovir', dosage: '500 mg VO', frequency: 'a cada 8 horas', duration: '7 dias' }
+    }
+    if (bellAntiviralChoice !== 'none') {
+      prescriptionItems.push({
+        ...antiviralPrescriptions[bellAntiviralChoice],
+        instructions: 'Associar ao corticosteroide; não utilizar antiviral isoladamente. Ajustar à função renal quando aplicável.',
         prescribedBy: 'Fluxograma Paralisia de Bell'
-      },
-      {
+      })
+    }
+    if (bellUseEyeCare) {
+      prescriptionItems.push({
         medication: 'Lágrimas artificiais sem conservantes',
         dosage: '1 gota no olho acometido',
         frequency: 'a cada 1 a 2 horas durante o dia',
         duration: 'enquanto houver lagoftalmo ou ressecamento ocular',
         instructions: 'Associar proteção ocular, pomada lubrificante à noite e oclusão palpebral noturna quando necessário.',
         prescribedBy: 'Fluxograma Paralisia de Bell'
-      },
-      {
+      })
+      prescriptionItems.push({
         medication: 'Pomada lubrificante oftálmica',
         dosage: 'aplicar no olho acometido',
         frequency: 'à noite',
         duration: 'enquanto houver exposição ocular',
         instructions: 'Usar antes da oclusão palpebral noturna com fita hipoalergênica, se indicado.',
         prescribedBy: 'Fluxograma Paralisia de Bell'
-      }
-    ]
-    const persisted = getPersistedBellPrescriptions()
-    const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
+      })
+    }
+    patientService.replacePrescriptionsByPrescriber(
+      patient.id,
+      'Fluxograma Paralisia de Bell',
+      prescriptionItems
+    )
 
-    prescriptionItems.forEach((item) => {
-      const key = `${item.medication}_${item.dosage}`
-      if (!existingKeys.has(key)) {
-        patientService.addPrescription(patient.id, item)
-      }
-    })
-
-    setBellTreatmentPrescriptionGenerated(true)
-    setBellTreatmentPrescriptionOpen(true)
     setBellDocumentCopied(false)
-    onUpdate(patient.id, currentStep, history, answers, progress)
-  }, [answers, currentStep, getPersistedBellPrescriptions, history, onUpdate, patient.id, progress])
+    handleAnswer('bell_prescricao_cuidados', JSON.stringify(bellTreatmentSelection))
+  }
   const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStepData?.id === 'avaliacao_clinica'
   const isTVPWellsScore = flowchart.id === 'tvp' && currentStepData?.id === 'wells_score'
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
+  const isTVPWaitingForVascularStep = flowchart.id === 'tvp' && currentStepData?.id === 'tvp_aguarda_avaliacao_vascular'
+  const isTVPVascularReferralStep = flowchart.id === 'tvp' && [
+    'encaminhamento_urgente',
+    'tvp_urgencia_vascular_concluida'
+  ].includes(currentStepData?.id || '')
+  const tvpReferralSymptoms = selectedClinicalFindings.filter((item) => tvpClassicSigns.includes(item))
+  const tvpReferralRiskFactors = [
+    ...selectedWellsCriteria.map((criterionId) => tvpWellsCriteria.find((item) => item.id === criterionId)?.text),
+    ...selectedClinicalFindings.filter((item) => /imobilização|cirurgia|trauma|câncer|gravidez|estrogênios|trombofilia|TVP\/TEV/i.test(item))
+  ].filter((item): item is string => Boolean(item))
+  const tvpReferralTherapies = selectedTherapies
+    .map((therapyId) => tvpTherapeuticOptions.find((item) => item.id === therapyId))
+    .filter((item): item is (typeof tvpTherapeuticOptions)[number] => Boolean(item))
+  const tvpReferralHasEdema = selectedClinicalFindings.some((item) => /edema|aumento da circunferência/i.test(item))
+  const tvpReferralHasAsymmetry = selectedClinicalFindings.some((item) => /assimétrico|lado contralateral|lado oposto/i.test(item))
+  const tvpReferralHasVenousPain = selectedClinicalFindings.some((item) => /trajeto venoso|palpação profunda/i.test(item))
+  const tvpReferralHasPreservedPulses = selectedClinicalFindings.some((item) => /pulsos arteriais preservados/i.test(item))
+  const tvpReferralHasIschemia = selectedClinicalFindings.some((item) => /cianose|palidez|flegmasia|ameaça ao membro/i.test(item))
+  const tvpReferralDdimer = answers.baixa_probabilidade === 'ddimer_positive'
+    ? 'positivo'
+    : answers.baixa_probabilidade === 'ddimer_negative'
+      ? 'negativo'
+      : 'não realizado ou não informado'
+  const tvpReferralUltrasound = answers.us_compressiva === 'us_positive' || answers.repetir_us === 'repeat_positive'
+    ? 'POCUS compressivo de 3 pontos positivo para TVP, com veia não compressível.'
+    : answers.us_compressiva === 'us_negative' || answers.repetir_us === 'repeat_negative'
+      ? 'POCUS compressivo de 3 pontos negativo nas janelas avaliadas.'
+      : answers.us_compressiva === 'us_inconclusive'
+        ? 'POCUS compressivo de 3 pontos inconclusivo ou tecnicamente limitado.'
+        : 'Resultado não informado no fluxo.'
   const hasTVPAlertSignSelected = useMemo(
     () => selectedClinicalFindings.some((item) => tvpAlertSigns.includes(item)),
     [selectedClinicalFindings]
@@ -2573,6 +2744,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_fatores_risco'
   const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_criterios_uti'
   const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_exame_fisico'
+  const isInfluenzaViralPanelStep = flowchart.id === 'influenza' && ['influenza_painel_viral_enfermaria', 'influenza_painel_viral_uti'].includes(currentStepData?.id || '')
   const isInfluenzaAmbulatoryConductStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
   const isInfluenzaAmbulatoryFinalStep = isInfluenzaAmbulatoryConductStep
   const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_calcular_psi'
@@ -2581,11 +2753,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaPhysicalExamStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_exame_fisico'
   const isPneumoniaCrbStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_crb65_triagem'
   const isPneumoniaExamRequestStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_solicitacao_exames'
+  const isPneumoniaLabResultsStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_resultados_exames'
   const isPneumoniaCurbProtocolStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_curb65_protocolo'
   const isPneumoniaAtsIdsaStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_ats_idsa_gravidade'
   const isPneumoniaDripStep = flowchart.id === 'pneumonia' && ['pac_drip_enfermaria', 'pac_drip_uti'].includes(currentStepData?.id || '')
   const isPneumoniaSmartCopStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStepData?.id || '')
   const isPneumoniaAmbulatoryConductStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_conduta_ambulatorial'
+  const isPneumoniaWardDestinationStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_destino_enfermaria'
   const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep
   const currentRespiratoryVitalSigns = isInfluenzaPhysicalExamStep ? influenzaVitalSigns : pneumoniaVitalSigns
   const updateCurrentRespiratoryVitalSign = isInfluenzaPhysicalExamStep ? updateInfluenzaVitalSign : updatePneumoniaVitalSign
@@ -2640,6 +2814,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : 'moderada_oral'
   const pneumoniaPsiResult = useMemo(() => calculatePneumoniaPsi(pneumoniaPsiValues, patient), [patient, pneumoniaPsiValues])
   const pneumoniaCurbResult = useMemo(() => calculatePneumoniaCurb65(pneumoniaCurbValues), [pneumoniaCurbValues])
+  const pneumoniaResultExams = useMemo(
+    () => pneumoniaSelectedExams.filter((exam) => pneumoniaLabResultConfig[exam]),
+    [pneumoniaSelectedExams]
+  )
+  const pneumoniaAutomaticCurbValues = useMemo<PneumoniaCurbValues>(() => {
+    const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
+    const respiratoryRate = pneumoniaVitalSigns.respiratoryRate
+    const bloodPressure = parseBloodPressure(pneumoniaVitalSigns.bloodPressure)
+    const hasConfusion = (pneumoniaPhysicalExam.neuro.glasgow != null && pneumoniaPhysicalExam.neuro.glasgow < 15)
+      || Boolean(pneumoniaPhysicalExam.neuro.altered?.trim())
+
+    return {
+      confusaoMental: hasConfusion,
+      ureiaMaior43: urea != null && urea > 43,
+      frMaior30: respiratoryRate != null && respiratoryRate >= 30,
+      paBaixa: (bloodPressure.systolic != null && bloodPressure.systolic < 90)
+        || (bloodPressure.diastolic != null && bloodPressure.diastolic <= 60),
+      idadeMaior65: typeof patient.age === 'number' && patient.age >= 65
+    }
+  }, [patient.age, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam.neuro.altered, pneumoniaPhysicalExam.neuro.glasgow, pneumoniaVitalSigns.bloodPressure, pneumoniaVitalSigns.respiratoryRate])
   const savedPneumoniaCurbScore = useMemo(() => {
     const raw = answers.pac_curb65_protocolo || answers.pac_calcular_curb65
     if (!raw) return undefined
@@ -2684,6 +2878,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         ? 'Alto risco'
         : 'Risco muito alto'
   const pneumoniaDripScore = (pneumoniaDripMajorCriteria.length * 2) + pneumoniaDripMinorCriteria.length
+  const savedPneumoniaDripScore = useMemo(() => {
+    const raw = answers.pac_drip_enfermaria || answers.pac_drip_uti
+    if (!raw) return undefined
+    try {
+      const parsed = JSON.parse(raw) as { score?: unknown }
+      return typeof parsed.score === 'number' ? parsed.score : undefined
+    } catch {
+      const match = String(raw).match(/drip_(\d+)/)
+      return match ? Number(match[1]) : undefined
+    }
+  }, [answers.pac_drip_enfermaria, answers.pac_drip_uti])
+  const effectivePneumoniaDripScore = savedPneumoniaDripScore ?? pneumoniaDripScore
   const pneumoniaDripInterpretation = pneumoniaDripScore >= 4
     ? 'Maior risco de patógenos resistentes - considerar cobertura ampliada conforme contexto'
     : 'Baixo risco de patógenos resistentes'
@@ -4943,6 +5149,23 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isInfluenzaPhysicalExamStep, patient])
 
   useEffect(() => {
+    if (!isInfluenzaViralPanelStep) {
+      setInfluenzaExamRequestOpen(false)
+      return
+    }
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed?.examesSolicitados)) {
+        setInfluenzaSelectedExams(parsed.examesSolicitados.map((item: unknown) => String(item)))
+      }
+    } catch {
+      setInfluenzaSelectedExams(influenzaDefaultRequestedExams)
+    }
+  }, [answers, currentStep, isInfluenzaViralPanelStep])
+
+  useEffect(() => {
     if (!isPneumoniaPhysicalExamStep) return
     const saved = answers[currentStep]
     if (!saved) {
@@ -4983,6 +5206,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setPneumoniaSelectedExams(pneumoniaInitialLabPackage)
     }
   }, [answers, currentStep, isPneumoniaExamRequestStep])
+
+  useEffect(() => {
+    if (!isPneumoniaLabResultsStep) return
+    const saved = answers[currentStep]
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.resultados && typeof parsed.resultados === 'object') {
+        setPneumoniaLabResults(parsed.resultados as PneumoniaLabResults)
+      }
+    } catch {
+      setPneumoniaLabResults({})
+    }
+  }, [answers, currentStep, isPneumoniaLabResultsStep])
 
   useEffect(() => {
     if (!isPneumoniaAmbulatoryPrescriptionStep) {
@@ -5159,10 +5396,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   useEffect(() => {
     if (!isBellTreatmentStep) {
-      setBellTreatmentPrescriptionOpen(false)
-      setBellTreatmentPrescriptionGenerated(false)
+      return
     }
-  }, [isBellTreatmentStep])
+    const saved = answers.bell_tratamento_clinico
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        if (typeof parsed?.within72Hours === 'boolean') setBellWithin72Hours(parsed.within72Hours)
+        if (typeof parsed?.corticosteroid === 'boolean') setBellUseCorticosteroid(parsed.corticosteroid)
+        if (['none', 'valaciclovir', 'aciclovir', 'famciclovir'].includes(parsed?.antiviral)) setBellAntiviralChoice(parsed.antiviral)
+        if (typeof parsed?.eyeCare === 'boolean') setBellUseEyeCare(parsed.eyeCare)
+        return
+      } catch {}
+    }
+    setBellWithin72Hours(null)
+    setBellUseCorticosteroid(bellSelectedHouseValue !== 'house_i')
+    setBellAntiviralChoice('none')
+    setBellUseEyeCare(['house_iv', 'house_v', 'house_vi'].includes(bellSelectedHouseValue))
+  }, [answers.bell_tratamento_clinico, bellSelectedHouseValue, isBellTreatmentStep])
 
   useEffect(() => {
     if (!isAnaphylaxisAdjunctStep) {
@@ -5783,9 +6034,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
               {isBellSupportStep && (
                 <div className="mb-8 overflow-hidden rounded-2xl border border-amber-200 bg-[#f4dbaf] shadow-sm">
-                  <div className="grid gap-6 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.5fr)] lg:items-center">
+                  <div className="mx-auto max-w-4xl p-5 sm:p-6">
                     <section className="space-y-5">
-                      <div className="text-center lg:text-left">
+                      <div className="text-center">
                         <h4 className="text-xl font-extrabold text-slate-950">
                           Critérios Diagnósticos de Suporte (não obrigatórios)
                         </h4>
@@ -5824,18 +6075,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         })}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => handleAnswer('bell_red_flags_ramsay', 'suporte_verificado')}
-                        className="w-full rounded-full border-2 border-blue-500 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 transition-colors hover:bg-blue-100 sm:w-auto sm:min-w-[340px]"
-                      >
-                        Critérios de suporte verificados, seguir fluxo.
-                      </button>
-                    </section>
-
-                    <section className="flex items-center justify-center">
-                      <div className="rounded-full bg-blue-900 p-5 text-white shadow-lg">
-                        <ChevronRight className="h-20 w-20" />
+                      <div className="flex justify-center">
+                        <button
+                          type="button"
+                          onClick={() => handleAnswer('bell_red_flags_ramsay', 'suporte_verificado')}
+                          className="w-full rounded-full border-2 border-blue-500 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 transition-colors hover:bg-blue-100 sm:w-auto sm:min-w-[340px]"
+                        >
+                          Critérios de suporte verificados, seguir fluxo.
+                        </button>
                       </div>
                     </section>
                   </div>
@@ -6413,8 +6660,33 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                  {isTVPWaitingForVascularStep && (
+                    <div className={clsx(
+                      'mb-4 rounded-xl border p-4 text-sm leading-relaxed',
+                      hasAbsoluteContraindication
+                        ? 'border-red-300 bg-red-100 text-red-950'
+                        : selectedTherapies.length > 0
+                          ? 'border-emerald-300 bg-emerald-100 text-emerald-950'
+                          : 'border-amber-300 bg-amber-100 text-amber-950'
+                    )}>
+                      <p className="font-extrabold uppercase tracking-wide">
+                        {hasAbsoluteContraindication
+                          ? 'Contraindicação absoluta confirmada: não anticoagular'
+                          : selectedTherapies.length > 0
+                            ? 'Anticoagulação iniciada: manter e monitorar'
+                            : 'Conduta antitrombótica pendente de definição vascular'}
+                      </p>
+                      <p className="mt-1">
+                        {hasAbsoluteContraindication
+                          ? 'Documentar o motivo, manter internação monitorizada e discutir com prioridade filtro de veia cava ou outra intervenção apropriada.'
+                          : selectedTherapies.length > 0
+                            ? `Esquema registrado: ${tvpReferralTherapies.map((item) => item.text).join('; ')}. Vigiar sangramento e manter até nova orientação.`
+                            : 'Não iniciar ou suspender tratamento por conta própria nesta etapa; individualizar a conduta e manter vigilância até avaliação especializada.'}
+                      </p>
+                    </div>
+                  )}
                   {stepMentionsFlegmasia && (
                     <div className="mb-3 flex justify-end">
                       <button
@@ -6432,6 +6704,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     className="prose prose-sm max-w-none"
                     onClick={(event) => {
                       const target = event.target as HTMLElement
+                      if (target.closest('[data-influenza-request-exams="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setInfluenzaExamRequestOpen(true)
+                      }
                       if (target.closest('[data-pac-rx-info="true"]')) {
                         event.preventDefault()
                         event.stopPropagation()
@@ -6506,62 +6783,346 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isBellTreatmentStep && (
-                <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5">
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                    <div className="max-w-3xl">
-                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">
-                        Prescrição nesta etapa
-                      </p>
-                      <h4 className="mt-1 text-lg font-extrabold text-slate-950">
-                        Gere a prescrição antes de encaminhar
+              {influenzaExamRequestOpen && isInfluenzaViralPanelStep && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-gradient-to-r from-emerald-800 to-cyan-800 px-5 py-4 text-white">
+                      <div>
+                        <h4 className="text-lg font-extrabold">Solicitação de exames - Influenza / SRAG</h4>
+                        <p className="mt-1 text-sm text-emerald-50">Selecione os exames indicados conforme gravidade, suspeitas associadas e disponibilidade do serviço.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setInfluenzaExamRequestOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 transition-colors hover:bg-white/25"
+                        title="Fechar"
+                        aria-label="Fechar solicitação de exames"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+                      <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-bold text-slate-950">{influenzaSelectedExams.length} exame(s) selecionado(s)</p>
+                          <p className="mt-1 text-xs text-slate-600">A coleta não deve atrasar oseltamivir, suporte respiratório ou antibioticoterapia quando indicada.</p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setInfluenzaSelectedExams(influenzaDefaultRequestedExams)}
+                            className="rounded-lg border border-cyan-200 bg-white px-3 py-2 text-xs font-bold text-cyan-800 hover:bg-cyan-50"
+                          >
+                            Marcar pacote sugerido
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInfluenzaSelectedExams([])}
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
+                          >
+                            Limpar
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        {influenzaExamRequestGroups.map((group) => (
+                          <section key={group.title} className={clsx('rounded-2xl border p-4', group.tone)}>
+                            <h5 className="font-extrabold text-slate-950">{group.title}</h5>
+                            <div className="mt-3 space-y-2">
+                              {group.items.map((exam) => {
+                                const checked = influenzaSelectedExams.includes(exam)
+                                return (
+                                  <label key={exam} className={clsx('flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-colors', checked ? 'border-white bg-white text-slate-950 shadow-sm' : 'border-transparent text-slate-700 hover:bg-white/60')}>
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => toggleSelection(setInfluenzaSelectedExams, exam)}
+                                      className="mt-0.5 h-4 w-4 rounded border-emerald-300 text-emerald-700 focus:ring-emerald-600"
+                                    />
+                                    <span>{exam}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end border-t border-slate-200 bg-slate-50 px-5 py-4">
+                      <button
+                        type="button"
+                        onClick={() => setInfluenzaExamRequestOpen(false)}
+                        className="rounded-xl bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-emerald-800"
+                      >
+                        Confirmar solicitação
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaWardDestinationStep && (
+                <div className={clsx(
+                  'mb-6 rounded-2xl border p-5',
+                  effectivePneumoniaDripScore >= 4
+                    ? 'border-violet-300 bg-violet-50 text-violet-950'
+                    : 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                )}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h4 className="font-extrabold">
+                        {effectivePneumoniaDripScore >= 4
+                          ? 'DRIP positivo: risco de patógenos resistentes'
+                          : 'DRIP negativo: baixo risco de patógenos resistentes'}
                       </h4>
-                      <p className="mt-2 text-sm leading-relaxed text-emerald-950">
-                        Registra corticoide, antiviral quando indicado e cuidados oculares no receituário do paciente,
-                        além de liberar o texto para copiar aqui mesmo.
+                      <p className="mt-2 text-sm leading-relaxed">
+                        {effectivePneumoniaDripScore >= 4
+                          ? 'Avaliar cobertura ampliada para MRSA/Pseudomonas conforme culturas prévias, epidemiologia local, função renal e protocolo institucional. Considerar piperacilina-tazobactam, cefepime ou meropenem, com associação apropriada para PAC grave e posterior descalonamento.'
+                          : 'Na ausência de outros fatores de resistência, considerar esquema habitual para PAC internada, como ceftriaxona associada a azitromicina ou claritromicina, ajustando a alergias, função renal e protocolo institucional.'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleGenerateBellTreatmentPrescription}
-                      className={clsx(
-                        'inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold transition-colors',
-                        hasBellTreatmentPrescription
-                          ? 'bg-emerald-700 text-white hover:bg-emerald-800'
-                          : 'bg-cyan-600 text-white hover:bg-cyan-700'
-                      )}
-                    >
-                      <Pill className="h-4 w-4" />
-                      {hasBellTreatmentPrescription ? 'Prescrição gerada' : 'Gerar prescrição'}
-                    </button>
+                    <span className={clsx(
+                      'shrink-0 rounded-xl px-4 py-2 text-sm font-black',
+                      effectivePneumoniaDripScore >= 4 ? 'bg-violet-700 text-white' : 'bg-white text-emerald-800'
+                    )}>
+                      DRIP {effectivePneumoniaDripScore}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {isTVPVascularReferralStep && (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
+                  <div className="border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
+                    <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Documento de encaminhamento</p>
+                    <h4 className="mt-1 text-lg font-extrabold">Avaliação pela Cirurgia Vascular</h4>
                   </div>
 
-                  {bellTreatmentPrescriptionOpen && (
-                    <div className="mt-4 rounded-xl border border-emerald-200 bg-white p-4">
-                      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <h5 className="text-sm font-extrabold text-slate-950">Prescrição e cuidados - Paralisia de Bell</h5>
-                          <p className="mt-1 text-xs font-semibold text-emerald-700">
-                            Registrada no receituário do paciente.
-                          </p>
+                  <div className="space-y-6 p-5 text-sm leading-relaxed text-slate-800 sm:p-6">
+                    <div>
+                      <p className="font-semibold">Prezado(a) Cirurgião(ã) Vascular,</p>
+                      <p className="mt-2">Encaminho paciente com diagnóstico ou suspeita de Trombose Venosa Profunda (TVP) para avaliação especializada.</p>
+                    </div>
+
+                    <section>
+                      <h5 className="border-b border-slate-200 pb-2 font-extrabold uppercase text-slate-950">Resumo clínico</h5>
+                      <dl className="mt-3 grid gap-3 md:grid-cols-2">
+                        <div className="rounded-lg bg-slate-50 p-3"><dt className="font-bold">Início dos sintomas</dt><dd>Não informado no fluxo. Atendimento em {new Date(patient.admission.date).toLocaleDateString('pt-BR')} às {patient.admission.time || '____'}.</dd></div>
+                        <div className="rounded-lg bg-slate-50 p-3"><dt className="font-bold">Membro acometido</dt><dd>{selectedTVPLeg === 'left' ? 'Membro inferior esquerdo' : selectedTVPLeg === 'right' ? 'Membro inferior direito' : selectedTVPLeg === 'other' ? 'Outra localização selecionada' : 'Não informado'}</dd></div>
+                        <div className="rounded-lg bg-slate-50 p-3 md:col-span-2"><dt className="font-bold">Sintomas e achados</dt><dd>{tvpReferralSymptoms.length > 0 ? tvpReferralSymptoms.join('; ') : 'Não informados no fluxo.'}</dd></div>
+                        <div className="rounded-lg bg-slate-50 p-3 md:col-span-2"><dt className="font-bold">Fatores de risco identificados</dt><dd>{tvpReferralRiskFactors.length > 0 ? Array.from(new Set(tvpReferralRiskFactors)).join('; ') : 'Não identificados ou não informados.'}</dd></div>
+                      </dl>
+                    </section>
+
+                    <section>
+                      <h5 className="border-b border-slate-200 pb-2 font-extrabold uppercase text-slate-950">Exame físico</h5>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {([
+                          ['Edema', tvpReferralHasEdema],
+                          ['Assimetria entre os membros', tvpReferralHasAsymmetry],
+                          ['Dor à palpação do trajeto venoso', tvpReferralHasVenousPain],
+                          ['Perfusão distal preservada', tvpReferralHasPreservedPulses],
+                          ['Sinais de isquemia do membro', tvpReferralHasIschemia]
+                        ] as Array<[string, boolean]>).map(([label, checked]) => (
+                          <div key={String(label)} className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 p-3">
+                            <span className="font-semibold">{String(label)}</span>
+                            <span className={clsx('rounded-full px-2.5 py-1 text-xs font-bold', checked ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600')}>
+                              {checked ? 'Sim' : 'Não registrado'}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="rounded-lg border border-slate-200 p-3 md:col-span-2"><strong>Pulsos arteriais:</strong> {tvpReferralHasPreservedPulses ? 'femoral, poplíteo, tibial posterior e pedioso palpáveis e simétricos.' : 'não informados no fluxo.'}</div>
+                      </div>
+                    </section>
+
+                    <section className="grid gap-4 lg:grid-cols-2">
+                      <div>
+                        <h5 className="border-b border-slate-200 pb-2 font-extrabold uppercase text-slate-950">Estratificação clínica</h5>
+                        <div className="mt-3 rounded-lg bg-blue-50 p-4 text-blue-950">
+                          <p><strong>Escore de Wells:</strong> {wellsScoreTotal} ponto{wellsScoreTotal === 1 ? '' : 's'}.</p>
+                          <p><strong>Probabilidade clínica:</strong> {wellsRisk === 'moderada' ? 'intermediária' : wellsRisk}.</p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={copyBellDocumentText}
-                          className={clsx(
-                            'inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition-colors',
-                            bellDocumentCopied ? 'bg-emerald-600 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
-                          )}
-                        >
-                          {bellDocumentCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-                          {bellDocumentCopied ? 'Copiado' : 'Copiar'}
-                        </button>
                       </div>
-                      <div className="max-h-72 overflow-y-auto whitespace-pre-line rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm leading-relaxed text-slate-900">
-                        {bellPrescriptionText}
+                      <div>
+                        <h5 className="border-b border-slate-200 pb-2 font-extrabold uppercase text-slate-950">Exames complementares</h5>
+                        <div className="mt-3 rounded-lg bg-blue-50 p-4 text-blue-950">
+                          <p><strong>D-dímero:</strong> {tvpReferralDdimer}.</p>
+                          <p className="mt-1"><strong>Ultrassonografia:</strong> {tvpReferralUltrasound}</p>
+                        </div>
                       </div>
+                    </section>
+
+                    <section>
+                      <h5 className="border-b border-slate-200 pb-2 font-extrabold uppercase text-slate-950">Extensão da trombose</h5>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {['Distal', 'Poplítea', 'Femoropoplítea', 'Iliofemoral', 'Bilateral', 'Outro'].map((location) => {
+                          const selected = location === 'Iliofemoral' && selectedClinicalFindings.some((item) => /iliofemoral|raiz da coxa/i.test(item))
+                          return <span key={location} className={clsx('rounded-lg border px-3 py-2 font-semibold', selected ? 'border-red-300 bg-red-50 text-red-800' : 'border-slate-200 bg-white text-slate-500')}>{selected ? 'Selecionado: ' : ''}{location}</span>
+                        })}
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">Completar a extensão após varredura venosa completa, quando ainda não definida.</p>
+                    </section>
+
+                    <section>
+                      <h5 className="border-b border-slate-200 pb-2 font-extrabold uppercase text-slate-950">Tratamento instituído</h5>
+                      <div className="mt-3 rounded-lg border border-slate-200 p-4">
+                        <p><strong>Anticoagulação iniciada:</strong> {tvpReferralTherapies.length > 0 ? 'Sim' : 'Não registrada'}.</p>
+                        <p className="mt-1"><strong>Medicamento e dose:</strong> {tvpReferralTherapies.length > 0 ? tvpReferralTherapies.map((item) => item.text).join('; ') : '____________________________________'}.</p>
+                        <p className="mt-1"><strong>Horário da primeira dose:</strong> ____________________.</p>
+                      </div>
+                    </section>
+
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+                      Solicito avaliação da Cirurgia Vascular para definição da necessidade de abordagem especializada, incluindo terapia endovascular, trombólise dirigida por cateter, trombectomia venosa ou outras intervenções quando indicadas, especialmente em TVP extensa, iliofemoral, progressão clínica ou sinais de comprometimento do membro.
+                    </div>
+
+                    <div className="grid gap-4 border-t border-slate-200 pt-5 md:grid-cols-3">
+                      <p><strong>Médico(a):</strong><br />____________________________</p>
+                      <p><strong>CRM:</strong><br />____________________________</p>
+                      <p><strong>Data/Hora:</strong><br />{new Date().toLocaleString('pt-BR')}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isBellTreatmentStep && (
+                <div className="mb-6 space-y-5 rounded-2xl border border-blue-200 bg-white p-4 shadow-sm sm:p-6">
+                  <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-blue-700">Conduta conforme gravidade</p>
+                    <h4 className="mt-1 text-xl font-extrabold text-slate-950">House-Brackmann {bellSelectedHouseLabel}</h4>
+                    <p className="mt-2 text-sm leading-relaxed text-blue-950">
+                      {bellIsNormalFunction
+                        ? 'Função facial normal: não há indicação de corticoide ou antiviral para Paralisia de Bell.'
+                        : ['house_ii', 'house_iii'].includes(bellSelectedHouseValue)
+                          ? 'Disfunção leve a moderada: corticosteroide é o tratamento principal; antiviral geralmente não é necessário.'
+                          : bellSelectedHouseValue === 'house_iv'
+                            ? 'Disfunção moderadamente grave: corticosteroide é o tratamento principal e o antiviral associado pode ser considerado dentro de 72 horas.'
+                            : 'Disfunção grave ou paralisia completa: corticosteroide é o tratamento principal e há maior justificativa para oferecer antiviral associado dentro de 72 horas.'}
+                    </p>
+                  </div>
+
+                  {!bellIsNormalFunction && (
+                    <div className="grid gap-5 lg:grid-cols-2">
+                      <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <h5 className="font-extrabold text-slate-950">1. Janela terapêutica e corticoide</h5>
+                          <p className="mt-1 text-sm text-slate-600">Registre o tempo desde o início da paresia/paralisia.</p>
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {[
+                            { value: true, label: 'Até 72 horas' },
+                            { value: false, label: 'Mais de 72 horas' }
+                          ].map((item) => (
+                            <button
+                              key={item.label}
+                              type="button"
+                              onClick={() => {
+                                setBellWithin72Hours(item.value)
+                                if (!item.value) setBellAntiviralChoice('none')
+                              }}
+                              className={clsx(
+                                'rounded-xl border px-4 py-3 text-sm font-bold transition-colors',
+                                bellWithin72Hours === item.value
+                                  ? 'border-blue-500 bg-blue-600 text-white'
+                                  : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300'
+                              )}
+                            >
+                              {item.label}
+                            </button>
+                          ))}
+                        </div>
+                        <label className={clsx('flex cursor-pointer items-start gap-3 rounded-xl border p-4', bellUseCorticosteroid ? 'border-emerald-400 bg-emerald-50' : 'border-slate-200 bg-white')}>
+                          <input
+                            type="checkbox"
+                            checked={bellUseCorticosteroid}
+                            disabled={bellAntiviralChoice !== 'none'}
+                            onChange={(event) => setBellUseCorticosteroid(event.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-slate-300 text-emerald-600"
+                          />
+                          <span className="text-sm text-slate-800">
+                            <strong className="block text-slate-950">Corticosteroide</strong>
+                            Prednisona 60 mg/dia por 5 dias, seguida de redução de 10 mg/dia até completar 10 dias.
+                          </span>
+                        </label>
+                        {bellWithin72Hours === false && (
+                          <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                            Após 72 horas, o benefício do início do tratamento é menos estabelecido. Individualize e registre a decisão clínica.
+                          </p>
+                        )}
+                      </section>
+
+                      <section className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                        <div>
+                          <h5 className="font-extrabold text-slate-950">2. Antiviral associado</h5>
+                          <p className="mt-1 text-sm text-slate-600">Nunca utilizar isoladamente. O benefício adicional é pequeno e mais plausível nos graus IV–VI.</p>
+                        </div>
+                        {!bellAntiviralMayBenefit ? (
+                          <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700">House-Brackmann II–III: antiviral não indicado rotineiramente neste protocolo.</div>
+                        ) : bellWithin72Hours !== true ? (
+                          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Selecione “Até 72 horas” para liberar as opções antivirais.</div>
+                        ) : (
+                          <div className="grid gap-2">
+                            {[
+                              { value: 'none', label: 'Não associar antiviral' },
+                              { value: 'valaciclovir', label: 'Valaciclovir 1.000 mg 8/8h por 7 dias' },
+                              { value: 'aciclovir', label: 'Aciclovir 400 mg 5x/dia por 10 dias' },
+                              { value: 'famciclovir', label: 'Famciclovir 500 mg 8/8h por 7 dias' }
+                            ].map((item) => (
+                              <button
+                                key={item.value}
+                                type="button"
+                                onClick={() => {
+                                  setBellAntiviralChoice(item.value as BellAntiviralChoice)
+                                  if (item.value !== 'none') setBellUseCorticosteroid(true)
+                                }}
+                                className={clsx('rounded-lg border px-3 py-2.5 text-left text-sm font-semibold transition-colors', bellAntiviralChoice === item.value ? 'border-violet-500 bg-violet-50 text-violet-950' : 'border-slate-200 bg-white text-slate-700 hover:border-violet-300')}
+                              >
+                                {item.label}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {bellAntiviralStronglyConsider && bellWithin72Hours === true && bellAntiviralChoice === 'none' && (
+                          <p className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-xs font-semibold text-violet-900">Grau V–VI: considerar fortemente a associação após discutir o pequeno benefício potencial, riscos e preferências do paciente.</p>
+                        )}
+                      </section>
                     </div>
                   )}
+
+                  <section className={clsx('rounded-xl border p-4', bellHasIncompleteEyeClosure ? 'border-red-300 bg-red-50' : 'border-cyan-200 bg-cyan-50')}>
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={bellUseEyeCare}
+                        disabled={bellIsNormalFunction}
+                        onChange={(event) => setBellUseEyeCare(event.target.checked)}
+                        className="mt-1 h-5 w-5 rounded border-slate-300 text-cyan-700"
+                      />
+                      <div>
+                        <h5 className="font-extrabold text-slate-950">3. Proteção ocular</h5>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-800">
+                          Lágrimas artificiais durante o dia, pomada lubrificante e oclusão palpebral cuidadosa à noite, além de proteção contra vento e poeira.
+                          {bellHasIncompleteEyeClosure && ' O fechamento ocular incompleto torna esta medida prioritária para prevenir abrasão, ceratite e úlcera de córnea.'}
+                        </p>
+                        <p className="mt-2 text-xs font-semibold text-red-800">Dor ocular, hiperemia, fotofobia ou alteração visual exigem avaliação oftalmológica.</p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <div className="flex justify-end border-t border-slate-200 pt-4">
+                    <button
+                      type="button"
+                      disabled={!bellIsNormalFunction && bellWithin72Hours === null}
+                      onClick={handleGenerateBellTreatmentPrescription}
+                      className={clsx('inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-colors', bellIsNormalFunction || bellWithin72Hours !== null ? 'bg-blue-700 text-white hover:bg-blue-800' : 'cursor-not-allowed bg-slate-200 text-slate-500')}
+                    >
+                      <Pill className="h-4 w-4" />
+                      {bellIsNormalFunction ? 'Registrar conduta e continuar' : 'Confirmar conduta e gerar prescrição'}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -7162,10 +7723,107 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => handleAnswer('pac_curb65_protocolo', 'exames_solicitados')}
+                        onClick={() => handleAnswer('pac_resultados_exames', 'exames_solicitados')}
                         className="rounded-xl bg-cyan-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-800"
                       >
-                        Prosseguir para CURB-65
+                        Registrar resultados
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isPneumoniaLabResultsStep && (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
+                  <div className="bg-gradient-to-r from-sky-900 to-cyan-800 p-5 text-white">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <h4 className="text-base font-extrabold uppercase tracking-wide">Resultados dos exames iniciais</h4>
+                        <p className="mt-1 text-sm text-sky-100">Preencha os resultados já disponíveis. Campos pendentes podem permanecer em branco.</p>
+                      </div>
+                      <div className="rounded-xl bg-white/15 px-4 py-3 text-sm font-bold">
+                        {Object.values(pneumoniaLabResults).filter((value) => value.trim()).length}/{pneumoniaResultExams.length}
+                        <div className="text-xs font-semibold text-sky-100">resultado(s) registrado(s)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-5 p-5">
+                    {pneumoniaResultExams.length === 0 ? (
+                      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                        Nenhum exame básico ou de gravidade foi selecionado. Volte à etapa anterior para revisar a solicitação ou prossiga para confirmar o CURB-65 com os dados clínicos disponíveis.
+                      </div>
+                    ) : (
+                      pneumoniaExamGroups
+                        .filter((group) => ['basicos', 'gravidade'].includes(group.key))
+                        .map((group) => {
+                          const exams = group.items.filter((exam) => pneumoniaResultExams.includes(exam))
+                          if (exams.length === 0) return null
+                          return (
+                            <section key={group.key} className={clsx('rounded-2xl border p-4', group.tone)}>
+                              <div className="mb-4">
+                                <h5 className="font-extrabold">{group.title}</h5>
+                                <p className="mt-1 text-xs opacity-80">Informe os valores liberados pelo laboratório.</p>
+                              </div>
+                              <div className="grid gap-3 md:grid-cols-2">
+                                {exams.map((exam) => {
+                                  const config = pneumoniaLabResultConfig[exam]
+                                  return (
+                                    <label key={exam} className="rounded-xl border border-white/80 bg-white p-3 shadow-sm">
+                                      <span className="mb-2 block text-sm font-bold text-slate-900">{exam}</span>
+                                      <div className="flex items-center gap-2">
+                                        <input
+                                          type="text"
+                                          inputMode={config.inputMode || 'text'}
+                                          value={pneumoniaLabResults[exam] || ''}
+                                          onChange={(event) => setPneumoniaLabResults((previous) => ({ ...previous, [exam]: event.target.value }))}
+                                          placeholder={config.placeholder}
+                                          className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-cyan-500 focus:ring-2 focus:ring-cyan-200"
+                                        />
+                                        {config.unit && <span className="shrink-0 text-xs font-bold text-slate-600">{config.unit}</span>}
+                                      </div>
+                                    </label>
+                                  )
+                                })}
+                              </div>
+                            </section>
+                          )
+                        })
+                    )}
+
+                    <section className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h5 className="font-extrabold text-cyan-950">Prévia automática do CURB-65</h5>
+                          <p className="mt-1 text-xs text-cyan-800">Calculada com resultados, sinais vitais, exame físico e idade já registrados.</p>
+                        </div>
+                        <span className="w-fit rounded-xl bg-white px-4 py-2 text-sm font-black text-cyan-900 shadow-sm">
+                          {Object.values(pneumoniaAutomaticCurbValues).filter(Boolean).length} ponto(s)
+                        </span>
+                      </div>
+                      <div className="mt-4 grid gap-2 md:grid-cols-2">
+                        {pneumoniaCurbItems.map((item) => (
+                          <div key={item.key} className={clsx('flex items-center justify-between rounded-lg border p-2 text-sm', pneumoniaAutomaticCurbValues[item.key] ? 'border-cyan-300 bg-white font-semibold text-cyan-950' : 'border-cyan-100 bg-cyan-50/50 text-slate-600')}>
+                            <span>{item.label}</span>
+                            <span className={clsx('rounded-full px-2 py-0.5 text-xs font-bold', pneumoniaAutomaticCurbValues[item.key] ? 'bg-cyan-700 text-white' : 'bg-slate-100 text-slate-500')}>
+                              {pneumoniaAutomaticCurbValues[item.key] ? 'Selecionado' : 'Não'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <div className="flex justify-end">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                          setPneumoniaCurbValues(pneumoniaAutomaticCurbValues)
+                          handleAnswer('pac_curb65_protocolo', 'resultados_registrados')
+                        }}
+                        className="rounded-xl bg-cyan-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-800"
+                      >
+                        Salvar resultados e revisar CURB-65
                       </motion.button>
                     </div>
                   </div>
@@ -7201,6 +7859,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       )
                     })}
                   </div>
+                  <p className="mt-3 rounded-lg border border-cyan-200 bg-white p-3 text-xs font-semibold text-cyan-900">
+                    Critérios pré-preenchidos a partir dos resultados, sinais vitais, exame físico e idade. Revise e ajuste manualmente se necessário antes de confirmar o escore.
+                  </p>
                   <div className="mt-4 flex justify-end">
                     <motion.button
                       whileHover={{ scale: 1.02 }}
@@ -9405,7 +10066,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         <div>
                           <h5 className="text-sm font-extrabold text-blue-950">POCUS vascular para TVP</h5>
                           <p className="mt-1 max-w-3xl text-xs leading-relaxed text-blue-900">
-                            Ultrassom compressivo limitado à beira-leito para rastrear TVP proximal. O principal achado é a incapacidade de compressão completa da veia.
+                            Protocolo compressivo de 3 pontos à beira-leito para rastrear TVP proximal. O principal achado é a incapacidade de compressão completa da veia.
                           </p>
                         </div>
                       </div>
@@ -10218,7 +10879,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </div>
                       <div className="bg-slate-50 p-4">
                         <img
-                          src="/paralisia%20de%20bell/cranio.png"
+                          src="/paralisia%20de%20bell/viiparcraniano.jpeg"
                           alt="VII par craniano"
                           className="mx-auto max-h-[58vh] w-full rounded-xl object-contain"
                         />
@@ -11618,7 +12279,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
                     {hasAbsoluteContraindication && (
                       <motion.button
-                        onClick={() => handleAnswer('encaminhamento_urgente', 'contraindicacao_absoluta')}
+                        onClick={() => handleAnswer('tvp_aguarda_avaliacao_vascular', 'contraindicacao_absoluta')}
                         className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-red-50 border-red-300 hover:border-red-500"
                         whileHover={{ scale: 1.01 }}
                         whileTap={{ scale: 0.99 }}
@@ -11657,7 +12318,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           </motion.button>
 
                           <motion.button
-                            onClick={() => handleAnswer('encaminhamento_urgente', 'risco_supera_beneficio')}
+                            onClick={() => handleAnswer('tvp_aguarda_avaliacao_vascular', 'risco_supera_beneficio')}
                             className="w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between bg-amber-50 border-amber-300 hover:border-amber-500"
                             whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.99 }}
@@ -11804,7 +12465,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </motion.button>
 
                       <motion.button
-                        onClick={() => handleAnswer('encaminhamento_urgente', 'anticoagulado_encaminhado_vascular')}
+                        onClick={() => handleAnswer('tvp_aguarda_avaliacao_vascular', 'anticoagulado_encaminhado_vascular')}
                         disabled={!hasSelectedTherapy}
                         className={clsx(
                           'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
@@ -11839,9 +12500,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                       <div>
-                        <h4 className="text-lg font-extrabold text-slate-950">POCUS vascular para TVP</h4>
+                        <h4 className="text-lg font-extrabold text-slate-950">POCUS vascular para TVP: compressão de 3 pontos</h4>
                         <p className="mt-1 text-sm leading-relaxed text-slate-600">
-                          Ultrassonografia compressiva limitada para rastreamento de trombose venosa profunda proximal à beira-leito.
+                          Protocolo adotado no pronto-socorro para rastreamento rápido da trombose venosa profunda proximal à beira-leito.
                         </p>
                       </div>
                       <button
@@ -11859,7 +12520,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <section className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                         <h5 className="font-extrabold text-blue-950">Princípio diagnóstico</h5>
                         <p className="mt-2">
-                          O médico treinado realiza ultrassom compressivo limitado (CUS) para rastrear TVP proximal. A incapacidade de compressão é o principal sinal diagnóstico.
+                          O médico treinado realiza ultrassonografia compressiva limitada de 3 pontos (Three-Point Compression POCUS/LCUS) para rastrear TVP proximal. A incapacidade de compressão é o principal sinal diagnóstico.
                         </p>
                         <div className="mt-4 grid gap-3 sm:grid-cols-2">
                           <div className="rounded-xl border border-emerald-200 bg-white p-4">
@@ -11881,25 +12542,70 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </div>
                       </section>
 
-                      <section className="grid gap-4 lg:grid-cols-2">
-                        <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
-                          <h5 className="font-extrabold text-cyan-950">Protocolo de 2 pontos</h5>
-                          <p className="mt-2">Método rápido, avaliando:</p>
-                          <ol className="mt-2 list-decimal space-y-2 pl-5">
-                            <li><strong>Veia femoral comum:</strong> região inguinal, identificando veia e artéria femorais comuns e aplicando compressão.</li>
-                            <li><strong>Veia poplítea:</strong> fossa poplítea, identificando veia e artéria poplíteas e aplicando compressão.</li>
-                          </ol>
-                          <p className="mt-3 font-semibold text-cyan-950">Se a veia não colabar, considerar POCUS positivo para TVP.</p>
+                      <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                          <div>
+                            <h5 className="font-extrabold text-cyan-950">Protocolo adotado: compressão de 3 pontos</h5>
+                            <p className="mt-1 text-cyan-900">Tempo habitual: 2–5 minutos, realizado à beira-leito por emergencista ou intensivista treinado.</p>
+                          </div>
+                          <span className="w-fit rounded-full bg-cyan-700 px-3 py-1 text-xs font-bold text-white">POCUS inicial</span>
                         </div>
-                        <div className="rounded-xl border border-violet-200 bg-violet-50 p-4">
-                          <h5 className="font-extrabold text-violet-950">Protocolo de 3 pontos</h5>
-                          <p className="mt-2">Avaliar em sequência:</p>
-                          <ol className="mt-2 list-decimal space-y-2 pl-5">
-                            <li>Veia femoral comum.</li>
-                            <li>Junção safeno-femoral.</li>
-                            <li>Veia poplítea.</li>
-                          </ol>
-                          <p className="mt-3">É uma abordagem frequentemente ensinada para ampliar a avaliação compressiva proximal na emergência.</p>
+                        <ol className="mt-4 grid gap-3 md:grid-cols-3">
+                          <li className="rounded-lg border border-cyan-200 bg-white p-3">
+                            <strong className="block text-cyan-950">1. Veia femoral comum</strong>
+                            <span className="mt-1 block">Avaliar na região inguinal, incluindo a junção safeno-femoral.</span>
+                          </li>
+                          <li className="rounded-lg border border-cyan-200 bg-white p-3">
+                            <strong className="block text-cyan-950">2. Bifurcação femoral</strong>
+                            <span className="mt-1 block">Avaliar a origem da veia femoral profunda e o início da veia femoral.</span>
+                          </li>
+                          <li className="rounded-lg border border-cyan-200 bg-white p-3">
+                            <strong className="block text-cyan-950">3. Veia poplítea</strong>
+                            <span className="mt-1 block">Comprimir na fossa poplítea e acompanhar até a trifurcação.</span>
+                          </li>
+                        </ol>
+                        <p className="mt-3 font-semibold text-cyan-950">Em cada ponto: colabamento completo indica compressibilidade preservada; ausência de colabamento deve ser considerada TVP até prova em contrário.</p>
+                      </section>
+
+                      <section className="grid gap-4 lg:grid-cols-2">
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                          <h5 className="font-extrabold text-emerald-950">Vantagens no pronto-socorro</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            <li>Exame rápido, reprodutível e realizado à beira-leito.</li>
+                            <li>Excelente desempenho para TVP proximal quando integrado ao Wells e ao D-dímero.</li>
+                            <li>Adequado para decisão clínica imediata.</li>
+                          </ul>
+                        </div>
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <h5 className="font-extrabold text-amber-950">Limitações do protocolo de 3 pontos</h5>
+                          <p className="mt-2">Não avalia adequadamente TVP distal, veias tibiais, fibulares, musculares da panturrilha, ilíacas ou tromboses muito proximais.</p>
+                          <p className="mt-2 font-semibold">POCUS negativo não exclui completamente TVP quando a probabilidade clínica é moderada ou alta.</p>
+                        </div>
+                      </section>
+
+                      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                        <div className="border-b border-slate-200 bg-slate-50 px-4 py-3">
+                          <h5 className="font-extrabold text-slate-950">Comparação prática dos métodos</h5>
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[680px] text-left text-sm">
+                            <thead className="bg-slate-100 text-slate-950">
+                              <tr>
+                                <th className="px-4 py-3 font-extrabold">Característica</th>
+                                <th className="px-4 py-3 font-extrabold">Compressão de 3 pontos</th>
+                                <th className="px-4 py-3 font-extrabold">Varredura completa</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200">
+                              <tr><td className="px-4 py-3 font-semibold">Tempo</td><td className="px-4 py-3">2–5 minutos</td><td className="px-4 py-3">20–40 minutos</td></tr>
+                              <tr><td className="px-4 py-3 font-semibold">Local</td><td className="px-4 py-3">Beira-leito</td><td className="px-4 py-3">Serviço de imagem/laboratório vascular</td></tr>
+                              <tr><td className="px-4 py-3 font-semibold">Operador</td><td className="px-4 py-3">Emergencista ou intensivista treinado</td><td className="px-4 py-3">Radiologista, angiologista ou cirurgião vascular</td></tr>
+                              <tr><td className="px-4 py-3 font-semibold">TVP proximal</td><td className="px-4 py-3 text-emerald-800">Excelente</td><td className="px-4 py-3 text-emerald-800">Excelente</td></tr>
+                              <tr><td className="px-4 py-3 font-semibold">TVP distal</td><td className="px-4 py-3 text-amber-800">Limitada</td><td className="px-4 py-3 text-emerald-800">Excelente</td></tr>
+                              <tr><td className="px-4 py-3 font-semibold">Toda a anatomia</td><td className="px-4 py-3">Não</td><td className="px-4 py-3">Sim</td></tr>
+                              <tr><td className="px-4 py-3 font-semibold">Decisão imediata</td><td className="px-4 py-3 font-semibold text-blue-800">Método inicial do fluxo</td><td className="px-4 py-3">Exame complementar/confirmatório</td></tr>
+                            </tbody>
+                          </table>
                         </div>
                       </section>
 
@@ -11921,20 +12627,23 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </div>
                       </section>
 
-                      <section className="rounded-xl border border-orange-200 bg-orange-50 p-4">
-                        <h5 className="font-extrabold text-orange-950">Quando o POCUS limitado não é suficiente?</h5>
-                        <p className="mt-2">
-                          A avaliação compressiva pode não identificar adequadamente TVP ilíaca. Suspeitar diante de edema importante de toda a perna, dor inguinal ou pélvica, veia femoral comum dilatada, fluxo reduzido ou edema unilateral expressivo.
-                        </p>
-                        <p className="mt-2 font-semibold">
-                          Nesses cenários, considerar Doppler vascular formal, angio-TC venosa ou angio-RM conforme disponibilidade e contexto clínico.
-                        </p>
+                      <section className="rounded-xl border border-violet-200 bg-violet-50 p-4">
+                        <h5 className="font-extrabold text-violet-950">Quando solicitar varredura venosa completa?</h5>
+                        <p className="mt-2">A ultrassonografia por varredura completa (Whole-Leg Compression Ultrasound/Duplex Venoso) avalia todo o sistema venoso profundo, utiliza Doppler colorido e espectral e define melhor TVP distal, extensão do trombo e apresentações atípicas.</p>
+                        <p className="mt-2 text-violet-950"><strong>Territórios avaliados:</strong> veias ilíacas quando acessíveis, femoral comum, femoral, femoral profunda, poplítea, tronco tibioperoneiro, tibiais anteriores e posteriores, fibulares e veias musculares do gastrocnêmio e sóleo.</p>
+                        <ul className="mt-3 grid gap-2 md:grid-cols-2">
+                          <li className="rounded-lg border border-violet-200 bg-white p-3">POCUS negativo com probabilidade clínica moderada ou alta.</li>
+                          <li className="rounded-lg border border-violet-200 bg-white p-3">Suspeita de TVP distal ou trombose iliofemoral.</li>
+                          <li className="rounded-lg border border-violet-200 bg-white p-3">POCUS inconclusivo ou tecnicamente limitado.</li>
+                          <li className="rounded-lg border border-violet-200 bg-white p-3">Necessidade de mapear toda a extensão antes de intervenção.</li>
+                        </ul>
+                        <p className="mt-3 text-violet-950">A varredura completa costuma exigir operador especializado, serviço de imagem e cerca de 20–40 minutos. Se houver suspeita de trombose ilíaca não esclarecida, considerar também angio-TC venosa ou angio-RM conforme o contexto.</p>
                       </section>
 
                       <section className="rounded-xl border border-rose-200 bg-rose-50 p-4">
                         <h5 className="font-extrabold text-rose-950">Mensagem prática</h5>
                         <p className="mt-2">
-                          Em paciente com Wells elevado e edema unilateral, a ausência de compressibilidade da veia femoral comum ou poplítea é um achado de grande impacto imediato. Um exame negativo não exclui TVP quando a probabilidade clínica permanece alta.
+                          Neste fluxo, o exame inicial é o POCUS compressivo de 3 pontos. Veia não compressível confirma forte suspeita de TVP proximal; resultado negativo exige correlação com Wells e, quando a probabilidade permanecer moderada ou alta, varredura completa ou ultrassonografia seriada.
                         </p>
                       </section>
                     </div>
@@ -11980,7 +12689,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

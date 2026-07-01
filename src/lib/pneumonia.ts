@@ -90,7 +90,7 @@ export const defaultCurbValues = (patient: Pick<Patient, 'age'>): PneumoniaCurbV
   ureiaMaior43: false,
   frMaior30: false,
   paBaixa: false,
-  idadeMaior65: typeof patient.age === 'number' ? patient.age > 65 : false
+  idadeMaior65: typeof patient.age === 'number' ? patient.age >= 65 : false
 })
 
 const isFemalePatient = (patient: Pick<Patient, 'gender'>) => {

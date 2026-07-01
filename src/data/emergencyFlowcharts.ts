@@ -2953,7 +2953,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
         <div class="bg-green-100 p-3 rounded border-l-4 border-green-700 text-sm text-green-950 leading-relaxed">
           <p><strong>Conduta:</strong> Solicitar D-dímero de alta sensibilidade.</p>
           <p>Se negativo, TVP pode ser excluída em paciente de baixa probabilidade.</p>
-          <p>Se positivo, prosseguir para ultrassonografia venosa compressiva.</p>
+          <p>Se positivo, prosseguir para POCUS vascular com compressão de 3 pontos.</p>
         </div>
       `,
       options: [
@@ -2964,38 +2964,39 @@ export const tvpFlowchart: EmergencyFlowchart = {
     moderada_probabilidade: {
       id: 'moderada_probabilidade',
       title: 'Moderada/Alta Probabilidade',
-      description: 'Realizar ultrassonografia com Doppler de membros inferiores (MMII).',
+      description: 'Realizar POCUS vascular com compressão de 3 pontos.',
       type: 'action',
       critical: true,
       content: `
         <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Conduta direta:</strong> realizar USG com Doppler de membros inferiores (MMII) sem etapa prévia de D-dímero.</p>
+          <p><strong>Conduta direta:</strong> realizar POCUS vascular com compressão de 3 pontos sem etapa prévia de D-dímero. Se negativo, inconclusivo ou insuficiente diante de probabilidade moderada/alta, solicitar varredura venosa completa.</p>
         </div>
       `,
       options: [
-        { text: 'Realizar USG com Doppler de membros inferiores (MMII)', nextStep: 'us_compressiva', value: 'direct_us', critical: true }
+        { text: 'Realizar POCUS compressivo de 3 pontos', nextStep: 'us_compressiva', value: 'direct_us', critical: true }
       ]
     },
     us_compressiva: {
       id: 'us_compressiva',
-      title: 'Ultrassonografia Doppler venosa de membro inferior',
-      description: 'Interpretar resultado e definir próximo passo.',
+      title: 'POCUS vascular: compressão de 3 pontos',
+      description: 'Avaliar veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.',
       type: 'question',
       critical: true,
       options: [
-        { text: 'USG positiva para trombose', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
-        { text: 'USG negativa para trombose', nextStep: 'us_negativa_conduta', value: 'us_negative' }
+        { text: 'POCUS positivo: veia não compressível', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
+        { text: 'POCUS negativo: compressibilidade preservada', nextStep: 'us_negativa_conduta', value: 'us_negative' },
+        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'us_negativa_conduta', value: 'us_inconclusive' }
       ]
     },
     us_negativa_conduta: {
       id: 'us_negativa_conduta',
-      title: 'USG Negativa - Reavaliação',
+      title: 'POCUS negativo ou inconclusivo - Reavaliação',
       description: 'Decisão baseada na persistência da suspeita clínica.',
       type: 'question',
       content: `
         <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
-          <p>USG negativa não exclui TVP em suspeita clínica alta.</p>
-          <p>Se persistir dúvida/suspeita clínica, repetir USG em 5–7 dias.</p>
+          <p>POCUS de 3 pontos negativo não exclui TVP distal, ilíaca ou trombose proximal fora das janelas avaliadas.</p>
+          <p>Se a probabilidade clínica permanecer moderada ou alta, solicitar varredura venosa completa ou repetir ultrassonografia em 5–7 dias conforme disponibilidade e protocolo.</p>
         </div>
       `,
       options: [
@@ -3026,7 +3027,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
       `,
       options: [
         { text: 'Sem contraindicação relevante: seguir para anticoagulação', nextStep: 'tratamento_inicial', value: 'proceed_anticoag' },
-        { text: 'Solicitar avaliação da Cirurgia Vascular', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
+        { text: 'Solicitar avaliação da Cirurgia Vascular', nextStep: 'tvp_aguarda_avaliacao_vascular', value: 'inpatient', critical: true }
       ]
     },
     tratamento_inicial: {
@@ -3067,7 +3068,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
       `,
       options: [
         { text: 'Paciente anticoagulado e fluxo finalizado', nextStep: 'anticoagulacao_iniciada', value: 'outpatient' },
-        { text: 'Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular', nextStep: 'encaminhamento_urgente', value: 'inpatient', critical: true }
+        { text: 'Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular', nextStep: 'tvp_aguarda_avaliacao_vascular', value: 'inpatient', critical: true }
       ]
     },
     conduta_gestante: {
@@ -3147,23 +3148,104 @@ export const tvpFlowchart: EmergencyFlowchart = {
       `,
       options: []
     },
+    tvp_aguarda_avaliacao_vascular: {
+      id: 'tvp_aguarda_avaliacao_vascular',
+      title: 'Cuidados enquanto aguarda a Cirurgia Vascular',
+      description: 'Manter o paciente internado ou em observação monitorizada até a equipe vascular assumir o caso.',
+      type: 'action',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-4 text-sm leading-relaxed">
+          <div class="rounded-lg border-l-4 border-red-700 bg-red-100 p-4 text-red-950">
+            <h4 class="font-bold">TVP com necessidade de avaliação vascular prioritária</h4>
+            <p class="mt-1">O encaminhamento não encerra a responsabilidade assistencial da equipe de emergência. Manter cuidado, vigilância e tratamento compatíveis com a gravidade até transferência formal do caso.</p>
+          </div>
+
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-950">
+              <h5 class="font-bold">Se contraindicação absoluta à anticoagulação</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Confirmar e documentar que a contraindicação é realmente absoluta.</li>
+                <li>Não iniciar anticoagulação enquanto persistir o risco hemorrágico impeditivo.</li>
+                <li>Acionar imediatamente a Cirurgia Vascular.</li>
+                <li>Avaliar filtro de veia cava temporário/recuperável em TVP proximal confirmada.</li>
+              </ul>
+            </div>
+            <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+              <h5 class="font-bold">Se anticoagulação já foi iniciada</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Manter o esquema prescrito, salvo sangramento, deterioração ou nova contraindicação.</li>
+                <li>Registrar medicamento, dose e horário da primeira administração.</li>
+                <li>Reavaliar função renal, hemograma, plaquetas e risco hemorrágico.</li>
+                <li>Discutir ajustes com a equipe vascular quando necessário.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <h5 class="font-bold">Internação, monitorização e reavaliação seriada</h5>
+            <ul class="mt-2 grid list-disc gap-x-6 gap-y-1 pl-5 md:grid-cols-2">
+              <li>Pressão arterial e frequência cardíaca.</li>
+              <li>Frequência respiratória e SpO₂.</li>
+              <li>Dor e necessidade de analgesia.</li>
+              <li>Progressão do edema e assimetria.</li>
+              <li>Coloração e temperatura do membro.</li>
+              <li>Pulsos, enchimento capilar e perfusão distal.</li>
+              <li>Sensibilidade e força muscular.</li>
+              <li>Vigilância clínica para sangramento.</li>
+            </ul>
+          </div>
+
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <h5 class="font-bold text-slate-950">Suporte clínico</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Elevar o membro acometido cerca de 15–30° acima do nível do coração.</li>
+                <li>Oferecer analgesia com dipirona, paracetamol ou opioide conforme intensidade.</li>
+                <li>Evitar AINE quando houver risco hemorrágico relevante.</li>
+                <li>Manter acesso venoso e exames pertinentes conforme gravidade.</li>
+              </ul>
+            </div>
+            <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <h5 class="font-bold">Não realizar nesta fase</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Não massagear nem manipular excessivamente o membro.</li>
+                <li>Evitar fisioterapia ativa e deambulação precoce sem liberação.</li>
+                <li>Não aplicar compressão agressiva.</li>
+                <li>Adiar meia elástica em edema importante, TVP extensa, flegmasia ou dor intensa.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="rounded-lg border border-orange-300 bg-orange-50 p-4 text-orange-950">
+            <h5 class="font-bold">Vigilância para embolia pulmonar</h5>
+            <p class="mt-1">Investigar imediatamente se surgirem dispneia, dor torácica, dessaturação, taquicardia, síncope ou hipotensão.</p>
+          </div>
+
+          <div class="rounded-lg border border-red-300 bg-red-50 p-4 text-red-950">
+            <h5 class="font-bold">Flegmasia ou ameaça ao membro</h5>
+            <p class="mt-1">Cianose, dor intensa progressiva, edema maciço, déficit sensitivo/motor, redução de pulsos ou piora da perfusão configuram emergência vascular. Priorizar intervenção imediata, considerando trombólise dirigida, trombectomia e avaliação de fasciotomia quando houver síndrome compartimental.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        {
+          text: 'Cirurgia Vascular assumiu o caso',
+          description: 'Confirmar a transferência formal da responsabilidade assistencial e gerar o encaminhamento.',
+          nextStep: 'encaminhamento_urgente',
+          value: 'vascular_assumiu_caso',
+          critical: true
+        }
+      ]
+    },
     encaminhamento_urgente: {
       id: 'encaminhamento_urgente',
       title: 'Encaminhamento para avaliação da Cirurgia Vascular',
       description: 'Encaminhar para avaliação especializada conforme cenário clínico.',
       type: 'result',
       critical: true,
-      content: `
-        <div class="bg-red-50 p-4 rounded border-l-4 border-red-600">
-          <h4 class="font-bold text-red-800">Avaliação vascular prioritária</h4>
-          <ul class="list-disc pl-5 text-red-700 text-sm mt-1">
-            <li>Encaminhar para avaliação cirúrgica especializada com prioridade.</li>
-            <li>Se anticoagulação já tiver sido iniciada, manter conduta até definição da equipe vascular.</li>
-            <li>Em cenário de risco hemorrágico elevado, individualizar conduta e discutir estratégia com equipe de referência.</li>
-            <li>Sinais de gravidade (flegmasia, dor intensa progressiva, suspeita de TEP associada) exigem prioridade máxima.</li>
-          </ul>
-        </div>
-      `,
+      content: '',
       options: []
     },
     tvp_urgencia_vascular_imediata: {
@@ -3263,7 +3345,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
         {
           text: 'Confirmar manejo de urgência vascular',
           description: 'Registra estabilização, anticoagulação e acionamento imediato da Cirurgia Vascular.',
-          nextStep: 'tvp_urgencia_vascular_concluida',
+          nextStep: 'tvp_aguarda_avaliacao_vascular',
           value: 'protocolo_flegmasia_aplicado',
           critical: true,
           requiresImmediateAction: true
@@ -3864,6 +3946,9 @@ const influenzaViralPanelContent = `
           <li>Hemograma, função renal, eletrólitos, função hepática, gasometria, lactato e marcadores inflamatórios.</li>
           <li>Radiografia de tórax e, quando necessário, tomografia ou ultrassom pulmonar.</li>
         </ul>
+        <button type="button" data-influenza-request-exams="true" class="mt-4 inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-800">
+          Solicitar exames
+        </button>
       </div>
     </div>
 
@@ -3994,7 +4079,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Realizar exame físico', nextStep: 'influenza_exame_fisico', value: 'iniciar_exame_fisico' }
+        { text: 'Avaliação inicial / Sinais Vitais / Exame Físico', nextStep: 'influenza_exame_fisico', value: 'iniciar_exame_fisico' }
       ]
     },
     influenza_exame_fisico: {
@@ -4429,7 +4514,7 @@ const pacWaitingAdmissionCareContent = `
           <li>Pressão arterial, frequência cardíaca e frequência respiratória.</li>
           <li>Saturação periférica de oxigênio (SpO2) e temperatura.</li>
           <li>Nível de consciência e reavaliação clínica periódica.</li>
-          <li>Reavaliar idealmente a cada 2-4 horas, ou antes se houver piora.</li>
+          <li>Reavaliar a cada 30 minutos a 1 hora, ou antes se houver piora.</li>
         </ul>
       </div>
 
@@ -4475,6 +4560,14 @@ const pacWaitingAdmissionCareContent = `
     </div>
   </div>
 `
+
+const pacWaitingICUCareContent = pacWaitingAdmissionCareContent.replace(`
+      <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+        <h5 class="font-bold text-orange-950">Reavaliação e critérios para escalonamento</h5>
+        <p class="mt-2">Monitorar necessidade crescente de oxigênio, frequência respiratória, fadiga respiratória, instabilidade hemodinâmica, alteração do nível de consciência, sepse ou choque séptico.</p>
+        <p class="mt-2"><strong>Reavaliar UTI imediatamente se:</strong> hipoxemia refratária, aumento progressivo do trabalho respiratório, necessidade de ventilação não invasiva ou invasiva, hipotensão persistente, lactato elevado, disfunção de órgãos ou rebaixamento do nível de consciência.</p>
+      </div>
+`, '')
 
 // Fluxograma de Pneumonia Adquirida na Comunidade (PAC)
 export const pneumoniaFlowchart: EmergencyFlowchart = {
@@ -4675,7 +4768,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Realizar exame físico', nextStep: 'pac_exame_fisico', value: 'iniciar_exame_fisico' }
+        { text: 'Avaliação inicial / Sinais Vitais / Exame Físico', nextStep: 'pac_exame_fisico', value: 'iniciar_exame_fisico' }
       ]
     },
     pac_exame_fisico: {
@@ -4708,6 +4801,19 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950">
           <p><strong>Objetivo:</strong> registrar os exames solicitados antes do CURB-65, separando exames básicos, exames conforme gravidade/comorbidade, investigação microbiológica e testes para pacientes selecionados.</p>
           <p class="mt-2"><strong>Pacote inicial mais usado no PS:</strong> hemograma completo, ureia, creatinina, sódio, potássio, glicemia e PCR. Acrescentar lactato se houver suspeita de sepse/gravidade e gasometria arterial se hipoxemia ou desconforto respiratório.</p>
+        </div>
+      `,
+      options: []
+    },
+    pac_resultados_exames: {
+      id: 'pac_resultados_exames',
+      title: 'Resultados dos Exames Iniciais',
+      description: 'Registrar resultados dos exames básicos e daqueles solicitados conforme gravidade ou necessidade clínica.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950">
+          <p><strong>Objetivo:</strong> registrar os resultados disponíveis antes do CURB-65 e aproveitar automaticamente ureia, pressão arterial, frequência respiratória, estado mental e idade na pontuação.</p>
+          <p class="mt-2">Resultados ainda pendentes podem permanecer em branco. O escore deverá ser revisado e confirmado pelo médico na etapa seguinte.</p>
         </div>
       `,
       options: []
@@ -4876,8 +4982,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
             <p><strong>Destino:</strong> internação em enfermaria ou unidade intermediária, com monitorização clínica, oxigenoterapia conforme necessidade e reavaliação seriada.</p>
           </div>
-          <p><strong>Sem risco de germe resistente:</strong> ceftriaxona + azitromicina ou claritromicina.</p>
-          <p><strong>Com risco DRIP/ATS-IDSA/local:</strong> avaliar ampliação para piperacilina-tazobactam, cefepime ou meropenem conforme cenário, culturas e protocolo institucional.</p>
+          <p>A antibioticoterapia deve seguir o resultado do DRIP, fatores ATS/IDSA, culturas prévias e epidemiologia local.</p>
         </div>
       `,
       options: []
@@ -4889,7 +4994,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
       type: 'action',
       critical: true,
       group: 'UTI',
-      content: pacWaitingAdmissionCareContent,
+      content: pacWaitingICUCareContent,
       options: [
         {
           text: 'Confirmar cuidados e seguir para protocolo de UTI',
@@ -4934,8 +5039,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
             <h5 class="font-bold text-rose-950">Antibioticoterapia precoce</h5>
             <p class="mt-2">Iniciar tratamento empírico sem atraso após culturas quando a coleta for viável e não postergar a primeira dose.</p>
-            <p class="mt-2"><strong>Sem risco de MRSA/Pseudomonas:</strong> considerar beta-lactâmico associado a macrolídeo, como ceftriaxona + azitromicina, conforme protocolo institucional.</p>
-            <p class="mt-2"><strong>Com risco de resistência:</strong> ampliar cobertura conforme DRIP, culturas prévias, internações, antibiótico recente, epidemiologia local e fatores ATS/IDSA. Descalonar após resultados microbiológicos e evolução clínica.</p>
+            <p class="mt-2">Definir o esquema conforme resultado do DRIP, culturas prévias, internações, antibiótico recente, epidemiologia local e fatores ATS/IDSA. Descalonar após resultados microbiológicos e evolução clínica.</p>
           </div>
 
           <div class="grid gap-4 lg:grid-cols-2">
@@ -4959,7 +5063,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
 
           <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
             <h5 class="font-bold text-orange-950">Reavaliação enquanto aguarda a UTI</h5>
-            <p class="mt-2">Reavaliar de forma seriada sinais vitais, necessidade de oxigênio, estado mental, perfusão, lactato, diurese e disfunções orgânicas. Documentar intercorrências e comunicar imediatamente qualquer deterioração à equipe da UTI.</p>
+            <p class="mt-2">Reavaliar a cada 30 minutos a 1 hora os sinais vitais, necessidade de oxigênio, estado mental, perfusão, lactato, diurese e disfunções orgânicas, ou imediatamente se houver piora. Documentar intercorrências e comunicar qualquer deterioração à equipe da UTI.</p>
             <p class="mt-2">Aplicar SOFA no contexto de sepse/disfunção orgânica e SAPS 3 após admissão na UTI, conforme rotina institucional.</p>
           </div>
         </div>
@@ -8584,6 +8688,414 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
   }
 }
 
+export const ituFlowchart: EmergencyFlowchart = {
+  id: 'itu',
+  name: 'Infecção do Trato Urinário (ITU)',
+  description: 'Avaliação de cistite, pielonefrite, sepse urinária, critérios de internação e antibioticoterapia inicial.',
+  category: 'infectious',
+  priority: 'high',
+  icon: 'droplets',
+  color: 'from-cyan-700 to-blue-900',
+  initialStep: 'itu_apresentacao',
+  finalSteps: [
+    'itu_cistite_fosfomicina',
+    'itu_cistite_nitrofurantoina',
+    'itu_cistite_cefuroxima',
+    'itu_cistite_sulfametoxazol',
+    'itu_bacteriuria_nao_tratar',
+    'itu_bacteriuria_grupo_especial',
+    'itu_ambulatorial_concluido',
+    'itu_alta_hospitalar',
+    'itu_sepse_encaminhada'
+  ],
+  steps: {
+    itu_apresentacao: {
+      id: 'itu_apresentacao',
+      title: 'Avaliação inicial da suspeita de ITU',
+      description: 'Diferenciar infecção urinária baixa, pielonefrite e bacteriúria assintomática.',
+      type: 'question',
+      content: `
+        <div class="grid gap-3 md:grid-cols-3 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+            <h4 class="font-bold">Cistite / ITU baixa</h4>
+            <p class="mt-2">Disúria, polaciúria, urgência urinária e dor suprapúbica, sem sinais sistêmicos ou dor lombar.</p>
+          </div>
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+            <h4 class="font-bold">Pielonefrite</h4>
+            <p class="mt-2">Febre, calafrios, dor lombar ou em flanco, punho-percussão lombar dolorosa, náuseas ou vômitos, com ou sem sintomas de cistite.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-800">
+            <h4 class="font-bold">Bacteriúria assintomática</h4>
+            <p class="mt-2">Urocultura positiva sem sintomas urinários. Em geral não tratar, exceto grupos específicos.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Sintomas compatíveis com cistite', nextStep: 'itu_cistite_complicadores', value: 'cistite' },
+        { text: 'Sinais e sintomas de pielonefrite', nextStep: 'itu_pielo_sepse', value: 'pielonefrite', critical: true },
+        { text: 'Bacteriúria sem sintomas urinários', nextStep: 'itu_bacteriuria_excecoes', value: 'bacteriuria_assintomatica' }
+      ]
+    },
+    itu_bacteriuria_excecoes: {
+      id: 'itu_bacteriuria_excecoes',
+      title: 'Bacteriúria assintomática: há indicação de tratamento?',
+      description: 'O tratamento indiscriminado aumenta eventos adversos e resistência antimicrobiana.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+          <p><strong>Considerar tratamento/investigação direcionada somente em grupos específicos:</strong> gestação, procedimento urológico invasivo com trauma de mucosa e situações especiais definidas por infectologia/urologia, como alguns pacientes transplantados ou neutropênicos.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Pertence a grupo com indicação específica', nextStep: 'itu_bacteriuria_grupo_especial', value: 'grupo_especial' },
+        { text: 'Não pertence: não tratar', nextStep: 'itu_bacteriuria_nao_tratar', value: 'nao_tratar' }
+      ]
+    },
+    itu_bacteriuria_nao_tratar: {
+      id: 'itu_bacteriuria_nao_tratar',
+      title: 'Bacteriúria assintomática: antibiótico não indicado',
+      description: 'Evitar tratamento sem indicação clínica.',
+      type: 'result',
+      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Conduta:</strong> não prescrever antibiótico. Investigar sintomas e diagnósticos diferenciais; orientar retorno se surgirem disúria, febre, dor lombar ou sinais sistêmicos.</div>`,
+      options: []
+    },
+    itu_bacteriuria_grupo_especial: {
+      id: 'itu_bacteriuria_grupo_especial',
+      title: 'Bacteriúria em grupo especial',
+      description: 'Tratamento guiado pela condição clínica e pela urocultura com TSA.',
+      type: 'result',
+      content: `<div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Conduta:</strong> coletar/revisar urocultura com antibiograma e seguir protocolo específico para gestação, procedimento urológico ou condição imunológica. Não extrapolar automaticamente os esquemas de cistite simples.</div>`,
+      options: []
+    },
+    itu_cistite_complicadores: {
+      id: 'itu_cistite_complicadores',
+      title: 'Cistite: excluir infecção alta ou complicada',
+      description: 'Confirmar ausência de sinais sistêmicos e fatores que exigem avaliação adicional.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950"><strong>Não conduzir como cistite simples</strong> se houver febre/calafrios, dor lombar ou em flanco, vômitos persistentes, sepse, obstrução, gestação, imunossupressão relevante, transplante, insuficiência renal importante ou sexo masculino com suspeita de acometimento prostático.</div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">Na mulher adulta não gestante com sintomas típicos e sem complicadores, o diagnóstico pode ser clínico. Leucocitúria isolada não confirma ITU, e nitrito positivo sem sintomas não define infecção.</div>
+        </div>
+      `,
+      options: [
+        { text: 'Sem complicadores: cistite não complicada', nextStep: 'itu_cistite_antibiotico', value: 'nao_complicada' },
+        { text: 'Há febre, dor lombar ou outro complicador', nextStep: 'itu_pielo_sepse', value: 'possivel_pielonefrite', critical: true }
+      ]
+    },
+    itu_cistite_antibiotico: {
+      id: 'itu_cistite_antibiotico',
+      title: 'Antibioticoterapia da cistite não complicada',
+      description: 'Escolher esquema conforme alergias, função renal, gestação, interações e resistência local.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Primeiras opções:</strong> fosfomicina ou nitrofurantoína. Não utilizar nenhuma delas para pielonefrite, pois não atingem concentração adequada no parênquima renal.</div>
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950"><strong>Atenção:</strong> sulfametoxazol-trimetoprim empírico depende do perfil local de sensibilidade e não deve ser escolhido quando houver resistência conhecida, uso recente ou contraindicação.</div>
+        </div>
+      `,
+      options: [
+        { text: 'Fosfomicina trometamol 3 g VO, dose única', nextStep: 'itu_cistite_fosfomicina', value: 'fosfomicina' },
+        { text: 'Nitrofurantoína 100 mg VO 6/6h por 5 dias', nextStep: 'itu_cistite_nitrofurantoina', value: 'nitrofurantoina' },
+        { text: 'Cefuroxima 250 mg VO 12/12h por 5 dias', nextStep: 'itu_cistite_cefuroxima', value: 'cefuroxima' },
+        { text: 'Sulfametoxazol-trimetoprim 800/160 mg VO 12/12h por 3 dias', nextStep: 'itu_cistite_sulfametoxazol', value: 'sulfametoxazol_trimetoprim' }
+      ]
+    },
+    itu_cistite_fosfomicina: {
+      id: 'itu_cistite_fosfomicina', title: 'Cistite: prescrição e alta', description: 'Fosfomicina em dose única.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><strong>Fosfomicina trometamol 3 g:</strong> dissolver 1 envelope em água e tomar VO em dose única.</div><div class="rounded-xl border border-slate-200 bg-white p-4"><strong>Sintomáticos:</strong> considerar fenazopiridina 200 mg VO 8/8h por no máximo 2 dias e dipirona 1 g ou paracetamol 500 mg VO 6/6h se dor/febre, conforme contraindicações.</div><p>Orientar hidratação habitual, não reter urina, completar o esquema prescrito e retornar se febre, dor lombar, vômitos, piora ou ausência de melhora em 48 horas.</p></div>`, options: []
+    },
+    itu_cistite_nitrofurantoina: {
+      id: 'itu_cistite_nitrofurantoina', title: 'Cistite: prescrição e alta', description: 'Nitrofurantoína por 5 dias.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><strong>Nitrofurantoína 100 mg:</strong> tomar 1 cápsula VO de 6/6 horas por 5 dias, conforme apresentação padronizada no serviço.</div><p>Não usar para pielonefrite. Revisar função renal, gestação próxima do termo, deficiência de G6PD, alergias e protocolo local. Retornar se febre, dor lombar, vômitos ou ausência de melhora em 48 horas.</p></div>`, options: []
+    },
+    itu_cistite_cefuroxima: {
+      id: 'itu_cistite_cefuroxima', title: 'Cistite: prescrição e alta', description: 'Cefuroxima como alternativa.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><strong>Cefuroxima 250 mg:</strong> tomar 1 comprimido VO de 12/12 horas por 5 dias.</div><p>Ajustar à função renal, alergias e cultura quando disponível. Retornar se febre, dor lombar, vômitos ou ausência de melhora em 48 horas.</p></div>`, options: []
+    },
+    itu_cistite_sulfametoxazol: {
+      id: 'itu_cistite_sulfametoxazol', title: 'Cistite: prescrição e alta', description: 'Sulfametoxazol-trimetoprim quando sensibilidade for provável.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Sulfametoxazol-trimetoprim 800/160 mg:</strong> tomar 1 comprimido VO de 12/12 horas por 3 dias.</div><p>Evitar quando a resistência local for elevada, houver uso recente, gestação, alergia a sulfa ou interação relevante. Ajustar à função renal.</p></div>`, options: []
+    },
+    itu_pielo_sepse: {
+      id: 'itu_pielo_sepse', title: 'Pielonefrite: sinais clínicos de sepse?', description: 'Identificar instabilidade antes de prosseguir à investigação habitual.', type: 'question', critical: true,
+      content: `<div class="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"><strong>Avaliar:</strong> hipotensão, alteração do nível de consciência, hipoperfusão, lactato elevado, oligúria, taquipneia, hipoxemia, choque ou disfunção orgânica. Não atrasar estabilização para completar o restante do fluxo.</div>`,
+      options: [
+        { text: 'Sim: suspeita de sepse/instabilidade', nextStep: 'itu_estabilizacao_sepse', value: 'sepse', critical: true, requiresImmediateAction: true },
+        { text: 'Não: paciente estável', nextStep: 'itu_exames_pielonefrite', value: 'sem_sepse' }
+      ]
+    },
+    itu_estabilizacao_sepse: {
+      id: 'itu_estabilizacao_sepse', title: 'Estabilização clínica imediata', description: 'Seguir protocolo institucional de sepse e garantir controle do foco urinário.', type: 'action', critical: true, timeSensitive: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-100 p-4 text-red-950"><strong>Prioridade:</strong> monitorização contínua, acessos venosos, lactato, culturas quando não atrasarem, antibioticoterapia EV precoce, reposição volêmica individualizada e vasopressor se choque persistente.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Controle do foco:</strong> pesquisar obstrução urinária, cálculo infectado, abscesso ou necessidade de drenagem; acionar urologia com urgência quando houver obstrução associada à infecção.</div></div>`,
+      options: [{ text: 'Estabilização iniciada e internação solicitada', nextStep: 'itu_sepse_encaminhada', value: 'sepse_estabilizada', critical: true }]
+    },
+    itu_sepse_encaminhada: {
+      id: 'itu_sepse_encaminhada', title: 'Sepse urinária: manejo hospitalar', description: 'Paciente encaminhado para internação após início da estabilização.', type: 'result', critical: true,
+      content: `<div class="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950">Manter monitorização, antimicrobiano EV, reavaliação hemodinâmica, controle de diurese e investigação de obstrução até transferência efetiva para unidade compatível com a gravidade.</div>`, options: []
+    },
+    itu_exames_pielonefrite: {
+      id: 'itu_exames_pielonefrite', title: 'Investigação inicial da pielonefrite', description: 'Coletar exames sem atrasar o antibiótico quando houver gravidade.', type: 'action', critical: true,
+      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><h4 class="font-bold text-blue-950">Solicitar</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>EAS.</li><li>Urocultura com TSA, preferencialmente antes do antibiótico.</li><li>Hemograma.</li><li>Ureia, creatinina e eletrólitos.</li><li>Hemoculturas se internação, sepse ou quadro grave.</li></ul></div><div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><h4 class="font-bold text-violet-950">Imagem quando indicada</h4><p class="mt-2">Considerar ultrassom ou TC diante de obstrução, cálculo, insuficiência renal, recorrência, imunossupressão, evolução desfavorável ou dúvida diagnóstica.</p></div></div>`,
+      options: [{ text: 'Exames solicitados: avaliar necessidade de internação', nextStep: 'itu_criterios_internacao', value: 'exames_solicitados' }]
+    },
+    itu_criterios_internacao: {
+      id: 'itu_criterios_internacao', title: 'Há indicação de internação?', description: 'Decisão clínica individual, sem escore único validado.', type: 'question', critical: true,
+      content: `<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><ul class="grid list-disc gap-x-6 gap-y-1 pl-5 md:grid-cols-2"><li>Obstrução do trato urinário.</li><li>Sepse ou instabilidade.</li><li>Gestação.</li><li>Vulnerabilidade social.</li><li>Sintomas refratários ou intolerância oral.</li><li>Alto risco de organismo multirresistente.</li><li>Comorbidades significativas ou imunossupressão.</li><li>Falha do tratamento ambulatorial.</li></ul></div>`,
+      options: [
+        { text: 'Sim: tratamento hospitalar', nextStep: 'itu_antibiotico_hospitalar', value: 'internar', critical: true },
+        { text: 'Não: tratamento ambulatorial', nextStep: 'itu_antibiotico_ambulatorial', value: 'ambulatorial' }
+      ]
+    },
+    itu_antibiotico_ambulatorial: {
+      id: 'itu_antibiotico_ambulatorial', title: 'Pielonefrite: tratamento ambulatorial', description: 'Selecionar esquema e programar reavaliação em 48–72 horas.', type: 'question', critical: true,
+      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><p>Considerar primeira dose de antibiótico parenteral no pronto-socorro quando indicado pela resistência local ou perfil clínico. Garantir tolerância oral, seguimento e acesso a retorno.</p><p class="mt-2"><strong>Não utilizar nitrofurantoína ou fosfomicina para pielonefrite.</strong></p></div>`,
+      options: [
+        { text: 'Ciprofloxacino 500 mg VO 12/12h por 7 dias', nextStep: 'itu_reavaliacao_ambulatorial', value: 'ciprofloxacino_vo' },
+        { text: 'Levofloxacino 750 mg VO 1x/dia por 5 dias', nextStep: 'itu_reavaliacao_ambulatorial', value: 'levofloxacino_vo' },
+        { text: 'Amoxicilina-clavulanato 875/125 mg VO 12/12h por 7 dias', nextStep: 'itu_reavaliacao_ambulatorial', value: 'amoxicilina_clavulanato_vo' }
+      ]
+    },
+    itu_reavaliacao_ambulatorial: {
+      id: 'itu_reavaliacao_ambulatorial', title: 'Reavaliação em 48–72 horas', description: 'Revisar resposta clínica e resultado da urocultura/TSA.', type: 'question',
+      content: `<div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-950"><p><strong>Verificar:</strong> febre, dor lombar, vômitos, hidratação, sinais vitais, tolerância oral e resultado da urocultura. Ajustar ou descalonar o antibiótico conforme TSA.</p></div>`,
+      options: [
+        { text: 'Melhora clínica: concluir tratamento ambulatorial', nextStep: 'itu_ambulatorial_concluido', value: 'melhora' },
+        { text: 'Sem melhora ou piora: internar', nextStep: 'itu_antibiotico_hospitalar', value: 'falha_ambulatorial', critical: true }
+      ]
+    },
+    itu_ambulatorial_concluido: {
+      id: 'itu_ambulatorial_concluido', title: 'Tratamento ambulatorial mantido', description: 'Boa resposta clínica em 48–72 horas.', type: 'result',
+      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Completar o antibiótico prescrito, revisar urocultura/TSA e ajustar se necessário. Não são necessários exames de controle rotineiros em paciente assintomático, salvo condição clínica específica.</div>`, options: []
+    },
+    itu_antibiotico_hospitalar: {
+      id: 'itu_antibiotico_hospitalar', title: 'Pielonefrite: tratamento hospitalar', description: 'Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
+      content: `<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"><p>Manter internação, hidratação e sintomáticos conforme necessidade. Revisar culturas e função renal. Pesquisar obstrução/abscesso e solicitar avaliação urológica quando indicada.</p></div>`,
+      options: [
+        { text: 'Ceftriaxona 1 g EV 1x/dia', nextStep: 'itu_criterios_alta', value: 'ceftriaxona_ev' },
+        { text: 'Ciprofloxacino 400 mg EV 12/12h', nextStep: 'itu_criterios_alta', value: 'ciprofloxacino_ev' },
+        { text: 'Piperacilina-tazobactam 4,5 g EV 6/6h', nextStep: 'itu_criterios_alta', value: 'piperacilina_tazobactam' },
+        { text: 'Meropenem 1 g EV 8/8h para quadro grave/alto risco MDR', nextStep: 'itu_criterios_alta', value: 'meropenem', critical: true }
+      ]
+    },
+    itu_criterios_alta: {
+      id: 'itu_criterios_alta', title: 'Critérios de alta hospitalar', description: 'Confirmar estabilidade antes da transição para tratamento oral.', type: 'question',
+      content: `<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><ul class="list-disc space-y-1 pl-5"><li>Bom estado geral e sinais vitais estáveis.</li><li>Afebril há pelo menos 48 horas.</li><li>Capaz de hidratar-se e alimentar-se por via oral.</li><li>Possibilidade de antibiótico oral ambulatorial guiado pelo TSA.</li><li>Obstrução e complicações controladas ou afastadas.</li></ul></div>`,
+      options: [
+        { text: 'Critérios preenchidos: alta hospitalar', nextStep: 'itu_alta_hospitalar', value: 'alta' },
+        { text: 'Critérios não preenchidos: manter internação', nextStep: 'itu_manutencao_hospitalar', value: 'manter_internacao', critical: true }
+      ]
+    },
+    itu_manutencao_hospitalar: {
+      id: 'itu_manutencao_hospitalar', title: 'Manter tratamento e monitorização hospitalar', description: 'Reavaliar resposta, culturas, função renal e complicações.', type: 'action', critical: true,
+      content: `<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950">Manter antibiótico EV ajustado à função renal e TSA, hidratação individualizada, controle de sintomas e sinais vitais. Se persistirem febre ou dor após 48–72 horas, investigar obstrução, abscesso, resistência, foco alternativo ou necessidade de intervenção urológica.</div>`,
+      options: [{ text: 'Reavaliar critérios de alta', nextStep: 'itu_criterios_alta', value: 'reavaliar' }]
+    },
+    itu_alta_hospitalar: {
+      id: 'itu_alta_hospitalar', title: 'Alta hospitalar segura', description: 'Transição para via oral e seguimento.', type: 'result',
+      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Completar antibioticoterapia oral conforme urocultura/TSA, função renal e evolução clínica. Orientar retorno diante de febre, dor lombar, vômitos, redução da diurese, hipotensão, confusão ou piora geral.</div>`, options: []
+    }
+  }
+}
+
+// Fluxograma de profilaxia pós-exposição da raiva humana
+export const atendimentoAntirrabicoFlowchart: EmergencyFlowchart = {
+  id: 'atendimento_antirrabico',
+  name: 'Mordedura',
+  description: 'Avaliação da exposição, espécie animal, possibilidade de observação e indicação de vacina e soro antirrábico.',
+  category: 'infectious',
+  priority: 'high',
+  icon: 'shield',
+  color: 'from-blue-700 to-indigo-900',
+  initialStep: 'raiva_cuidados_iniciais',
+  finalSteps: ['raiva_sem_profilaxia', 'raiva_vacina', 'raiva_vacina_soro'],
+  steps: {
+    raiva_cuidados_iniciais: {
+      id: 'raiva_cuidados_iniciais',
+      title: 'Atendimento inicial da exposição',
+      description: 'Realizar os cuidados locais imediatamente, antes de classificar a exposição.',
+      type: 'action',
+      content: `
+        <div class="space-y-4 text-sm leading-relaxed">
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-4">
+            <p class="font-bold text-blue-950">Medidas obrigatórias</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5 text-blue-950">
+              <li>Lavar imediatamente e de forma abundante o ferimento com água corrente e sabão.</li>
+              <li>Evitar sutura; se indispensável, aproximar as bordas com pontos isolados após limpeza e infiltração do soro, quando indicado.</li>
+              <li>Avaliar profilaxia do tétano e necessidade de antibioticoterapia conforme tipo de lesão.</li>
+              <li>Registrar a exposição no SINAN e iniciar a profilaxia indicada o mais precocemente possível.</li>
+            </ul>
+          </div>
+          <p class="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-950"><strong>Atenção:</strong> a decisão deve considerar espécie, tipo de contato, local e profundidade da lesão, condições do animal e tratamentos antirrábicos prévios.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Cuidados iniciais realizados', nextStep: 'raiva_tipo_contato', value: 'cuidados_realizados' }
+      ]
+    },
+    raiva_tipo_contato: {
+      id: 'raiva_tipo_contato',
+      title: 'Tipo de contato',
+      description: 'Determine se houve exposição capaz de transmitir o vírus da raiva.',
+      type: 'question',
+      content: `
+        <div class="grid gap-3 md:grid-cols-2 text-sm">
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+            <p class="font-bold text-emerald-950">Contato indireto</p>
+            <p class="mt-1 text-emerald-900">Tocar ou alimentar animais; lambedura em pele íntegra; contato de pele íntegra com secreções ou excreções.</p>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-red-50 p-4">
+            <p class="font-bold text-red-950">Contato direto</p>
+            <p class="mt-1 text-red-900">Mordedura, arranhadura, lambedura de pele lesada ou mucosa, ou contato de secreção com solução de continuidade.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Contato indireto', nextStep: 'raiva_indireto_morcego', value: 'contato_indireto' },
+        { text: 'Contato direto ou exposição duvidosa', nextStep: 'raiva_especie', value: 'contato_direto' }
+      ]
+    },
+    raiva_indireto_morcego: {
+      id: 'raiva_indireto_morcego',
+      title: 'Contato indireto com morcego?',
+      description: 'Contato com morcegos exige abordagem específica devido ao risco de exposição não percebida.',
+      type: 'question',
+      options: [
+        { text: 'Sim, envolveu morcego', nextStep: 'raiva_vacina_soro', value: 'morcego' },
+        { text: 'Não, envolveu outro animal', nextStep: 'raiva_sem_profilaxia', value: 'outro_animal' }
+      ]
+    },
+    raiva_especie: {
+      id: 'raiva_especie',
+      title: 'Animal envolvido no acidente',
+      description: 'Selecione a espécie ou o grupo epidemiológico do animal agressor.',
+      type: 'question',
+      options: [
+        { text: 'Cão ou gato', description: 'Prosseguir conforme possibilidade de observação por 10 dias.', nextStep: 'raiva_cao_gato_observavel', value: 'cao_gato' },
+        { text: 'Mamífero doméstico de interesse econômico', description: 'Bovinos, suínos, equídeos, caprinos ou ovinos.', nextStep: 'raiva_gravidade', value: 'mamifero_domestico' },
+        { text: 'Animal silvestre', description: 'Morcego, raposa, macaco, sagui ou outro mamífero silvestre.', nextStep: 'raiva_vacina_soro', value: 'animal_silvestre' }
+      ]
+    },
+    raiva_cao_gato_observavel: {
+      id: 'raiva_cao_gato_observavel',
+      title: 'Condição do cão ou gato',
+      description: 'Avalie se o animal está sem sinais sugestivos de raiva e pode ser observado por 10 dias.',
+      type: 'question',
+      options: [
+        { text: 'Passível de observação e sem sinais de raiva', nextStep: 'raiva_observacao_10_dias', value: 'observavel_sadio' },
+        { text: 'Não observável ou com sinais sugestivos de raiva', nextStep: 'raiva_gravidade', value: 'nao_observavel_ou_suspeito', critical: true }
+      ]
+    },
+    raiva_observacao_10_dias: {
+      id: 'raiva_observacao_10_dias',
+      title: 'Observação do animal por 10 dias',
+      description: 'Manter lavagem local e acompanhar o animal durante todo o período.',
+      type: 'question',
+      content: `
+        <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <p>Orientar observação por <strong>10 dias</strong>, contados a partir da data da agressão. Se o animal desaparecer, morrer ou apresentar sinais neurológicos/sugestivos de raiva, reavaliar imediatamente e iniciar a profilaxia indicada.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Animal permaneceu vivo e saudável por 10 dias', nextStep: 'raiva_sem_profilaxia', value: 'vivo_saudavel' },
+        { text: 'Animal sumiu, morreu ou apresentou sinais de raiva', nextStep: 'raiva_gravidade', value: 'evolucao_suspeita', critical: true }
+      ]
+    },
+    raiva_gravidade: {
+      id: 'raiva_gravidade',
+      title: 'Classificação do acidente',
+      description: 'Classifique a exposição como leve ou grave conforme local, extensão e profundidade.',
+      type: 'question',
+      content: `
+        <div class="grid gap-3 md:grid-cols-2 text-sm">
+          <div class="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-950">
+            <p class="font-bold">Acidente leve</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Mordedura ou arranhadura superficial no tronco ou membros, exceto mãos e pés.</li>
+              <li>Lambedura de lesões superficiais.</li>
+            </ul>
+          </div>
+          <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-950">
+            <p class="font-bold">Acidente grave</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Lesão em mucosa, segmento cefálico, mãos ou pés.</li>
+              <li>Lesões múltiplas, extensas, profundas ou puntiformes.</li>
+              <li>Lambedura de mucosa ou de lesão profunda.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Acidente leve', nextStep: 'raiva_vacina', value: 'leve' },
+        { text: 'Acidente grave', nextStep: 'raiva_vacina_soro', value: 'grave', critical: true }
+      ]
+    },
+    raiva_sem_profilaxia: {
+      id: 'raiva_sem_profilaxia',
+      title: 'Profilaxia antirrábica não indicada',
+      description: 'Encerrar a avaliação sem vacina ou soro antirrábico neste momento.',
+      type: 'result',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+            <p class="font-bold">Conduta</p>
+            <p class="mt-1">Manter cuidados locais, profilaxia antitetânica quando indicada e registro da avaliação. Orientar retorno imediato se houver mudança na condição do animal ou nova informação epidemiológica.</p>
+          </div>
+        </div>
+      `,
+      options: []
+    },
+    raiva_vacina: {
+      id: 'raiva_vacina',
+      title: 'Profilaxia indicada: vacina antirrábica',
+      description: 'Acidente leve com indicação de profilaxia pós-exposição.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p class="font-bold">Esquema vacinal pós-exposição</p>
+            <p class="mt-1">Aplicar vacina antirrábica nos dias <strong>0, 3, 7 e 14</strong>, por via intramuscular, conforme apresentação e protocolo do serviço.</p>
+          </div>
+          <ul class="list-disc space-y-1 pl-5">
+            <li>Dia 0: primeira dose no atendimento.</li>
+            <li>Agendar e registrar as doses dos dias 3, 7 e 14.</li>
+            <li>Não aplicar na região glútea.</li>
+            <li>Reavaliar esquema em imunossuprimidos e em pessoas previamente vacinadas.</li>
+          </ul>
+        </div>
+      `,
+      options: []
+    },
+    raiva_vacina_soro: {
+      id: 'raiva_vacina_soro',
+      title: 'Profilaxia indicada: vacina e soro antirrábico',
+      description: 'Exposição grave, contato com morcego ou animal silvestre.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-lg border border-red-200 bg-red-50 p-4 text-red-950">
+            <p class="font-bold">Vacina antirrábica</p>
+            <p class="mt-1">Aplicar nos dias <strong>0, 3, 7 e 14</strong>. Não aguardar confirmação laboratorial do animal para iniciar quando a profilaxia estiver indicada.</p>
+          </div>
+          <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p class="font-bold">Soro ou imunoglobulina antirrábica</p>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li><strong>SAR:</strong> 40 UI/kg.</li>
+              <li><strong>IGHAR:</strong> 20 UI/kg.</li>
+              <li>Infiltrar o máximo possível ao redor e no interior de todas as lesões; aplicar eventual volume restante por via IM, em local diferente da vacina.</li>
+              <li>Preferencialmente no dia 0; se indisponível, pode ser administrado até o 7º dia após a primeira dose da vacina.</li>
+            </ul>
+          </div>
+          <p class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-slate-800"><strong>Conferir antes da aplicação:</strong> peso, tratamento antirrábico prévio, imunossupressão, disponibilidade do produto e protocolo institucional vigente.</p>
+        </div>
+      `,
+      options: []
+    }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
@@ -8614,6 +9126,8 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   cholecystitis: cholecystitisFlowchart,
   cholangitis: cholangitisFlowchart,
   pancreatitis: pancreatitisFlowchart,
+  itu: ituFlowchart,
+  atendimento_antirrabico: atendimentoAntirrabicoFlowchart,
 }
 
 // Lista completa de todos os fluxogramas disponíveis
@@ -8626,6 +9140,7 @@ export const allFlowcharts = [
 
   // Infecciosos
   { id: 'arranhadura_gato', name: 'Arranhadura de gato', category: 'infectious', implemented: false },
+  { id: 'atendimento_antirrabico', name: 'Mordedura', category: 'infectious', implemented: true },
   { id: 'candidíase', name: 'Candidíase', category: 'infectious', implemented: false },
   { id: 'dengue', name: 'Dengue', category: 'infectious', implemented: true },
   { id: 'endocardite', name: 'Endocardite Infecciosa', category: 'infectious', implemented: false },
@@ -8637,7 +9152,7 @@ export const allFlowcharts = [
   { id: 'herpes_zoster', name: 'Herpes Zoster', category: 'infectious', implemented: false },
   { id: 'influenza', name: 'Influenza / Síndrome Gripal', category: 'infectious', implemented: true },
   { id: 'ivas', name: 'Infecção de vias aéreas superiores (Gripe/Resfriado)', category: 'infectious', implemented: false },
-  { id: 'itu', name: 'ITU', category: 'infectious', implemented: false },
+  { id: 'itu', name: 'Infecção do Trato Urinário (ITU)', category: 'infectious', implemented: true },
   { id: 'meningite', name: 'Meningite', category: 'infectious', implemented: false },
   { id: 'pep_hiv', name: 'PEP ao HIV', category: 'infectious', implemented: true },
   { id: 'pneumonia', name: 'Pneumonia', category: 'infectious', implemented: true },
