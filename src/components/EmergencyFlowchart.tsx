@@ -258,7 +258,7 @@ type AnaphylaxisCriteriaInfo = {
   }>
 }
 
-type PneumoniaReferenceImageKey = 'ct' | 'pocus' | 'blue'
+type PneumoniaReferenceImageKey = 'ct' | 'pocus' | 'blue' | 'blueAlgorithm'
 
 const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
   title: string
@@ -272,13 +272,18 @@ const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
   },
   pocus: {
     title: 'POCUS Pulmonar',
-    src: '/Novo%20POCUS%20pulmao.png',
+    src: '/pocus%20pac%20novo.jpeg',
     alt: 'Imagem de referência de POCUS pulmonar'
   },
   blue: {
     title: 'Protocolo BLUE',
     src: '/protocolo blue.jpeg',
     alt: 'Imagem de referência do protocolo BLUE'
+  },
+  blueAlgorithm: {
+    title: 'Algoritmo do Protocolo BLUE',
+    src: '/algoritmo.jpeg',
+    alt: 'Algoritmo de decisão do protocolo BLUE'
   }
 }
 
@@ -538,6 +543,14 @@ type LombalgiaPrescriptionPreview = {
 
 type BellCriteriaKey = 'periferica_unilateral' | 'inicio_agudo' | 'sem_causa_identificavel' | 'sem_outros_deficits'
 type BellSupportKey = 'otalgia_leve' | 'hiperacusia' | 'disgeusia_ageusia' | 'xeroftalmia' | 'xerostomia' | 'infeccao_viral'
+type BellPhysicalExamKey =
+  | 'assimetria_repouso' | 'queda_comissura' | 'sulco_nasolabial' | 'lagoftalmo' | 'fenda_palpebral' | 'rugas_frontais_ausentes'
+  | 'sobrancelha_reduzida' | 'franzir_testa_reduzido' | 'fechamento_ocular_incompleto' | 'resistencia_ocular_reduzida' | 'fenomeno_bell' | 'sinal_cilios'
+  | 'sorriso_assimetrico' | 'desvio_boca' | 'fraqueza_labio_superior' | 'escape_ar' | 'bochecha_insuficiente'
+  | 'bico_reduzido' | 'assobio_reduzido' | 'labio_inferior_reduzido' | 'platisma_reduzido'
+  | 'paladar_alterado' | 'hiperacusia' | 'olho_seco' | 'boca_seca' | 'dor_retroauricular' | 'lacrimejamento_alterado'
+  | 'pares_cranianos_normais' | 'forca_membros_normal' | 'sensibilidade_normal' | 'coordenacao_normal' | 'fala_normal' | 'marcha_normal'
+  | 'deficit_neurologico_adicional'
 type BellRedFlagKey =
   | 'testa_poupada'
   | 'bilateral'
@@ -606,6 +619,89 @@ const BELL_SUPPORT_CRITERIA: Array<{ key: BellSupportKey; label: string; detail:
     key: 'infeccao_viral',
     label: 'História recente de infecção viral inespecífica',
     detail: 'Pródromo viral recente pode reforçar a hipótese clínica.'
+  }
+]
+
+const BELL_PHYSICAL_EXAM_GROUPS: Array<{
+  title: string
+  instruction: string
+  items: Array<{ key: BellPhysicalExamKey; label: string }>
+}> = [
+  {
+    title: 'Inspeção em repouso',
+    instruction: 'Observe antes de solicitar qualquer movimento.',
+    items: [
+      { key: 'assimetria_repouso', label: 'Assimetria facial em repouso' },
+      { key: 'queda_comissura', label: 'Queda da comissura labial' },
+      { key: 'sulco_nasolabial', label: 'Apagamento do sulco nasolabial' },
+      { key: 'lagoftalmo', label: 'Lagoftalmo' },
+      { key: 'fenda_palpebral', label: 'Alargamento da fenda palpebral' },
+      { key: 'rugas_frontais_ausentes', label: 'Ausência de rugas frontais' }
+    ]
+  },
+  {
+    title: 'Terço superior e testa',
+    instruction: 'Peça para levantar as sobrancelhas e franzir a testa.',
+    items: [
+      { key: 'sobrancelha_reduzida', label: 'Elevação da sobrancelha reduzida no lado acometido' },
+      { key: 'franzir_testa_reduzido', label: 'Movimento da testa reduzido ou ausente' }
+    ]
+  },
+  {
+    title: 'Avaliação ocular',
+    instruction: 'Peça para fechar suavemente e depois com força, tentando abrir as pálpebras.',
+    items: [
+      { key: 'fechamento_ocular_incompleto', label: 'Fechamento ocular incompleto' },
+      { key: 'resistencia_ocular_reduzida', label: 'Resistência à abertura palpebral reduzida' },
+      { key: 'fenomeno_bell', label: 'Fenômeno de Bell visível' },
+      { key: 'sinal_cilios', label: 'Sinal dos cílios presente' }
+    ]
+  },
+  {
+    title: 'Terço médio e bochechas',
+    instruction: 'Peça para sorrir, mostrar os dentes e insuflar as bochechas.',
+    items: [
+      { key: 'sorriso_assimetrico', label: 'Sorriso assimétrico' },
+      { key: 'desvio_boca', label: 'Desvio da boca para o lado saudável' },
+      { key: 'fraqueza_labio_superior', label: 'Fraqueza do lábio superior' },
+      { key: 'escape_ar', label: 'Escape de ar pelo lado acometido' },
+      { key: 'bochecha_insuficiente', label: 'Incapacidade de manter a bochecha insuflada' }
+    ]
+  },
+  {
+    title: 'Terço inferior e platisma',
+    instruction: 'Peça para fazer bico, assobiar, mostrar os dentes inferiores e tensionar o pescoço.',
+    items: [
+      { key: 'bico_reduzido', label: 'Movimento de bico reduzido' },
+      { key: 'assobio_reduzido', label: 'Incapacidade ou dificuldade para assobiar' },
+      { key: 'labio_inferior_reduzido', label: 'Mobilidade do lábio inferior reduzida' },
+      { key: 'platisma_reduzido', label: 'Contração do platisma reduzida' }
+    ]
+  },
+  {
+    title: 'Sintomas associados ao VII par',
+    instruction: 'Pergunte sobre sintomas que ajudam a localizar a lesão.',
+    items: [
+      { key: 'paladar_alterado', label: 'Alteração do paladar' },
+      { key: 'hiperacusia', label: 'Hiperacusia' },
+      { key: 'olho_seco', label: 'Olho seco' },
+      { key: 'boca_seca', label: 'Boca seca' },
+      { key: 'dor_retroauricular', label: 'Dor retroauricular' },
+      { key: 'lacrimejamento_alterado', label: 'Lacrimejamento alterado' }
+    ]
+  },
+  {
+    title: 'Rastreio neurológico',
+    instruction: 'Registre os componentes examinados para excluir causas centrais ou múltiplas neuropatias.',
+    items: [
+      { key: 'pares_cranianos_normais', label: 'Demais pares cranianos sem alterações' },
+      { key: 'forca_membros_normal', label: 'Força preservada nos quatro membros' },
+      { key: 'sensibilidade_normal', label: 'Sensibilidade preservada' },
+      { key: 'coordenacao_normal', label: 'Coordenação preservada' },
+      { key: 'fala_normal', label: 'Fala sem alterações' },
+      { key: 'marcha_normal', label: 'Marcha sem alterações' },
+      { key: 'deficit_neurologico_adicional', label: 'Déficit neurológico adicional identificado' }
+    ]
   }
 ]
 
@@ -837,7 +933,7 @@ const pneumoniaPsiSections: Array<{ title: string; tone: string; items: Array<{ 
 const pneumoniaCurbItems: Array<{ key: PneumoniaCurbFieldKey; label: string }> = [
   { key: 'confusaoMental', label: 'Confusão mental' },
   { key: 'ureiaMaior43', label: 'Ureia > 43 mg/dL' },
-  { key: 'frMaior30', label: 'Frequência respiratória > 30 irpm' },
+  { key: 'frMaior30', label: 'Frequência respiratória ≥ 30 irpm' },
   { key: 'paBaixa', label: 'PAS < 90 mmHg ou PAD < 60 mmHg' },
   { key: 'idadeMaior65', label: 'Idade ≥ 65 anos' }
 ]
@@ -1169,7 +1265,10 @@ const tvpVascularSurgeryAlertSigns = tvpAlertSigns.slice(0, 4)
 const tvpRespiratoryTEPAlertSigns = [tvpAlertSigns[5]]
 
 const flegmasiaReferenceImages = [
-  '/flegmasia%20NOVO.jpeg'
+  '/flegmasia.jpeg',
+  '/flegmasia-1.jpg',
+  '/flegmasia-3.jpeg',
+  '/flegmasia-4.jpg'
 ]
 
 const dpocSinaisGravidadeItems = [
@@ -1595,6 +1694,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellFacialNerveOpen, setBellFacialNerveOpen] = useState(false)
   const [bellCranioOpen, setBellCranioOpen] = useState(false)
   const [pendingBellSide, setPendingBellSide] = useState<{ label: string; value: string } | null>(null)
+  const [bellPhysicalExamFindings, setBellPhysicalExamFindings] = useState<BellPhysicalExamKey[]>([])
+  const [bellPhysicalExamNotes, setBellPhysicalExamNotes] = useState('')
   const [bellCriteriaChecks, setBellCriteriaChecks] = useState<Record<BellCriteriaKey, boolean>>(() => defaultBellCriteriaChecks())
   const [bellSupportChecks, setBellSupportChecks] = useState<Record<BellSupportKey, boolean>>(() => defaultBellSupportChecks())
   const [bellRedFlagChecks, setBellRedFlagChecks] = useState<Record<BellRedFlagKey, boolean>>(() => defaultBellRedFlagChecks())
@@ -1866,6 +1967,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isCholecystitisSeverityStep = flowchart.id === 'cholecystitis' && currentStep === 'cole_tokyo_gravidade'
     const isAppendicitisAlvaradoStep = flowchart.id === 'appendicitis' && currentStep === 'apend_alvarado'
     const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStep === 'lomb_red_flags'
+    const isBellPhysicalExamStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_exame_fisico'
     const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_criterios_obrigatorios'
     const isBellSupportStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_suporte_diagnostico'
     const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_red_flags_ramsay'
@@ -2056,6 +2158,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       criteriosSelecionados: BELL_DIAGNOSTIC_CRITERIA.filter((item) => bellCriteriaChecks[item.key]).map((item) => item.key),
       todosCriteriosPresentes: BELL_DIAGNOSTIC_CRITERIA.every((item) => bellCriteriaChecks[item.key])
     })
+    const bellPhysicalExamAnswer = JSON.stringify({
+      decision: value || nextStep,
+      achadosSelecionados: bellPhysicalExamFindings,
+      observacoes: bellPhysicalExamNotes.trim(),
+      deficitNeurologicoAdicional: bellPhysicalExamFindings.includes('deficit_neurologico_adicional')
+    })
     const bellSupportAnswer = JSON.stringify({
       decision: value || nextStep,
       criteriosSuporteSelecionados: BELL_SUPPORT_CRITERIA.filter((item) => bellSupportChecks[item.key]).map((item) => item.key)
@@ -2130,6 +2238,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                                     ? appendicitisAlvaradoAnswer
                                                     : isLombalgiaRiskStep
                                                       ? lombalgiaRiskAnswer
+                                                      : isBellPhysicalExamStep
+                                                        ? bellPhysicalExamAnswer
                                                       : isBellCriteriaStep
                                                         ? bellCriteriaAnswer
                                                         : isBellSupportStep
@@ -2182,6 +2292,39 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
 
     handleAnswer(option.nextStep, option.value)
+  }
+
+  const handlePneumoniaLabsAndAutomaticCurb = () => {
+    const curbResult = calculatePneumoniaCurb65(pneumoniaAutomaticCurbValues)
+    const nextStep = curbResult.score <= 1 ? 'pac_conduta_ambulatorial' : 'pac_ats_idsa_gravidade'
+    const newHistory = [...history, currentStep]
+    const labAnswer = JSON.stringify({
+      decision: nextStep,
+      resultados: pneumoniaLabResults,
+      criteriosCurbPreenchidosAutomaticamente: pneumoniaAutomaticCurbValues,
+      scoreCurb65: curbResult.score,
+      destinoCurb65: curbResult.disposition
+    })
+    const curbAnswer = JSON.stringify({
+      decision: nextStep,
+      score: curbResult.score,
+      destino: curbResult.disposition,
+      criterios: pneumoniaAutomaticCurbValues,
+      preenchimentoAutomatico: true
+    })
+    const newAnswers = {
+      ...answers,
+      [currentStep]: labAnswer,
+      pac_curb65_protocolo: curbAnswer
+    }
+    const newProgress = calculateProgress(nextStep, newHistory)
+
+    setPneumoniaCurbValues(pneumoniaAutomaticCurbValues)
+    setCurrentStep(nextStep)
+    setHistory(newHistory)
+    setAnswers(newAnswers)
+    setProgress(newProgress)
+    onUpdate(patient.id, nextStep, newHistory, newAnswers, newProgress)
   }
 
   const buildTVPPrescriptionPreview = useCallback((therapyId: string): TVPPrescriptionPreview => {
@@ -2458,6 +2601,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setBellCriteriaChecks(defaultBellCriteriaChecks())
     setBellSupportChecks(defaultBellSupportChecks())
     setBellRedFlagChecks(defaultBellRedFlagChecks())
+    setBellPhysicalExamFindings([])
+    setBellPhysicalExamNotes('')
     setBellRamsayInfoOpen(false)
     setSelectedBellHouseGrade('')
     setBellTreatmentTimingOpen(false)
@@ -2474,6 +2619,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : tvpSelectedLegFromAnswers === 'other' ? 'Outras Localizações' : ''
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
   const isBellSideSelection = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_inicio'
+  const isBellPhysicalExamStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_exame_fisico'
   const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_criterios_obrigatorios'
   const isBellSupportStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_suporte_diagnostico'
   const isBellRedFlagsStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_red_flags_ramsay'
@@ -2554,10 +2700,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       lines.push(`${item++}. Oclusão palpebral noturna cuidadosa com fita hipoalergênica e óculos de proteção contra vento e poeira.`)
       lines.push(`${item++}. Avaliação oftalmológica se dor ocular, hiperemia, fotofobia, alteração visual ou sinais de exposição/lesão corneana.`)
     }
-    lines.push('', `Janela terapêutica registrada: ${bellWithin72Hours === true ? 'até 72 horas' : bellWithin72Hours === false ? 'mais de 72 horas' : 'não informada'}.`)
-    lines.push('Ajustar doses à função renal quando aplicável e revisar contraindicações, comorbidades, gestação, alergias e interações medicamentosas.')
     return lines.join('\n')
-  }, [bellAntiviralChoice, bellIsNormalFunction, bellSelectedHouseLabel, bellUseCorticosteroid, bellUseEyeCare, bellWithin72Hours])
+  }, [bellAntiviralChoice, bellIsNormalFunction, bellSelectedHouseLabel, bellUseCorticosteroid, bellUseEyeCare])
   const bellReferralText = useMemo(() => {
     const specialty = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologia' : 'Neurologia'
     const specialist = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologista' : 'Neurologista'
@@ -2926,6 +3070,33 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const influenzaWorseningSuggestsSRAG = influenzaWorseningSigns.some((item) =>
     item.includes('Alterações do estado mental') || item.includes('Desidratação')
   )
+  const influenzaSeverityIsReassessment = useMemo(() => {
+    const raw = answers.influenza_fatores_risco
+    if (!raw) return false
+    try {
+      const parsed = JSON.parse(raw) as { decision?: string }
+      return parsed.decision === 'reavaliar_srag_por_piora'
+    } catch {
+      return raw === 'reavaliar_srag_por_piora'
+    }
+  }, [answers.influenza_fatores_risco])
+  const savedInfluenzaRiskAssessment = useMemo(() => {
+    const raw = answers.influenza_fatores_risco
+    if (!raw) return { riskFactors: [] as string[], worseningSigns: [] as string[] }
+    try {
+      const parsed = JSON.parse(raw) as { fatoresRiscoSelecionados?: unknown; sinaisPioraSelecionados?: unknown }
+      return {
+        riskFactors: Array.isArray(parsed.fatoresRiscoSelecionados) ? parsed.fatoresRiscoSelecionados.map(String) : [],
+        worseningSigns: Array.isArray(parsed.sinaisPioraSelecionados) ? parsed.sinaisPioraSelecionados.map(String) : []
+      }
+    } catch {
+      return { riskFactors: [] as string[], worseningSigns: [] as string[] }
+    }
+  }, [answers.influenza_fatores_risco])
+  const influenzaHasAmbulatoryOseltamivirIndication = influenzaRiskFactors.length > 0
+    || influenzaWorseningSigns.length > 0
+    || savedInfluenzaRiskAssessment.riskFactors.length > 0
+    || savedInfluenzaRiskAssessment.worseningSigns.length > 0
   const anaphylaxisAdrenalineDose = useMemo(() => calculateAnaphylaxisAdrenalineDose(patient), [patient])
   const pancreatitisBisapResult = useMemo(() => calculatePancreatitisBisap(pancreatitisBisapValues), [pancreatitisBisapValues])
   const pancreatitisMarshallResult = useMemo(() => calculatePancreatitisMarshall(pancreatitisMarshallValues), [pancreatitisMarshallValues])
@@ -5106,19 +5277,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isPneumoniaPsiStep, patient])
 
   useEffect(() => {
-    if (!isPneumoniaCurbStep) {
+    if (!isPneumoniaCurbStep && !isPneumoniaCurbProtocolStep) {
       setPneumoniaCurbValues(defaultCurbValues(patient))
       return
     }
     const saved = answers[currentStep]
-    if (!saved) return
+    if (!saved) {
+      if (isPneumoniaCurbProtocolStep) {
+        setPneumoniaCurbValues(pneumoniaAutomaticCurbValues)
+      }
+      return
+    }
     try {
       const parsed = JSON.parse(saved)
       if (parsed?.criterios) setPneumoniaCurbValues({ ...defaultCurbValues(patient), ...parsed.criterios })
     } catch {
-      setPneumoniaCurbValues(defaultCurbValues(patient))
+      setPneumoniaCurbValues(isPneumoniaCurbProtocolStep ? pneumoniaAutomaticCurbValues : defaultCurbValues(patient))
     }
-  }, [answers, currentStep, isPneumoniaCurbStep, patient])
+  }, [answers, currentStep, isPneumoniaCurbProtocolStep, isPneumoniaCurbStep, patient, pneumoniaAutomaticCurbValues])
 
   useEffect(() => {
     if (!isInfluenzaPhysicalExamStep) return
@@ -5310,6 +5486,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSelectedAnaphylaxisCriteria([])
     }
   }, [answers, currentStep, isAnaphylaxisCriteriaStep])
+
+  useEffect(() => {
+    if (!isBellPhysicalExamStep) return
+    const saved = answers.bell_exame_fisico
+    if (!saved) return
+    try {
+      const parsed = JSON.parse(saved)
+      setBellPhysicalExamFindings(Array.isArray(parsed?.achadosSelecionados) ? parsed.achadosSelecionados : [])
+      setBellPhysicalExamNotes(typeof parsed?.observacoes === 'string' ? parsed.observacoes : '')
+    } catch {
+      setBellPhysicalExamFindings([])
+      setBellPhysicalExamNotes('')
+    }
+  }, [answers.bell_exame_fisico, isBellPhysicalExamStep])
 
   useEffect(() => {
     if (!isBellCriteriaStep) {
@@ -5949,6 +6139,105 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         ))}
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {isBellPhysicalExamStep && (
+                <div className="mb-8 space-y-5">
+                  <div className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+                    <div className="bg-gradient-to-r from-blue-800 to-cyan-700 px-5 py-5 text-white sm:px-6">
+                      <div className="flex items-start gap-4">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/15">
+                          <Stethoscope className="h-6 w-6" />
+                        </span>
+                        <div>
+                          <h3 className="text-xl font-extrabold">Exame físico da suspeita de Paralisia de Bell</h3>
+                          <p className="mt-1 max-w-4xl text-sm leading-relaxed text-blue-50">
+                            Confirme o padrão periférico do VII par craniano e procure alterações que indiquem diagnóstico alternativo. Marque somente os achados efetivamente observados.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="grid gap-2 border-b border-blue-100 bg-blue-50 p-4 text-xs font-semibold text-blue-950 sm:grid-cols-4 sm:p-5">
+                      {['Repouso', 'Testa', 'Olhos', 'Boca e bochechas', 'Lábios', 'Platisma', 'Sintomas do VII par', 'Neurológico completo'].map((step, index) => (
+                        <div key={step} className="flex items-center gap-2 rounded-lg border border-blue-200 bg-white px-3 py-2">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-700 text-[10px] text-white">{index + 1}</span>
+                          {step}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    {BELL_PHYSICAL_EXAM_GROUPS.map((group) => (
+                      <section key={group.title} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                        <h4 className="font-extrabold text-slate-950">{group.title}</h4>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-600">{group.instruction}</p>
+                        <div className="mt-3 grid gap-2">
+                          {group.items.map((item) => {
+                            const checked = bellPhysicalExamFindings.includes(item.key)
+                            const isNeurologicDeficit = item.key === 'deficit_neurologico_adicional'
+                            return (
+                              <label
+                                key={item.key}
+                                className={clsx(
+                                  'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 transition-colors',
+                                  checked
+                                    ? isNeurologicDeficit ? 'border-red-400 bg-red-50' : 'border-blue-400 bg-blue-50'
+                                    : 'border-slate-200 bg-slate-50 hover:border-blue-300'
+                                )}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() => setBellPhysicalExamFindings((current) => (
+                                    checked ? current.filter((key) => key !== item.key) : [...current, item.key]
+                                  ))}
+                                  className={clsx('mt-0.5 h-4 w-4 rounded border-slate-300', isNeurologicDeficit ? 'text-red-600' : 'text-blue-600')}
+                                />
+                                <span className={clsx('text-sm leading-relaxed', isNeurologicDeficit ? 'font-bold text-red-900' : 'text-slate-800')}>{item.label}</span>
+                              </label>
+                            )
+                          })}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+
+                  {bellPhysicalExamFindings.includes('deficit_neurologico_adicional') && (
+                    <div className="rounded-2xl border-2 border-red-400 bg-red-50 p-4 text-red-950">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+                        <div>
+                          <h4 className="font-extrabold">Déficit neurológico adicional identificado</h4>
+                          <p className="mt-1 text-sm">Questionar o diagnóstico de Paralisia de Bell isolada e investigar causa central ou envolvimento de outros nervos cranianos.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                    <label className="mb-2 block text-sm font-extrabold text-slate-950" htmlFor="bell-physical-exam-notes">Outros achados do exame</label>
+                    <textarea
+                      id="bell-physical-exam-notes"
+                      value={bellPhysicalExamNotes}
+                      onChange={(event) => setBellPhysicalExamNotes(event.target.value)}
+                      rows={3}
+                      placeholder="Descreva lateralidade, intensidade, achados oculares, déficits adicionais ou outras observações relevantes."
+                      className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    />
+                  </div>
+
+                  <div className="flex justify-end rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <button
+                      type="button"
+                      onClick={() => handleAnswer('bell_criterios_obrigatorios', 'exame_fisico_registrado')}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-bold text-white transition-colors hover:bg-blue-800 sm:w-auto"
+                    >
+                      Salvar exame e seguir para critérios obrigatórios
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
               )}
@@ -6660,7 +6949,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {currentStepData.content && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {isTVPWaitingForVascularStep && (
                     <div className={clsx(
@@ -6738,6 +7027,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         event.preventDefault()
                         event.stopPropagation()
                         setPneumoniaReferenceImage('blue')
+                      }
+                      if (target.closest('[data-pac-blue-algorithm-image="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPneumoniaReferenceImage('blueAlgorithm')
                       }
                     }}
                   >
@@ -7102,7 +7396,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         className="mt-1 h-5 w-5 rounded border-slate-300 text-cyan-700"
                       />
                       <div>
-                        <h5 className="font-extrabold text-slate-950">3. Proteção ocular</h5>
+                        <h5 className="font-extrabold text-slate-950">Proteção ocular</h5>
                         <p className="mt-1 text-sm leading-relaxed text-slate-800">
                           Lágrimas artificiais durante o dia, pomada lubrificante e oclusão palpebral cuidadosa à noite, além de proteção contra vento e poeira.
                           {bellHasIncompleteEyeClosure && ' O fechamento ocular incompleto torna esta medida prioritária para prevenir abrasão, ceratite e úlcera de córnea.'}
@@ -7588,7 +7882,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   )}>
                     {influenzaSeveritySigns.length > 0
                       ? 'Sinais de gravidade presentes: classificar como síndrome respiratória aguda grave (SRAG) e definir nível de internação.'
-                      : 'Sem sinais de gravidade neste momento: seguir avaliação de fatores de risco e sinais de piora clínica.'}
+                      : influenzaSeverityIsReassessment
+                        ? 'A reavaliação não confirmou critérios de SRAG: seguir para conduta ambulatorial, mantendo tratamento e orientações conforme os fatores previamente registrados.'
+                        : 'Sem sinais de gravidade neste momento: seguir avaliação de fatores de risco e sinais de piora clínica.'}
                   </div>
 
                   <div className="mt-4 flex justify-end">
@@ -7596,15 +7892,33 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => handleAnswer(
-                        influenzaSeveritySigns.length > 0 ? 'influenza_criterios_uti' : 'influenza_fatores_risco',
-                        influenzaSeveritySigns.length > 0 ? 'srag' : 'sindrome_gripal'
+                        influenzaSeveritySigns.length > 0
+                          ? 'influenza_criterios_uti'
+                          : influenzaSeverityIsReassessment
+                            ? influenzaHasAmbulatoryOseltamivirIndication
+                              ? 'influenza_ambulatorial_oseltamivir'
+                              : 'influenza_ambulatorial_sintomaticos'
+                            : 'influenza_fatores_risco',
+                        influenzaSeveritySigns.length > 0
+                          ? 'srag'
+                          : influenzaSeverityIsReassessment
+                            ? influenzaHasAmbulatoryOseltamivirIndication
+                              ? 'srag_nao_confirmada_ambulatorial_oseltamivir'
+                              : 'srag_nao_confirmada_ambulatorial_sintomaticos'
+                            : 'sindrome_gripal'
                       )}
                       className={clsx(
                         'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
                         influenzaSeveritySigns.length > 0 ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'
                       )}
                     >
-                      {influenzaSeveritySigns.length > 0 ? 'Classificar como SRAG' : 'Seguir como síndrome gripal'}
+                      {influenzaSeveritySigns.length > 0
+                        ? 'Classificar como SRAG'
+                        : influenzaSeverityIsReassessment
+                          ? influenzaHasAmbulatoryOseltamivirIndication
+                            ? 'Seguir para conduta ambulatorial com oseltamivir'
+                            : 'Seguir para conduta ambulatorial sintomática'
+                          : 'Seguir como síndrome gripal'}
                     </motion.button>
                   </div>
                 </div>
@@ -7794,11 +8108,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <section className="rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <h5 className="font-extrabold text-cyan-950">Prévia automática do CURB-65</h5>
-                          <p className="mt-1 text-xs text-cyan-800">Calculada com resultados, sinais vitais, exame físico e idade já registrados.</p>
+                          <h5 className="font-extrabold text-cyan-950">CURB-65 calculado automaticamente</h5>
+                          <p className="mt-1 text-xs text-cyan-800">Resultado definitivo com exames, sinais vitais, exame físico e idade já registrados.</p>
                         </div>
                         <span className="w-fit rounded-xl bg-white px-4 py-2 text-sm font-black text-cyan-900 shadow-sm">
                           {Object.values(pneumoniaAutomaticCurbValues).filter(Boolean).length} ponto(s)
+                          <span className="mt-0.5 block text-xs font-semibold">
+                            {calculatePneumoniaCurb65(pneumoniaAutomaticCurbValues).disposition}
+                          </span>
                         </span>
                       </div>
                       <div className="mt-4 grid gap-2 md:grid-cols-2">
@@ -7817,13 +8134,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => {
-                          setPneumoniaCurbValues(pneumoniaAutomaticCurbValues)
-                          handleAnswer('pac_curb65_protocolo', 'resultados_registrados')
-                        }}
-                        className="rounded-xl bg-cyan-700 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-cyan-800"
+                        onClick={handlePneumoniaLabsAndAutomaticCurb}
+                        className={clsx(
+                          'rounded-xl px-5 py-2.5 font-semibold text-white transition-colors',
+                          calculatePneumoniaCurb65(pneumoniaAutomaticCurbValues).score <= 1
+                            ? 'bg-emerald-700 hover:bg-emerald-800'
+                            : 'bg-cyan-700 hover:bg-cyan-800'
+                        )}
                       >
-                        Salvar resultados e revisar CURB-65
+                        {calculatePneumoniaCurb65(pneumoniaAutomaticCurbValues).score <= 1
+                          ? 'Salvar CURB-65 e seguir para manejo ambulatorial'
+                          : 'Salvar CURB-65 e prosseguir para ATS/IDSA'}
                       </motion.button>
                     </div>
                   </div>
@@ -10297,7 +10618,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
               {flegmasiaGalleryOpen && (
                 <div className="fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
-                  <div className="w-full max-w-5xl bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden">
+                  <div className="flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-blue-700 to-indigo-700 text-white">
                       <h4 className="font-bold">Flegmasia Cerulea Dolens - Imagens de Referência</h4>
                       <button
@@ -10309,24 +10630,24 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <div className="p-5">
+                    <div className="min-h-0 overflow-y-auto p-5">
                       <p className="text-sm text-slate-700 mb-4">
                         Achados visuais típicos: edema importante, cianose e diferença marcante entre os membros.
                       </p>
-                      <div className="grid md:grid-cols-3 gap-4">
+                      <div className="grid gap-4 md:grid-cols-2">
                         {flegmasiaReferenceImages.map((imageSrc, index) => (
                           <a
                             key={imageSrc}
                             href={imageSrc}
                             target="_blank"
                             rel="noreferrer"
-                            className="group block rounded-xl border border-slate-200 overflow-hidden bg-slate-50"
+                            className="group block overflow-hidden rounded-xl border border-slate-200 bg-white p-2"
                             title="Abrir imagem em tamanho original"
                           >
                             <img
                               src={imageSrc}
                               alt={`Imagem de referência de flegmasia ${index + 1}`}
-                              className="w-full h-44 object-cover group-hover:scale-[1.02] transition-transform"
+                              className="h-72 w-full rounded-lg object-contain transition-transform group-hover:scale-[1.01]"
                               loading="lazy"
                             />
                           </a>
@@ -10858,35 +11179,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {isBellCriteriaStep && bellCranioOpen && (
-                <div className="fixed inset-0 z-[70] overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm">
-                  <div className="flex min-h-full items-center justify-center">
-                    <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                      <div className="flex items-center justify-between gap-4 bg-gradient-to-r from-blue-800 to-cyan-700 px-5 py-4 text-white">
-                        <div>
-                          <h4 className="text-lg font-extrabold">VII par craniano</h4>
-                          <p className="mt-1 text-sm text-blue-50">
-                            Referência visual do trajeto do nervo facial.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setBellCranioOpen(false)}
-                          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20 transition-colors hover:bg-white/30"
-                          title="Fechar"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
-                      <div className="bg-slate-50 p-4">
-                        <img
-                          src="/paralisia%20de%20bell/viiparcraniano.jpeg"
-                          alt="VII par craniano"
-                          className="mx-auto max-h-[58vh] w-full rounded-xl object-contain"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                <ZoomableImageModal
+                  title="VII par craniano"
+                  description="Referência visual do trajeto do nervo facial. Use os controles de lupa para ampliar os detalhes."
+                  src="/paralisia%20de%20bell/viiparcraniano.jpeg"
+                  alt="VII par craniano"
+                  onClose={() => setBellCranioOpen(false)}
+                  maxWidthClassName="max-w-7xl"
+                />
               )}
 
               {isAVCCincinnatiStep && cincinnatiInfoOpen && (
@@ -12689,7 +12989,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

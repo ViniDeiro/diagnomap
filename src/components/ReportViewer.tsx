@@ -2159,6 +2159,73 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         antiviral?: 'none' | 'valaciclovir' | 'aciclovir' | 'famciclovir'
         eyeCare?: boolean
       } | null
+      const physicalExamData = safeParse(answers.bell_exame_fisico) as {
+        achadosSelecionados?: string[]
+        observacoes?: string
+        deficitNeurologicoAdicional?: boolean
+      } | null
+      const bellPhysicalExamLabels: Record<string, string> = {
+        assimetria_repouso: 'assimetria facial em repouso',
+        queda_comissura: 'queda da comissura labial',
+        sulco_nasolabial: 'apagamento do sulco nasolabial',
+        lagoftalmo: 'lagoftalmo',
+        fenda_palpebral: 'alargamento da fenda palpebral',
+        rugas_frontais_ausentes: 'ausência de rugas frontais',
+        sobrancelha_reduzida: 'elevação reduzida da sobrancelha no lado acometido',
+        franzir_testa_reduzido: 'redução ou ausência de movimento ao franzir a testa',
+        fechamento_ocular_incompleto: 'fechamento ocular incompleto',
+        resistencia_ocular_reduzida: 'resistência reduzida à abertura palpebral',
+        fenomeno_bell: 'fenômeno de Bell visível',
+        sinal_cilios: 'sinal dos cílios presente',
+        sorriso_assimetrico: 'sorriso assimétrico',
+        desvio_boca: 'desvio da boca para o lado saudável',
+        fraqueza_labio_superior: 'fraqueza do lábio superior',
+        escape_ar: 'escape de ar pelo lado acometido',
+        bochecha_insuficiente: 'incapacidade de manter a bochecha insuflada',
+        bico_reduzido: 'movimento de protrusão labial reduzido',
+        assobio_reduzido: 'dificuldade ou incapacidade para assobiar',
+        labio_inferior_reduzido: 'mobilidade reduzida do lábio inferior',
+        platisma_reduzido: 'contração reduzida do platisma',
+        paladar_alterado: 'alteração do paladar',
+        hiperacusia: 'hiperacusia',
+        olho_seco: 'olho seco',
+        boca_seca: 'boca seca',
+        dor_retroauricular: 'dor retroauricular',
+        lacrimejamento_alterado: 'alteração do lacrimejamento'
+      }
+      const bellNeurologicNormalLabels: Record<string, string> = {
+        pares_cranianos_normais: 'demais pares cranianos sem alterações',
+        forca_membros_normal: 'força preservada nos quatro membros',
+        sensibilidade_normal: 'sensibilidade preservada',
+        coordenacao_normal: 'coordenação preservada',
+        fala_normal: 'fala sem alterações',
+        marcha_normal: 'marcha sem alterações'
+      }
+      const selectedPhysicalExamFindings = physicalExamData?.achadosSelecionados || []
+      const facialExamFindings = selectedPhysicalExamFindings
+        .filter(item => bellPhysicalExamLabels[item])
+        .map(item => bellPhysicalExamLabels[item])
+      const normalNeurologicFindings = selectedPhysicalExamFindings
+        .filter(item => bellNeurologicNormalLabels[item])
+        .map(item => bellNeurologicNormalLabels[item])
+      const hasAdditionalNeurologicDeficit = physicalExamData?.deficitNeurologicoAdicional === true
+        || selectedPhysicalExamFindings.includes('deficit_neurologico_adicional')
+      const physicalExamNarrative = answers.bell_exame_fisico
+        ? [
+            facialExamFindings.length > 0
+              ? `Ao exame motor dirigido do VII par craniano, observaram-se ${facialExamFindings.join(', ')}.`
+              : 'Não foram marcados achados motores faciais específicos no checklist.',
+            normalNeurologicFindings.length > 0
+              ? `No rastreio neurológico, registraram-se ${normalNeurologicFindings.join(', ')}.`
+              : 'Não foram registrados componentes normais do rastreio neurológico.',
+            hasAdditionalNeurologicDeficit
+              ? 'Foi identificado déficit neurológico adicional, achado incompatível com Paralisia de Bell típica isolada e que exige investigação de diagnóstico alternativo.'
+              : null,
+            physicalExamData?.observacoes?.trim()
+              ? `Observações adicionais do exame: ${physicalExamData.observacoes.trim()}.`
+              : null
+          ].filter(Boolean).join(' ')
+        : 'O exame físico direcionado do VII par craniano não foi registrado neste atendimento.'
       const bellMandatoryCriteriaLabels: Record<string, string> = {
         periferica_unilateral: 'Fraqueza ou paralisia facial periférica unilateral, envolvendo fronte, fechamento ocular e comissura labial',
         inicio_agudo: 'Início agudo, com progressão até o pico em 72 horas ou menos',
@@ -2193,6 +2260,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       } else if (answers.bell_criterios_obrigatorios === 'criterios_preenchidos') {
         selectedMandatoryCriteria = Object.keys(bellMandatoryCriteriaLabels)
       }
+      const allMandatoryCriteriaPresent = criteriaData?.todosCriteriosPresentes === true
+        || selectedMandatoryCriteria.length === Object.keys(bellMandatoryCriteriaLabels).length
       const mandatoryCriteriaItems = Object.entries(bellMandatoryCriteriaLabels).map(([key, label]) => {
         const wasSelected = selectedMandatoryCriteria.includes(key)
         return `${wasSelected ? 'Presente' : 'Não registrado'}: ${label}.`
@@ -2200,9 +2269,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const supportCriteriaItems = uniqueItems(
         (supportData?.criteriosSuporteSelecionados || []).map((item) => bellSupportCriteriaLabels[item] || item)
       )
+      const supportEvaluationPerformed = Boolean(answers.bell_suporte_diagnostico)
       const redFlagItems = uniqueItems(
         (redFlagsData?.redFlagsSelecionadas || []).map((item) => bellRedFlagLabels[item] || item)
       )
+      const hasRedFlags = redFlagsData?.possuiRedFlag === true || answers.bell_red_flags_ramsay === 'red_flags'
+      const redFlagEvaluationPerformed = Boolean(answers.bell_red_flags_ramsay)
       const parsedSideData = safeParse(answers.bell_inicio) as { decision?: string } | null
       const sideDecision = parsedSideData?.decision || answers.bell_inicio
       const sideLabel = sideDecision === 'lado_direito'
@@ -2220,24 +2292,21 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       }
       const houseValue = houseData?.houseBrackmann || answers.bell_house_brackmann
       const houseLabel = houseData?.houseBrackmannLabel || houseLabelMap[houseValue] || 'não informado'
+      const hasHouseClassification = Boolean(houseData?.houseBrackmann || houseLabelMap[answers.bell_house_brackmann])
       const additionalFindings = uniqueItems([
         ...symptoms,
         ...observations,
         ...vitalItems
       ])
-      const additionalFindingsText = additionalFindings.length > 0
-        ? additionalFindings.join(', ')
-        : 'assimetria facial, lagoftalmo e desvio da comissura labial'
-      const redFlagsText = redFlagsData?.possuiRedFlag
+      const additionalFindingsText = additionalFindings.length > 0 ? additionalFindings.join(', ') : ''
+      const redFlagsText = hasRedFlags
         ? `Foram registrados sinais de alerta no fluxo${redFlagItems.length > 0 ? `: ${redFlagItems.join('; ')}` : ''}, sendo indicada investigação complementar e avaliação especializada conforme suspeita clínica.`
         : 'Diante das características apresentadas, da ausência de sinais de alerta e da evolução típica, o quadro foi considerado compatível com Paralisia de Bell.'
-      const centralInvestigationText = redFlagsData?.possuiRedFlag
+      const centralInvestigationText = hasRedFlags
         ? 'A presença de sinais de alerta impede conduzir o caso como Paralisia de Bell típica isolada até investigação complementar adequada.'
         : 'Não houve achados clínicos sugestivos de paralisia facial central que indicassem necessidade imediata de investigação complementar com exames de imagem ou outros métodos diagnósticos.'
-      const diagnosticCriteriaText = criteriaData?.todosCriteriosPresentes
+      const diagnosticCriteriaText = allMandatoryCriteriaPresent
         ? `Critérios diagnósticos obrigatórios registrados como presentes: ${Object.values(bellMandatoryCriteriaLabels).join('; ')}.`
-        : selectedMandatoryCriteria.length === Object.keys(bellMandatoryCriteriaLabels).length
-          ? `Critérios diagnósticos obrigatórios registrados como presentes: ${Object.values(bellMandatoryCriteriaLabels).join('; ')}.`
         : 'Os critérios obrigatórios para Paralisia de Bell não foram completamente registrados no fluxo, devendo ser reavaliados antes de confirmar a hipótese diagnóstica.'
       const supportCriteriaText = supportCriteriaItems.length > 0
         ? `Critérios de suporte registrados: ${supportCriteriaItems.join('; ')}.`
@@ -2247,7 +2316,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         aciclovir: 'aciclovir 400 mg VO cinco vezes ao dia por 10 dias',
         famciclovir: 'famciclovir 500 mg VO a cada 8 horas por 7 dias'
       }
-      const treatmentNarrative = houseValue === 'house_i'
+      const treatmentNarrative = !hasHouseClassification
+        ? 'Não houve classificação pela escala de House-Brackmann nem definição terapêutica específica neste caminho do fluxo.'
+        : houseValue === 'house_i'
         ? 'A escala demonstrou função facial normal (House-Brackmann I), sem indicação de tratamento farmacológico específico para Paralisia de Bell.'
         : [
             treatmentData?.corticosteroid
@@ -2261,15 +2332,43 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
               : 'Cuidados oculares não foram selecionados no fluxo.',
             `Janela terapêutica registrada: ${treatmentData?.within72Hours === true ? 'até 72 horas do início' : treatmentData?.within72Hours === false ? 'mais de 72 horas do início' : 'não informada'}.`
           ].join(' ')
-      const bellEvolutionText = [
-        `Paciente ${patient.name || 'não identificado'}, admitido na unidade com quadro sugestivo de neuropatia periférica do nervo facial, de instalação aguda, apresentando paralisia facial periférica unilateral ${sideLabel}. ${diagnosticCriteriaText}`,
-        `Durante o exame físico, foram registrados sinais e sintomas adicionais compatíveis com o diagnóstico, incluindo ${additionalFindingsText}, os quais reforçaram a hipótese de paralisia facial periférica idiopática. ${supportCriteriaText} ${centralInvestigationText}`,
-        `${redFlagsText} Em seguida, procedeu-se à avaliação do grau de disfunção motora facial por meio da escala de House-Brackmann, classificando o paciente como ${houseLabel}.`,
-        `O paciente foi informado sobre a natureza da patologia, curso clínico esperado, possibilidades terapêuticas e prognóstico. ${treatmentNarrative}`
-      ].join('\n\n')
+      const bellEvolutionText = !allMandatoryCriteriaPresent
+        ? [
+            `Paciente ${patient.name || 'não identificado'} avaliado por fraqueza facial ${sideLabel}. ${physicalExamNarrative}`,
+            diagnosticCriteriaText,
+            `${additionalFindingsText ? `Achados adicionais registrados: ${additionalFindingsText}. ` : ''}Como os elementos clínicos obrigatórios não foram integralmente demonstrados, o diagnóstico de Paralisia de Bell não foi confirmado. Recomenda-se investigação ativa de causas centrais, infecciosas, otológicas, traumáticas, estruturais ou sistêmicas conforme os achados do exame.`,
+            'Não foi indicada prescrição automática específica para Paralisia de Bell neste caminho.'
+          ].join('\n\n')
+        : hasRedFlags
+          ? [
+              `Paciente ${patient.name || 'não identificado'} com paralisia facial periférica unilateral ${sideLabel}. ${physicalExamNarrative}`,
+              `Os critérios clínicos iniciais foram preenchidos para suspeita de Paralisia de Bell. ${supportCriteriaText}`,
+              `${redFlagsText} ${centralInvestigationText}`,
+              `${additionalFindingsText ? `Achados clínicos adicionais registrados: ${additionalFindingsText}. ` : ''}Foi indicada interrupção do fluxo de Bell típica, investigação etiológica dirigida e avaliação especializada conforme a natureza dos sinais de alerta. Não houve prescrição automática de tratamento específico para Paralisia de Bell.`
+            ].join('\n\n')
+          : [
+              `Paciente ${patient.name || 'não identificado'}, com paralisia facial periférica unilateral ${sideLabel}, de instalação aguda. ${physicalExamNarrative}`,
+              diagnosticCriteriaText,
+              `${supportCriteriaText} ${additionalFindingsText ? `Achados adicionais registrados: ${additionalFindingsText}.` : ''}`.trim(),
+              `${redFlagsText} ${centralInvestigationText}`,
+              hasHouseClassification
+                ? `A disfunção motora facial foi classificada como House-Brackmann ${houseLabel}. ${treatmentNarrative}`
+                : 'A classificação de House-Brackmann e a definição terapêutica ainda não foram registradas.',
+              'Foram explicados o curso esperado, os cuidados domiciliares e os sinais que exigem reavaliação imediata.'
+            ].join('\n\n')
+      const bellSafetyItems = [
+        'Retorno imediato se houver piora rápida da fraqueza facial, evolução para paralisia completa ou progressão do déficit para outra região.',
+        'Retorno imediato se surgir fraqueza em braço ou perna, alteração da fala ou marcha, visão dupla, perda de sensibilidade, tontura intensa persistente ou dificuldade para engolir.',
+        'Reavaliação diante de dor facial ou retroauricular intensa e progressiva, ou aparecimento de vesículas na orelha, conduto auditivo ou boca.',
+        'Retorno imediato em caso de dor ocular, vermelhidão importante, sensação intensa de corpo estranho, piora visual ou incapacidade de proteger o olho.',
+        'Reavaliação se houver febre, secreção otológica, sinais de infecção, paralisia bilateral ou recorrência.',
+        'Acompanhamento se não houver qualquer melhora, se houver piora progressiva ou se a recuperação permanecer incompleta em cerca de 3 meses.'
+      ]
 
       return {
-        title: 'PRONTUÁRIO MÉDICO – PARALISIA DE BELL',
+        title: allMandatoryCriteriaPresent && !hasRedFlags
+          ? 'PRONTUÁRIO MÉDICO – PARALISIA DE BELL'
+          : 'PRONTUÁRIO MÉDICO – PARALISIA FACIAL EM INVESTIGAÇÃO',
         sections: [
           {
             title: 'Identificação do Paciente',
@@ -2289,19 +2388,27 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           {
             title: 'Critérios de Suporte',
-            items: supportCriteriaItems.length > 0 ? supportCriteriaItems : ['Sem critérios de suporte adicionais registrados.']
+            items: supportCriteriaItems.length > 0
+              ? supportCriteriaItems
+              : [supportEvaluationPerformed ? 'Nenhum critério de suporte adicional foi registrado.' : 'Etapa não realizada neste caminho do fluxo.']
           },
           {
             title: 'Red Flags / Critérios de Exclusão',
-            items: redFlagItems.length > 0 ? redFlagItems : ['Red flags ausentes no fluxo.']
+            items: redFlagItems.length > 0
+              ? redFlagItems
+              : [redFlagEvaluationPerformed ? 'Nenhuma red flag foi identificada.' : 'Etapa não realizada neste caminho do fluxo.']
           },
           {
             title: 'Classificação House-Brackmann',
-            text: houseLabel
+            text: hasHouseClassification ? houseLabel : 'Não realizada neste caminho do fluxo.'
           },
           {
             title: 'Conduta Terapêutica Selecionada',
             text: treatmentNarrative
+          },
+          {
+            title: 'Orientações de Retorno e Segurança',
+            items: bellSafetyItems
           }
         ]
       }

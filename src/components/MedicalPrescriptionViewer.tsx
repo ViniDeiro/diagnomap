@@ -45,7 +45,52 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const isCholecystitis = livePatient.selectedFlowchart === 'cholecystitis'
   const isAppendicitis = livePatient.selectedFlowchart === 'appendicitis'
   const isLombalgia = livePatient.selectedFlowchart === 'lombalgia'
+  const isBell = livePatient.selectedFlowchart === 'paralisia_bell'
   const flowName = getFlowchartById(livePatient.selectedFlowchart || '')?.name || (livePatient.selectedFlowchart ? livePatient.selectedFlowchart.toUpperCase() : 'DENGUE')
+
+  const parseFlowAnswer = <T,>(stepId: string): T | null => {
+    const raw = livePatient.flowchartState?.answers?.[stepId]
+    if (!raw) return null
+    try {
+      return JSON.parse(raw) as T
+    } catch {
+      return null
+    }
+  }
+
+  const bellCriteria = parseFlowAnswer<{ todosCriteriosPresentes?: boolean }>('bell_criterios_obrigatorios')
+  const bellRedFlags = parseFlowAnswer<{ possuiRedFlag?: boolean; redFlagsSelecionadas?: string[] }>('bell_red_flags_ramsay')
+  const bellHouse = parseFlowAnswer<{ houseBrackmann?: string; houseBrackmannLabel?: string }>('bell_house_brackmann')
+  const bellTreatment = parseFlowAnswer<{ corticosteroid?: boolean; antiviral?: string; eyeCare?: boolean; within72Hours?: boolean | null }>('bell_tratamento_clinico')
+  const bellCriteriaComplete = bellCriteria?.todosCriteriosPresentes === true
+    || livePatient.flowchartState?.answers?.bell_criterios_obrigatorios === 'criterios_preenchidos'
+  const bellHasRedFlags = bellRedFlags?.possuiRedFlag === true
+    || livePatient.flowchartState?.answers?.bell_red_flags_ramsay === 'red_flags'
+  const bellRedFlagsEvaluated = Boolean(livePatient.flowchartState?.answers?.bell_red_flags_ramsay)
+  const bellTypicalPath = bellCriteriaComplete && bellRedFlagsEvaluated && !bellHasRedFlags
+  const bellDiagnosisLabel = bellTypicalPath ? 'Paralisia de Bell' : 'Paralisia facial periférica em investigação'
+  const bellHouseLabels: Record<string, string> = {
+    house_i: 'Grau I', house_ii: 'Grau II', house_iii: 'Grau III', house_iv: 'Grau IV', house_v: 'Grau V', house_vi: 'Grau VI'
+  }
+  const bellHouseLabel = bellHouse?.houseBrackmannLabel || bellHouseLabels[bellHouse?.houseBrackmann || ''] || 'não classificado'
+  const bellAntiviralLabels: Record<string, string> = {
+    valaciclovir: 'valaciclovir', aciclovir: 'aciclovir', famciclovir: 'famciclovir'
+  }
+  const bellConductSummary = !bellCriteriaComplete
+    ? 'Os critérios clínicos obrigatórios não foram integralmente preenchidos. Paralisia de Bell não confirmada; indicada investigação etiológica dirigida.'
+    : bellHasRedFlags
+      ? 'Foram identificados sinais de alerta. O quadro não deve ser conduzido como Paralisia de Bell típica isolada até investigação complementar e avaliação especializada.'
+      : !bellRedFlagsEvaluated
+        ? 'Os critérios iniciais foram preenchidos, porém a avaliação de sinais de alerta ainda não foi concluída.'
+      : `Quadro típico classificado como House-Brackmann ${bellHouseLabel}. ${bellTreatment?.corticosteroid ? 'Corticosteroide selecionado.' : 'Corticosteroide não selecionado.'} ${bellTreatment?.antiviral && bellTreatment.antiviral !== 'none' ? `Antiviral associado: ${bellAntiviralLabels[bellTreatment.antiviral] || bellTreatment.antiviral}.` : 'Sem antiviral associado.'} ${bellTreatment?.eyeCare ? 'Proteção ocular prescrita.' : 'Proteção ocular não selecionada.'}`
+  const bellSafetyItems = [
+    'Retornar imediatamente se houver piora rápida da fraqueza facial, evolução para paralisia completa ou progressão do déficit para outra região.',
+    'Retornar imediatamente se surgir fraqueza em braço ou perna, alteração da fala ou marcha, visão dupla, perda de sensibilidade, tontura intensa persistente ou dificuldade para engolir.',
+    'Procurar reavaliação diante de dor facial ou retroauricular intensa e progressiva, ou aparecimento de vesículas na orelha, conduto auditivo ou boca.',
+    'Retornar imediatamente em caso de dor ocular, vermelhidão importante, sensação intensa de corpo estranho, piora visual ou incapacidade de proteger o olho.',
+    'Reavaliar se houver febre, secreção otológica, sinais de infecção, acometimento bilateral ou recorrência.',
+    'Programar reavaliação se não houver qualquer melhora, se houver piora progressiva ou se a recuperação permanecer incompleta em cerca de 3 meses.'
+  ]
 
   const tvpPrescriptionTemplates: Record<string, Omit<Prescription, 'id' | 'prescribedAt' | 'prescribedBy'>> = {
     rivaroxabana: {
@@ -240,6 +285,32 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
+    if (isBell) {
+      const mappedPrescriptions = allPrescriptions.map((prescription, index) => (
+        `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}${prescription.instructions ? `\n   Instruções: ${prescription.instructions}` : ''}`
+      )).join('\n\n')
+
+      return [
+        'ORIENTAÇÕES MÉDICAS - PARALISIA FACIAL PERIFÉRICA',
+        '',
+        `Paciente: ${patient.name}`,
+        `Idade: ${patient.age} anos`,
+        `Data: ${new Date().toLocaleDateString('pt-BR')}`,
+        '',
+        `Diagnóstico/Avaliação: ${bellDiagnosisLabel}`,
+        `Conduta: ${bellConductSummary}`,
+        '',
+        'Sinais para retorno imediato:',
+        ...bellSafetyItems.map(item => `• ${item}`),
+        '',
+        ...(allPrescriptions.length > 0 ? ['Medicamentos prescritos:', mappedPrescriptions, ''] : []),
+        'Assinatura do Médico:',
+        '__________________________________________________',
+        '',
+        formatDate(new Date())
+      ].join('\n')
+    }
+
     if (isInfluenza || isPneumonia || isSinusitis || isFaringoamigdalite || isEpistaxe || isMonoartrite || isAnsiedade || isVertigem || isCefaleia || isAgitacao || isPepHiv || isAnaphylaxis || isPancreatitis || isCholangitis || isCholecystitis || isAppendicitis || isLombalgia) {
       const mappedPrescriptions = allPrescriptions.map((prescription, index) => {
         const instructionsLine = prescription.instructions ? `Instruções: ${prescription.instructions}` : ''
@@ -560,7 +631,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
 
             <div className="mb-8">
               <div className="text-lg">
-                <strong>Diagnóstico:</strong> {flowName}
+                <strong>Diagnóstico:</strong> {isBell ? bellDiagnosisLabel : flowName}
               </div>
             </div>
 
@@ -637,6 +708,34 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                   </div>
                 </div>
                 </>
+                ) : isBell ? (
+                  <div className="space-y-5 text-lg">
+                    <div className={clsx(
+                      'rounded-xl border p-4',
+                      bellTypicalPath ? 'border-blue-200 bg-blue-50' : 'border-amber-200 bg-amber-50'
+                    )}>
+                      <h3 className="mb-2 font-bold text-slate-900">Conduta clínica registrada</h3>
+                      <p className="leading-relaxed text-slate-800">{bellConductSummary}</p>
+                    </div>
+
+                    {bellTypicalPath && bellTreatment?.eyeCare && (
+                      <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+                        <h3 className="mb-2 font-bold text-cyan-950">Proteção ocular</h3>
+                        <ul className="space-y-1 text-cyan-950">
+                          <li>• Utilizar lágrimas artificiais durante o dia conforme prescrição.</li>
+                          <li>• Aplicar pomada lubrificante e realizar oclusão palpebral cuidadosa à noite.</li>
+                          <li>• Proteger o olho contra vento, poeira e trauma.</li>
+                        </ul>
+                      </div>
+                    )}
+
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                      <h3 className="mb-2 font-bold text-red-950">Retorno imediato e sinais de alerta</h3>
+                      <ul className="space-y-2 text-red-950">
+                        {bellSafetyItems.map(item => <li key={item}>• {item}</li>)}
+                      </ul>
+                    </div>
+                  </div>
                 ) : isInfluenza ? (
                   <div className="space-y-5 text-lg">
                     <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-4">

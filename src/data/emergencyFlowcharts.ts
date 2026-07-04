@@ -2940,8 +2940,34 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Baixa probabilidade (menor ou igual a 0)', nextStep: 'baixa_probabilidade', value: 'low' },
+        { text: 'Baixa probabilidade (menor ou igual a 0)', nextStep: 'pocus_antes_d_dimero', value: 'low' },
         { text: 'Moderada/Alta probabilidade (maior ou igual a 1)', nextStep: 'moderada_probabilidade', value: 'moderate_high', critical: true }
+      ]
+    },
+    pocus_antes_d_dimero: {
+      id: 'pocus_antes_d_dimero',
+      title: 'POCUS vascular: visão geral antes do D-dímero',
+      description: 'Revisar a técnica compressiva e o papel do exame antes de registrar o resultado do D-dímero.',
+      type: 'action',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+            <p class="font-extrabold">POCUS compressivo de 3 pontos</p>
+            <p class="mt-2">O exame à beira-leito avalia a compressibilidade venosa em três janelas: veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.</p>
+          </div>
+          <div class="grid gap-3 md:grid-cols-3">
+            <div class="rounded-xl border border-slate-200 bg-white p-3"><strong>1. Região inguinal</strong><p class="mt-1">Veia femoral comum e junção safeno-femoral.</p></div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3"><strong>2. Bifurcação femoral</strong><p class="mt-1">Origem da femoral profunda e início da veia femoral.</p></div>
+            <div class="rounded-xl border border-slate-200 bg-white p-3"><strong>3. Região poplítea</strong><p class="mt-1">Veia poplítea até sua trifurcação.</p></div>
+          </div>
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p><strong>Interpretação:</strong> veia que colaba completamente é considerada compressível; ausência de colabamento sugere TVP.</p>
+            <p class="mt-2">Na baixa probabilidade clínica, o D-dímero permanece a etapa diagnóstica seguinte. O POCUS será realizado se o D-dímero for positivo.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Prosseguir para resultado do D-dímero', nextStep: 'baixa_probabilidade', value: 'pocus_revisado' }
       ]
     },
     baixa_probabilidade: {
@@ -2978,8 +3004,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     us_compressiva: {
       id: 'us_compressiva',
-      title: 'POCUS vascular: compressão de 3 pontos',
-      description: 'Avaliar veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.',
+      title: 'Resultado do POCUS vascular: compressão de 3 pontos',
+      description: 'Registrar o resultado após avaliar veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.',
       type: 'question',
       critical: true,
       options: [
@@ -4637,7 +4663,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
                 </ul>
               </div>
               <div class="rounded-lg border border-cyan-200 bg-cyan-50 p-3">
-                <h5 class="font-bold text-cyan-950">Interpretação pelo BLUE Protocol <button type="button" data-pac-blue-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300 bg-white text-xs font-black text-cyan-700 align-middle hover:bg-cyan-100" title="Ver imagem do Protocolo BLUE">i</button></h5>
+                <h5 class="font-bold text-cyan-950">Interpretação pelo BLUE Protocol <button type="button" data-pac-blue-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-cyan-300 bg-white text-xs font-black text-cyan-700 align-middle hover:bg-cyan-100" title="Ver imagem do Protocolo BLUE">i</button> <button type="button" data-pac-blue-algorithm-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-blue-300 bg-white text-xs font-black text-blue-700 align-middle hover:bg-blue-100" title="Ver algoritmo do Protocolo BLUE">i</button></h5>
                 <p class="mt-1"><strong>Objetivo:</strong> protocolo ultrassonográfico à beira-leito para investigar insuficiência respiratória aguda e diferenciar pneumonia, edema pulmonar cardiogênico, DPOC/asma, TEP e pneumotórax.</p>
                 <p class="mt-2"><strong>Componentes principais:</strong> deslizamento pleural, linhas A e linhas B.</p>
                 <p class="mt-2"><strong>Pontos de avaliação:</strong> BLUE point superior, BLUE point inferior e PLAPS point bilateral, com pesquisa posterolateral de consolidação, pneumonia e derrame pleural.</p>
@@ -8330,7 +8356,21 @@ export const paralisiaBellFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Seguir para critérios obrigatórios', nextStep: 'bell_criterios_obrigatorios', value: 'seguir_criterios' }
+        { text: 'Realizar exame físico direcionado', nextStep: 'bell_exame_fisico', value: 'seguir_exame_fisico' }
+      ]
+    },
+    bell_exame_fisico: {
+      id: 'bell_exame_fisico',
+      title: 'Avaliação Inicial / Exame Físico',
+      description: 'Exame motor do VII par craniano e rastreio neurológico antes dos critérios diagnósticos.',
+      type: 'question',
+      content: `
+        <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+          <p><strong>Objetivos:</strong> confirmar o padrão de paralisia facial periférica e pesquisar achados que indiquem AVC, Ramsay Hunt, lesão estrutural ou outra neuropatia.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Salvar exame físico e seguir para critérios obrigatórios', nextStep: 'bell_criterios_obrigatorios', value: 'exame_fisico_registrado' }
       ]
     },
     bell_criterios_obrigatorios: {
