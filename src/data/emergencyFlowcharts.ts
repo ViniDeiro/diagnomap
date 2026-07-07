@@ -2884,7 +2884,17 @@ export const tvpFlowchart: EmergencyFlowchart = {
       description: 'Paciente com dor/edema unilateral de membro inferior.',
       type: 'question',
       options: [
-        { text: 'Prosseguir avaliação clínica', nextStep: 'avaliacao_clinica', value: 'start_eval' }
+        { text: 'Avaliação inicial / Sinais Vitais / Exame Físico', nextStep: 'tvp_exame_fisico', value: 'iniciar_exame_fisico' }
+      ]
+    },
+    tvp_exame_fisico: {
+      id: 'tvp_exame_fisico',
+      title: 'Avaliação Inicial / Sinais Vitais / Exame Físico',
+      description: 'Registrar sinais vitais e exame físico completo antes do checklist clínico de TVP.',
+      type: 'action',
+      content: '',
+      options: [
+        { text: 'Salvar exame e seguir para checklist clínico', nextStep: 'avaliacao_clinica', value: 'exame_fisico_registrado' }
       ]
     },
     avaliacao_clinica: {
@@ -2952,7 +2962,10 @@ export const tvpFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
-            <p class="font-extrabold">POCUS compressivo de 3 pontos</p>
+            <div class="flex items-center gap-2">
+              <p class="font-extrabold">POCUS compressivo de 3 / 4 pontos</p>
+              <button type="button" data-tvp-pocus-points-image="true" class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-cyan-400 bg-white text-xs font-extrabold text-cyan-800 transition-colors hover:bg-cyan-100" title="Ver imagem do POCUS de 3 / 4 pontos" aria-label="Ver imagem do POCUS de 3 / 4 pontos">i</button>
+            </div>
             <p class="mt-2">O exame à beira-leito avalia a compressibilidade venosa em três janelas: veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.</p>
           </div>
           <div class="grid gap-3 md:grid-cols-3">
@@ -4707,6 +4720,34 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
                 </div>
                 <div class="mt-3 rounded-lg border border-red-200 bg-red-50 p-3">
                   <p><strong>Na PAC, valorizar:</strong> Perfil C, Perfil A/B, Perfil B' e PLAPS positivo, principalmente quando associados a broncograma aéreo dinâmico e quadro clínico compatível.</p>
+                </div>
+              </div>
+              <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+                <h5 class="font-bold text-indigo-950">Ultrassom Pulmonar (LUS - Lung Ultrasound)</h5>
+                <p class="mt-1">O LUS é uma ferramenta diagnóstica rápida, não invasiva, livre de radiação ionizante e de alta acurácia para avaliação de pacientes com suspeita de PAC. Consolidou-se como método complementar ao exame físico e à radiografia de tórax, especialmente na emergência, UTI e enfermaria.</p>
+                <p class="mt-2">Seu princípio baseia-se na análise da interface pleural e dos artefatos ultrassonográficos produzidos pela interação entre o ar pulmonar e as estruturas adjacentes. A perda de aeração por processo infeccioso pode gerar padrões característicos, como consolidações pulmonares, broncogramas aéreos dinâmicos, linhas B focais ou difusas, irregularidades pleurais e derrames pleurais.</p>
+                <div class="mt-3 grid gap-3 md:grid-cols-2">
+                  <div class="rounded-lg border border-indigo-200 bg-white p-3">
+                    <p class="font-bold text-indigo-950">LUS Score</p>
+                    <p class="mt-1">Permite estimar a extensão do comprometimento pulmonar dividindo o tórax em regiões padronizadas e classificando cada área conforme o grau de perda de aeração. A soma dos escores auxilia no acompanhamento evolutivo, resposta ao tratamento, necessidade de suporte ventilatório e estratificação prognóstica.</p>
+                  </div>
+                  <div class="rounded-lg border border-emerald-200 bg-white p-3">
+                    <p class="font-bold text-emerald-950">Vantagens</p>
+                    <ul class="mt-1 list-disc pl-5 space-y-1">
+                      <li>Realização à beira-leito.</li>
+                      <li>Repetição seriada sem radiação.</li>
+                      <li>Alta sensibilidade para consolidações subpleurais e pequenos derrames pleurais.</li>
+                      <li>Integração rápida a protocolos como BLUE e RUSH.</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="mt-3 rounded-lg border border-amber-200 bg-white p-3">
+                  <p class="font-bold text-amber-950">Limitações e interpretação</p>
+                  <p class="mt-1">Lesões profundas que não alcançam a superfície pleural podem não ser detectadas, e a acurácia depende da técnica de aquisição e da experiência do examinador. Os achados devem ser interpretados com história clínica, exame físico, exames laboratoriais e métodos convencionais, especialmente RX ou TC de tórax quando indicados.</p>
+                </div>
+                <div class="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+                  <p class="font-bold text-slate-950">Mensagem prática</p>
+                  <p class="mt-1">As principais diretrizes reconhecem o LUS como ferramenta valiosa na insuficiência respiratória aguda e na pneumonia, especialmente em pacientes críticos, quando o RX tem limitações diagnósticas ou quando se deseja monitorar a evolução do comprometimento pulmonar.</p>
                 </div>
               </div>
               <div class="rounded-lg border border-amber-200 bg-white p-3">

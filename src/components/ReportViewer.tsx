@@ -659,6 +659,18 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
     if (flowId === 'tvp') {
       const startData = safeParse(answers.start) as { selectedLeg?: string; selectedLegLabel?: string } | null
+      const initialAssessmentData = safeParse(answers.tvp_exame_fisico) as {
+        sinaisVitais?: {
+          temperature?: number
+          feverDays?: number
+          bloodPressure?: string
+          heartRate?: number
+          respiratoryRate?: number
+          oxygenSaturation?: number
+          glucose?: string
+        }
+        exameFisico?: PhysicalExamData
+      } | null
       const clinicalData = safeParse(answers.avaliacao_clinica) as { sinaisEAchados?: string[]; outrosAchados?: string } | null
       const wellsData = safeParse(answers.wells_score) as {
         score?: number
@@ -696,9 +708,42 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           : null
       ])
 
+      const tvpFlowVitalItems = uniqueItems([
+        initialAssessmentData?.sinaisVitais?.temperature != null ? `Temperatura: ${initialAssessmentData.sinaisVitais.temperature} °C` : null,
+        initialAssessmentData?.sinaisVitais?.feverDays != null ? `Tempo de febre: ${initialAssessmentData.sinaisVitais.feverDays} dia(s)` : null,
+        initialAssessmentData?.sinaisVitais?.heartRate != null ? `Frequência cardíaca: ${initialAssessmentData.sinaisVitais.heartRate} bpm` : null,
+        initialAssessmentData?.sinaisVitais?.respiratoryRate != null ? `Frequência respiratória: ${initialAssessmentData.sinaisVitais.respiratoryRate} irpm` : null,
+        initialAssessmentData?.sinaisVitais?.bloodPressure ? `Pressão arterial: ${initialAssessmentData.sinaisVitais.bloodPressure} mmHg` : null,
+        initialAssessmentData?.sinaisVitais?.oxygenSaturation != null ? `Saturação de oxigênio: ${initialAssessmentData.sinaisVitais.oxygenSaturation}%` : null,
+        initialAssessmentData?.sinaisVitais?.glucose ? `Glicemia capilar: ${initialAssessmentData.sinaisVitais.glucose} mg/dL` : null
+      ])
+      const tvpStructuredExamItems = (() => {
+        const exam = initialAssessmentData?.exameFisico
+        if (!exam) return [] as string[]
+        const grade = (value?: number) => value ? ` ${value}/4+` : ''
+        const generalStateLabels: Record<PhysicalExamData['generalState'], string> = {
+          bom: 'bom estado geral', regular: 'regular estado geral', mal: 'mal estado geral', grave: 'grave estado geral', pessimo: 'péssimo estado geral'
+        }
+        const respiration = exam.respiration.status === 'eupneico'
+          ? 'eupneico'
+          : exam.respiration.status === 'taquipneico'
+            ? 'taquipneico'
+            : `dispneico${grade(exam.respiration.grade)}`
+        return uniqueItems([
+          `Estado geral: ${generalStateLabels[exam.generalState]}.`,
+          `Coloração e hidratação: ${exam.coloration.status === 'corado' ? 'corado' : `descorado${grade(exam.coloration.grade)}`}, ${exam.hydration.status === 'hidratado' ? 'hidratado' : `desidratado${grade(exam.hydration.grade)}`}.`,
+          `Cianose e icterícia: ${exam.cyanosis.status === 'acianotico' ? 'acianótico' : `cianótico${grade(exam.cyanosis.grade)}`}, ${exam.jaundice.status === 'anicterico' ? 'anictérico' : `ictérico${grade(exam.jaundice.grade)}`}.`,
+          `Temperatura e respiração: ${exam.temperature.status === 'afebril' ? 'afebril' : 'febril'}${exam.temperature.value != null ? `, temperatura de ${exam.temperature.value} °C` : ''}; ${respiration}.`,
+          `Neurológico: Glasgow ${exam.neuro.glasgow ?? 'não informado'}; ${exam.neuro.altered?.trim() || 'consciente e contactuante'}.`,
+          `Aparelho cardiovascular: ${exam.cardiac.altered?.trim() || 'bulhas rítmicas, normofonéticas, sem sopros audíveis'}.`,
+          `Aparelho respiratório: ${exam.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}.`,
+          `Abdome: ${exam.abdomen.altered?.trim() || 'sem alterações relevantes descritas'}.`,
+          `Extremidades e perfusão: ${exam.extremities.altered?.trim() || 'pulsos periféricos simétricos e perfusão preservada'}.`
+        ])
+      })()
       const physicalExamItems = uniqueItems([
         ...selectedClinicalFindings.filter((item) => physicalExamSet.has(item)),
-        ...vitalItems,
+        ...tvpStructuredExamItems,
         clinicalData?.outrosAchados
       ])
 
@@ -850,6 +895,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Sinais e Sintomas',
             items: symptomItems.length > 0 ? symptomItems : ['Sem sinais e sintomas estruturados registrados no fluxo.']
+          },
+          {
+            title: 'Sinais Vitais',
+            items: tvpFlowVitalItems.length > 0 ? tvpFlowVitalItems : vitalItems.length > 0 ? vitalItems : ['Sem sinais vitais estruturados registrados.']
           },
           {
             title: 'Exame Físico',
