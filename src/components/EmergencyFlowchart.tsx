@@ -258,7 +258,7 @@ type AnaphylaxisCriteriaInfo = {
   }>
 }
 
-type PneumoniaReferenceImageKey = 'ct' | 'pocus' | 'blue' | 'blueAlgorithm'
+type PneumoniaReferenceImageKey = 'ct' | 'pocus' | 'blue' | 'blueAlgorithm' | 'lus'
 
 const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
   title: string
@@ -272,7 +272,7 @@ const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
   },
   pocus: {
     title: 'POCUS Pulmonar',
-    src: '/pocus%20pac%20novo.jpeg',
+    src: '/Novo%20POCUS%20pulmao.png',
     alt: 'Imagem de referência de POCUS pulmonar'
   },
   blue: {
@@ -284,6 +284,11 @@ const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
     title: 'Algoritmo do Protocolo BLUE',
     src: '/algoritmo.jpeg',
     alt: 'Algoritmo de decisão do protocolo BLUE'
+  },
+  lus: {
+    title: 'LUS - Lung Ultrasound',
+    src: '/LUS.jpeg',
+    alt: 'Imagem de referência do Lung Ultrasound'
   }
 }
 
@@ -305,12 +310,17 @@ const ZoomableImageModal: React.FC<ZoomableImageModalProps> = ({
   maxWidthClassName = 'max-w-6xl'
 }) => {
   const [zoom, setZoom] = useState(100)
+  const [imageFailed, setImageFailed] = useState(false)
   const canZoomOut = zoom > 75
   const canZoomIn = zoom < 300
 
   const imageStyle: React.CSSProperties = {
     width: `${zoom}%`
   }
+
+  useEffect(() => {
+    setImageFailed(false)
+  }, [src])
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
@@ -363,12 +373,24 @@ const ZoomableImageModal: React.FC<ZoomableImageModalProps> = ({
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-auto bg-white p-4">
-          <img
-            src={src}
-            alt={alt}
-            style={imageStyle}
-            className="mx-auto block h-auto min-w-0 max-w-none rounded-xl"
-          />
+          {imageFailed ? (
+            <div className="flex min-h-[45vh] items-center justify-center rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-amber-950">
+              <div>
+                <p className="text-lg font-extrabold">Imagem não encontrada</p>
+                <p className="mt-2 text-sm leading-relaxed">
+                  Verifique se o arquivo está na pasta public com este nome: <strong>{src.replace(/^\//, '')}</strong>
+                </p>
+              </div>
+            </div>
+          ) : (
+            <img
+              src={src}
+              alt={alt}
+              style={imageStyle}
+              onError={() => setImageFailed(true)}
+              className="mx-auto block h-auto min-w-0 max-w-none rounded-xl"
+            />
+          )}
         </div>
       </div>
     </div>
@@ -1094,6 +1116,34 @@ const parseBloodPressure = (value?: string) => {
   const matches = value?.match(/(\d{2,3})\s*[xX\/]\s*(\d{2,3})/)
   if (!matches) return { systolic: undefined, diastolic: undefined }
   return { systolic: Number(matches[1]), diastolic: Number(matches[2]) }
+}
+
+const parseSavedPhysicalExamAnswer = (value?: string, patient?: EmergencyPatient) => {
+  if (!value) {
+    return {
+      sinaisVitais: patient ? defaultFlowVitalSigns(patient) : undefined,
+      exameFisico: defaultPneumoniaPhysicalExam()
+    }
+  }
+
+  try {
+    const parsed = JSON.parse(value)
+    return {
+      sinaisVitais: {
+        ...(patient ? defaultFlowVitalSigns(patient) : {}),
+        ...(parsed?.sinaisVitais || {})
+      } as FlowVitalSigns,
+      exameFisico: {
+        ...defaultPneumoniaPhysicalExam(),
+        ...(parsed?.exameFisico || {})
+      } as PhysicalExamData
+    }
+  } catch {
+    return {
+      sinaisVitais: patient ? defaultFlowVitalSigns(patient) : undefined,
+      exameFisico: defaultPneumoniaPhysicalExam()
+    }
+  }
 }
 
 const defaultPneumoniaPhysicalExam = (): PhysicalExamData => ({
@@ -2996,11 +3046,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     [pneumoniaSelectedExams]
   )
   const pneumoniaAutomaticCurbValues = useMemo<PneumoniaCurbValues>(() => {
+    const savedPhysicalExam = parseSavedPhysicalExamAnswer(answers.pac_exame_fisico, patient)
+    const sourceVitalSigns = answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns
+    const sourcePhysicalExam = answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam
     const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
-    const respiratoryRate = pneumoniaVitalSigns.respiratoryRate
-    const bloodPressure = parseBloodPressure(pneumoniaVitalSigns.bloodPressure)
-    const hasConfusion = (pneumoniaPhysicalExam.neuro.glasgow != null && pneumoniaPhysicalExam.neuro.glasgow < 15)
-      || Boolean(pneumoniaPhysicalExam.neuro.altered?.trim())
+    const respiratoryRate = parseClinicalNumber(sourceVitalSigns?.respiratoryRate)
+    const bloodPressure = parseBloodPressure(sourceVitalSigns?.bloodPressure)
+    const patientAge = parseClinicalNumber(patient.age)
+    const hasConfusion = (sourcePhysicalExam.neuro.glasgow != null && sourcePhysicalExam.neuro.glasgow < 15)
+      || Boolean(sourcePhysicalExam.neuro.altered?.trim())
 
     return {
       confusaoMental: hasConfusion,
@@ -3008,9 +3062,32 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       frMaior30: respiratoryRate != null && respiratoryRate >= 30,
       paBaixa: (bloodPressure.systolic != null && bloodPressure.systolic < 90)
         || (bloodPressure.diastolic != null && bloodPressure.diastolic <= 60),
-      idadeMaior65: typeof patient.age === 'number' && patient.age >= 65
+      idadeMaior65: patientAge != null && patientAge >= 65
     }
-  }, [patient.age, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam.neuro.altered, pneumoniaPhysicalExam.neuro.glasgow, pneumoniaVitalSigns.bloodPressure, pneumoniaVitalSigns.respiratoryRate])
+  }, [answers.pac_exame_fisico, patient, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
+  const pneumoniaAutomaticCurbDetails = useMemo<Record<PneumoniaCurbFieldKey, string>>(() => {
+    const savedPhysicalExam = parseSavedPhysicalExamAnswer(answers.pac_exame_fisico, patient)
+    const sourceVitalSigns = answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns
+    const sourcePhysicalExam = answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam
+    const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
+    const respiratoryRate = parseClinicalNumber(sourceVitalSigns?.respiratoryRate)
+    const bloodPressure = sourceVitalSigns?.bloodPressure?.trim()
+    const patientAge = parseClinicalNumber(patient.age)
+    const glasgow = sourcePhysicalExam.neuro.glasgow
+    const altered = sourcePhysicalExam.neuro.altered?.trim()
+
+    return {
+      confusaoMental: altered
+        ? `Exame físico: ${altered}`
+        : glasgow != null
+          ? `Glasgow ${glasgow}`
+          : 'Exame físico: sem alteração registrada',
+      ureiaMaior43: urea != null ? `Ureia ${urea} mg/dL` : 'Ureia não informada nos exames',
+      frMaior30: respiratoryRate != null ? `FR ${respiratoryRate} irpm` : 'FR não informada nos sinais vitais',
+      paBaixa: bloodPressure ? `PA ${bloodPressure} mmHg` : 'PA não informada nos sinais vitais',
+      idadeMaior65: patientAge != null ? `Idade do cadastro: ${patientAge} anos` : 'Idade não informada no cadastro'
+    }
+  }, [answers.pac_exame_fisico, patient, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
   const savedPneumoniaCurbScore = useMemo(() => {
     const raw = answers.pac_curb65_protocolo || answers.pac_calcular_curb65
     if (!raw) return undefined
@@ -7257,6 +7334,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         event.stopPropagation()
                         setPneumoniaReferenceImage('pocus')
                       }
+                      if (target.closest('[data-pac-lus-image="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPneumoniaReferenceImage('lus')
+                      }
                       if (target.closest('[data-pac-blue-image="true"]')) {
                         event.preventDefault()
                         event.stopPropagation()
@@ -8359,7 +8441,12 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <div className="mt-4 grid gap-2 md:grid-cols-2">
                         {pneumoniaCurbItems.map((item) => (
                           <div key={item.key} className={clsx('flex items-center justify-between rounded-lg border p-2 text-sm', pneumoniaAutomaticCurbValues[item.key] ? 'border-cyan-300 bg-white font-semibold text-cyan-950' : 'border-cyan-100 bg-cyan-50/50 text-slate-600')}>
-                            <span>{item.label}</span>
+                            <span>
+                              <span className="block">{item.label}</span>
+                              <span className={clsx('mt-0.5 block text-xs font-medium', pneumoniaAutomaticCurbValues[item.key] ? 'text-cyan-700' : 'text-slate-500')}>
+                                {pneumoniaAutomaticCurbDetails[item.key]}
+                              </span>
+                            </span>
                             <span className={clsx('rounded-full px-2 py-0.5 text-xs font-bold', pneumoniaAutomaticCurbValues[item.key] ? 'bg-cyan-700 text-white' : 'bg-slate-100 text-slate-500')}>
                               {pneumoniaAutomaticCurbValues[item.key] ? 'Selecionado' : 'Não'}
                             </span>

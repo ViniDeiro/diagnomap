@@ -4723,7 +4723,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
                 </div>
               </div>
               <div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-                <h5 class="font-bold text-indigo-950">Ultrassom Pulmonar (LUS - Lung Ultrasound)</h5>
+                <h5 class="font-bold text-indigo-950">Ultrassom Pulmonar (LUS - Lung Ultrasound) <button type="button" data-pac-lus-image="true" class="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full border border-indigo-300 bg-white text-xs font-black text-indigo-700 align-middle hover:bg-indigo-100" title="Ver imagem de LUS">i</button></h5>
                 <p class="mt-1">O LUS é uma ferramenta diagnóstica rápida, não invasiva, livre de radiação ionizante e de alta acurácia para avaliação de pacientes com suspeita de PAC. Consolidou-se como método complementar ao exame físico e à radiografia de tórax, especialmente na emergência, UTI e enfermaria.</p>
                 <p class="mt-2">Seu princípio baseia-se na análise da interface pleural e dos artefatos ultrassonográficos produzidos pela interação entre o ar pulmonar e as estruturas adjacentes. A perda de aeração por processo infeccioso pode gerar padrões característicos, como consolidações pulmonares, broncogramas aéreos dinâmicos, linhas B focais ou difusas, irregularidades pleurais e derrames pleurais.</p>
                 <div class="mt-3 grid gap-3 md:grid-cols-2">
