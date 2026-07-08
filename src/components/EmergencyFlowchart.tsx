@@ -322,8 +322,31 @@ const ZoomableImageModal: React.FC<ZoomableImageModalProps> = ({
     setImageFailed(false)
   }, [src])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="fixed right-4 top-4 z-[80] inline-flex h-11 w-11 items-center justify-center rounded-full bg-slate-950/80 text-white shadow-xl ring-1 ring-white/30 transition-colors hover:bg-slate-800"
+        title="Fechar imagem"
+        aria-label="Fechar imagem"
+      >
+        <X className="h-6 w-6" />
+      </button>
       <div className={clsx('flex max-h-[92vh] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl', maxWidthClassName)}>
         <div className="flex flex-col gap-3 border-b border-slate-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
@@ -4697,10 +4720,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       alert('Não foi possível copiar a prescrição. Tente novamente.')
     }
   }, [lombalgiaPrescriptionPreview])
-
-  const hasSelectedFlegmasia = selectedClinicalFindings.some((item) =>
-    item.toLowerCase().includes('flegmasia')
-  )
 
   const toggleSelection = (setter: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
     setter(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item])
@@ -10402,16 +10421,15 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         <AlertTriangle className="w-5 h-5 text-red-600" />
                         Emergência Vascular: Flegmasia Cerulea Dolens (FCD)
                       </h5>
-                      {hasSelectedFlegmasia && (
-                        <button
-                          type="button"
-                          onClick={() => setFlegmasiaGalleryOpen(true)}
-                          className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-red-300 bg-white text-red-700 hover:bg-red-100 transition-colors"
-                          title="Ver imagens de referência"
-                        >
-                          <Info className="w-4 h-4" />
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => setFlegmasiaGalleryOpen(true)}
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-full border border-red-300 bg-white text-red-700 hover:bg-red-100 transition-colors"
+                        title="Ver imagens de referência"
+                        aria-label="Ver imagens de referência da flegmasia"
+                      >
+                        <Info className="w-4 h-4" />
+                      </button>
                     </div>
                     <p className="text-xs text-red-900 leading-relaxed font-medium">
                       É uma forma rara e gravíssima de trombose venosa profunda (TVP) ileofemoral, caracterizada por obstrução maciça do retorno venoso, resultando em edema intenso, dor extrema e cianose (coloração azulada) do membro, com alto risco de gangrena venosa, amputação e óbito (25% a 40%). É uma emergência vascular imediata.
@@ -10705,10 +10723,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
 
                     <div className="mt-5 rounded-xl border border-slate-200 bg-white/85 p-4">
-                      <h5 className="flex items-center gap-2 text-sm font-extrabold text-slate-900">
-                        <Info className="h-4 w-4 text-cyan-600" />
-                        Mapa rápido de localizações
-                      </h5>
+                      <h5 className="text-sm font-extrabold text-slate-900">Mapa rápido de localizações</h5>
                       <div className="mt-3 grid gap-4 text-xs leading-relaxed text-slate-700 md:grid-cols-2">
                         <div>
                           <strong className="mb-1 block text-slate-950">Membros inferiores</strong>
