@@ -2975,12 +2975,24 @@ export const tvpFlowchart: EmergencyFlowchart = {
           </div>
           <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
             <p><strong>Interpretação:</strong> veia que colaba completamente é considerada compressível; ausência de colabamento sugere TVP.</p>
-            <p class="mt-2">Na baixa probabilidade clínica, o D-dímero permanece a etapa diagnóstica seguinte. O POCUS será realizado se o D-dímero for positivo.</p>
+            <p class="mt-2">Na baixa probabilidade clínica, registrar o POCUS antes do D-dímero ajuda a documentar as janelas avaliadas. Se não houver achado positivo crítico, o D-dímero permanece a etapa diagnóstica seguinte.</p>
           </div>
         </div>
       `,
       options: [
-        { text: 'Prosseguir para resultado do D-dímero', nextStep: 'baixa_probabilidade', value: 'pocus_revisado' }
+        { text: 'Prosseguir para resultado do POCUS', nextStep: 'pocus_resultado_pre_d_dimero', value: 'pocus_revisado' }
+      ]
+    },
+    pocus_resultado_pre_d_dimero: {
+      id: 'pocus_resultado_pre_d_dimero',
+      title: 'Resultado do POCUS vascular: compressão de 3 pontos',
+      description: 'Registrar o resultado após avaliar veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.',
+      type: 'question',
+      critical: true,
+      options: [
+        { text: 'POCUS positivo: veia não compressível', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
+        { text: 'POCUS negativo: compressibilidade preservada', nextStep: 'baixa_probabilidade', value: 'us_negative' },
+        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'baixa_probabilidade', value: 'us_inconclusive' }
       ]
     },
     baixa_probabilidade: {
@@ -2992,12 +3004,12 @@ export const tvpFlowchart: EmergencyFlowchart = {
         <div class="bg-green-100 p-3 rounded border-l-4 border-green-700 text-sm text-green-950 leading-relaxed">
           <p><strong>Conduta:</strong> Solicitar D-dímero de alta sensibilidade.</p>
           <p>Se negativo, TVP pode ser excluída em paciente de baixa probabilidade.</p>
-          <p>Se positivo, prosseguir para POCUS vascular com compressão de 3 pontos.</p>
+          <p>Se positivo, correlacionar com o POCUS já registrado e seguir para reavaliação/varredura venosa conforme suspeita clínica.</p>
         </div>
       `,
       options: [
         { text: 'D-dímero negativo', nextStep: 'tvp_excluida', value: 'ddimer_negative' },
-        { text: 'D-dímero positivo', nextStep: 'us_compressiva', value: 'ddimer_positive' }
+        { text: 'D-dímero positivo', nextStep: 'us_negativa_conduta', value: 'ddimer_positive' }
       ]
     },
     moderada_probabilidade: {

@@ -3102,11 +3102,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : answers.baixa_probabilidade === 'ddimer_negative'
       ? 'negativo'
       : 'não realizado ou não informado'
-  const tvpReferralUltrasound = answers.us_compressiva === 'us_positive' || answers.repetir_us === 'repeat_positive'
+  const tvpPocusResult = answers.pocus_resultado_pre_d_dimero || answers.us_compressiva
+  const tvpReferralUltrasound = tvpPocusResult === 'us_positive' || answers.repetir_us === 'repeat_positive'
     ? 'POCUS compressivo de 3 pontos positivo para TVP, com veia não compressível.'
-    : answers.us_compressiva === 'us_negative' || answers.repetir_us === 'repeat_negative'
+    : tvpPocusResult === 'us_negative' || answers.repetir_us === 'repeat_negative'
       ? 'POCUS compressivo de 3 pontos negativo nas janelas avaliadas.'
-      : answers.us_compressiva === 'us_inconclusive'
+      : tvpPocusResult === 'us_inconclusive'
         ? 'POCUS compressivo de 3 pontos inconclusivo ou tecnicamente limitado.'
         : 'Resultado não informado no fluxo.'
   const hasTVPAlertSignSelected = useMemo(
