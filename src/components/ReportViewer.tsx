@@ -24,6 +24,7 @@ import {
 import {
   getOseltamivirDoseText
 } from '@/lib/influenza'
+import { buildClinicalSummary } from '@/lib/clinicalSummary'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 
@@ -448,6 +449,65 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       patientForReport.generalObservations,
       ...(patientForReport.treatment.observations || [])
     ])
+
+    const usesSemiologicReport = !['dengue', 'atendimento_antirrabico', 'itu', 'tvp', 'anafilaxia', 'influenza'].includes(flowId)
+
+    if (usesSemiologicReport) {
+      const clinicalSummary = buildClinicalSummary(patientForReport, {
+        flowchart: flowchart || undefined,
+        currentStep,
+        history,
+        answers
+      })
+
+      return {
+        title: 'RESUMO CLÍNICO SEMIOLÓGICO',
+        sections: [
+          {
+            title: 'Identificação e contexto',
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, prontuário nº ${patientForReport.medicalRecord || 'não informado'}. Fluxograma aplicado: ${flowchart?.name || flowId}.`
+          },
+          {
+            title: 'Queixa principal / motivo do atendimento',
+            text: clinicalSummary.chiefComplaint
+          },
+          {
+            title: 'História da moléstia atual e raciocínio do fluxo',
+            items: clinicalSummary.historyLines.length > 0
+              ? clinicalSummary.historyLines
+              : ['Caminho clínico ainda sem respostas estruturadas registradas.']
+          },
+          {
+            title: 'Sinais, sintomas e exame físico',
+            items: clinicalSummary.examinationLines.length > 0
+              ? clinicalSummary.examinationLines
+              : ['Sem sinais vitais ou exame físico estruturado registrados neste fluxo.']
+          },
+          {
+            title: 'Exames, critérios e estratificação',
+            items: clinicalSummary.scoreLines.length > 0
+              ? clinicalSummary.scoreLines
+              : ['Sem exames, escores ou critérios estruturados registrados neste caminho.']
+          },
+          {
+            title: 'Impressão clínica',
+            text: `${clinicalSummary.finalTitle}. ${clinicalSummary.finalDescription}`
+          },
+          {
+            title: 'Conduta / plano',
+            items: clinicalSummary.conductLines
+          },
+          ...(prescriptions.length > 0 ? [{
+            title: 'Prescrições registradas',
+            items: prescriptions
+          }] : []),
+          ...(observations.length > 0 ? [{
+            title: 'Observações adicionais',
+            items: observations
+          }] : [])
+        ]
+      }
+    }
 
     if (flowId === 'atendimento_antirrabico') {
       const contactAnswer = answers.raiva_tipo_contato

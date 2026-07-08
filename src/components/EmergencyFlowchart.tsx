@@ -25,6 +25,7 @@ import {
   ScanLine,
   Clipboard,
   ClipboardCheck,
+  FileText,
   ZoomIn,
   ZoomOut,
   X
@@ -167,6 +168,7 @@ import {
   defaultLombalgiaRiskValues,
   hasLombalgiaPrescriptionSet
 } from '@/lib/lombalgia'
+import { buildClinicalSummary, formatClinicalDate } from '@/lib/clinicalSummary'
 
 type GasometryFieldKey = 'ph' | 'pco2' | 'hco3' | 'be' | 'po2' | 'sodium' | 'chloride' | 'albumin'
 type AsthmaInitialFieldKey = 'sato2' | 'fr' | 'fc' | 'pfe' | 'paco2'
@@ -1736,6 +1738,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [anaphylaxisPrescriptionPreview, setAnaphylaxisPrescriptionPreview] = useState<AnaphylaxisPrescriptionPreview | null>(null)
   const [anaphylaxisPrescriptionCopied, setAnaphylaxisPrescriptionCopied] = useState(false)
   const [anaphylaxisPrescriptionGenerated, setAnaphylaxisPrescriptionGenerated] = useState(false)
+  const [rabiesBiteImageOpen, setRabiesBiteImageOpen] = useState(false)
   const [pancreatitisBisapValues, setPancreatitisBisapValues] = useState<Record<PancreatitisBisapKey, boolean>>(() => defaultPancreatitisBisapValues(patient))
   const [pancreatitisMarshallValues, setPancreatitisMarshallValues] = useState<PancreatitisMarshallValues>(() => defaultPancreatitisMarshallValues())
   const [pancreatitisIcuCriteria, setPancreatitisIcuCriteria] = useState<string[]>([])
@@ -1785,6 +1788,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellTreatmentTimingOpen, setBellTreatmentTimingOpen] = useState(false)
   const [bellDocumentCopied, setBellDocumentCopied] = useState(false)
   const [clinicalSummaryCopied, setClinicalSummaryCopied] = useState(false)
+  const [clinicalSummaryModalOpen, setClinicalSummaryModalOpen] = useState(false)
   const [bellWithin72Hours, setBellWithin72Hours] = useState<boolean | null>(null)
   const [bellUseCorticosteroid, setBellUseCorticosteroid] = useState(false)
   const [bellAntiviralChoice, setBellAntiviralChoice] = useState<BellAntiviralChoice>('none')
@@ -2716,6 +2720,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setBellTreatmentTimingOpen(false)
     setBellDocumentCopied(false)
     setClinicalSummaryCopied(false)
+    setClinicalSummaryModalOpen(false)
+    setRabiesBiteImageOpen(false)
     setBellWithin72Hours(null)
     setBellUseCorticosteroid(false)
     setBellAntiviralChoice('none')
@@ -2724,177 +2730,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
-  const formatClinicalDate = useCallback((dateLike?: Date | string) => {
-    if (!dateLike) return 'data não informada'
-    const date = new Date(dateLike)
-    if (Number.isNaN(date.getTime())) return 'data não informada'
-    return date.toLocaleDateString('pt-BR')
-  }, [])
-  const formatClinicalValue = useCallback((value: unknown): string => {
-    if (value == null || value === '') return ''
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-      if (typeof value === 'boolean') return value ? 'sim' : 'não'
-      return String(value)
-    }
-    if (Array.isArray(value)) {
-      return value.map(formatClinicalValue).filter(Boolean).join('; ')
-    }
-    if (typeof value === 'object') {
-      return Object.entries(value as Record<string, unknown>)
-        .map(([key, itemValue]) => {
-          const formattedValue = formatClinicalValue(itemValue)
-          return formattedValue ? `${key}: ${formattedValue}` : ''
-        })
-        .filter(Boolean)
-        .join('; ')
-    }
-    return String(value)
-  }, [])
-  type FlowSummaryAnswer = Record<string, unknown>
-  type FlowSummaryEntry = {
-    step: EmergencyStep
-    answerLabel: string
-    parsed: FlowSummaryAnswer | null
-  }
-  const parseFlowAnswerForSummary = useCallback((raw?: string): FlowSummaryAnswer | null => {
-    if (!raw) return null
-    try {
-      const parsed = JSON.parse(raw)
-      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : { decision: parsed }
-    } catch {
-      return { decision: raw }
-    }
-  }, [])
-  const getAnswerDecision = useCallback((stepId: string, raw?: string) => {
-    const parsed = parseFlowAnswerForSummary(raw)
-    const decision = typeof parsed?.decision === 'string' ? parsed.decision : raw
-    if (!decision) return ''
-    const step = flowchart.steps[stepId]
-    const matchedOption = step?.options?.find((option) => option.value === decision || option.nextStep === decision)
-    return matchedOption?.text || formatClinicalValue(decision)
-  }, [flowchart.steps, formatClinicalValue, parseFlowAnswerForSummary])
   const clinicalSummaryData = useMemo(() => {
-    const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {
-        const step = flowchart.steps[stepId]
-        if (!step) return entries
-        const rawAnswer = answers[stepId]
-        const answerLabel = getAnswerDecision(stepId, rawAnswer)
-        const parsed = parseFlowAnswerForSummary(rawAnswer)
-        entries.push({ step, answerLabel, parsed })
-        return entries
-      }, [])
-
-    const chiefComplaint = answerEntries
-      .map((entry) => formatClinicalValue(entry.parsed?.queixaPrincipal))
-      .find(Boolean)
-      || patient.admission?.symptoms?.join('; ')
-      || currentStepData?.description
-      || flowchart.description
-
-    const historyLines = answerEntries
-      .filter((entry) => entry.answerLabel)
-      .map((entry) => `${entry.step.title}: ${entry.answerLabel}`)
-      .slice(-8)
-
-    const examinationLines = answerEntries.flatMap((entry) => {
-      const lines: string[] = []
-      const vitalSigns = formatClinicalValue(entry.parsed?.sinaisVitais)
-      const physicalExam = formatClinicalValue(entry.parsed?.exameFisico)
-      const findings = formatClinicalValue(entry.parsed?.sinaisEAchados || entry.parsed?.achadosSelecionados)
-      const notes = formatClinicalValue(entry.parsed?.observacoes || entry.parsed?.outrosAchados)
-      if (vitalSigns) lines.push(`Sinais vitais: ${vitalSigns}`)
-      if (physicalExam) lines.push(`Exame físico: ${physicalExam}`)
-      if (findings) lines.push(`Achados semiológicos: ${findings}`)
-      if (notes) lines.push(`Observações clínicas: ${notes}`)
-      return lines
+    return buildClinicalSummary(patient, {
+      flowchart,
+      currentStep,
+      history,
+      answers
     })
-
-    const scoreLines = answerEntries.flatMap((entry) => {
-      const lines: string[] = []
-      const score = formatClinicalValue(entry.parsed?.score || entry.parsed?.pontuacaoMaximaMarshall)
-      const classification = formatClinicalValue(
-        entry.parsed?.classificacao
-        || entry.parsed?.classificacaoAtlanta
-        || entry.parsed?.destino
-        || entry.parsed?.gravidade
-        || entry.parsed?.risco
-        || entry.parsed?.grupo
-        || entry.parsed?.status
-      )
-      const selectedCriteria = formatClinicalValue(
-        entry.parsed?.criteriosSelecionados
-        || entry.parsed?.criterios
-        || entry.parsed?.redFlagsSelecionadas
-        || entry.parsed?.examesSelecionados
-        || entry.parsed?.examesSolicitados
-      )
-      if (score || classification) lines.push(`${entry.step.title}: ${[score ? `pontuação ${score}` : '', classification].filter(Boolean).join(' - ')}`)
-      if (selectedCriteria) lines.push(`${entry.step.title}: ${selectedCriteria}`)
-      return lines
-    })
-
-    const finalTitle = currentStepData?.title || flowchart.name
-    const finalDescription = currentStepData?.description || flowchart.description
-    const finalAnswer = answerEntries.at(-1)?.answerLabel
-    const conductLines = [
-      finalDescription,
-      finalAnswer ? `Decisão final registrada: ${finalAnswer}` : '',
-      currentStepData?.critical ? 'Fluxo finalizado em etapa crítica; manter monitorização e reavaliação conforme gravidade.' : ''
-    ].filter(Boolean)
-
-    const textSections = [
-      'RESUMO CLÍNICO SEMIOLÓGICO',
-      '',
-      'Identificação e contexto',
-      `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: ${flowchart.name}.`,
-      '',
-      'Queixa principal / motivo do atendimento',
-      chiefComplaint,
-      '',
-      'História da moléstia atual e raciocínio do fluxo',
-      historyLines.length > 0 ? historyLines.map((line) => `- ${line}`).join('\n') : '- Caminho clínico ainda sem respostas estruturadas registradas.',
-      '',
-      'Sinais, sintomas e exame físico',
-      examinationLines.length > 0 ? Array.from(new Set(examinationLines)).map((line) => `- ${line}`).join('\n') : '- Sem sinais vitais ou exame físico estruturado registrados neste fluxo.',
-      '',
-      'Exames, critérios e estratificação',
-      scoreLines.length > 0 ? Array.from(new Set(scoreLines)).slice(-10).map((line) => `- ${line}`).join('\n') : '- Sem exames, escores ou critérios estruturados registrados neste caminho.',
-      '',
-      'Impressão clínica',
-      `${finalTitle}. ${finalDescription}`,
-      '',
-      'Conduta / plano',
-      conductLines.map((line) => `- ${line}`).join('\n')
-    ]
-
-    return {
-      chiefComplaint,
-      historyLines,
-      examinationLines: Array.from(new Set(examinationLines)),
-      scoreLines: Array.from(new Set(scoreLines)).slice(-10),
-      finalTitle,
-      finalDescription,
-      conductLines,
-      text: textSections.join('\n')
-    }
-  }, [
-    answers,
-    currentStepData,
-    flowchart.description,
-    flowchart.name,
-    flowchart.steps,
-    formatClinicalDate,
-    formatClinicalValue,
-    getAnswerDecision,
-    history,
-    parseFlowAnswerForSummary,
-    patient.admission?.date,
-    patient.admission?.symptoms,
-    patient.admission?.time,
-    patient.age,
-    patient.gender,
-    patient.name
-  ])
+  }, [answers, currentStep, flowchart, history, patient])
   const copyClinicalSummaryText = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(clinicalSummaryData.text)
@@ -6525,7 +6368,23 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                 <div className="flex items-center space-x-3">
                   {getStepIcon(currentStepData)}
                   <div>
-                    <h2 className="text-xl font-bold">{currentStepData.title}</h2>
+                    <h2 className="flex items-center gap-2 text-xl font-bold">
+                      <span>{currentStepData.title}</span>
+                      {flowchart.id === 'atendimento_antirrabico' && currentStepData.id === 'raiva_tipo_contato' && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setRabiesBiteImageOpen(true)
+                          }}
+                          className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-white/20 text-sm font-black text-white shadow-sm transition-colors hover:bg-white/30"
+                          title="Ver referência visual de mordedura"
+                          aria-label="Ver referência visual de mordedura"
+                        >
+                          i
+                        </button>
+                      )}
+                    </h2>
                     <p className="text-sm opacity-90">{currentStepData.description}</p>
                   </div>
                 </div>
@@ -14610,71 +14469,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         />
                       </figure>
                     )}
-                    <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm">
-                      <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Resumo clínico semiológico</p>
-                          <h4 className="mt-1 text-lg font-extrabold text-slate-950">{clinicalSummaryData.finalTitle}</h4>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={copyClinicalSummaryText}
-                          className={clsx(
-                            'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
-                            clinicalSummaryCopied
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-900 text-white hover:bg-slate-800'
-                          )}
-                        >
-                          {clinicalSummaryCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-                          {clinicalSummaryCopied ? 'Copiado' : 'Copiar resumo'}
-                        </button>
-                      </div>
-                      <div className="space-y-5 p-5 text-sm leading-relaxed text-slate-800">
-                        <section>
-                          <h5 className="font-extrabold text-slate-950">Identificação e contexto</h5>
-                          <p className="mt-1">
-                            Paciente {patient.name || 'não identificado'}, {patient.age || 'idade não informada'} anos, {patient.gender || 'gênero não informado'}, atendido em {formatClinicalDate(patient.admission?.date)}
-                            {patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: {flowchart.name}.
-                          </p>
-                        </section>
-                        <section>
-                          <h5 className="font-extrabold text-slate-950">Queixa principal / motivo do atendimento</h5>
-                          <p className="mt-1">{clinicalSummaryData.chiefComplaint}</p>
-                        </section>
-                        <section>
-                          <h5 className="font-extrabold text-slate-950">História da moléstia atual e raciocínio do fluxo</h5>
-                          <ul className="mt-2 list-disc space-y-1 pl-5">
-                            {clinicalSummaryData.historyLines.length > 0
-                              ? clinicalSummaryData.historyLines.map((line) => <li key={line}>{line}</li>)
-                              : <li>Caminho clínico ainda sem respostas estruturadas registradas.</li>}
-                          </ul>
-                        </section>
-                        <section>
-                          <h5 className="font-extrabold text-slate-950">Sinais, sintomas e exame físico</h5>
-                          <ul className="mt-2 list-disc space-y-1 pl-5">
-                            {clinicalSummaryData.examinationLines.length > 0
-                              ? clinicalSummaryData.examinationLines.map((line) => <li key={line}>{line}</li>)
-                              : <li>Sem sinais vitais ou exame físico estruturado registrados neste fluxo.</li>}
-                          </ul>
-                        </section>
-                        <section>
-                          <h5 className="font-extrabold text-slate-950">Exames, critérios e estratificação</h5>
-                          <ul className="mt-2 list-disc space-y-1 pl-5">
-                            {clinicalSummaryData.scoreLines.length > 0
-                              ? clinicalSummaryData.scoreLines.map((line) => <li key={line}>{line}</li>)
-                              : <li>Sem exames, escores ou critérios estruturados registrados neste caminho.</li>}
-                          </ul>
-                        </section>
-                        <section className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-950">
-                          <h5 className="font-extrabold">Impressão clínica e plano</h5>
-                          <p className="mt-1">{clinicalSummaryData.finalDescription}</p>
-                          <ul className="mt-2 list-disc space-y-1 pl-5">
-                            {clinicalSummaryData.conductLines.map((line) => <li key={line}>{line}</li>)}
-                          </ul>
-                        </section>
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setClinicalSummaryModalOpen(true)}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg transition-colors hover:bg-slate-800"
+                    >
+                      <FileText className="h-4 w-4" />
+                      Ver resumo clínico
+                    </button>
                     <button
                       onClick={onComplete}
                       className={clsx(
@@ -14697,6 +14499,97 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
             </div>
           </motion.div>
         </AnimatePresence>
+
+        {clinicalSummaryModalOpen && (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+            <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+              <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Resumo clínico semiológico</p>
+                  <h4 className="mt-1 text-lg font-extrabold text-slate-950">{clinicalSummaryData.finalTitle}</h4>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={copyClinicalSummaryText}
+                    className={clsx(
+                      'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
+                      clinicalSummaryCopied
+                        ? 'bg-emerald-600 text-white'
+                        : 'bg-slate-900 text-white hover:bg-slate-800'
+                    )}
+                  >
+                    {clinicalSummaryCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                    {clinicalSummaryCopied ? 'Copiado' : 'Copiar resumo'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setClinicalSummaryModalOpen(false)}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-slate-700 transition-colors hover:bg-slate-300"
+                    title="Fechar"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-5 overflow-y-auto p-5 text-left text-sm leading-relaxed text-slate-800">
+                <section>
+                  <h5 className="font-extrabold text-slate-950">Identificação e contexto</h5>
+                  <p className="mt-1">
+                    Paciente {patient.name || 'não identificado'}, {patient.age || 'idade não informada'} anos, {patient.gender || 'gênero não informado'}, atendido em {formatClinicalDate(patient.admission?.date)}
+                    {patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: {flowchart.name}.
+                  </p>
+                </section>
+                <section>
+                  <h5 className="font-extrabold text-slate-950">Queixa principal / motivo do atendimento</h5>
+                  <p className="mt-1">{clinicalSummaryData.chiefComplaint}</p>
+                </section>
+                <section>
+                  <h5 className="font-extrabold text-slate-950">História da moléstia atual e raciocínio do fluxo</h5>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {clinicalSummaryData.historyLines.length > 0
+                      ? clinicalSummaryData.historyLines.map((line) => <li key={line}>{line}</li>)
+                      : <li>Caminho clínico ainda sem respostas estruturadas registradas.</li>}
+                  </ul>
+                </section>
+                <section>
+                  <h5 className="font-extrabold text-slate-950">Sinais, sintomas e exame físico</h5>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {clinicalSummaryData.examinationLines.length > 0
+                      ? clinicalSummaryData.examinationLines.map((line) => <li key={line}>{line}</li>)
+                      : <li>Sem sinais vitais ou exame físico estruturado registrados neste fluxo.</li>}
+                  </ul>
+                </section>
+                <section>
+                  <h5 className="font-extrabold text-slate-950">Exames, critérios e estratificação</h5>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {clinicalSummaryData.scoreLines.length > 0
+                      ? clinicalSummaryData.scoreLines.map((line) => <li key={line}>{line}</li>)
+                      : <li>Sem exames, escores ou critérios estruturados registrados neste caminho.</li>}
+                  </ul>
+                </section>
+                <section className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-950">
+                  <h5 className="font-extrabold">Impressão clínica e plano</h5>
+                  <p className="mt-1">{clinicalSummaryData.finalDescription}</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5">
+                    {clinicalSummaryData.conductLines.map((line) => <li key={line}>{line}</li>)}
+                  </ul>
+                </section>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {rabiesBiteImageOpen && (
+          <ZoomableImageModal
+            title="Referência visual - mordedura"
+            description="Imagem de apoio para classificar o animal agressor como observável ou não observável durante a avaliação da exposição."
+            src="/mordedura.jpeg"
+            alt="Imagem de referência sobre mordedura"
+            onClose={() => setRabiesBiteImageOpen(false)}
+            maxWidthClassName="max-w-5xl"
+          />
+        )}
 
         {anaphylaxisCriteriaInfo && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
