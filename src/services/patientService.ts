@@ -302,7 +302,12 @@ class PatientService {
   }
 
   // Gerar prescrições automáticas baseadas no grupo
-  generatePrescriptions(patientId: string, group: 'A' | 'B' | 'C' | 'D', antipyreticChoice?: 'paracetamol' | 'dipirona'): Prescription[] {
+  generatePrescriptions(
+    patientId: string,
+    group: 'A' | 'B' | 'C' | 'D',
+    antipyreticChoice?: 'paracetamol' | 'dipirona',
+    prescribedBy = 'Sistema Siga o Fluxo'
+  ): Prescription[] {
     const patient = this.getPatientById(patientId)
     if (!patient) return []
 
@@ -334,7 +339,7 @@ class PatientService {
           frequency: '6/6 a 8/8 horas',
           duration: 'Conforme necessário',
           instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
-          prescribedBy: 'Sistema Siga o Fluxo'
+          prescribedBy
         })
       }
     } else {
@@ -349,7 +354,7 @@ class PatientService {
           frequency: '6/6 a 8/8 horas',
           duration: 'Conforme necessário',
           instructions: 'Para febre acima de 37,5°C. Não usar AAS ou anti-inflamatórios.',
-          prescribedBy: 'Sistema Siga o Fluxo'
+          prescribedBy
         })
       }
     }
@@ -376,7 +381,7 @@ class PatientService {
         frequency: 'Oferecer em pequenos volumes, frequentemente',
         duration: 'Até melhora dos sintomas',
         instructions: 'Manter via oral; se não tolerar ou piorar, retornar imediatamente.',
-        prescribedBy: 'Sistema Siga o Fluxo'
+        prescribedBy
       })
     }
 
@@ -388,7 +393,7 @@ class PatientService {
         frequency: 'EV contínuo',
         duration: 'Conforme evolução',
         instructions: 'Controlar balanço hídrico rigorosamente. Reavaliar a cada 2-4 horas.',
-        prescribedBy: 'Sistema Siga o Fluxo'
+        prescribedBy
       })
     }
 

@@ -13,6 +13,7 @@ import {
 import { Patient, Prescription } from '@/types/patient'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { patientService } from '@/services/patientService'
+import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import clsx from 'clsx'
@@ -26,6 +27,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
   const [activeTab, setActiveTab] = React.useState<'orientations' | 'prescriptions'>('orientations')
+  const [doctorProfile, setDoctorProfile] = React.useState<DoctorProfile | null>(null)
   const livePatient = patientService.getPatientById(patient.id) || patient
   const isDengue = !livePatient.selectedFlowchart || livePatient.selectedFlowchart === 'dengue'
   const isInfluenza = livePatient.selectedFlowchart === 'influenza'
@@ -47,6 +49,33 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const isLombalgia = livePatient.selectedFlowchart === 'lombalgia'
   const isBell = livePatient.selectedFlowchart === 'paralisia_bell'
   const flowName = getFlowchartById(livePatient.selectedFlowchart || '')?.name || (livePatient.selectedFlowchart ? livePatient.selectedFlowchart.toUpperCase() : 'DENGUE')
+
+  React.useEffect(() => {
+    let mounted = true
+    getCurrentDoctor()
+      .then((doctor) => {
+        if (mounted) setDoctorProfile(doctor as DoctorProfile | null)
+      })
+      .catch((error) => {
+        console.warn('Não foi possível carregar o médico responsável pelo receituário:', error)
+        if (mounted) setDoctorProfile(null)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const doctorSignatureLine = React.useMemo(() => {
+    const doctorName = doctorProfile?.name?.trim()
+    const crm = doctorProfile?.crm?.trim()
+    const nameText = doctorName
+      ? (/^dr\.?\s|^dra\.?\s/i.test(doctorName) ? doctorName : `Dr(a). ${doctorName}`)
+      : 'Médico(a) responsável não informado'
+    const crmText = crm ? (/^crm\b/i.test(crm) ? crm : `CRM ${crm}`) : 'CRM não informado'
+    return `${nameText} / ${crmText}`
+  }, [doctorProfile])
+
+  const doctorPrescribedBy = doctorProfile?.name?.trim() || 'Médico(a) responsável'
 
   const parseFlowAnswer = <T,>(stepId: string): T | null => {
     const raw = livePatient.flowchartState?.answers?.[stepId]
@@ -227,7 +256,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         id: `flow_${id}`,
         ...tvpPrescriptionTemplates[id],
         prescribedAt: new Date(livePatient.updatedAt || new Date()),
-        prescribedBy: 'Fluxograma Clínico'
+        prescribedBy: doctorPrescribedBy
       }))
   }
 
@@ -306,6 +335,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         ...(allPrescriptions.length > 0 ? ['Medicamentos prescritos:', mappedPrescriptions, ''] : []),
         'Assinatura do Médico:',
         '__________________________________________________',
+        doctorSignatureLine,
         '',
         formatDate(new Date())
       ].join('\n')
@@ -445,7 +475,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         '',
         prescriptionsText + 'Assinatura do Médico:',
         '__________________________________________________',
-        'Dr. Rodrigo Machado / CRM: XXXX.XXX',
+        doctorSignatureLine,
         '',
         '---',
         'Receituário gerado automaticamente pelo Sistema Siga o Fluxo',
@@ -513,7 +543,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       ] : []),
       prescriptionsText + 'Assinatura do Médico:',
       '__________________________________________________',
-      'Dr. Rodrigo Machado / CRM: XXXX.XXX',
+      doctorSignatureLine,
       '',
       '---',
       'Receituário gerado automaticamente pelo Sistema Siga o Fluxo',
@@ -959,7 +989,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                   </div>
                   <div className="mt-8 space-y-2 text-lg">
                     <div>__________________________________________________</div>
-                    <div>Dr. Rodrigo Machado / CRM: XXXX.XXX</div>
+                    <div>{doctorSignatureLine}</div>
                   </div>
                 </div>
               </div>

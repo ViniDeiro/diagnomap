@@ -10,7 +10,6 @@ import {
   X, 
   Plus,
   Stethoscope,
-  Calendar,
   Award,
   Target,
   Download,
@@ -18,6 +17,7 @@ import {
 } from 'lucide-react'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
+import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import { clsx } from 'clsx'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
@@ -51,6 +51,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   }
   const activeHydrationPrescriptions = (livePatient.treatment.prescriptions || []).filter(isHydrationPrescription)
   const [showAddForm, setShowAddForm] = useState(false)
+  const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(null)
   const prescriptionRef = useRef<HTMLDivElement>(null)
   const labRef = useRef<HTMLDivElement>(null)
   const [newPrescription, setNewPrescription] = useState({
@@ -61,6 +62,33 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
     instructions: ''
   })
   const [selectedAntipyretic, setSelectedAntipyretic] = useState<'paracetamol' | 'dipirona' | null>(null)
+
+  React.useEffect(() => {
+    let mounted = true
+    getCurrentDoctor()
+      .then((doctor) => {
+        if (mounted) setDoctorProfile(doctor as DoctorProfile | null)
+      })
+      .catch((error) => {
+        console.warn('Não foi possível carregar o médico responsável pela prescrição:', error)
+        if (mounted) setDoctorProfile(null)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const doctorSignatureLine = React.useMemo(() => {
+    const doctorName = doctorProfile?.name?.trim()
+    const crm = doctorProfile?.crm?.trim()
+    const nameText = doctorName
+      ? (/^dr\.?\s|^dra\.?\s/i.test(doctorName) ? doctorName : `Dr(a). ${doctorName}`)
+      : 'Médico(a) responsável não informado'
+    const crmText = crm ? (/^crm\b/i.test(crm) ? crm : `CRM ${crm}`) : 'CRM não informado'
+    return `${nameText} / ${crmText}`
+  }, [doctorProfile])
+
+  const doctorPrescribedBy = doctorProfile?.name?.trim() || 'Médico(a) responsável'
 
   const allergies = (livePatient.allergies || []).map(a => a.toLowerCase())
   const isAllergicTo = (key: 'paracetamol' | 'dipirona') => {
@@ -76,7 +104,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
     if (newPrescription.medication && newPrescription.dosage) {
       patientService.addPrescription(patient.id, {
         ...newPrescription,
-        prescribedBy: 'Dr. Sistema Siga o Fluxo'
+        prescribedBy: doctorPrescribedBy
       })
       
       setNewPrescription({
@@ -94,7 +122,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
   const handleGenerateAutomaticPrescriptions = () => {
     if (!selectedAntipyretic) return
     if (patient.flowchartState.group) {
-      patientService.generatePrescriptions(patient.id, patient.flowchartState.group, selectedAntipyretic)
+      patientService.generatePrescriptions(patient.id, patient.flowchartState.group, selectedAntipyretic, doctorPrescribedBy)
       onUpdate()
     }
   }
@@ -690,7 +718,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                 </div>
                 <div className="mt-8 space-y-2 text-lg">
                   <div>__________________________________________________</div>
-                  <div>Dr. Sistema Siga o Fluxo / CRM: XXXX.XXX</div>
+                  <div>{doctorSignatureLine}</div>
                 </div>
               </div>
             </div>
@@ -787,7 +815,7 @@ const PrescriptionViewer: React.FC<PrescriptionViewerProps> = ({
                         <p className="text-slate-800">{prescription.instructions}</p>
                       </div>
                       <div className="mt-4 text-sm text-slate-600">
-                        Prescrito em: {formatDate(prescription.prescribedAt)} | Por: {prescription.prescribedBy}
+                        Prescrito em: {formatDate(prescription.prescribedAt)} | Por: {prescription.prescribedBy === 'Sistema Siga o Fluxo' ? doctorPrescribedBy : prescription.prescribedBy}
                       </div>
                     </div>
                   ))}
