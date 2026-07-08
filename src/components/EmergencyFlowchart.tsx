@@ -7280,7 +7280,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isBellDynamicDocumentStep && (
+              {isBellDynamicDocumentStep && !flowchart.finalSteps.includes(currentStep) && (
                 <div className="mb-6 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
