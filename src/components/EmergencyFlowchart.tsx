@@ -1772,6 +1772,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellCranioOpen, setBellCranioOpen] = useState(false)
   const [bellCheekInflationImageOpen, setBellCheekInflationImageOpen] = useState(false)
   const [pendingBellSide, setPendingBellSide] = useState<{ label: string; value: string } | null>(null)
+  const [bellChiefComplaint, setBellChiefComplaint] = useState('')
   const [bellPhysicalExamFindings, setBellPhysicalExamFindings] = useState<BellPhysicalExamKey[]>([])
   const [bellPhysicalExamNotes, setBellPhysicalExamNotes] = useState('')
   const [bellCriteriaChecks, setBellCriteriaChecks] = useState<Record<BellCriteriaKey, boolean>>(() => defaultBellCriteriaChecks())
@@ -1783,6 +1784,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [selectedBellHouseGrade, setSelectedBellHouseGrade] = useState('')
   const [bellTreatmentTimingOpen, setBellTreatmentTimingOpen] = useState(false)
   const [bellDocumentCopied, setBellDocumentCopied] = useState(false)
+  const [clinicalSummaryCopied, setClinicalSummaryCopied] = useState(false)
   const [bellWithin72Hours, setBellWithin72Hours] = useState<boolean | null>(null)
   const [bellUseCorticosteroid, setBellUseCorticosteroid] = useState(false)
   const [bellAntiviralChoice, setBellAntiviralChoice] = useState<BellAntiviralChoice>('none')
@@ -2071,6 +2073,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       selectedLeg: selectedTVPLeg,
       selectedLegLabel: selectedTVPLeg === 'left' ? 'Perna Esquerda' : selectedTVPLeg === 'right' ? 'Perna Direita' : selectedTVPLeg === 'other' ? 'Outras localizações' : ''
     })
+    const bellSideAnswer = JSON.stringify({
+      decision: value || nextStep,
+      ladoAcometido: value,
+      ladoAcometidoLabel: value === 'lado_direito' ? 'direito' : value === 'lado_esquerdo' ? 'esquerdo' : '',
+      queixaPrincipal: bellChiefComplaint.trim()
+    })
     const clinicalEvaluationAnswer = JSON.stringify({
       decision: value || nextStep,
       sinaisEAchados: selectedClinicalFindings,
@@ -2272,6 +2280,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       ...answers,
       [currentStep]: isTVPLegSelection
         ? legSelectionAnswer
+        : isBellSideSelection
+          ? bellSideAnswer
         : isTVPClinicalEvaluation
           ? clinicalEvaluationAnswer
           : isTVPWellsScore
@@ -2695,6 +2705,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setBellCriteriaChecks(defaultBellCriteriaChecks())
     setBellSupportChecks(defaultBellSupportChecks())
     setBellRedFlagChecks(defaultBellRedFlagChecks())
+    setBellChiefComplaint('')
     setBellPhysicalExamFindings([])
     setBellPhysicalExamNotes('')
     setBellRamsayInfoOpen(false)
@@ -2704,6 +2715,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setSelectedBellHouseGrade('')
     setBellTreatmentTimingOpen(false)
     setBellDocumentCopied(false)
+    setClinicalSummaryCopied(false)
     setBellWithin72Hours(null)
     setBellUseCorticosteroid(false)
     setBellAntiviralChoice('none')
@@ -2712,6 +2724,187 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  const formatClinicalDate = useCallback((dateLike?: Date | string) => {
+    if (!dateLike) return 'data não informada'
+    const date = new Date(dateLike)
+    if (Number.isNaN(date.getTime())) return 'data não informada'
+    return date.toLocaleDateString('pt-BR')
+  }, [])
+  const formatClinicalValue = useCallback((value: unknown): string => {
+    if (value == null || value === '') return ''
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      if (typeof value === 'boolean') return value ? 'sim' : 'não'
+      return String(value)
+    }
+    if (Array.isArray(value)) {
+      return value.map(formatClinicalValue).filter(Boolean).join('; ')
+    }
+    if (typeof value === 'object') {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([key, itemValue]) => {
+          const formattedValue = formatClinicalValue(itemValue)
+          return formattedValue ? `${key}: ${formattedValue}` : ''
+        })
+        .filter(Boolean)
+        .join('; ')
+    }
+    return String(value)
+  }, [])
+  type FlowSummaryAnswer = Record<string, unknown>
+  type FlowSummaryEntry = {
+    step: EmergencyStep
+    answerLabel: string
+    parsed: FlowSummaryAnswer | null
+  }
+  const parseFlowAnswerForSummary = useCallback((raw?: string): FlowSummaryAnswer | null => {
+    if (!raw) return null
+    try {
+      const parsed = JSON.parse(raw)
+      return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : { decision: parsed }
+    } catch {
+      return { decision: raw }
+    }
+  }, [])
+  const getAnswerDecision = useCallback((stepId: string, raw?: string) => {
+    const parsed = parseFlowAnswerForSummary(raw)
+    const decision = typeof parsed?.decision === 'string' ? parsed.decision : raw
+    if (!decision) return ''
+    const step = flowchart.steps[stepId]
+    const matchedOption = step?.options?.find((option) => option.value === decision || option.nextStep === decision)
+    return matchedOption?.text || formatClinicalValue(decision)
+  }, [flowchart.steps, formatClinicalValue, parseFlowAnswerForSummary])
+  const clinicalSummaryData = useMemo(() => {
+    const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {
+        const step = flowchart.steps[stepId]
+        if (!step) return entries
+        const rawAnswer = answers[stepId]
+        const answerLabel = getAnswerDecision(stepId, rawAnswer)
+        const parsed = parseFlowAnswerForSummary(rawAnswer)
+        entries.push({ step, answerLabel, parsed })
+        return entries
+      }, [])
+
+    const chiefComplaint = answerEntries
+      .map((entry) => formatClinicalValue(entry.parsed?.queixaPrincipal))
+      .find(Boolean)
+      || patient.admission?.symptoms?.join('; ')
+      || currentStepData?.description
+      || flowchart.description
+
+    const historyLines = answerEntries
+      .filter((entry) => entry.answerLabel)
+      .map((entry) => `${entry.step.title}: ${entry.answerLabel}`)
+      .slice(-8)
+
+    const examinationLines = answerEntries.flatMap((entry) => {
+      const lines: string[] = []
+      const vitalSigns = formatClinicalValue(entry.parsed?.sinaisVitais)
+      const physicalExam = formatClinicalValue(entry.parsed?.exameFisico)
+      const findings = formatClinicalValue(entry.parsed?.sinaisEAchados || entry.parsed?.achadosSelecionados)
+      const notes = formatClinicalValue(entry.parsed?.observacoes || entry.parsed?.outrosAchados)
+      if (vitalSigns) lines.push(`Sinais vitais: ${vitalSigns}`)
+      if (physicalExam) lines.push(`Exame físico: ${physicalExam}`)
+      if (findings) lines.push(`Achados semiológicos: ${findings}`)
+      if (notes) lines.push(`Observações clínicas: ${notes}`)
+      return lines
+    })
+
+    const scoreLines = answerEntries.flatMap((entry) => {
+      const lines: string[] = []
+      const score = formatClinicalValue(entry.parsed?.score || entry.parsed?.pontuacaoMaximaMarshall)
+      const classification = formatClinicalValue(
+        entry.parsed?.classificacao
+        || entry.parsed?.classificacaoAtlanta
+        || entry.parsed?.destino
+        || entry.parsed?.gravidade
+        || entry.parsed?.risco
+        || entry.parsed?.grupo
+        || entry.parsed?.status
+      )
+      const selectedCriteria = formatClinicalValue(
+        entry.parsed?.criteriosSelecionados
+        || entry.parsed?.criterios
+        || entry.parsed?.redFlagsSelecionadas
+        || entry.parsed?.examesSelecionados
+        || entry.parsed?.examesSolicitados
+      )
+      if (score || classification) lines.push(`${entry.step.title}: ${[score ? `pontuação ${score}` : '', classification].filter(Boolean).join(' - ')}`)
+      if (selectedCriteria) lines.push(`${entry.step.title}: ${selectedCriteria}`)
+      return lines
+    })
+
+    const finalTitle = currentStepData?.title || flowchart.name
+    const finalDescription = currentStepData?.description || flowchart.description
+    const finalAnswer = answerEntries.at(-1)?.answerLabel
+    const conductLines = [
+      finalDescription,
+      finalAnswer ? `Decisão final registrada: ${finalAnswer}` : '',
+      currentStepData?.critical ? 'Fluxo finalizado em etapa crítica; manter monitorização e reavaliação conforme gravidade.' : ''
+    ].filter(Boolean)
+
+    const textSections = [
+      'RESUMO CLÍNICO SEMIOLÓGICO',
+      '',
+      'Identificação e contexto',
+      `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: ${flowchart.name}.`,
+      '',
+      'Queixa principal / motivo do atendimento',
+      chiefComplaint,
+      '',
+      'História da moléstia atual e raciocínio do fluxo',
+      historyLines.length > 0 ? historyLines.map((line) => `- ${line}`).join('\n') : '- Caminho clínico ainda sem respostas estruturadas registradas.',
+      '',
+      'Sinais, sintomas e exame físico',
+      examinationLines.length > 0 ? Array.from(new Set(examinationLines)).map((line) => `- ${line}`).join('\n') : '- Sem sinais vitais ou exame físico estruturado registrados neste fluxo.',
+      '',
+      'Exames, critérios e estratificação',
+      scoreLines.length > 0 ? Array.from(new Set(scoreLines)).slice(-10).map((line) => `- ${line}`).join('\n') : '- Sem exames, escores ou critérios estruturados registrados neste caminho.',
+      '',
+      'Impressão clínica',
+      `${finalTitle}. ${finalDescription}`,
+      '',
+      'Conduta / plano',
+      conductLines.map((line) => `- ${line}`).join('\n')
+    ]
+
+    return {
+      chiefComplaint,
+      historyLines,
+      examinationLines: Array.from(new Set(examinationLines)),
+      scoreLines: Array.from(new Set(scoreLines)).slice(-10),
+      finalTitle,
+      finalDescription,
+      conductLines,
+      text: textSections.join('\n')
+    }
+  }, [
+    answers,
+    currentStepData,
+    flowchart.description,
+    flowchart.name,
+    flowchart.steps,
+    formatClinicalDate,
+    formatClinicalValue,
+    getAnswerDecision,
+    history,
+    parseFlowAnswerForSummary,
+    patient.admission?.date,
+    patient.admission?.symptoms,
+    patient.admission?.time,
+    patient.age,
+    patient.gender,
+    patient.name
+  ])
+  const copyClinicalSummaryText = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(clinicalSummaryData.text)
+      setClinicalSummaryCopied(true)
+      setTimeout(() => setClinicalSummaryCopied(false), 2000)
+    } catch (error) {
+      console.error('Erro ao copiar resumo clínico:', error)
+      alert('Não foi possível copiar o resumo clínico. Tente novamente.')
+    }
+  }, [clinicalSummaryData.text])
   const tvpSelectedLegFromAnswers = useMemo(() => parseTVPSelectedLeg(answers.start), [answers])
   const tvpSelectedLegLabel = tvpSelectedLegFromAnswers === 'left' ? 'Perna Esquerda' : tvpSelectedLegFromAnswers === 'right' ? 'Perna Direita' : tvpSelectedLegFromAnswers === 'other' ? 'Outras Localizações' : ''
   const isTVPLegSelection = flowchart.id === 'tvp' && currentStepData?.id === 'start'
@@ -2724,7 +2917,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isBellTreatmentStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_tratamento_clinico'
   const isBellPrescriptionStep = flowchart.id === 'paralisia_bell' && currentStepData?.id === 'bell_prescricao_cuidados'
   const isBellReferralStep = flowchart.id === 'paralisia_bell' && (currentStepData?.id === 'bell_encaminhamento_neuro' || currentStepData?.id === 'bell_encaminhamento_otorrino')
-  const isBellDynamicDocumentStep = isBellPrescriptionStep || isBellReferralStep
+  const isBellFinalReportStep = flowchart.id === 'paralisia_bell' && [
+    'bell_criterios_nao_preenchidos',
+    'bell_red_flags_investigar',
+    'bell_prescricao_cuidados',
+    'bell_encaminhamento_neuro',
+    'bell_encaminhamento_otorrino',
+    'bell_finalizado'
+  ].includes(currentStepData?.id || '')
+  const isBellDynamicDocumentStep = isBellPrescriptionStep || isBellReferralStep || isBellFinalReportStep
   const allBellCriteriaChecked = BELL_DIAGNOSTIC_CRITERIA.every((item) => bellCriteriaChecks[item.key])
   const hasBellRedFlagChecked = BELL_RED_FLAGS.some((item) => bellRedFlagChecks[item.key])
   const bellSelectedSideLabel = useMemo(() => {
@@ -2735,6 +2936,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       const parsed = raw ? JSON.parse(raw) : null
       if (parsed?.decision === 'lado_direito') return 'direito'
       if (parsed?.decision === 'lado_esquerdo') return 'esquerdo'
+      if (parsed?.ladoAcometido === 'lado_direito') return 'direito'
+      if (parsed?.ladoAcometido === 'lado_esquerdo') return 'esquerdo'
     } catch {
       return 'não informado'
     }
@@ -2773,12 +2976,159 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (!date || Number.isNaN(date.getTime())) return 'data não informada'
     return date.toLocaleDateString('pt-BR')
   }, [patient.admission?.date])
+  const parseBellAnswer = useCallback((stepId: string) => {
+    const raw = answers[stepId]
+    if (!raw) return null
+    try {
+      return JSON.parse(raw)
+    } catch {
+      return { decision: raw }
+    }
+  }, [answers])
+  const getBellSelectedLabels = <T extends string>(
+    selectedKeys: unknown,
+    items: Array<{ key: T; label: string }>
+  ) => {
+    if (!Array.isArray(selectedKeys)) return []
+    return items.filter((item) => selectedKeys.includes(item.key)).map((item) => item.label)
+  }
+  const bellSavedTreatmentSelection = useMemo(() => {
+    const parsed = parseBellAnswer('bell_tratamento_clinico')
+    if (parsed && typeof parsed === 'object' && 'houseBrackmann' in parsed) return parsed
+    return bellTreatmentSelection
+  }, [bellTreatmentSelection, parseBellAnswer])
+  const bellClinicalReportText = useMemo(() => {
+    const physicalExamAnswer = parseBellAnswer('bell_exame_fisico')
+    const criteriaAnswer = parseBellAnswer('bell_criterios_obrigatorios')
+    const supportAnswer = parseBellAnswer('bell_suporte_diagnostico')
+    const redFlagsAnswer = parseBellAnswer('bell_red_flags_ramsay')
+    const sideAnswer = parseBellAnswer('bell_inicio')
+    const chiefComplaintText = typeof sideAnswer?.queixaPrincipal === 'string' && sideAnswer.queixaPrincipal.trim()
+      ? sideAnswer.queixaPrincipal.trim()
+      : bellChiefComplaint.trim() || 'queixa de alteração facial referida pelo paciente'
+    const selectedPhysicalExamLabels = getBellSelectedLabels(
+      physicalExamAnswer?.achadosSelecionados || bellPhysicalExamFindings,
+      BELL_PHYSICAL_EXAM_GROUPS.flatMap((group) => group.items)
+    )
+    const selectedCriteriaLabels = getBellSelectedLabels(
+      criteriaAnswer?.criteriosSelecionados || BELL_DIAGNOSTIC_CRITERIA.filter((item) => bellCriteriaChecks[item.key]).map((item) => item.key),
+      BELL_DIAGNOSTIC_CRITERIA
+    )
+    const selectedSupportLabels = getBellSelectedLabels(
+      supportAnswer?.criteriosSuporteSelecionados || BELL_SUPPORT_CRITERIA.filter((item) => bellSupportChecks[item.key]).map((item) => item.key),
+      BELL_SUPPORT_CRITERIA
+    )
+    const selectedRedFlagLabels = getBellSelectedLabels(
+      redFlagsAnswer?.redFlagsSelecionadas || BELL_RED_FLAGS.filter((item) => bellRedFlagChecks[item.key]).map((item) => item.key),
+      BELL_RED_FLAGS
+    )
+    const treatmentData = bellSavedTreatmentSelection
+    const selectedAntiviral = treatmentData?.antiviral || 'none'
+    const selectedAntiviralLabel = selectedAntiviral === 'valaciclovir'
+      ? 'Valaciclovir'
+      : selectedAntiviral === 'aciclovir'
+        ? 'Aciclovir'
+        : selectedAntiviral === 'famciclovir'
+          ? 'Famciclovir'
+          : 'Não selecionado'
+    const proseList = (items: string[]) => {
+      if (items.length === 0) return ''
+      if (items.length === 1) return items[0]
+      return `${items.slice(0, -1).join(', ')} e ${items[items.length - 1]}`
+    }
+    const hasAllCriteria = Boolean(criteriaAnswer?.todosCriteriosPresentes || allBellCriteriaChecked)
+    const hasRedFlags = Boolean(redFlagsAnswer?.possuiRedFlag || hasBellRedFlagChecked)
+    const examSentence = selectedPhysicalExamLabels.length > 0
+      ? `No exame físico direcionado, foram registrados os seguintes achados: ${proseList(selectedPhysicalExamLabels)}.`
+      : 'No exame físico direcionado, não foram registrados achados objetivos no checklist estruturado.'
+    const examObservation = physicalExamAnswer?.observacoes || bellPhysicalExamNotes
+      ? ` Como observação adicional, consta: ${physicalExamAnswer?.observacoes || bellPhysicalExamNotes}.`
+      : ''
+    const criteriaSentence = hasAllCriteria
+      ? `A avaliação dos critérios obrigatórios sustenta o padrão clínico de paralisia facial periférica unilateral aguda, com ${selectedCriteriaLabels.length > 0 ? proseList(selectedCriteriaLabels) : 'critérios obrigatórios registrados como presentes'}.`
+      : `A avaliação dos critérios obrigatórios ficou incompleta${selectedCriteriaLabels.length > 0 ? `, apesar do registro de ${proseList(selectedCriteriaLabels)}` : ''}. Dessa forma, o quadro não deve ser assumido como Paralisia de Bell típica até investigação complementar.`
+    const supportSentence = selectedSupportLabels.length > 0
+      ? `Foram ainda observados elementos de suporte compatíveis com acometimento do nervo facial, incluindo ${proseList(selectedSupportLabels)}.`
+      : 'Não foram registrados critérios de suporte adicionais; a interpretação permanece baseada nos critérios obrigatórios e na ausência ou presença de sinais de alerta.'
+    const redFlagSentence = hasRedFlags
+      ? `Durante a triagem de segurança, foram identificados sinais de alerta: ${selectedRedFlagLabels.length > 0 ? proseList(selectedRedFlagLabels) : 'red flags registradas no fluxo'}. Esses achados tornam inadequado tratar o caso como Paralisia de Bell isolada sem investigação etiológica dirigida.`
+      : 'Na triagem de segurança, não foram registrados sinais de alerta ou elementos sugestivos de Ramsay Hunt no checklist aplicado.'
+    const treatmentSentence = treatmentData?.houseBrackmann
+      ? `A gravidade funcional foi classificada pela escala de House-Brackmann como ${bellHouseGradeLabels[treatmentData.houseBrackmann] || bellSelectedHouseLabel}. A janela terapêutica foi registrada como ${treatmentData.within72Hours === true ? 'até 72 horas' : treatmentData.within72Hours === false ? 'superior a 72 horas' : 'não informada'}. Na conduta, ${treatmentData.corticosteroid ? 'foi selecionado corticosteroide' : 'não foi selecionado corticosteroide'}, ${selectedAntiviral === 'none' ? 'sem antiviral associado' : `com associação de ${selectedAntiviralLabel}`} e ${treatmentData.eyeCare ? 'com orientação de proteção ocular' : 'sem proteção ocular selecionada no fluxo'}.`
+      : 'A classificação House-Brackmann e a conduta medicamentosa não foram registradas neste caminho do fluxo.'
+    const conclusionSentence = currentStepData?.id === 'bell_criterios_nao_preenchidos'
+      ? 'Conclusão: os critérios mínimos para Paralisia de Bell típica não foram preenchidos. Recomenda-se reavaliar o padrão da paralisia facial e investigar causas centrais, infecciosas, otológicas, estruturais ou sistêmicas conforme história e exame físico.'
+      : currentStepData?.id === 'bell_red_flags_investigar'
+        ? 'Conclusão: há sinais de alerta ou suspeita de diagnóstico alternativo associado. O caso deve ser conduzido como paralisia facial periférica atípica até esclarecimento, com investigação direcionada e avaliação especializada conforme a suspeita predominante.'
+        : hasAllCriteria && !hasRedFlags
+          ? 'Conclusão: o conjunto clínico é compatível com Paralisia de Bell típica, sem sinais de alarme registrados no fluxo. A conduta deve priorizar tratamento precoce quando indicado, proteção ocular e seguimento clínico para monitorar recuperação funcional.'
+          : 'Conclusão: os dados disponíveis exigem cautela diagnóstica. Recomenda-se complementar a avaliação clínica antes de firmar Paralisia de Bell como hipótese isolada.'
+    const followUpSentence = currentStepData?.id === 'bell_encaminhamento_neuro'
+      ? 'Foi indicado encaminhamento à Neurologia para seguimento da recuperação facial, avaliação de necessidade de neuroimagem ou eletroneuromiografia, exclusão de diagnósticos diferenciais e orientação de reabilitação quando indicada.'
+      : currentStepData?.id === 'bell_encaminhamento_otorrino'
+        ? 'Foi indicado encaminhamento à Otorrinolaringologia para avaliação de possível etiologia otológica, orelha média/mastoide, sintomas cocleovestibulares e necessidade de exames complementares.'
+        : currentStepData?.id === 'bell_prescricao_cuidados'
+          ? 'Foram registradas prescrição e orientações de cuidados, com atenção especial à proteção ocular e aos sinais de retorno.'
+          : 'Orientar retorno imediato diante de piora neurológica, alteração de consciência, cefaleia intensa, febre, dor otológica importante, vesículas, vertigem, hipoacusia, sintomas oculares ou progressão fora do padrão esperado.'
+    const referralSentence = isBellReferralStep
+      ? currentStepData?.id === 'bell_encaminhamento_otorrino'
+        ? 'Solicito avaliação pela Otorrinolaringologia para investigação de causa otológica, avaliação de orelha média e mastoide, definição de exames complementares e seguimento funcional.'
+        : 'Solicito avaliação pela Neurologia para acompanhamento da recuperação facial, definição de necessidade de neuroimagem ou eletroneuromiografia, exclusão de causas alternativas e orientação de reabilitação quando indicada.'
+      : ''
+
+    const lines = [
+      'RELATÓRIO MÉDICO - PARALISIA FACIAL',
+      '',
+      `Paciente ${patient.name || 'não identificado'}, atendido em ${bellAdmissionDateLabel}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaintText}". Durante a avaliação, foi observado acometimento facial do lado ${bellSelectedSideLabel}, motivo pelo qual foi realizada investigação estruturada para diferenciar paralisia facial central de periférica, documentar achados do VII par craniano, verificar critérios diagnósticos obrigatórios para Paralisia de Bell, pesquisar sinais de suporte e excluir sinais de alerta, incluindo possibilidade de síndrome de Ramsay Hunt ou outras etiologias.`,
+      '',
+      `${examSentence}${examObservation}`,
+      '',
+      `${criteriaSentence} ${supportSentence}`,
+      '',
+      redFlagSentence,
+      '',
+      treatmentSentence,
+      '',
+      `${conclusionSentence} ${followUpSentence}`,
+      ...(referralSentence ? ['', referralSentence] : []),
+      '',
+      'Médico(a): ____________________________',
+      'CRM: ____________________________',
+      `Gerado em: ${new Date().toLocaleString('pt-BR')}`
+    ]
+
+    return lines.join('\n')
+  }, [
+    allBellCriteriaChecked,
+    bellAdmissionDateLabel,
+    bellChiefComplaint,
+    bellCriteriaChecks,
+    bellPhysicalExamFindings,
+    bellPhysicalExamNotes,
+    bellRedFlagChecks,
+    bellSelectedHouseLabel,
+    bellSelectedSideLabel,
+    bellSupportChecks,
+    bellSavedTreatmentSelection,
+    currentStepData?.id,
+    hasBellRedFlagChecked,
+    isBellReferralStep,
+    parseBellAnswer,
+    patient.admission?.time,
+    patient.name
+  ])
   const bellPrescriptionText = useMemo(() => {
-    const lines = ['Prescrição e cuidados - Paralisia de Bell', '', `Classificação: House-Brackmann ${bellSelectedHouseLabel}.`]
+    const treatmentData = bellSavedTreatmentSelection
+    const savedHouseLabel = bellHouseGradeLabels[treatmentData?.houseBrackmann] || bellSelectedHouseLabel
+    const savedIsNormalFunction = treatmentData?.houseBrackmann === 'house_i'
+    const savedUseCorticosteroid = Boolean(treatmentData?.corticosteroid)
+    const savedAntiviralChoice = (treatmentData?.antiviral || 'none') as BellAntiviralChoice
+    const savedUseEyeCare = Boolean(treatmentData?.eyeCare)
+    const lines = ['Prescrição e cuidados - Paralisia de Bell', '', `Classificação: House-Brackmann ${savedHouseLabel}.`]
     let item = 1
-    if (bellIsNormalFunction) {
+    if (savedIsNormalFunction) {
       lines.push(`${item++}. Função facial normal (House-Brackmann I): sem indicação de tratamento farmacológico para Paralisia de Bell.`)
-    } else if (bellUseCorticosteroid) {
+    } else if (savedUseCorticosteroid) {
       lines.push(`${item++}. Prednisona 60 mg VO 1x/dia por 5 dias, seguida de redução de 10 mg/dia até completar 10 dias.`)
     } else {
       lines.push(`${item++}. Corticosteroide não selecionado pelo médico; registrar justificativa clínica.`)
@@ -2789,37 +3139,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       aciclovir: 'Aciclovir 400 mg VO cinco vezes ao dia por 10 dias.',
       famciclovir: 'Famciclovir 500 mg VO a cada 8 horas por 7 dias.'
     }
-    if (bellAntiviralChoice !== 'none') lines.push(`${item++}. ${antiviralLines[bellAntiviralChoice]} Usar somente associado ao corticosteroide.`)
+    if (savedAntiviralChoice !== 'none') lines.push(`${item++}. ${antiviralLines[savedAntiviralChoice]} Usar somente associado ao corticosteroide.`)
 
-    if (bellUseEyeCare) {
+    if (savedUseEyeCare) {
       lines.push(`${item++}. Lágrimas artificiais sem conservantes: 1 gota no olho acometido a cada 1 a 2 horas durante o dia.`)
       lines.push(`${item++}. Pomada lubrificante oftálmica à noite.`)
       lines.push(`${item++}. Oclusão palpebral noturna cuidadosa com fita hipoalergênica e óculos de proteção contra vento e poeira.`)
       lines.push(`${item++}. Avaliação oftalmológica se dor ocular, hiperemia, fotofobia, alteração visual ou sinais de exposição/lesão corneana.`)
     }
     return lines.join('\n')
-  }, [bellAntiviralChoice, bellIsNormalFunction, bellSelectedHouseLabel, bellUseCorticosteroid, bellUseEyeCare])
-  const bellReferralText = useMemo(() => {
-    const specialty = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologia' : 'Neurologia'
-    const specialist = currentStepData?.id === 'bell_encaminhamento_otorrino' ? 'Otorrinolaringologista' : 'Neurologista'
-    const reason = currentStepData?.id === 'bell_encaminhamento_otorrino'
-      ? 'avaliação otorrinolaringológica para investigação de possíveis causas otológicas da paralisia facial, avaliação da orelha média e mastoide, definição da necessidade de exames complementares, acompanhamento da evolução funcional e orientação sobre terapias adjuvantes e prevenção de sequelas'
-      : 'seguimento neurológico para monitorar a evolução da função facial, orientar sobre necessidade de exames complementares como eletroneuromiografia ou neuroimagem, excluir outras possíveis causas de paralisia facial periférica, definir condutas terapêuticas adicionais e avaliar necessidade de reabilitação motora'
-
-    return [
-      `Encaminhamento à ${specialty}`,
-      '',
-      `Encaminho o paciente ${patient.name || 'não identificado'}, portador de quadro clínico compatível com Paralisia de Bell, para avaliação especializada em ${specialty}.`,
-      '',
-      `O paciente apresenta instalação súbita de paralisia facial periférica unilateral, acometendo o lado ${bellSelectedSideLabel}, com início registrado em ${bellAdmissionDateLabel} e grau de comprometimento facial estimado em ${bellSelectedHouseLabel} de House-Brackmann.`,
-      '',
-      `Foi iniciado tratamento clínico com corticoide, antiviral quando indicado e orientações de proteção ocular. Solicito avaliação pelo ${specialist} para ${reason}.`,
-      '',
-      'Atenciosamente,',
-      'Médico assistente'
-    ].join('\n')
-  }, [bellAdmissionDateLabel, bellSelectedHouseLabel, bellSelectedSideLabel, currentStepData?.id, patient.name])
-  const currentBellDocumentText = isBellPrescriptionStep || isBellTreatmentStep ? bellPrescriptionText : bellReferralText
+  }, [bellSavedTreatmentSelection, bellSelectedHouseLabel])
+  const currentBellDocumentText = isBellTreatmentStep
+    ? bellPrescriptionText
+    : isBellPrescriptionStep
+      ? `${bellClinicalReportText}\n\nPRESCRIÇÃO E CUIDADOS\n\n${bellPrescriptionText}`
+      : bellClinicalReportText
   const copyBellDocumentText = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(currentBellDocumentText)
@@ -3189,6 +3523,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     pneumoniaSipfShockIndex != null && pneumoniaSipfShockIndex >= 0.9,
     Number.isFinite(pneumoniaSipfPf) && pneumoniaSipfPf <= 250
   ].filter(Boolean).length
+  const pneumoniaSipfShockIndexLabel = Number.isFinite(pneumoniaSipfShockIndex)
+    ? Number(pneumoniaSipfShockIndex).toFixed(2)
+    : '--'
   const pneumoniaSipfInterpretation = pneumoniaSipfRiskPoints === 0
     ? 'Sem sinal de alto risco pelos parâmetros preenchidos'
     : pneumoniaSipfRiskPoints === 1
@@ -5637,6 +5974,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, isAnaphylaxisCriteriaStep])
 
   useEffect(() => {
+    if (!isBellSideSelection) return
+    const saved = answers.bell_inicio
+    if (!saved) {
+      setBellChiefComplaint('')
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      setBellChiefComplaint(typeof parsed?.queixaPrincipal === 'string' ? parsed.queixaPrincipal : '')
+    } catch {
+      setBellChiefComplaint('')
+    }
+  }, [answers.bell_inicio, isBellSideSelection])
+
+  useEffect(() => {
     if (!isBellPhysicalExamStep) return
     const saved = answers.bell_exame_fisico
     if (!saved) return
@@ -6286,6 +6638,20 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                             </div>
                           </motion.button>
                         ))}
+                      </div>
+                      <div className="mt-5 rounded-2xl border border-blue-100 bg-white p-4 shadow-sm">
+                        <label className="block text-xs font-bold uppercase tracking-wide text-blue-700">
+                          Queixa principal
+                        </label>
+                        <textarea
+                          value={bellChiefComplaint}
+                          onChange={(event) => setBellChiefComplaint(event.target.value)}
+                          className="mt-2 min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm font-medium leading-relaxed text-slate-800 outline-none transition-all placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100"
+                          placeholder="Ex: paciente refere boca torta e dificuldade para fechar o olho direito desde hoje pela manhã."
+                        />
+                        <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                          Escreva a queixa do paciente, sem transformar em diagnóstico. Esse texto entrará no resumo clínico do relatório.
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -7042,10 +7408,10 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-wide text-blue-700">
-                        {isBellPrescriptionStep ? 'Prescrição' : 'Encaminhamento'}
+                        {isBellPrescriptionStep ? 'Relatório e prescrição' : isBellReferralStep ? 'Relatório e encaminhamento' : 'Relatório clínico'}
                       </p>
                       <h4 className="mt-1 text-lg font-extrabold text-slate-950">
-                        {isBellPrescriptionStep ? 'Prescrição e cuidados - Paralisia de Bell' : currentStepData.title}
+                        {isBellPrescriptionStep ? 'Relatório, prescrição e cuidados - Paralisia de Bell' : currentStepData.title}
                       </h4>
                     </div>
                     <button
@@ -8966,7 +9332,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           <p className="text-xs text-teal-900">Combina Shock Index (FC/PAS) e PaO2/FiO2.</p>
                         </div>
                         <div className="rounded-lg bg-white px-3 py-2 text-right text-sm font-bold text-teal-900">
-                          SI {pneumoniaSipfShockIndex != null ? pneumoniaSipfShockIndex.toFixed(2) : '--'}
+                          SI {pneumoniaSipfShockIndexLabel}
                           <div className="text-xs font-semibold">{pneumoniaSipfInterpretation}</div>
                         </div>
                       </div>
@@ -14244,6 +14610,71 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         />
                       </figure>
                     )}
+                    <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm">
+                      <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Resumo clínico semiológico</p>
+                          <h4 className="mt-1 text-lg font-extrabold text-slate-950">{clinicalSummaryData.finalTitle}</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={copyClinicalSummaryText}
+                          className={clsx(
+                            'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
+                            clinicalSummaryCopied
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-900 text-white hover:bg-slate-800'
+                          )}
+                        >
+                          {clinicalSummaryCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                          {clinicalSummaryCopied ? 'Copiado' : 'Copiar resumo'}
+                        </button>
+                      </div>
+                      <div className="space-y-5 p-5 text-sm leading-relaxed text-slate-800">
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Identificação e contexto</h5>
+                          <p className="mt-1">
+                            Paciente {patient.name || 'não identificado'}, {patient.age || 'idade não informada'} anos, {patient.gender || 'gênero não informado'}, atendido em {formatClinicalDate(patient.admission?.date)}
+                            {patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: {flowchart.name}.
+                          </p>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Queixa principal / motivo do atendimento</h5>
+                          <p className="mt-1">{clinicalSummaryData.chiefComplaint}</p>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">História da moléstia atual e raciocínio do fluxo</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.historyLines.length > 0
+                              ? clinicalSummaryData.historyLines.map((line) => <li key={line}>{line}</li>)
+                              : <li>Caminho clínico ainda sem respostas estruturadas registradas.</li>}
+                          </ul>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Sinais, sintomas e exame físico</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.examinationLines.length > 0
+                              ? clinicalSummaryData.examinationLines.map((line) => <li key={line}>{line}</li>)
+                              : <li>Sem sinais vitais ou exame físico estruturado registrados neste fluxo.</li>}
+                          </ul>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Exames, critérios e estratificação</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.scoreLines.length > 0
+                              ? clinicalSummaryData.scoreLines.map((line) => <li key={line}>{line}</li>)
+                              : <li>Sem exames, escores ou critérios estruturados registrados neste caminho.</li>}
+                          </ul>
+                        </section>
+                        <section className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-950">
+                          <h5 className="font-extrabold">Impressão clínica e plano</h5>
+                          <p className="mt-1">{clinicalSummaryData.finalDescription}</p>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.conductLines.map((line) => <li key={line}>{line}</li>)}
+                          </ul>
+                        </section>
+                      </div>
+                    </div>
                     <button
                       onClick={onComplete}
                       className={clsx(
