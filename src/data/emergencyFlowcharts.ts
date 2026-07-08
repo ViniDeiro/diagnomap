@@ -3199,6 +3199,13 @@ export const tvpFlowchart: EmergencyFlowchart = {
           <div class="rounded-lg border-l-4 border-red-700 bg-red-100 p-4 text-red-950">
             <h4 class="font-bold">TVP com necessidade de avaliação vascular prioritária</h4>
             <p class="mt-1">O encaminhamento não encerra a responsabilidade assistencial da equipe de emergência. Manter cuidado, vigilância e tratamento compatíveis com a gravidade até transferência formal do caso.</p>
+            <p class="mt-2 font-semibold">Solicitar avaliação da Cirurgia Vascular e manter o paciente preferencialmente monitorizado, com pressão arterial, frequência cardíaca e saturação acompanhadas de forma seriada.</p>
+          </div>
+
+          <div class="rounded-lg border border-rose-300 bg-rose-50 p-4 text-rose-950">
+            <h5 class="font-bold">Anticoagulação plena</h5>
+            <p class="mt-1">Na ausência de contraindicação absoluta, manter anticoagulação plena conforme o esquema iniciado no fluxo e reavaliar continuamente risco hemorrágico, função renal, hemograma e plaquetas.</p>
+            <p class="mt-2">Se houver contraindicação absoluta ou sangramento ativo, não iniciar ou suspender temporariamente a anticoagulação e acionar a Cirurgia Vascular para estratégia alternativa.</p>
           </div>
 
           <div class="grid gap-3 md:grid-cols-2">

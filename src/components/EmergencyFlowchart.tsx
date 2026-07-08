@@ -2927,38 +2927,38 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => selectedClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
     [selectedClinicalFindings]
   )
-  const tvpAlertInterruptionOption = useMemo(() => {
+  const tvpAlertContinuationOption = useMemo(() => {
     if (!hasTVPAlertSignSelected) return null
 
     if (hasTVPVascularAlertSelected) {
       return {
-        text: 'Interromper fluxo: urgência vascular + internação imediata',
-        nextStep: 'tvp_urgencia_vascular_imediata',
-        value: 'tvp_alerta_urgencia_vascular',
+        text: 'Alto risco: seguir avaliação completa com Wells, POCUS e D-dímero',
+        nextStep: 'wells_score',
+        value: 'tvp_alerta_vascular_seguir_wells',
         critical: true,
         requiresImmediateAction: true,
-        description: 'Achados compatíveis com maior gravidade local do membro. Exigem internação mandatória e avaliação urgente da Cirurgia Vascular.'
+        description: 'Manter indicação de avaliação vascular, mas completar a estratificação diagnóstica antes da tela de vascular/anticoagulação.'
       }
     }
 
     if (hasTVPRespiratoryAlertSelected) {
       return {
-        text: 'Interromper fluxo: internação imediata + investigar possível TEP',
-        nextStep: 'tvp_internacao_investigar_tep',
-        value: 'tvp_alerta_tep',
+        text: 'Alto risco: seguir avaliação completa com Wells, POCUS e D-dímero',
+        nextStep: 'wells_score',
+        value: 'tvp_alerta_tep_seguir_wells',
         critical: true,
         requiresImmediateAction: true,
-        description: 'Sintomas respiratórios associados exigem internação mandatória e investigação imediata de possível tromboembolismo pulmonar.'
+        description: 'Manter alerta para TEP/internação, mas completar a estratificação diagnóstica antes da conduta final.'
       }
     }
 
     return {
-      text: 'Interromper fluxo: internação imediata + aprofundar investigação',
-      nextStep: 'tvp_internacao_investigacao_clinica',
-      value: 'tvp_alerta_investigacao',
+      text: 'Alto risco: seguir avaliação completa com Wells, POCUS e D-dímero',
+      nextStep: 'wells_score',
+      value: 'tvp_alerta_seguir_wells',
       critical: true,
       requiresImmediateAction: true,
-      description: 'Situação de alto risco com necessidade de internação mandatória e seguimento da investigação, sem indicação automática de Cirurgia Vascular.'
+      description: 'Manter mensagem de alto risco e avançar pelo mesmo fluxo diagnóstico antes da avaliação vascular.'
     }
   }, [
     hasTVPAlertSignSelected,
@@ -10549,18 +10549,19 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <p className="mt-1 text-sm text-red-900">
                         {hasTVPVascularAlertSelected ? (
                           <>
-                            Fluxograma deve ser interrompido: indicar <strong>internação hospitalar mandatória</strong> e
-                            acionar <strong>Cirurgia Vascular em urgência</strong>.
+                            Manter alerta de <strong>avaliação vascular</strong> e seguir a investigação estruturada com
+                            Wells, POCUS e D-dímero quando indicado. Após essa etapa, direcionar para vascular e
+                            anticoagulação plena conforme contraindicações.
                           </>
                         ) : hasTVPRespiratoryAlertSelected ? (
                           <>
-                            Atenção para a possibilidade de <strong>embolia pulmonar</strong>. Deve-se solicitar investigação
-                            e exames pertinentes para o diagnóstico. <strong>Internação hospitalar mandatória</strong>.
+                            Atenção para a possibilidade de <strong>embolia pulmonar</strong>. Manter investigação e exames
+                            pertinentes em paralelo, sem pular a estratificação diagnóstica da TVP.
                           </>
                         ) : (
                           <>
-                            <strong>Alto risco de TVP</strong>. Deve-se proceder imediatamente na investigação. Solicitar exames
-                            pertinentes. <strong>Internação hospitalar mandatória</strong>.
+                            <strong>Alto risco de TVP</strong>. Prosseguir imediatamente com Wells, POCUS e D-dímero quando
+                            indicado, mantendo necessidade de reavaliação e conduta hospitalar conforme o resultado.
                           </>
                         )}
                       </p>
@@ -13398,8 +13399,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     ? gasometryStepOptions
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
-                      : isTVPClinicalEvaluation && tvpAlertInterruptionOption
-                        ? [tvpAlertInterruptionOption]
+                      : isTVPClinicalEvaluation && tvpAlertContinuationOption
+                        ? [tvpAlertContinuationOption]
                         : isBellTreatmentStep
                           ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
