@@ -25,7 +25,6 @@ import {
   ScanLine,
   Clipboard,
   ClipboardCheck,
-  FileText,
   ZoomIn,
   ZoomOut,
   X
@@ -33,6 +32,7 @@ import {
 import { clsx } from 'clsx'
 import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, EmergencyOption, EmergencyStep } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
+import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
 import {
   INFLUENZA_SEVERITY_SIGNS,
@@ -1788,7 +1788,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [bellTreatmentTimingOpen, setBellTreatmentTimingOpen] = useState(false)
   const [bellDocumentCopied, setBellDocumentCopied] = useState(false)
   const [clinicalSummaryCopied, setClinicalSummaryCopied] = useState(false)
-  const [clinicalSummaryModalOpen, setClinicalSummaryModalOpen] = useState(false)
+  const [doctorProfile, setDoctorProfile] = useState<DoctorProfile | null>(null)
   const [bellWithin72Hours, setBellWithin72Hours] = useState<boolean | null>(null)
   const [bellUseCorticosteroid, setBellUseCorticosteroid] = useState(false)
   const [bellAntiviralChoice, setBellAntiviralChoice] = useState<BellAntiviralChoice>('none')
@@ -2720,7 +2720,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setBellTreatmentTimingOpen(false)
     setBellDocumentCopied(false)
     setClinicalSummaryCopied(false)
-    setClinicalSummaryModalOpen(false)
     setRabiesBiteImageOpen(false)
     setBellWithin72Hours(null)
     setBellUseCorticosteroid(false)
@@ -2730,14 +2729,29 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  useEffect(() => {
+    let mounted = true
+    getCurrentDoctor()
+      .then((doctor) => {
+        if (mounted) setDoctorProfile(doctor as DoctorProfile | null)
+      })
+      .catch((error) => {
+        console.warn('Não foi possível carregar o médico responsável do resumo:', error)
+        if (mounted) setDoctorProfile(null)
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
   const clinicalSummaryData = useMemo(() => {
     return buildClinicalSummary(patient, {
       flowchart,
       currentStep,
       history,
-      answers
+      answers,
+      doctor: doctorProfile
     })
-  }, [answers, currentStep, flowchart, history, patient])
+  }, [answers, currentStep, doctorProfile, flowchart, history, patient])
   const copyClinicalSummaryText = useCallback(async () => {
     try {
       await navigator.clipboard.writeText(clinicalSummaryData.text)
@@ -2935,8 +2949,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       `${conclusionSentence} ${followUpSentence}`,
       ...(referralSentence ? ['', referralSentence] : []),
       '',
-      'Médico(a): ____________________________',
-      'CRM: ____________________________',
+      clinicalSummaryData.doctorSignature,
       `Gerado em: ${new Date().toLocaleString('pt-BR')}`
     ]
 
@@ -2953,6 +2966,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     bellSelectedSideLabel,
     bellSupportChecks,
     bellSavedTreatmentSelection,
+    clinicalSummaryData.doctorSignature,
     currentStepData?.id,
     hasBellRedFlagChecked,
     isBellReferralStep,
@@ -14469,14 +14483,72 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         />
                       </figure>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setClinicalSummaryModalOpen(true)}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg transition-colors hover:bg-slate-800"
-                    >
-                      <FileText className="h-4 w-4" />
-                      Ver resumo clínico
-                    </button>
+                    <div className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-sm">
+                      <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Resumo clínico semiológico</p>
+                          <h4 className="mt-1 text-lg font-extrabold text-slate-950">{clinicalSummaryData.finalTitle}</h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={copyClinicalSummaryText}
+                          className={clsx(
+                            'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
+                            clinicalSummaryCopied
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-slate-900 text-white hover:bg-slate-800'
+                          )}
+                        >
+                          {clinicalSummaryCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                          {clinicalSummaryCopied ? 'Copiado' : 'Copiar resumo'}
+                        </button>
+                      </div>
+                      <div className="space-y-5 p-5 text-sm leading-relaxed text-slate-800">
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Identificação e contexto</h5>
+                          <p className="mt-1">
+                            Paciente {patient.name || 'não identificado'}, {patient.age || 'idade não informada'} anos, {patient.gender || 'gênero não informado'}, atendido em {formatClinicalDate(patient.admission?.date)}
+                            {patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: {flowchart.name}.
+                          </p>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Queixa principal / motivo do atendimento</h5>
+                          <p className="mt-1">{clinicalSummaryData.chiefComplaint}</p>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">História da moléstia atual e raciocínio do fluxo</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.historyLines.length > 0
+                              ? clinicalSummaryData.historyLines.map((line) => <li key={line}>{line}</li>)
+                              : <li>Caminho clínico ainda sem respostas estruturadas registradas.</li>}
+                          </ul>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Sinais, sintomas e exame físico</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.examinationLines.length > 0
+                              ? clinicalSummaryData.examinationLines.map((line) => <li key={line}>{line}</li>)
+                              : <li>Sem sinais vitais ou exame físico estruturado registrados neste fluxo.</li>}
+                          </ul>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Exames, critérios e estratificação</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {clinicalSummaryData.scoreLines.length > 0
+                              ? clinicalSummaryData.scoreLines.map((line) => <li key={line}>{line}</li>)
+                              : <li>Sem exames, escores ou critérios estruturados registrados neste caminho.</li>}
+                          </ul>
+                        </section>
+                        <section className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-950">
+                          <h5 className="font-extrabold">Síntese final e conduta</h5>
+                          <p className="mt-1">{clinicalSummaryData.finalNarrative}</p>
+                        </section>
+                        <section>
+                          <h5 className="font-extrabold text-slate-950">Médico responsável</h5>
+                          <p className="mt-1 whitespace-pre-line">{clinicalSummaryData.doctorSignature}</p>
+                        </section>
+                      </div>
+                    </div>
                     <button
                       onClick={onComplete}
                       className={clsx(
@@ -14499,86 +14571,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
             </div>
           </motion.div>
         </AnimatePresence>
-
-        {clinicalSummaryModalOpen && (
-          <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
-            <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-              <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Resumo clínico semiológico</p>
-                  <h4 className="mt-1 text-lg font-extrabold text-slate-950">{clinicalSummaryData.finalTitle}</h4>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={copyClinicalSummaryText}
-                    className={clsx(
-                      'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-bold transition-colors',
-                      clinicalSummaryCopied
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-slate-900 text-white hover:bg-slate-800'
-                    )}
-                  >
-                    {clinicalSummaryCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
-                    {clinicalSummaryCopied ? 'Copiado' : 'Copiar resumo'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setClinicalSummaryModalOpen(false)}
-                    className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-200 text-slate-700 transition-colors hover:bg-slate-300"
-                    title="Fechar"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-5 overflow-y-auto p-5 text-left text-sm leading-relaxed text-slate-800">
-                <section>
-                  <h5 className="font-extrabold text-slate-950">Identificação e contexto</h5>
-                  <p className="mt-1">
-                    Paciente {patient.name || 'não identificado'}, {patient.age || 'idade não informada'} anos, {patient.gender || 'gênero não informado'}, atendido em {formatClinicalDate(patient.admission?.date)}
-                    {patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma aplicado: {flowchart.name}.
-                  </p>
-                </section>
-                <section>
-                  <h5 className="font-extrabold text-slate-950">Queixa principal / motivo do atendimento</h5>
-                  <p className="mt-1">{clinicalSummaryData.chiefComplaint}</p>
-                </section>
-                <section>
-                  <h5 className="font-extrabold text-slate-950">História da moléstia atual e raciocínio do fluxo</h5>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    {clinicalSummaryData.historyLines.length > 0
-                      ? clinicalSummaryData.historyLines.map((line) => <li key={line}>{line}</li>)
-                      : <li>Caminho clínico ainda sem respostas estruturadas registradas.</li>}
-                  </ul>
-                </section>
-                <section>
-                  <h5 className="font-extrabold text-slate-950">Sinais, sintomas e exame físico</h5>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    {clinicalSummaryData.examinationLines.length > 0
-                      ? clinicalSummaryData.examinationLines.map((line) => <li key={line}>{line}</li>)
-                      : <li>Sem sinais vitais ou exame físico estruturado registrados neste fluxo.</li>}
-                  </ul>
-                </section>
-                <section>
-                  <h5 className="font-extrabold text-slate-950">Exames, critérios e estratificação</h5>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    {clinicalSummaryData.scoreLines.length > 0
-                      ? clinicalSummaryData.scoreLines.map((line) => <li key={line}>{line}</li>)
-                      : <li>Sem exames, escores ou critérios estruturados registrados neste caminho.</li>}
-                  </ul>
-                </section>
-                <section className="rounded-xl border border-blue-100 bg-blue-50 p-4 text-blue-950">
-                  <h5 className="font-extrabold">Impressão clínica e plano</h5>
-                  <p className="mt-1">{clinicalSummaryData.finalDescription}</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-5">
-                    {clinicalSummaryData.conductLines.map((line) => <li key={line}>{line}</li>)}
-                  </ul>
-                </section>
-              </div>
-            </div>
-          </div>
-        )}
 
         {rabiesBiteImageOpen && (
           <ZoomableImageModal

@@ -457,7 +457,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         flowchart: flowchart || undefined,
         currentStep,
         history,
-        answers
+        answers,
+        doctor: doctorProfile
       })
 
       return {
@@ -496,6 +497,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Conduta / plano',
             items: clinicalSummary.conductLines
+          },
+          {
+            title: 'Médico responsável',
+            text: clinicalSummary.doctorSignature
           },
           ...(prescriptions.length > 0 ? [{
             title: 'Prescrições registradas',
@@ -601,6 +606,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
               'Reavaliar a conduta em caso de tratamento antirrábico prévio, imunossupressão ou mudança da condição epidemiológica do animal.',
               'Orientado retorno imediato diante de sinais de infecção local, reação ao imunobiológico ou nova informação sobre adoecimento, morte ou desaparecimento do animal.'
             ])
+          },
+          {
+            title: 'Médico responsável',
+            text: doctorSignatureText
           }
         ]
       }

@@ -9,6 +9,8 @@ export type ClinicalSummaryData = {
   scoreLines: string[]
   finalTitle: string
   finalDescription: string
+  finalNarrative: string
+  doctorSignature: string
   conductLines: string[]
   text: string
 }
@@ -41,6 +43,16 @@ export const formatClinicalDate = (dateLike?: Date | string) => {
   const date = new Date(dateLike)
   if (Number.isNaN(date.getTime())) return 'data não informada'
   return date.toLocaleDateString('pt-BR')
+}
+
+export const formatDoctorSignature = (doctor?: { name?: string | null; crm?: string | null } | null) => {
+  const doctorName = doctor?.name?.trim()
+  const crm = doctor?.crm?.trim()
+  const nameText = doctorName
+    ? (/^dr\.?\s|^dra\.?\s/i.test(doctorName) ? doctorName : `Dr(a). ${doctorName}`)
+    : 'Médico(a) responsável não informado'
+  const crmText = crm ? (/^crm\b/i.test(crm) ? crm : `CRM ${crm}`) : 'CRM não informado'
+  return `${nameText}\n${crmText}`
 }
 
 export const formatClinicalValue = (value: unknown): string => {
@@ -115,6 +127,7 @@ export function buildClinicalSummary(
     currentStep?: string
     history?: string[]
     answers?: Record<string, string>
+    doctor?: { name?: string | null; crm?: string | null } | null
   }
 ): ClinicalSummaryData {
   const flowchart = options?.flowchart || getFlowchartById(patient.selectedFlowchart || '') || getFlowchartById('dengue')
@@ -132,6 +145,8 @@ export function buildClinicalSummary(
       scoreLines: [],
       finalTitle: 'Resumo clínico',
       finalDescription: fallbackText,
+      finalNarrative: fallbackText,
+      doctorSignature: formatDoctorSignature(options?.doctor),
       conductLines: [fallbackText],
       text: fallbackText
     }
@@ -199,11 +214,16 @@ export function buildClinicalSummary(
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
   const finalAnswer = answerEntries.at(-1)?.answerLabel
-  const conductLines = [
+  const finalNarrative = [
+    `Ao final do fluxograma, o caso foi direcionado para: ${finalTitle}.`,
     finalDescription,
-    finalAnswer ? `Última decisão clínica registrada: ${finalAnswer}` : '',
-    currentStepData?.critical ? 'Fluxo finalizado em etapa crítica; manter monitorização e reavaliação conforme gravidade.' : ''
+    finalAnswer ? `A decisão clínica mais recente registrada foi: ${finalAnswer}.` : '',
+    currentStepData?.critical ? 'Por se tratar de etapa crítica, recomenda-se manter monitorização clínica, reavaliação seriada e escalonamento de cuidado conforme gravidade.' : ''
+  ].filter(Boolean).join(' ')
+  const conductLines = [
+    finalNarrative
   ].filter(Boolean)
+  const doctorSignature = formatDoctorSignature(options?.doctor)
 
   const textSections = [
     'RESUMO CLÍNICO SEMIOLÓGICO',
@@ -226,8 +246,11 @@ export function buildClinicalSummary(
     'Impressão clínica',
     `${finalTitle}. ${finalDescription}`,
     '',
-    'Conduta / plano',
-    conductLines.map((line) => `- ${line}`).join('\n')
+    'Síntese final e conduta',
+    finalNarrative,
+    '',
+    'Médico responsável',
+    doctorSignature
   ]
 
   return {
@@ -237,6 +260,8 @@ export function buildClinicalSummary(
     scoreLines: Array.from(new Set(scoreLines)).slice(-10),
     finalTitle,
     finalDescription,
+    finalNarrative,
+    doctorSignature,
     conductLines,
     text: textSections.join('\n')
   }
