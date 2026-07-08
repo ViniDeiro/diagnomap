@@ -944,57 +944,34 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         'Orientado retorno imediato em caso de piora da dor, aumento do edema, dispneia, dor torácica, síncope ou sinais de sangramento.',
         therapies.length > 0 ? 'Monitorização clínica e laboratorial conforme necessidade e esquema anticoagulante adotado.' : null
       ])
+      void [
+        selectedLegNarrative,
+        chiefComplaint,
+        historyTextParts,
+        tvpFlowVitalItems,
+        physicalExamItems,
+        evaluationItems,
+        complementaryExamItems,
+        conductItems,
+        vascularEmergencyItems,
+        planItems
+      ]
+
+      const tvpClinicalSummary = buildClinicalSummary(patientForReport, {
+        flowchart: flowchart || undefined,
+        currentStep,
+        history,
+        answers,
+        doctor: doctorProfile
+      })
+      const tvpReportTitle = tvpClinicalSummary.continuousText.split('\n').find(Boolean) || title
 
       return {
-        title,
+        title: tvpReportTitle,
         sections: [
           {
-            title: 'Identificação do Paciente',
-            text: `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${formatGender(patient.gender)}, peso ${formatWeight(patient.weight)}, prontuário nº ${patient.medicalRecord || 'não informado'}.`
-          },
-          {
-            title: 'Queixa Principal',
-            text: symptomItems.length > 0
-              ? chiefComplaint
-              : `Suspeita clínica de trombose venosa profunda em ${selectedLegNarrative}.`
-          },
-          {
-            title: 'História da Doença Atual',
-            text: historyTextParts
-          },
-          {
-            title: 'Sinais e Sintomas',
-            items: symptomItems.length > 0 ? symptomItems : ['Sem sinais e sintomas estruturados registrados no fluxo.']
-          },
-          {
-            title: 'Sinais Vitais',
-            items: tvpFlowVitalItems.length > 0 ? tvpFlowVitalItems : vitalItems.length > 0 ? vitalItems : ['Sem sinais vitais estruturados registrados.']
-          },
-          {
-            title: 'Exame Físico',
-            items: physicalExamItems.length > 0 ? physicalExamItems : ['Sem descrição estruturada de exame físico no fluxo.']
-          },
-          {
-            title: 'Avaliação Clínica',
-            items: evaluationItems
-          },
-          {
-            title: 'Exames Complementares',
-            items: complementaryExamItems.length > 0 ? complementaryExamItems : ['Sem exames complementares registrados no fluxo.']
-          },
-          {
-            title: 'Conduta',
-            items: conductItems.length > 0 ? conductItems : ['Conduta ainda não registrada de forma estruturada no sistema.']
-          },
-          ...(vascularEmergencyItems.length > 0
-            ? [{
-                title: 'Protocolo de Urgência Vascular / Flegmasia',
-                items: vascularEmergencyItems
-              }]
-            : []),
-          {
-            title: 'Plano / Acompanhamento',
-            items: planItems
+            title: 'Relatório clínico',
+            text: tvpClinicalSummary.continuousText
           }
         ]
       }

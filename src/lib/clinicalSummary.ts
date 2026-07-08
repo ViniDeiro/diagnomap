@@ -22,6 +22,11 @@ type FlowSummaryEntry = {
   answerLabel: string
   parsed: FlowSummaryAnswer | null
 }
+type TVPExamSummary = {
+  extremities?: { altered?: string }
+  cardiac?: { altered?: string }
+  pulmonary?: { altered?: string }
+}
 
 const houseBrackmannLabels: Record<string, string> = {
   house_i: 'Grau I',
@@ -37,6 +42,41 @@ const antiviralLabels: Record<string, string> = {
   valaciclovir: 'valaciclovir associado',
   aciclovir: 'aciclovir associado',
   famciclovir: 'famciclovir associado'
+}
+
+const tvpWellsLabels: Record<string, string> = {
+  cancer_ativo: 'câncer ativo',
+  paresia_imobilizacao: 'paresia, paralisia ou imobilização de membro inferior',
+  restrito_leito_cirurgia: 'restrição ao leito ou cirurgia recente',
+  dor_trajeto_venoso: 'dor à palpação no trajeto venoso profundo',
+  perna_inteira_edemaciada: 'edema de todo o membro inferior',
+  panturrilha_3cm: 'aumento de panturrilha maior ou igual a 3 cm',
+  edema_cacifo: 'edema com cacifo limitado ao membro sintomático',
+  veias_colaterais: 'veias colaterais superficiais não varicosas',
+  tvp_previa: 'TVP prévia documentada',
+  diagnostico_alternativo: 'diagnóstico alternativo pelo menos tão provável quanto TVP'
+}
+
+const tvpContraindicationLabels: Record<string, string> = {
+  abs_sangramento_ativo: 'sangramento ativo maior',
+  abs_intracraniano_recente: 'sangramento intracraniano recente',
+  abs_neuro_ocular_recente: 'cirurgia neurológica ou ocular recente',
+  abs_trombocitopenia_grave: 'plaquetopenia grave',
+  abs_risco_critico: 'risco hemorrágico crítico não corrigível',
+  rel_trombocitopenia_moderada: 'plaquetopenia moderada',
+  rel_hipertensao_nao_controlada: 'hipertensão arterial importante não controlada',
+  rel_disfuncao_renal_hepatica: 'disfunção renal ou hepática moderada',
+  rel_sangramento_gi_recente: 'sangramento gastrointestinal recente'
+}
+
+const tvpTherapyLabels: Record<string, string> = {
+  rivaroxabana: 'rivaroxabana',
+  apixabana: 'apixabana',
+  dabigatrana: 'dabigatrana',
+  edoxabana: 'edoxabana',
+  enoxaparina: 'enoxaparina',
+  hnf: 'heparina não fracionada',
+  varfarina: 'varfarina'
 }
 
 export const formatClinicalDate = (dateLike?: Date | string) => {
@@ -84,6 +124,186 @@ export const parseFlowAnswerForSummary = (raw?: string): FlowSummaryAnswer | nul
     return parsed && typeof parsed === 'object' ? parsed as Record<string, unknown> : { decision: parsed }
   } catch {
     return { decision: raw }
+  }
+}
+
+const uniqueTextItems = (items: Array<string | null | undefined>) =>
+  Array.from(new Set(items.map((item) => item?.trim()).filter(Boolean) as string[]))
+
+const formatClinicalListText = (items: string[]) => {
+  if (items.length === 0) return ''
+  if (items.length === 1) return items[0]
+  return `${items.slice(0, -1).join(', ')} e ${items.at(-1)}`
+}
+
+const getTVPLegLabel = (value?: string) => {
+  if (value === 'left') return 'membro inferior esquerdo'
+  if (value === 'right') return 'membro inferior direito'
+  if (value === 'other') return 'outra localização informada'
+  return 'membro acometido não especificado'
+}
+
+const getTVPPocusText = (value?: string) => {
+  if (value === 'us_positive' || value === 'repeat_positive') {
+    return 'POCUS vascular compressivo positivo, com veia não compressível, achado compatível com TVP proximal no contexto clínico.'
+  }
+  if (value === 'us_negative' || value === 'repeat_negative') {
+    return 'POCUS vascular compressivo negativo, com compressibilidade preservada nas janelas avaliadas.'
+  }
+  if (value === 'us_inconclusive') {
+    return 'POCUS vascular compressivo inconclusivo ou tecnicamente limitado, sem permitir exclusão segura de TVP.'
+  }
+  return 'Resultado do POCUS vascular não registrado no fluxo.'
+}
+
+const buildTVPClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const startData = parseFlowAnswerForSummary(answers.start)
+  const clinicalData = parseFlowAnswerForSummary(answers.avaliacao_clinica)
+  const examData = parseFlowAnswerForSummary(answers.tvp_exame_fisico)
+  const wellsData = parseFlowAnswerForSummary(answers.wells_score)
+  const contraData = parseFlowAnswerForSummary(answers.checar_contra_anticoagulacao)
+  const treatmentData = parseFlowAnswerForSummary(answers.tratamento_inicial)
+  const currentStepData = flowchart.steps[currentStep]
+  const doctorSignature = formatDoctorSignature(doctor)
+
+  const selectedLeg = typeof startData?.selectedLeg === 'string' ? startData.selectedLeg : ''
+  const selectedLegLabel = typeof startData?.selectedLegLabel === 'string' && startData.selectedLegLabel.trim()
+    ? startData.selectedLegLabel.toLowerCase()
+    : getTVPLegLabel(selectedLeg)
+  const selectedFindings = Array.isArray(clinicalData?.sinaisEAchados)
+    ? clinicalData.sinaisEAchados.map((item) => formatClinicalValue(item)).filter(Boolean)
+    : []
+  const otherFindings = typeof clinicalData?.outrosAchados === 'string' ? clinicalData.outrosAchados.trim() : ''
+  const symptoms = uniqueTextItems([
+    ...(patient.admission?.symptoms || []),
+    ...selectedFindings.filter((item) => /dor|edema|panturrilha|coxa|calor|rubor|cianose|taquicardia|sensibilidade|circunferência/i.test(item)),
+    otherFindings
+  ])
+  const riskFactors = uniqueTextItems([
+    ...selectedFindings.filter((item) => /imobilização|cirurgia|trauma|câncer|gravidez|puerpério|estrogênios|trombofilia|TVP\/TEV|prévia/i.test(item))
+  ])
+  const alertFindings = uniqueTextItems([
+    ...selectedFindings.filter((item) => /flegmasia|cianose|dispneia|dor torácica|hemoptise|síncope|iliofemoral|progressão rápida|urgência/i.test(item))
+  ])
+  const vitalSigns = examData?.sinaisVitais && typeof examData.sinaisVitais === 'object'
+    ? examData.sinaisVitais as Record<string, unknown>
+    : {}
+  const vitalLines = uniqueTextItems([
+    vitalSigns.temperature != null ? `temperatura ${String(vitalSigns.temperature).replace('.', ',')} °C` : null,
+    vitalSigns.heartRate != null ? `frequência cardíaca ${vitalSigns.heartRate} bpm` : null,
+    vitalSigns.respiratoryRate != null ? `frequência respiratória ${vitalSigns.respiratoryRate} irpm` : null,
+    vitalSigns.bloodPressure ? `pressão arterial ${vitalSigns.bloodPressure} mmHg` : null,
+    vitalSigns.oxygenSaturation != null ? `saturação de oxigênio ${vitalSigns.oxygenSaturation}%` : null,
+    vitalSigns.glucose ? `glicemia capilar ${vitalSigns.glucose} mg/dL` : null
+  ])
+  const exam = examData?.exameFisico && typeof examData.exameFisico === 'object'
+    ? examData.exameFisico as TVPExamSummary
+    : null
+  const directedExamLines = uniqueTextItems([
+    ...selectedFindings.filter((item) => /edema|cacifo|circunferência|calor|rubor|veias|palpação|eritema|cianose|palidez|pulsos|Homans/i.test(item)),
+    exam?.extremities?.altered ? `extremidades: ${String(exam.extremities.altered).trim()}` : null,
+    exam?.cardiac?.altered ? `aparelho cardiovascular: ${String(exam.cardiac.altered).trim()}` : null,
+    exam?.pulmonary?.altered ? `aparelho respiratório: ${String(exam.pulmonary.altered).trim()}` : null
+  ])
+
+  const wellsScore = typeof wellsData?.score === 'number' ? wellsData.score : undefined
+  const wellsClassification = typeof wellsData?.classificacao === 'string' ? wellsData.classificacao : ''
+  const wellsCriteria = Array.isArray(wellsData?.criteriosSelecionados)
+    ? uniqueTextItems(wellsData.criteriosSelecionados.map((item) => tvpWellsLabels[String(item)] || formatClinicalValue(item)))
+    : []
+  const pocusValue = answers.pocus_resultado_pre_d_dimero || answers.us_compressiva || answers.repetir_us
+  const dDimerText = answers.baixa_probabilidade === 'ddimer_negative'
+    ? 'D-dímero negativo.'
+    : answers.baixa_probabilidade === 'ddimer_positive'
+      ? 'D-dímero positivo.'
+      : answers.moderada_probabilidade
+        ? 'D-dímero não foi utilizado como etapa inicial por probabilidade clínica moderada/alta.'
+        : 'D-dímero não registrado no fluxo.'
+  const contraindications = Array.isArray(contraData?.contraindicacoesSelecionadas)
+    ? uniqueTextItems(contraData.contraindicacoesSelecionadas.map((item) => tvpContraindicationLabels[String(item)] || formatClinicalValue(item)))
+    : []
+  const therapies = Array.isArray(treatmentData?.opcoesTerapeuticasSelecionadas)
+    ? uniqueTextItems(treatmentData.opcoesTerapeuticasSelecionadas.map((item) => tvpTherapyLabels[String(item)] || formatClinicalValue(item)))
+    : []
+
+  const isVascularReferral = currentStep === 'encaminhamento_urgente' || currentStep === 'tvp_aguarda_avaliacao_vascular' || history.includes('tvp_aguarda_avaliacao_vascular')
+  const isUrgentVascular = currentStep === 'tvp_urgencia_vascular_concluida' || history.includes('tvp_urgencia_vascular_imediata')
+  const isExcluded = currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial'
+  const isTEPInvestigation = currentStep === 'tvp_internacao_investigar_tep'
+  const isConfirmed = pocusValue === 'us_positive' || pocusValue === 'repeat_positive' || currentStep === 'anticoagulacao_iniciada' || isVascularReferral || isUrgentVascular
+
+  const chiefComplaint = symptoms.length > 0
+    ? formatClinicalListText(symptoms.slice(0, 3))
+    : `suspeita clínica de trombose venosa profunda em ${selectedLegLabel}`
+  const title = isConfirmed
+    ? 'RELATÓRIO MÉDICO - TROMBOSE VENOSA PROFUNDA'
+    : isExcluded
+      ? 'RELATÓRIO MÉDICO - INVESTIGAÇÃO DE TVP'
+      : 'RELATÓRIO MÉDICO - SUSPEITA DE TROMBOSE VENOSA PROFUNDA'
+  const finalTitle = currentStepData?.title || flowchart.name
+  const finalDescription = currentStepData?.description || flowchart.description
+  const conductText = isUrgentVascular
+    ? 'Diante de sinais de gravidade vascular, foi indicada internação imediata, monitorização, estabilização clínica e acionamento urgente da Cirurgia Vascular.'
+    : isVascularReferral
+      ? 'Foi solicitado encaminhamento/avaliação pela Cirurgia Vascular, mantendo responsabilidade assistencial, monitorização e tratamento instituído até transferência formal do caso.'
+      : isConfirmed
+        ? 'O quadro foi conduzido como TVP confirmada ou altamente provável, com avaliação de contraindicações e instituição de anticoagulação conforme risco clínico e protocolo local.'
+        : isExcluded
+          ? 'A investigação realizada não sustentou TVP no desfecho do fluxo, sendo indicada alta/seguimento com sinais de retorno e reavaliação se houver piora clínica.'
+          : isTEPInvestigation
+            ? 'Pela presença de sintomas respiratórios associados, foi indicada internação e investigação imediata de possível tromboembolismo pulmonar.'
+            : 'Mantida investigação clínica para TVP conforme estratificação, exame complementar e evolução.'
+  const anticoagulationText = contraindications.length > 0
+    ? `Na checagem terapêutica, foram registradas contraindicações ou alertas para anticoagulação: ${formatClinicalListText(contraindications)}.`
+    : contraData
+      ? 'Contraindicações relevantes à anticoagulação foram avaliadas no fluxo e não foram documentadas.'
+      : 'Contraindicações à anticoagulação não foram registradas de forma estruturada.'
+  const therapyText = therapies.length > 0
+    ? `A terapêutica selecionada incluiu ${formatClinicalListText(therapies)}.`
+    : 'Não há anticoagulante específico registrado como prescrição final neste relatório.'
+
+  const paragraphs = [
+    title,
+    '',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint}. O atendimento foi conduzido no contexto do fluxograma de TVP, com avaliação dirigida do ${selectedLegLabel}.`,
+    '',
+    symptoms.length > 0
+      ? `Na história da moléstia atual, foram documentados achados compatíveis com suspeita de TVP, incluindo ${formatClinicalListText(symptoms)}.${riskFactors.length > 0 ? ` Como fatores de risco ou contexto predisponente, constaram ${formatClinicalListText(riskFactors)}.` : ''}${alertFindings.length > 0 ? ` Também foram assinalados sinais de alerta: ${formatClinicalListText(alertFindings)}.` : ''}`
+      : `Na história da moléstia atual, o fluxo foi iniciado por suspeita clínica de TVP em ${selectedLegLabel}, sem descrição adicional estruturada de sintomas na admissão.`,
+    '',
+    `${vitalLines.length > 0 ? `Na avaliação inicial, sinais vitais registrados: ${formatClinicalListText(vitalLines)}. ` : ''}${directedExamLines.length > 0 ? `Ao exame físico direcionado, observaram-se ${formatClinicalListText(directedExamLines)}.` : 'O exame físico direcionado de membro inferior não apresentou descrição estruturada suficiente no fluxo, devendo ser correlacionado com a avaliação presencial.'}`,
+    '',
+    `${wellsScore != null ? `Foi aplicado o escore de Wells para TVP, com ${wellsScore} ponto${wellsScore === 1 ? '' : 's'} e classificação clínica ${wellsClassification || 'não informada'}.` : 'O escore de Wells não foi registrado de forma estruturada.'}${wellsCriteria.length > 0 ? ` Os critérios pontuados foram: ${formatClinicalListText(wellsCriteria)}.` : ''} ${getTVPPocusText(pocusValue)} ${dDimerText}`,
+    '',
+    `${anticoagulationText} ${therapyText} ${conductText}`,
+    '',
+    doctorSignature
+  ]
+  const continuousText = paragraphs.join('\n')
+
+  return {
+    chiefComplaint,
+    historyLines: symptoms,
+    examinationLines: [...vitalLines, ...directedExamLines],
+    scoreLines: uniqueTextItems([
+      wellsScore != null ? `Wells ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}${wellsClassification ? ` - ${wellsClassification}` : ''}` : null,
+      getTVPPocusText(pocusValue),
+      dDimerText
+    ]),
+    finalTitle,
+    finalDescription,
+    finalNarrative: conductText,
+    doctorSignature,
+    conductLines: [conductText],
+    continuousText,
+    text: continuousText
   }
 }
 
@@ -152,6 +372,10 @@ export function buildClinicalSummary(
       continuousText: fallbackText,
       text: fallbackText
     }
+  }
+
+  if (flowchart.id === 'tvp') {
+    return buildTVPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
   }
 
   const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {

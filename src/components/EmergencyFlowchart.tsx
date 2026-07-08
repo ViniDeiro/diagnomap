@@ -3125,35 +3125,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const tvpAlertContinuationOption = useMemo(() => {
     if (!hasTVPAlertSignSelected) return null
 
-    if (hasTVPVascularAlertSelected) {
-      return {
-        text: 'Alto risco: seguir avaliação completa com Wells, POCUS e D-dímero',
-        nextStep: 'wells_score',
-        value: 'tvp_alerta_vascular_seguir_wells',
-        critical: true,
-        requiresImmediateAction: true,
-        description: 'Manter indicação de avaliação vascular, mas completar a estratificação diagnóstica antes da tela de vascular/anticoagulação.'
-      }
-    }
-
-    if (hasTVPRespiratoryAlertSelected) {
-      return {
-        text: 'Alto risco: seguir avaliação completa com Wells, POCUS e D-dímero',
-        nextStep: 'wells_score',
-        value: 'tvp_alerta_tep_seguir_wells',
-        critical: true,
-        requiresImmediateAction: true,
-        description: 'Manter alerta para TEP/internação, mas completar a estratificação diagnóstica antes da conduta final.'
-      }
-    }
-
     return {
-      text: 'Alto risco: seguir avaliação completa com Wells, POCUS e D-dímero',
-      nextStep: 'wells_score',
-      value: 'tvp_alerta_seguir_wells',
+      text: 'Alto risco: iniciar manejo imediato da urgência vascular',
+      nextStep: 'tvp_urgencia_vascular_imediata',
+      value: hasTVPRespiratoryAlertSelected
+        ? 'tvp_alerta_tep_manejo_imediato'
+        : hasTVPVascularAlertSelected
+          ? 'tvp_alerta_vascular_manejo_imediato'
+          : 'tvp_alerta_manejo_imediato',
       critical: true,
       requiresImmediateAction: true,
-      description: 'Manter mensagem de alto risco e avançar pelo mesmo fluxo diagnóstico antes da avaliação vascular.'
+      description: 'Sinal de alerta selecionado: interromper a rota ambulatorial e seguir para estabilização, investigação urgente e avaliação vascular.'
     }
   }, [
     hasTVPAlertSignSelected,
@@ -7771,7 +7753,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {isTVPVascularReferralStep && (
+              {isTVPVascularReferralStep && !flowchart.finalSteps.includes(currentStep) && (
                 <div className="mb-6 overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
                   <div className="border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-300">Documento de encaminhamento</p>
@@ -10792,19 +10774,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <p className="mt-1 text-sm text-red-900">
                         {hasTVPVascularAlertSelected ? (
                           <>
-                            Manter alerta de <strong>avaliação vascular</strong> e seguir a investigação estruturada com
-                            Wells, POCUS e D-dímero quando indicado. Após essa etapa, direcionar para vascular e
-                            anticoagulação plena conforme contraindicações.
+                            Sinal de <strong>urgência vascular</strong> identificado. Interromper a rota ambulatorial e
+                            seguir para manejo imediato, estabilização e avaliação presencial da Cirurgia Vascular.
                           </>
                         ) : hasTVPRespiratoryAlertSelected ? (
                           <>
-                            Atenção para a possibilidade de <strong>embolia pulmonar</strong>. Manter investigação e exames
-                            pertinentes em paralelo, sem pular a estratificação diagnóstica da TVP.
+                            Atenção para possível <strong>embolia pulmonar associada</strong>. Seguir para manejo imediato,
+                            monitorização e investigação urgente em paralelo à avaliação vascular.
                           </>
                         ) : (
                           <>
-                            <strong>Alto risco de TVP</strong>. Prosseguir imediatamente com Wells, POCUS e D-dímero quando
-                            indicado, mantendo necessidade de reavaliação e conduta hospitalar conforme o resultado.
+                            <strong>Alto risco de TVP</strong>. Seguir para manejo imediato da urgência vascular antes de
+                            qualquer rota ambulatorial ou decisão eletiva de anticoagulação.
                           </>
                         )}
                       </p>
