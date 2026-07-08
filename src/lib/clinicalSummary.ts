@@ -12,6 +12,7 @@ export type ClinicalSummaryData = {
   finalNarrative: string
   doctorSignature: string
   conductLines: string[]
+  continuousText: string
   text: string
 }
 
@@ -148,6 +149,7 @@ export function buildClinicalSummary(
       finalNarrative: fallbackText,
       doctorSignature: formatDoctorSignature(options?.doctor),
       conductLines: [fallbackText],
+      continuousText: fallbackText,
       text: fallbackText
     }
   }
@@ -252,6 +254,27 @@ export function buildClinicalSummary(
     'Médico responsável',
     doctorSignature
   ]
+  const continuousSections = [
+    'RELATÓRIO MÉDICO',
+    '',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, no contexto do fluxograma ${flowchart.name}. A queixa principal ou motivo do atendimento registrado foi: ${chiefComplaint}.`,
+    '',
+    historyLines.length > 0
+      ? `Durante o raciocínio clínico estruturado, foram percorridas as seguintes decisões principais: ${historyLines.join('; ')}.`
+      : 'Durante o raciocínio clínico estruturado, ainda não há respostas suficientes registradas para descrever o caminho percorrido.',
+    '',
+    examinationLines.length > 0
+      ? `Na avaliação semiológica, constam: ${Array.from(new Set(examinationLines)).join('; ')}.`
+      : 'Sinais vitais e exame físico estruturado não foram registrados neste fluxo, devendo ser correlacionados com a avaliação clínica presencial.',
+    '',
+    scoreLines.length > 0
+      ? `Quanto à investigação, critérios e estratificação, foram registrados: ${Array.from(new Set(scoreLines)).slice(-10).join('; ')}.`
+      : 'Não foram registrados exames, escores ou critérios complementares estruturados neste caminho.',
+    '',
+    finalNarrative,
+    '',
+    doctorSignature
+  ]
 
   return {
     chiefComplaint,
@@ -263,6 +286,7 @@ export function buildClinicalSummary(
     finalNarrative,
     doctorSignature,
     conductLines,
+    continuousText: continuousSections.join('\n'),
     text: textSections.join('\n')
   }
 }
