@@ -76,6 +76,8 @@ import {
   hasMonoartritePrescriptionSet
 } from '@/lib/monoartrite'
 import {
+  ANSIEDADE_NON_PHARMACOLOGICAL_STEPS,
+  ANSIEDADE_ORGANIC_RED_FLAGS,
   buildAnsiedadePrescriptionItems,
   getAnsiedadeMedicationAlternatives,
   hasAnsiedadePrescriptionSet
@@ -101,6 +103,8 @@ import {
 import {
   PEP_HIV_ALTERNATIVE_SCHEMES,
   PEP_HIV_FOLLOW_UP_ORIENTATIONS,
+  PEP_HIV_RISK_EXPOSURES,
+  PEP_HIV_RISK_MATERIALS,
   buildPepHivPrescriptionItems,
   hasPepHivPrescriptionSet
 } from '@/lib/pepHiv'
@@ -1143,6 +1147,19 @@ const parseBloodPressure = (value?: string) => {
   return { systolic: Number(matches[1]), diastolic: Number(matches[2]) }
 }
 
+const getPatientAgeForScore = (patient: EmergencyPatient) => {
+  const registeredAge = parseClinicalNumber(patient.age)
+  if (registeredAge != null) return registeredAge
+  if (!patient.birthDate) return undefined
+  const birthDate = new Date(patient.birthDate)
+  if (Number.isNaN(birthDate.getTime())) return undefined
+  const today = new Date()
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDelta = today.getMonth() - birthDate.getMonth()
+  if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) age -= 1
+  return age >= 0 ? age : undefined
+}
+
 const parseSavedPhysicalExamAnswer = (value?: string, patient?: EmergencyPatient) => {
   if (!value) {
     return {
@@ -1168,6 +1185,18 @@ const parseSavedPhysicalExamAnswer = (value?: string, patient?: EmergencyPatient
       sinaisVitais: patient ? defaultFlowVitalSigns(patient) : undefined,
       exameFisico: defaultPneumoniaPhysicalExam()
     }
+  }
+}
+
+const parseSavedPneumoniaCrbCriteria = (value?: string) => {
+  if (!value) return []
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed?.criteriosSelecionados)
+      ? parsed.criteriosSelecionados.filter((item: unknown): item is string => typeof item === 'string')
+      : []
+  } catch {
+    return []
   }
 }
 
@@ -1659,6 +1688,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpRiskBenefitGuideOpen, setTVPRiskBenefitGuideOpen] = useState(false)
   const [tvpNoacInfoOpen, setTVPNoacInfoOpen] = useState<string | null>(null)
   const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
+  const [pepHivGuideOpen, setPepHivGuideOpen] = useState(false)
+  const [ansiedadeGuideOpen, setAnsiedadeGuideOpen] = useState(false)
   const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
   const [influenzaSeveritySigns, setInfluenzaSeveritySigns] = useState<string[]>([])
   const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
@@ -2652,6 +2683,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaVitalSigns(defaultFlowVitalSigns(patient))
     setTVPPhysicalExam(defaultPneumoniaPhysicalExam())
     setTVPVitalSigns(defaultFlowVitalSigns(patient))
+    setPepHivGuideOpen(false)
+    setAnsiedadeGuideOpen(false)
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
     setPneumoniaVitalSigns(defaultFlowVitalSigns(patient))
     setPneumoniaCrbCriteria([])
@@ -3122,26 +3155,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => selectedClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
     [selectedClinicalFindings]
   )
-  const tvpAlertContinuationOption = useMemo(() => {
-    if (!hasTVPAlertSignSelected) return null
-
-    return {
-      text: 'Alto risco: iniciar manejo imediato da urgência vascular',
-      nextStep: 'tvp_urgencia_vascular_imediata',
-      value: hasTVPRespiratoryAlertSelected
-        ? 'tvp_alerta_tep_manejo_imediato'
-        : hasTVPVascularAlertSelected
-          ? 'tvp_alerta_vascular_manejo_imediato'
-          : 'tvp_alerta_manejo_imediato',
-      critical: true,
-      requiresImmediateAction: true,
-      description: 'Sinal de alerta selecionado: interromper a rota ambulatorial e seguir para estabilização, investigação urgente e avaliação vascular.'
-    }
-  }, [
-    hasTVPAlertSignSelected,
-    hasTVPVascularAlertSelected,
-    hasTVPRespiratoryAlertSelected
-  ])
   const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
     const criterion = tvpWellsCriteria.find(item => item.id === criterionId)
@@ -3247,47 +3260,72 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   )
   const pneumoniaAutomaticCurbValues = useMemo<PneumoniaCurbValues>(() => {
     const savedPhysicalExam = parseSavedPhysicalExamAnswer(answers.pac_exame_fisico, patient)
+    const savedCrbCriteria = parseSavedPneumoniaCrbCriteria(answers.pac_crb65_triagem)
+    const combinedCrbCriteria = new Set([...savedCrbCriteria, ...pneumoniaCrbCriteria])
     const sourceVitalSigns = answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns
     const sourcePhysicalExam = answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam
     const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
     const respiratoryRate = parseClinicalNumber(sourceVitalSigns?.respiratoryRate)
     const bloodPressure = parseBloodPressure(sourceVitalSigns?.bloodPressure)
-    const patientAge = parseClinicalNumber(patient.age)
+    const patientAge = getPatientAgeForScore(patient)
     const hasConfusion = (sourcePhysicalExam.neuro.glasgow != null && sourcePhysicalExam.neuro.glasgow < 15)
       || Boolean(sourcePhysicalExam.neuro.altered?.trim())
+      || combinedCrbCriteria.has('Confusão mental nova')
+    const hasHighRespiratoryRate = combinedCrbCriteria.has('Frequência respiratória ≥ 30 irpm')
+      || (respiratoryRate != null && respiratoryRate >= 30)
+    const hasLowBloodPressure = combinedCrbCriteria.has('PAS < 90 mmHg ou PAD ≤ 60 mmHg')
+      || (bloodPressure.systolic != null && bloodPressure.systolic < 90)
+      || (bloodPressure.diastolic != null && bloodPressure.diastolic <= 60)
+    const hasAge65 = combinedCrbCriteria.has('Idade ≥ 65 anos')
+      || (patientAge != null && patientAge >= 65)
 
     return {
       confusaoMental: hasConfusion,
       ureiaMaior43: urea != null && urea > 43,
-      frMaior30: respiratoryRate != null && respiratoryRate >= 30,
-      paBaixa: (bloodPressure.systolic != null && bloodPressure.systolic < 90)
-        || (bloodPressure.diastolic != null && bloodPressure.diastolic <= 60),
-      idadeMaior65: patientAge != null && patientAge >= 65
+      frMaior30: hasHighRespiratoryRate,
+      paBaixa: hasLowBloodPressure,
+      idadeMaior65: hasAge65
     }
-  }, [answers.pac_exame_fisico, patient, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
+  }, [answers.pac_crb65_triagem, answers.pac_exame_fisico, patient, pneumoniaCrbCriteria, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
   const pneumoniaAutomaticCurbDetails = useMemo<Record<PneumoniaCurbFieldKey, string>>(() => {
     const savedPhysicalExam = parseSavedPhysicalExamAnswer(answers.pac_exame_fisico, patient)
+    const savedCrbCriteria = parseSavedPneumoniaCrbCriteria(answers.pac_crb65_triagem)
+    const combinedCrbCriteria = new Set([...savedCrbCriteria, ...pneumoniaCrbCriteria])
     const sourceVitalSigns = answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns
     const sourcePhysicalExam = answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam
     const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
     const respiratoryRate = parseClinicalNumber(sourceVitalSigns?.respiratoryRate)
     const bloodPressure = sourceVitalSigns?.bloodPressure?.trim()
-    const patientAge = parseClinicalNumber(patient.age)
+    const patientAge = getPatientAgeForScore(patient)
     const glasgow = sourcePhysicalExam.neuro.glasgow
     const altered = sourcePhysicalExam.neuro.altered?.trim()
 
     return {
-      confusaoMental: altered
+      confusaoMental: combinedCrbCriteria.has('Confusão mental nova')
+        ? 'Marcado no CRB-65: confusão mental nova'
+        : altered
         ? `Exame físico: ${altered}`
         : glasgow != null
           ? `Glasgow ${glasgow}`
           : 'Exame físico: sem alteração registrada',
       ureiaMaior43: urea != null ? `Ureia ${urea} mg/dL` : 'Ureia não informada nos exames',
-      frMaior30: respiratoryRate != null ? `FR ${respiratoryRate} irpm` : 'FR não informada nos sinais vitais',
-      paBaixa: bloodPressure ? `PA ${bloodPressure} mmHg` : 'PA não informada nos sinais vitais',
-      idadeMaior65: patientAge != null ? `Idade do cadastro: ${patientAge} anos` : 'Idade não informada no cadastro'
+      frMaior30: combinedCrbCriteria.has('Frequência respiratória ≥ 30 irpm')
+        ? 'Marcado no CRB-65: frequência respiratória ≥ 30 irpm'
+        : respiratoryRate != null
+          ? `FR ${respiratoryRate} irpm`
+          : 'FR não informada nos sinais vitais',
+      paBaixa: combinedCrbCriteria.has('PAS < 90 mmHg ou PAD ≤ 60 mmHg')
+        ? 'Marcado no CRB-65: hipotensão'
+        : bloodPressure
+          ? `PA ${bloodPressure} mmHg`
+          : 'PA não informada nos sinais vitais',
+      idadeMaior65: combinedCrbCriteria.has('Idade ≥ 65 anos')
+        ? 'Marcado no CRB-65: idade ≥ 65 anos'
+        : patientAge != null
+          ? `Idade do cadastro: ${patientAge} anos`
+          : 'Idade não informada no cadastro'
     }
-  }, [answers.pac_exame_fisico, patient, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
+  }, [answers.pac_crb65_triagem, answers.pac_exame_fisico, patient, pneumoniaCrbCriteria, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
   const savedPneumoniaCurbScore = useMemo(() => {
     const raw = answers.pac_curb65_protocolo || answers.pac_calcular_curb65
     if (!raw) return undefined
@@ -4135,9 +4173,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const buildPepHivPrescriptionPreview = useCallback((): PepHivPrescriptionPreview => {
     const items = buildPepHivPrescriptionItems()
     const content = [
-      'PROFILAXIA POS-EXPOSICAO (PEP) AO HIV',
+      'PROFILAXIA PÓS-EXPOSIÇÃO (PEP) AO HIV',
       '',
-      'RECEITA MEDICA',
+      'RECEITA MÉDICA',
       '',
       'USO ORAL',
       '',
@@ -7598,6 +7636,16 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         event.stopPropagation()
                         setTVPPocusPointsImageOpen(true)
                       }
+                      if (target.closest('[data-pep-hiv-guide="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setPepHivGuideOpen(true)
+                      }
+                      if (target.closest('[data-ansiedade-guide="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        setAnsiedadeGuideOpen(true)
+                      }
                     }}
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
@@ -10774,18 +10822,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <p className="mt-1 text-sm text-red-900">
                         {hasTVPVascularAlertSelected ? (
                           <>
-                            Sinal de <strong>urgência vascular</strong> identificado. Interromper a rota ambulatorial e
-                            seguir para manejo imediato, estabilização e avaliação presencial da Cirurgia Vascular.
+                            Sinal de <strong>urgência vascular</strong> identificado. Manter atenção para gravidade e
+                            prosseguir com a estratificação diagnóstica do fluxo antes da decisão de conduta.
                           </>
                         ) : hasTVPRespiratoryAlertSelected ? (
                           <>
-                            Atenção para possível <strong>embolia pulmonar associada</strong>. Seguir para manejo imediato,
-                            monitorização e investigação urgente em paralelo à avaliação vascular.
+                            Atenção para possível <strong>embolia pulmonar associada</strong>. Prosseguir com a
+                            estratificação diagnóstica e manter monitorização conforme estabilidade clínica.
                           </>
                         ) : (
                           <>
-                            <strong>Alto risco de TVP</strong>. Seguir para manejo imediato da urgência vascular antes de
-                            qualquer rota ambulatorial ou decisão eletiva de anticoagulação.
+                            <strong>Maior suspeita/gravidade de TVP</strong>. Prosseguir para Wells, POCUS e D-dímero
+                            conforme o caminho do fluxograma, mantendo cautela na decisão final.
                           </>
                         )}
                       </p>
@@ -13623,9 +13671,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     ? gasometryStepOptions
                     : isAsthmaFlow && asthmaStepOptions !== null
                       ? asthmaStepOptions
-                      : isTVPClinicalEvaluation && tvpAlertContinuationOption
-                        ? [tvpAlertContinuationOption]
-                        : isBellTreatmentStep
+                      : isBellTreatmentStep
                           ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
@@ -13897,6 +13943,91 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
+              {ansiedadeGuideOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                      <div>
+                        <h4 className="text-lg font-extrabold text-slate-950">Guia rápido - Crise de ansiedade</h4>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                          Roteiro prático para diferenciar ataque de pânico de causas orgânicas e conduzir o manejo inicial.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setAnsiedadeGuideOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                        title="Fechar"
+                        aria-label="Fechar guia rápido de crise de ansiedade"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                      <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+                        <h5 className="font-extrabold">Antes de chamar de ansiedade</h5>
+                        <p className="mt-2">
+                          Ataque de pânico pode cursar com taquicardia, dispneia, dor torácica, tremores, náusea, parestesias, medo de morrer, despersonalização ou desrealização. A prioridade no pronto-socorro é reconhecer o padrão e excluir sinais de causa orgânica grave.
+                        </p>
+                      </section>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+                          <h5 className="font-extrabold">Sinais de alerta orgânico</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {ANSIEDADE_ORGANIC_RED_FLAGS.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                        </section>
+                        <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                          <h5 className="font-extrabold">1ª linha: não medicamentosa</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {ANSIEDADE_NON_PHARMACOLOGICAL_STEPS.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                        </section>
+                      </div>
+
+                      <section className="overflow-hidden rounded-xl border border-slate-300 bg-white">
+                        <div className="bg-amber-100 px-4 py-3 font-extrabold text-slate-950">
+                          2ª linha: benzodiazepínico em dose baixa e reavaliação
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[720px] text-left">
+                            <thead className="bg-slate-100 text-slate-900">
+                              <tr>
+                                <th className="px-4 py-3 font-bold">Opção</th>
+                                <th className="px-4 py-3 font-bold">Dose</th>
+                                <th className="px-4 py-3 font-bold">Observação</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200">
+                              <tr>
+                                <td className="px-4 py-3 font-bold">Clonazepam</td>
+                                <td className="px-4 py-3">0,25 a 0,5 mg VO</td>
+                                <td className="px-4 py-3">Reavaliar resposta, sedação e segurança respiratória.</td>
+                              </tr>
+                              {getAnsiedadeMedicationAlternatives().map((item) => (
+                                <tr key={item}>
+                                  <td className="px-4 py-3 font-bold">Alternativa</td>
+                                  <td className="px-4 py-3" colSpan={2}>{item}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+
+                      <section className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-950">
+                        <h5 className="font-extrabold">Quando acionar saúde mental</h5>
+                        <p className="mt-2">
+                          Solicitar avaliação psicológica/psiquiátrica se houver recorrência importante, sofrimento funcional, risco psicossocial, ideação suicida, psicose, intoxicação, risco de auto/heteroagressão ou se o serviço estiver disponível para seguimento no pronto-socorro.
+                        </p>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {isVertigemPrescriptionFinalStep && (
                 <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -14042,6 +14173,99 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     >
                       {pepHivPrescriptionGenerated || hasPepHivPrescriptionSet(getPersistedPepHivPrescriptions()) ? 'Receita' : 'Gerar receita'}
                     </button>
+                  </div>
+                </div>
+              )}
+
+              {pepHivGuideOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                      <div>
+                        <h4 className="text-lg font-extrabold text-slate-950">Guia rápido - PEP ao HIV</h4>
+                        <p className="mt-1 text-sm leading-relaxed text-slate-600">
+                          Referência prática para decisão, prescrição e acompanhamento no pronto-socorro.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPepHivGuideOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                        title="Fechar"
+                        aria-label="Fechar guia rápido de PEP ao HIV"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                      <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+                        <h5 className="font-extrabold">Decisão em 5 perguntas</h5>
+                        <ol className="mt-2 list-decimal space-y-1 pl-5">
+                          <li>Houve material biológico com risco?</li>
+                          <li>Houve tipo de exposição com risco?</li>
+                          <li>O atendimento ocorreu em até 72 horas?</li>
+                          <li>A pessoa exposta tem teste de HIV negativo/não reagente?</li>
+                          <li>A fonte é positiva, reagente, desconhecida ou teve risco nos últimos 30 dias?</li>
+                        </ol>
+                      </section>
+
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <section className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+                          <h5 className="font-extrabold">Materiais com risco</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {PEP_HIV_RISK_MATERIALS.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                        </section>
+                        <section className="rounded-xl border border-orange-200 bg-orange-50 p-4 text-orange-950">
+                          <h5 className="font-extrabold">Exposições com risco</h5>
+                          <ul className="mt-2 list-disc space-y-1 pl-5">
+                            {PEP_HIV_RISK_EXPOSURES.map((item) => <li key={item}>{item}</li>)}
+                          </ul>
+                        </section>
+                      </div>
+
+                      <section className="overflow-hidden rounded-xl border border-slate-300 bg-white">
+                        <div className="bg-yellow-100 px-4 py-3 font-extrabold text-slate-950">
+                          Esquemas de PEP - iniciar no máximo até 72h após exposição
+                        </div>
+                        <div className="overflow-x-auto">
+                          <table className="w-full min-w-[760px] text-left">
+                            <thead className="bg-slate-100 text-slate-900">
+                              <tr>
+                                <th className="px-4 py-3 font-bold">Situação</th>
+                                <th className="px-4 py-3 font-bold">Esquema</th>
+                                <th className="px-4 py-3 font-bold">Posologia</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200">
+                              <tr>
+                                <td className="px-4 py-3 font-bold">Preferencial</td>
+                                <td className="px-4 py-3">Tenofovir/lamivudina + dolutegravir</td>
+                                <td className="px-4 py-3">TDF/3TC 300/300 mg VO 1x/dia + DTG 50 mg VO 1x/dia por 28 dias.</td>
+                              </tr>
+                              <tr>
+                                <td className="px-4 py-3 font-bold">Se impossibilidade de tenofovir</td>
+                                <td className="px-4 py-3">Zidovudina/lamivudina + dolutegravir</td>
+                                <td className="px-4 py-3">AZT/3TC 300/150 mg VO 12/12h + DTG 50 mg VO 1x/dia por 28 dias.</td>
+                              </tr>
+                              <tr>
+                                <td className="px-4 py-3 font-bold">Se impossibilidade de dolutegravir</td>
+                                <td className="px-4 py-3">Tenofovir/lamivudina + darunavir/ritonavir</td>
+                                <td className="px-4 py-3">TDF/3TC 1x/dia + DRV 800 mg + RTV 100 mg VO 1x/dia por 28 dias.</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </section>
+
+                      <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+                        <h5 className="font-extrabold">Orientações essenciais</h5>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {PEP_HIV_FOLLOW_UP_ORIENTATIONS.map((item) => <li key={item}>{item}</li>)}
+                        </ul>
+                      </section>
+                    </div>
                   </div>
                 </div>
               )}

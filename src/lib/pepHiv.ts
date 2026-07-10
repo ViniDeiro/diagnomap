@@ -6,19 +6,19 @@ const prescribedBy = 'Fluxograma PEP HIV'
 
 export const PEP_HIV_RISK_MATERIALS = [
   'Sangue',
-  'Semen',
+  'Sêmen',
   'Fluidos vaginais',
-  'Liquidos de serosas: peritoneal, pleural ou pericardico',
-  'Liquido amniotico',
-  'Liquor'
+  'Líquidos de serosas: peritoneal, pleural ou pericárdico',
+  'Líquido amniótico',
+  'Líquor'
 ]
 
 export const PEP_HIV_RISK_EXPOSURES = [
-  'Percutanea',
+  'Percutânea',
   'Membranas mucosas',
-  'Exposicao sexual desprotegida',
-  'Cutanea em pele nao integra',
-  'Mordedura com presenca de sangue'
+  'Exposição sexual desprotegida',
+  'Cutânea em pele não íntegra',
+  'Mordedura com presença de sangue'
 ]
 
 export const PEP_HIV_ALTERNATIVE_SCHEMES = [
@@ -27,11 +27,11 @@ export const PEP_HIV_ALTERNATIVE_SCHEMES = [
 ]
 
 export const PEP_HIV_FOLLOW_UP_ORIENTATIONS = [
-  'A PEP deve ser iniciada ate 72 horas apos a exposicao, com maior beneficio quanto mais precoce.',
-  'Repetir testagem para HIV 30 dias apos a exposicao, mesmo com PEP completa.',
-  'Considerar risco de outras ISTs e encaminhar para acompanhamento sorologico.',
-  'Orientar retorno imediato se sinais de toxicidade grave, intolerancia importante, ictericia, rash extenso ou vomitos persistentes.',
-  'A PEP pode ser continuada/acompanhada em unidades de Atencao Primaria do SUS; garantir sigilo e referencia adequada quando necessario.'
+  'A PEP deve ser iniciada até 72 horas após a exposição, com maior benefício quanto mais precoce.',
+  'Repetir testagem para HIV 30 dias após a exposição, mesmo com PEP completa.',
+  'Considerar risco de outras ISTs e hepatites virais; encaminhar para acompanhamento sorológico conforme protocolo local.',
+  'Orientar retorno imediato se sinais de toxicidade grave, intolerância importante, icterícia, rash extenso ou vômitos persistentes.',
+  'A PEP pode ser continuada/acompanhada em unidades de Atenção Primária do SUS; garantir sigilo e referência adequada quando necessário.'
 ]
 
 export const buildPepHivPrescriptionItems = (): PrescriptionDraft[] => [
@@ -40,7 +40,7 @@ export const buildPepHivPrescriptionItems = (): PrescriptionDraft[] => [
     dosage: '300 mg/300 mg',
     frequency: 'Tomar 1 comprimido VO 1x/dia',
     duration: '28 dias',
-    instructions: 'Iniciar o quanto antes, no maximo ate 72 horas apos a exposicao.',
+    instructions: 'Iniciar o quanto antes, no máximo até 72 horas após a exposição.',
     prescribedBy
   },
   {
@@ -54,9 +54,9 @@ export const buildPepHivPrescriptionItems = (): PrescriptionDraft[] => [
   {
     medication: 'Bromoprida 10 mg ou Ondansetrona 4 mg',
     dosage: '1 comprimido',
-    frequency: 'VO a cada 8 horas se enjoo ou vomitos',
+    frequency: 'VO a cada 8 horas se enjoo ou vômitos',
     duration: 'Conforme sintomas',
-    instructions: 'Usar apenas se necessario para controle de nauseas ou vomitos.',
+    instructions: 'Usar apenas se necessário para controle de náuseas ou vômitos.',
     prescribedBy
   }
 ]

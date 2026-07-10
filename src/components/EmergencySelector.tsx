@@ -58,15 +58,9 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     const allAvailableFlowcharts = allFlowcharts
     const implementedFlowchartsCount = allAvailableFlowcharts.filter(flowchart => flowchart.implemented).length
     const totalFlowchartsCount = allAvailableFlowcharts.length
-    const finishedFlowchartIds = ['tvp', 'anafilaxia', 'paralisia_bell']
+    const inProgressFlowchartIds = ['pneumonia', 'influenza', 'itu', 'crise_ansiedade']
+    const finishedFlowchartIds = ['paralisia_bell', 'tvp', 'atendimento_antirrabico']
     const finishedFlowchartsCount = finishedFlowchartIds.length
-
-    const clinicalProtocols: Array<{ id: string; name: string; category: string; implemented: boolean }> = [
-        { id: 'sepse_protocolo', name: 'Sepse Grave (Protocolo Clínico)', category: 'infectious', implemented: false },
-        { id: 'iam_protocolo', name: 'IAM (Protocolo Clínico)', category: 'cardiovascular', implemented: false },
-        { id: 'avc_protocolo', name: 'AVC (Protocolo Clínico)', category: 'neurological', implemented: false },
-        { id: 'dengue_protocolo', name: 'Dengue (Protocolo Clínico)', category: 'infectious', implemented: false },
-    ]
 
     const normalizeText = (value: string) =>
         value
@@ -75,8 +69,14 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
             .toLowerCase()
 
     const visibleFlowcharts = activeTab === 'finished'
-        ? allAvailableFlowcharts.filter(flowchart => finishedFlowchartIds.includes(flowchart.id))
-        : allAvailableFlowcharts
+        ? allAvailableFlowcharts.filter(flowchart => inProgressFlowchartIds.includes(flowchart.id))
+        : activeTab === 'protocols'
+            ? allAvailableFlowcharts.filter(flowchart => finishedFlowchartIds.includes(flowchart.id))
+            : allAvailableFlowcharts.filter(flowchart =>
+                flowchart.implemented &&
+                !inProgressFlowchartIds.includes(flowchart.id) &&
+                !finishedFlowchartIds.includes(flowchart.id)
+            )
 
     const filteredFlowcharts = visibleFlowcharts.filter(flowchart => {
         const normalizedSearch = normalizeText(searchTerm.trim())
@@ -212,7 +212,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                     : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                             )}
                         >
-                            Fluxogramas
+                            Implementados
                         </button>
                         <button
                             onClick={() => setActiveTab('finished')}
@@ -223,7 +223,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                     : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                             )}
                         >
-                            Finalizados
+                            Em andamento
                         </button>
                         <button
                             onClick={() => setActiveTab('protocols')}
@@ -234,7 +234,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                     : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
                             )}
                         >
-                            Protocolos Clínicos
+                            Finalizados
                         </button>
                     </div>
                 </div>
@@ -253,10 +253,10 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                     />
                 </div>
 
-                {(activeTab === 'flowcharts' || activeTab === 'finished') && (
+                {(activeTab === 'flowcharts' || activeTab === 'finished' || activeTab === 'protocols') && (
                 <div className="mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     {/* Filtros */}
-                    <div className={clsx("flex flex-wrap items-center gap-3", activeTab === 'finished' && "hidden")}>
+                    <div className={clsx("flex flex-wrap items-center gap-3", activeTab !== 'flowcharts' && "hidden")}>
                         <div className="flex items-center space-x-2 mr-2">
                             <Filter className="w-4 h-4 text-slate-400" />
                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">Filtros</span>
@@ -322,6 +322,20 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                 )}
 
                 {activeTab === 'finished' && (
+                  <div className="mb-8 rounded-2xl border border-amber-100 bg-amber-50 p-5">
+                    <div className="flex items-start gap-3">
+                      <Activity className="mt-0.5 h-5 w-5 text-amber-700" />
+                      <div>
+                        <h2 className="text-sm font-extrabold uppercase tracking-wide text-amber-900">Fluxogramas em andamento</h2>
+                        <p className="mt-1 text-sm text-amber-800">
+                          Estes fluxogramas já estão implementados, mas ainda estão em revisão de conteúdo, interface ou relatório médico.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'protocols' && (
                   <div className="mb-8 rounded-2xl border border-blue-100 bg-blue-50 p-5">
                     <div className="flex items-start gap-3">
                       <CheckCircle className="mt-0.5 h-5 w-5 text-blue-700" />
@@ -335,7 +349,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                   </div>
                 )}
 
-                {(activeTab === 'flowcharts' || activeTab === 'finished') && (
+                {(activeTab === 'flowcharts' || activeTab === 'finished' || activeTab === 'protocols') && (
                 <>
                 {filteredFlowcharts.length === 0 ? (
                     <motion.div
@@ -491,75 +505,6 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                     </div>
                 )}
                 </>
-                )}
-
-                {activeTab === 'protocols' && (
-                    <div className={clsx(
-                        "gap-6",
-                        viewMode === 'grid'
-                            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-                            : "space-y-4"
-                    )}>
-                        {clinicalProtocols
-                            .filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                            .map((proto, index) => (
-                            <motion.div
-                                key={proto.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.05 }}
-                                whileHover={{ y: -4 }}
-                                onClick={() => {
-                                    setSelectedProtocol({ name: proto.name, category: proto.category })
-                                    setShowDevelopmentModal(true)
-                                }}
-                                className={clsx(
-                                    "bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-all duration-300 cursor-pointer group",
-                                    !proto.implemented && "opacity-80 grayscale-[0.3] hover:grayscale-0 hover:opacity-100"
-                                )}
-                            >
-                                <div className={clsx(
-                                    "flex flex-col h-full",
-                                    viewMode === 'list' && "flex-row items-center gap-6"
-                                )}>
-                                    {/* Header do Card */}
-                                    <div className={clsx(
-                                        "flex items-start justify-between mb-4",
-                                        viewMode === 'list' && "mb-0 w-1/4"
-                                    )}>
-                                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                                            <Stethoscope className="w-6 h-6" />
-                                        </div>
-                                        {viewMode === 'grid' && (
-                                            !proto.implemented ? (
-                                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-600 border border-amber-100 uppercase tracking-wide">
-                                                    Em breve
-                                                </span>
-                                            ) : (
-                                                <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                            )
-                                        )}
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <h3 className="text-lg font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">
-                                            {proto.name}
-                                        </h3>
-                                        <p className="text-sm text-slate-500 mb-4 line-clamp-2">
-                                            Diretriz clínica completa para condução de casos de {proto.name.split(' ')[0]}.
-                                        </p>
-
-                                        <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-50">
-                                            <span className="flex items-center space-x-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-lg">
-                                                {getCategoryIcon(proto.category as EmergencyCategory)}
-                                                <span className="truncate max-w-[140px]">{getCategoryName(proto.category as EmergencyCategory)}</span>
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
-                    </div>
                 )}
 
                 {/* Modal de Desenvolvimento */}

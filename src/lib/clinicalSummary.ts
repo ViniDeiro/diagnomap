@@ -307,6 +307,239 @@ const buildTVPClinicalSummary = (
   }
 }
 
+const pepHivDecisionLabels: Record<string, string> = {
+  material_risco: 'houve contato com material biológico com risco de transmissão do HIV',
+  sem_material: 'não houve contato com material biológico de risco para transmissão do HIV',
+  risco: 'o tipo de exposição foi classificado como potencialmente transmissor',
+  sem_risco: 'o tipo de exposição não foi compatível com risco relevante de transmissão',
+  ate_72h: 'o atendimento ocorreu dentro da janela de até 72 horas após a exposição',
+  fora_72h: 'o atendimento ocorreu após 72 horas da exposição',
+  exposta_positivo: 'a pessoa exposta apresentou teste de HIV positivo ou reagente',
+  exposta_negativo: 'a pessoa exposta apresentou teste de HIV negativo ou não reagente',
+  fonte_indica: 'a pessoa fonte foi classificada como HIV positiva, reagente ou de status desconhecido',
+  fonte_negativa: 'a pessoa fonte foi classificada como HIV negativa',
+  risco_30d: 'a pessoa fonte teve exposição de risco nos últimos 30 dias',
+  sem_risco_30d: 'não houve exposição de risco recente da pessoa fonte nos últimos 30 dias'
+}
+
+const getPepHivDecision = (answers: Record<string, string>, stepId: string) => {
+  const parsed = parseFlowAnswerForSummary(answers[stepId])
+  const decision = typeof parsed?.decision === 'string' ? parsed.decision : answers[stepId]
+  return decision ? pepHivDecisionLabels[decision] || formatClinicalValue(decision) : ''
+}
+
+const buildPepHivClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const currentStepData = flowchart.steps[currentStep]
+  const doctorSignature = formatDoctorSignature(doctor)
+  const materialDecision = getPepHivDecision(answers, 'pep_material_risco')
+  const exposureDecision = getPepHivDecision(answers, 'pep_tipo_exposicao')
+  const windowDecision = getPepHivDecision(answers, 'pep_janela_72h')
+  const exposedDecision = getPepHivDecision(answers, 'pep_exposta_hiv')
+  const sourceDecision = getPepHivDecision(answers, 'pep_fonte_hiv')
+  const sourceRiskDecision = getPepHivDecision(answers, 'pep_fonte_risco_30d')
+
+  const finalTitle = currentStepData?.title || flowchart.name
+  const finalDescription = currentStepData?.description || flowchart.description
+  const chiefComplaint = patient.admission?.symptoms?.join('; ') || 'exposição potencial ao HIV com necessidade de avaliação para profilaxia pós-exposição'
+  const isPepIndicated = currentStep === 'pep_iniciar'
+  const isNoRiskMaterial = currentStep === 'pep_sem_material_risco'
+  const isNoRiskExposure = currentStep === 'pep_sem_exposicao_risco'
+  const isOutsideWindow = currentStep === 'pep_fora_janela'
+  const isExposedPositive = currentStep === 'pep_exposta_hiv_positivo'
+  const isSourceLowRisk = currentStep === 'pep_nao_indicada_fonte_sem_risco'
+
+  const decisionLines = uniqueTextItems([
+    materialDecision,
+    exposureDecision,
+    windowDecision,
+    exposedDecision,
+    sourceDecision,
+    sourceRiskDecision
+  ])
+
+  const indicationSentence = isPepIndicated
+    ? 'A estratificação do risco sustentou indicação de PEP ao HIV, pois houve exposição de risco dentro da janela terapêutica, com pessoa exposta sem evidência de infecção prévia e pessoa fonte positiva, reagente, desconhecida ou com risco recente.'
+    : isNoRiskMaterial
+      ? 'A PEP ao HIV não foi indicada porque o material envolvido não foi classificado como biologicamente relevante para transmissão do HIV.'
+      : isNoRiskExposure
+        ? 'A PEP ao HIV não foi indicada porque a via ou o tipo de contato não configurou exposição com risco relevante de transmissão.'
+        : isOutsideWindow
+          ? 'A PEP ao HIV não foi indicada por atendimento após a janela de 72 horas, período no qual não há benefício comprovado para início da profilaxia.'
+          : isExposedPositive
+            ? 'A PEP ao HIV não foi indicada porque a pessoa exposta apresentou teste positivo ou reagente, devendo ser encaminhada para cuidado clínico especializado em HIV.'
+            : isSourceLowRisk
+              ? 'A PEP ao HIV não foi indicada porque a pessoa fonte foi classificada como HIV negativa e sem exposição de risco recente nos últimos 30 dias.'
+              : 'A decisão final seguiu a estratificação do fluxograma de PEP ao HIV, considerando risco biológico, tipo de exposição, janela temporal e status sorológico disponível.'
+
+  const conductSentence = isPepIndicated
+    ? 'Foi orientado iniciar profilaxia imediatamente, preferencialmente com tenofovir/lamivudina associado a dolutegravir por 28 dias, além de acompanhamento sorológico, avaliação de ISTs e hepatites virais, orientação de adesão e retorno se sinais de toxicidade ou intolerância.'
+    : isOutsideWindow
+      ? 'Foi orientado manter acompanhamento sorológico da pessoa exposta, avaliar outras ISTs/hepatites conforme contexto e registrar orientações de retorno.'
+      : isExposedPositive
+        ? 'Foi indicado encaminhamento para acompanhamento clínico especializado, com confirmação diagnóstica e vinculação ao cuidado, sem uso de PEP como profilaxia.'
+        : 'Foi orientado que a PEP não é necessária para HIV neste cenário, mantendo aconselhamento, prevenção combinada e reavaliação se surgirem novas informações sobre a exposição.'
+
+  const title = isPepIndicated
+    ? 'RELATÓRIO MÉDICO - PROFILAXIA PÓS-EXPOSIÇÃO AO HIV'
+    : 'RELATÓRIO MÉDICO - AVALIAÇÃO DE EXPOSIÇÃO AO HIV'
+  const finalNarrative = `${indicationSentence} ${conductSentence}`
+  const examinationLine = 'Não há necessidade de exame físico específico para definir PEP ao HIV quando a decisão depende principalmente da caracterização da exposição; eventuais lesões, violência sexual, ferimentos ou sinais de IST devem ser avaliados e documentados no atendimento presencial.'
+
+  const paragraphs = [
+    title,
+    '',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint}. A avaliação foi conduzida como urgência médica por possível exposição ao HIV, com objetivo de definir indicação de profilaxia pós-exposição dentro da janela terapêutica.`,
+    '',
+    decisionLines.length > 0
+      ? `Na história da exposição e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.`
+      : 'Na história da exposição, ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório.',
+    '',
+    examinationLine,
+    '',
+    `A impressão clínica final foi: ${finalTitle}. ${finalDescription}`,
+    '',
+    finalNarrative,
+    '',
+    doctorSignature
+  ]
+  const continuousText = paragraphs.join('\n')
+
+  return {
+    chiefComplaint,
+    historyLines: decisionLines,
+    examinationLines: [examinationLine],
+    scoreLines: uniqueTextItems([
+      windowDecision || null,
+      exposedDecision || null,
+      sourceDecision || sourceRiskDecision || null
+    ]),
+    finalTitle,
+    finalDescription,
+    finalNarrative,
+    doctorSignature,
+    conductLines: [conductSentence],
+    continuousText,
+    text: continuousText
+  }
+}
+
+const ansiedadeDecisionLabels: Record<string, string> = {
+  iniciar: 'foi iniciada avaliação estruturada de crise de ansiedade/ataque de pânico no pronto-socorro',
+  organico: 'houve suspeita de causa orgânica ou sinal de alerta que impede atribuir o quadro exclusivamente à ansiedade',
+  sem_organico: 'não foram identificados sinais de causa orgânica grave após avaliação inicial dirigida',
+  melhorou: 'houve melhora clínica com acolhimento, psicoeducação e abordagem não medicamentosa',
+  persistente: 'os sintomas persistiram ou houve sofrimento importante apesar da abordagem não medicamentosa',
+  avaliacao_saude_mental: 'foi indicado seguimento ou avaliação psicológica/psiquiátrica conforme disponibilidade e contexto clínico'
+}
+
+const getAnsiedadeDecision = (answers: Record<string, string>, stepId: string) => {
+  const parsed = parseFlowAnswerForSummary(answers[stepId])
+  const decision = typeof parsed?.decision === 'string' ? parsed.decision : answers[stepId]
+  return decision ? ansiedadeDecisionLabels[decision] || formatClinicalValue(decision) : ''
+}
+
+const buildAnsiedadeClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const currentStepData = flowchart.steps[currentStep]
+  const doctorSignature = formatDoctorSignature(doctor)
+  const initialDecision = getAnsiedadeDecision(answers, 'ansiedade_inicio')
+  const organicDecision = getAnsiedadeDecision(answers, 'ansiedade_excluir_organico')
+  const nonDrugDecision = getAnsiedadeDecision(answers, 'ansiedade_abordagem_nao_medicamentosa')
+  const medicationDecision = getAnsiedadeDecision(answers, 'ansiedade_medicamentosa')
+  const decisionLines = uniqueTextItems([
+    initialDecision,
+    organicDecision,
+    nonDrugDecision,
+    medicationDecision
+  ])
+
+  const finalTitle = currentStepData?.title || flowchart.name
+  const finalDescription = currentStepData?.description || flowchart.description
+  const chiefComplaint = patient.admission?.symptoms?.join('; ') || 'episódio súbito de ansiedade intensa, medo ou desconforto com sintomas físicos associados'
+  const isOrganic = currentStep === 'ansiedade_causa_organica'
+  const isDischarge = currentStep === 'ansiedade_alta_orientada'
+  const isPsych = currentStep === 'ansiedade_avaliacao_psiquiatrica'
+  const hadMedicationStep = history.includes('ansiedade_medicamentosa') || currentStep === 'ansiedade_medicamentosa'
+
+  const clinicalImpression = isOrganic
+    ? 'O quadro não deve ser encerrado como crise de ansiedade até investigação e estabilização da causa orgânica suspeita.'
+    : isDischarge
+      ? 'O quadro foi compatível com crise de ansiedade/ataque de pânico após avaliação inicial sem sinais de causa orgânica grave, com melhora após medidas não medicamentosas.'
+      : isPsych
+        ? `O quadro foi compatível com crise de ansiedade/ataque de pânico após triagem de segurança, com necessidade de ${hadMedicationStep ? 'abordagem medicamentosa em dose baixa e ' : ''}avaliação ou seguimento em saúde mental.`
+        : 'O caso foi conduzido como suspeita de crise de ansiedade/ataque de pânico, mantendo necessidade de reavaliação clínica conforme evolução e sinais de segurança.'
+
+  const conductSentence = isOrganic
+    ? 'Foi indicada investigação direcionada conforme manifestação predominante, incluindo possibilidade de síndrome coronariana aguda, arritmia, AVC, hipoxemia, broncoespasmo, intoxicação, hipoglicemia ou outra causa tóxico-metabólica.'
+    : isDischarge
+      ? 'Foram reforçadas orientações de respiração diafragmática, estratégias de aterramento, redução de estímulos, sinais de retorno e seguimento ambulatorial se recorrência ou prejuízo funcional.'
+      : isPsych
+        ? 'Foi recomendado solicitar avaliação psicológica/psiquiátrica quando disponível no pronto-socorro ou programar seguimento ambulatorial, com atenção a ideação suicida, risco psicossocial, intoxicação, psicose ou incapacidade de autocuidado.'
+        : 'Foi mantida abordagem escalonada, priorizando acolhimento, psicoeducação, respiração diafragmática e benzodiazepínico em dose baixa apenas se persistirem sofrimento importante e não houver contraindicação clínica.'
+
+  const medicationSentence = hadMedicationStep && !isOrganic
+    ? 'Na etapa medicamentosa, foi considerado benzodiazepínico em baixa dose, com necessidade de reavaliar resposta clínica, nível de sedação e segurança respiratória, evitando uso em intoxicação por álcool ou outros depressores, hipoxemia, sedação excessiva ou risco respiratório.'
+    : ''
+
+  const title = isOrganic
+    ? 'RELATÓRIO MÉDICO - SINTOMAS ANSIOSOS COM SUSPEITA DE CAUSA ORGÂNICA'
+    : 'RELATÓRIO MÉDICO - CRISE DE ANSIEDADE / ATAQUE DE PÂNICO'
+  const finalNarrative = [clinicalImpression, medicationSentence, conductSentence].filter(Boolean).join(' ')
+  const examinationLine = isOrganic
+    ? 'A avaliação física e complementar deve ser direcionada ao sinal de alerta predominante, incluindo sinais vitais, oximetria, glicemia, ECG, exame neurológico ou avaliação respiratória conforme apresentação.'
+    : 'Na avaliação inicial, recomenda-se registrar sinais vitais, oximetria, glicemia quando indicada, exame cardiovascular, respiratório e neurológico direcionado, especialmente quando houver dor torácica, palpitações, dispneia, parestesias ou alteração do nível de consciência.'
+
+  const paragraphs = [
+    title,
+    '',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint}. A avaliação foi conduzida no contexto de sintomas ansiosos agudos no pronto-socorro, com prioridade inicial de excluir causas orgânicas potencialmente graves antes de atribuir o quadro a ansiedade.`,
+    '',
+    decisionLines.length > 0
+      ? `Na história da moléstia atual e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.`
+      : 'Na história da moléstia atual, ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório.',
+    '',
+    examinationLine,
+    '',
+    `A impressão clínica final foi: ${finalTitle}. ${finalDescription}`,
+    '',
+    finalNarrative,
+    '',
+    doctorSignature
+  ]
+  const continuousText = paragraphs.join('\n')
+
+  return {
+    chiefComplaint,
+    historyLines: decisionLines,
+    examinationLines: [examinationLine],
+    scoreLines: uniqueTextItems([
+      organicDecision || null,
+      nonDrugDecision || null,
+      medicationDecision || null
+    ]),
+    finalTitle,
+    finalDescription,
+    finalNarrative,
+    doctorSignature,
+    conductLines: [conductSentence],
+    continuousText,
+    text: continuousText
+  }
+}
+
 const formatStructuredAnswer = (parsed: FlowSummaryAnswer | null) => {
   if (!parsed) return ''
   const lines: string[] = []
@@ -376,6 +609,14 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'tvp') {
     return buildTVPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'pep_hiv') {
+    return buildPepHivClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'crise_ansiedade') {
+    return buildAnsiedadeClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
   }
 
   const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {

@@ -6175,7 +6175,7 @@ export const monoartriteFlowchart: EmergencyFlowchart = {
 // Fluxograma de Crise de Ansiedade / Ataque de Pânico
 export const ansiedadeFlowchart: EmergencyFlowchart = {
   id: 'crise_ansiedade',
-  name: 'Crise de Ansiedade',
+  name: 'Crise de Ansiedade / Ataque de Pânico',
   description: 'Abordagem sistematizada do ataque de pânico no pronto-socorro, com exclusão inicial de causas orgânicas e manejo escalonado.',
   category: 'psychiatric',
   priority: 'medium',
@@ -6194,16 +6194,30 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
       description: 'Episódio súbito de medo ou desconforto intenso com sintomas físicos e/ou cognitivos.',
       type: 'question',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-            <p><strong>Termo técnico:</strong> segundo o DSM-5, o termo correto para episódios súbitos de ansiedade intensa é ataque de pânico.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p class="font-extrabold">Ataque de pânico no pronto-socorro</p>
+                <p class="mt-1">Episódio súbito e abrupto de medo ou desconforto intenso, acompanhado de sintomas físicos e/ou cognitivos.</p>
+              </div>
+              <button type="button" data-ansiedade-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-blue-400 bg-white text-sm font-extrabold text-blue-800 transition-colors hover:bg-blue-100" title="Ver guia rápido de crise de ansiedade" aria-label="Ver guia rápido de crise de ansiedade">i</button>
+            </div>
           </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Eventos súbitos e abruptos de medo e desconforto intenso.</li>
-            <li>Podem vir com taquicardia, sudorese, tremores, náuseas, asfixia, dor precordial, tontura, formigamento e parestesias.</li>
-            <li>Também podem ocorrer medo excessivo da morte, despersonalização, desrealização e sensação de perda de controle.</li>
-            <li>A crise costuma ser comum, passageira e durar entre 10 e 30 minutos.</li>
-          </ul>
+          <div class="grid gap-3 lg:grid-cols-2">
+            <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+              <p class="font-bold">Sintomas frequentes</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Taquicardia, sudorese, tremores, náuseas, sensação de asfixia ou aperto torácico.</li>
+                <li>Tontura, formigamentos, parestesias, calafrios ou ondas de calor.</li>
+                <li>Medo de morrer, medo de perder o controle, despersonalização ou desrealização.</li>
+              </ul>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <p class="font-bold">Ponto-chave</p>
+              <p class="mt-2">A crise costuma ser autolimitada, mas o diagnóstico é clínico e de segurança: primeiro exclua causas orgânicas que simulam ansiedade.</p>
+            </div>
+          </div>
         </div>
       `,
       options: [
@@ -6212,21 +6226,35 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
     },
     ansiedade_excluir_organico: {
       id: 'ansiedade_excluir_organico',
-      title: 'Excluir Causa Orgânica',
+      title: 'Excluir causa orgânica e risco imediato',
       description: 'Antes de concluir ansiedade, pesquisar diagnósticos potencialmente graves.',
       type: 'question',
       critical: true,
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
             <p><strong>Não atribuir automaticamente à ansiedade:</strong> excluir rapidamente causas orgânicas que podem simular crise de pânico.</p>
           </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Dor precordial → considerar SCA.</li>
-            <li>Taquicardia → considerar arritmias.</li>
-            <li>Parestesias ou queixas neurológicas → procurar sinais focais compatíveis com AVC.</li>
-            <li>Dispneia → considerar exacerbação de DPOC, broncoespasmo, hipoxemia ou outra causa respiratória.</li>
-          </ul>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <p class="font-bold text-slate-950">Sinais que mudam a rota</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5 text-slate-800">
+                <li>Dor precordial, irradiação, sudorese fria ou fatores de risco cardiovasculares → avaliar SCA.</li>
+                <li>Taquicardia sustentada, pulso irregular, síncope ou palpitações importantes → avaliar arritmia.</li>
+                <li>Parestesias com assimetria, déficit focal, alteração de fala ou confusão → avaliar AVC/causa neurológica.</li>
+                <li>Dispneia, sibilância, hipoxemia, dor pleurítica ou uso de substâncias → avaliar causa respiratória/tóxica.</li>
+              </ul>
+            </div>
+            <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-950">
+              <p class="font-bold">Avaliação mínima sugerida conforme quadro</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Sinais vitais, oximetria e glicemia capilar quando indicado.</li>
+                <li>ECG se dor torácica, palpitações, síncope ou taquicardia persistente.</li>
+                <li>Exame neurológico direcionado se queixas sensitivas/motoras ou alteração de fala.</li>
+                <li>Investigar uso de estimulantes, álcool, drogas, abstinência e medicações.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       `,
       options: [
@@ -6240,14 +6268,22 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
       description: 'Acolhimento, validação e respiração diafragmática.',
       type: 'question',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p><strong>Acolhimento:</strong> tranquilize o paciente explicando que os sintomas vêm da crise de ansiedade e não representam risco de morte após exclusão de causas orgânicas. Mostre empatia e valide as sensações como reais.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+            <p class="font-bold">Acolhimento e psicoeducação</p>
+            <p class="mt-1">Explique que, após exclusão de sinais de causa orgânica grave, os sintomas são reais, comuns e geralmente transitórios. Evite confrontar o paciente; valide o desconforto e reduza estímulos do ambiente.</p>
           </div>
-          <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-500">
-            <p><strong>Respiração diafragmática:</strong> instruir o paciente a respirar com o diafragma e limitar a utilização da musculatura intercostal.</p>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+              <p class="font-bold">Respiração diafragmática</p>
+              <p class="mt-2">Orientar inspiração nasal lenta usando o abdome, pausa breve e expiração prolongada. Repetir por alguns minutos, com voz calma e instruções curtas.</p>
+            </div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4 text-violet-950">
+              <p class="font-bold">Aterramento</p>
+              <p class="mt-2">Estimular o paciente a nomear objetos do ambiente, sentir os pés no chão e reconhecer que a crise tende a reduzir gradualmente.</p>
+            </div>
           </div>
-          <p>Pergunte sobre fatores de estresse e explique que a crise é comum, passageira e dura entre 10 e 30 minutos.</p>
+          <p class="rounded-xl border border-slate-200 bg-white p-4 text-slate-800">Reavaliar após a intervenção. Se houver melhora sustentada, orientar alta segura; se persistirem sofrimento intenso, hiperventilação importante, recorrência ou incapacidade de controle, considerar abordagem medicamentosa.</p>
         </div>
       `,
       options: [
@@ -6262,17 +6298,27 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
       type: 'question',
       group: 'Medicamentosa',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-            <p><strong>Conduta:</strong> considerar benzodiazepínico em dose baixa e reavaliar resposta clínica, sedação e segurança respiratória.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p class="font-bold">Usar quando sintomas persistem apesar da abordagem inicial</p>
+            <p class="mt-1">Considerar benzodiazepínico em dose baixa, com reavaliação de resposta clínica, nível de sedação, oximetria e segurança respiratória.</p>
           </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Clonazepam 0,25 ou 0,5 mg VO e reavaliar.</li>
-            <li>Clonazepam solução oral 2 mg/mL: 5 a 10 gotas e reavaliar.</li>
-            <li>Diazepam 5 mg VO e reavaliar.</li>
-            <li>Alprazolam 0,25 ou 0,5 mg VO e reavaliar.</li>
-          </ul>
-          <p>Evitar benzodiazepínicos em intoxicação por álcool/outros depressores, sedação excessiva, risco respiratório ou contraindicação clínica.</p>
+          <div class="overflow-x-auto rounded-xl border border-slate-300 bg-white">
+            <table class="w-full min-w-[720px] text-left">
+              <thead class="bg-blue-100 text-slate-950">
+                <tr><th class="px-3 py-2 font-bold">Opção</th><th class="px-3 py-2 font-bold">Dose prática</th><th class="px-3 py-2 font-bold">Observação</th></tr>
+              </thead>
+              <tbody class="divide-y divide-slate-200">
+                <tr><td class="px-3 py-2 font-bold">Clonazepam comprimido</td><td class="px-3 py-2">0,25 a 0,5 mg VO</td><td class="px-3 py-2">Reavaliar antes de repetir dose.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Clonazepam solução 2 mg/mL</td><td class="px-3 py-2">5 a 10 gotas VO</td><td class="px-3 py-2">Útil quando há dificuldade com comprimido.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Diazepam</td><td class="px-3 py-2">5 mg VO</td><td class="px-3 py-2">Maior risco de sedação em idosos/frágeis.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Alprazolam</td><td class="px-3 py-2">0,25 a 0,5 mg VO</td><td class="px-3 py-2">Evitar uso continuado sem seguimento.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+            <p><strong>Evitar benzodiazepínico</strong> em intoxicação por álcool/outros depressores, sedação excessiva, hipoxemia, risco respiratório, apneia do sono descompensada, gestação sem avaliação individualizada ou contraindicação clínica.</p>
+          </div>
         </div>
       `,
       options: [
@@ -6287,10 +6333,10 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
       group: 'Alta',
       content: `
         <div class="space-y-3 text-sm">
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
             <p><strong>Conduta:</strong> alta com orientações, sinais de retorno e encaminhamento ambulatorial quando indicado.</p>
           </div>
-          <ul class="list-disc pl-5 space-y-1">
+          <ul class="list-disc space-y-1 pl-5">
             <li>Reforçar que causas orgânicas graves foram avaliadas conforme quadro clínico.</li>
             <li>Ensinar respiração diafragmática e estratégias de aterramento.</li>
             <li>Orientar retorno se dor torácica, dispneia, síncope, déficit neurológico, confusão, ideação suicida ou piora importante.</li>
@@ -6306,8 +6352,13 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
       type: 'result',
       group: 'Saúde mental',
       content: `
-        <div class="bg-rose-50 p-3 rounded border-l-4 border-rose-500 text-sm">
-          <p><strong>Conduta:</strong> se serviço disponível no pronto-socorro, solicitar avaliação psicológica/psiquiátrica. Programar seguimento ambulatorial conforme caso, recorrência, sofrimento funcional, risco psicossocial ou ideação suicida.</p>
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-950">
+            <p><strong>Conduta:</strong> se serviço disponível no pronto-socorro, solicitar avaliação psicológica/psiquiátrica. Programar seguimento ambulatorial conforme caso, recorrência, sofrimento funcional, risco psicossocial ou ideação suicida.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-white p-4 text-slate-800">
+            <p>Se houver ideação suicida, risco de auto/heteroagressão, psicose, intoxicação grave ou incapacidade de autocuidado, manter observação protegida e avaliação especializada urgente.</p>
+          </div>
         </div>
       `,
       options: []
@@ -6319,8 +6370,13 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
       type: 'result',
       critical: true,
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>Conduta:</strong> conduzir investigação conforme suspeita clínica: ECG/troponina se dor torácica, monitorização e ECG se taquiarritmia, avaliação neurológica se sinais focais, oximetria/gasometria/broncoespasmo se dispneia, além de glicemia e causas tóxico-metabólicas quando indicado.</p>
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+            <p><strong>Conduta:</strong> conduzir investigação conforme suspeita clínica: ECG/troponina se dor torácica, monitorização e ECG se taquiarritmia, avaliação neurológica se sinais focais, oximetria/gasometria/broncoespasmo se dispneia, além de glicemia e causas tóxico-metabólicas quando indicado.</p>
+          </div>
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p>O diagnóstico de crise de ansiedade/ataque de pânico deve ser retomado somente após estabilização e exclusão razoável da causa orgânica suspeita.</p>
+          </div>
         </div>
       `,
       options: []
@@ -7039,11 +7095,11 @@ export const agitacaoPsicomotoraFlowchart: EmergencyFlowchart = {
   }
 }
 
-// Fluxograma de Profilaxia Pos-exposicao (PEP) ao HIV no Pronto Socorro
+// Fluxograma de Profilaxia Pós-Exposição (PEP) ao HIV no pronto-socorro
 export const pepHivFlowchart: EmergencyFlowchart = {
   id: 'pep_hiv',
-  name: 'Profilaxia Pos-exposicao (PEP) ao HIV',
-  description: 'Decisao de indicacao de PEP ao HIV apos exposicao, com janela de 72 horas, avaliacao da pessoa exposta e status da pessoa fonte.',
+  name: 'Profilaxia Pós-Exposição (PEP) ao HIV',
+  description: 'Decisão de indicação de PEP ao HIV após exposição, com janela de 72 horas, avaliação da pessoa exposta e status da pessoa fonte.',
   category: 'infectious',
   priority: 'high',
   icon: 'shield',
@@ -7060,229 +7116,260 @@ export const pepHivFlowchart: EmergencyFlowchart = {
   steps: {
     pep_inicio: {
       id: 'pep_inicio',
-      title: 'Situacao de Exposicao ao HIV',
-      description: 'A primeira abordagem apos exposicao de risco ao HIV e uma urgencia medica.',
+      title: 'Situação de Exposição ao HIV',
+      description: 'A primeira abordagem após exposição de risco ao HIV é uma urgência médica.',
       type: 'question',
       critical: true,
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-cyan-50 p-3 rounded border-l-4 border-cyan-600">
-            <p><strong>PEP:</strong> deve ser iniciada em ate 72 horas apos a exposicao, com maior beneficio quanto mais precoce for administrada.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p class="font-extrabold">PEP ao HIV é urgência médica</p>
+                <p class="mt-1">Iniciar o mais precocemente possível, no máximo até 72 horas após a exposição.</p>
+              </div>
+              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-400 bg-white text-sm font-extrabold text-cyan-800 transition-colors hover:bg-cyan-100" title="Ver guia rápido de PEP ao HIV" aria-label="Ver guia rápido de PEP ao HIV">i</button>
+            </div>
           </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Quando o status sorologico da pessoa fonte e desconhecido, indicar PEP em penetracao vaginal e/ou anal, com ou sem sexo oral.</li>
-            <li>Em violencia sexual com sexo oral exclusivo, mesmo com ejaculacao na cavidade oral, avaliar caso a caso.</li>
-            <li>Nao indicar se houve uso correto de preservativo durante todo o ato sexual.</li>
-            <li>Nao indicar em exposicao cronica e repetida ao mesmo agressor, devendo avaliar acompanhamento especializado.</li>
-            <li>Toda exposicao ao HIV tambem deve ser considerada risco para outras ISTs.</li>
-          </ul>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+              <p class="font-bold">Não pode deixar passar</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Avaliar material biológico, tipo de exposição e janela de 72 horas.</li>
+                <li>Testar a pessoa exposta antes da decisão sempre que possível.</li>
+                <li>Considerar ISTs, hepatites virais, contracepção de emergência e violência sexual quando aplicável.</li>
+              </ul>
+            </div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+              <p class="font-bold">Situações em que PEP não deve ser banalizada</p>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Uso correto de preservativo durante todo o ato sexual.</li>
+                <li>Exposição crônica/repetida ao mesmo agressor: individualizar e avaliar seguimento especializado.</li>
+                <li>Sexo oral exclusivo: indicação controversa, avaliar caso a caso.</li>
+              </ul>
+            </div>
+          </div>
         </div>
       `,
       options: [
-        { text: 'Iniciar avaliacao da exposicao', nextStep: 'pep_material_risco', value: 'iniciar' }
+        { text: 'Iniciar avaliação da exposição', nextStep: 'pep_material_risco', value: 'iniciar' }
       ]
     },
     pep_material_risco: {
       id: 'pep_material_risco',
-      title: 'Material Biologico com Risco?',
-      description: 'Sangue, semen, fluidos vaginais, liquidos de serosas, liquido amniotico ou liquor.',
+      title: 'Material biológico com risco?',
+      description: 'Sangue, sêmen, fluidos vaginais, líquidos de serosas, líquido amniótico ou líquor.',
       type: 'question',
       critical: true,
       content: `
-        <div class="rounded-lg border border-red-200 bg-red-50 p-3 text-sm">
-          <p class="font-bold text-red-900">Materiais biologicos com risco</p>
-          <ul class="mt-2 list-disc pl-5 space-y-1">
+        <div class="grid gap-3 text-sm md:grid-cols-2">
+          <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">
+          <p class="font-bold">Materiais biológicos com risco</p>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
             <li>Sangue</li>
-            <li>Semen</li>
+            <li>Sêmen</li>
             <li>Fluidos vaginais</li>
-            <li>Liquidos de serosas: peritoneal, pleural ou pericardico</li>
-            <li>Liquido amniotico</li>
-            <li>Liquor</li>
+            <li>Líquidos de serosas: peritoneal, pleural ou pericárdico</li>
+            <li>Líquido amniótico</li>
+            <li>Líquor</li>
           </ul>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-800">
+            <p class="font-bold text-slate-950">Em geral, sem risco para HIV</p>
+            <p class="mt-2">Saliva, suor, lágrima, urina, fezes, vômitos ou secreções nasais sem sangue visível não indicam PEP por HIV.</p>
+          </div>
         </div>
       `,
       options: [
         { text: 'Sim - houve material com risco', nextStep: 'pep_tipo_exposicao', value: 'material_risco' },
-        { text: 'Nao - sem material de risco', nextStep: 'pep_sem_material_risco', value: 'sem_material' }
+        { text: 'Não - sem material de risco', nextStep: 'pep_sem_material_risco', value: 'sem_material' }
       ]
     },
     pep_tipo_exposicao: {
       id: 'pep_tipo_exposicao',
-      title: 'Tipo de Exposicao com Risco?',
-      description: 'Percutanea, mucosa, sexual desprotegida, pele nao integra ou mordedura com sangue.',
+      title: 'Tipo de exposição com risco?',
+      description: 'Percutânea, mucosa, sexual desprotegida, pele não íntegra ou mordedura com sangue.',
       type: 'question',
       critical: true,
       content: `
-        <div class="rounded-lg border border-orange-200 bg-orange-50 p-3 text-sm">
-          <p class="font-bold text-orange-950">Tipos de exposicao com risco</p>
-          <ul class="mt-2 list-disc pl-5 space-y-1">
-            <li>Percutanea</li>
+        <div class="rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-950">
+          <p class="font-bold">Tipos de exposição com risco</p>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li>Percutânea</li>
             <li>Membranas mucosas</li>
-            <li>Exposicao sexual desprotegida</li>
-            <li>Cutanea em pele nao integra</li>
-            <li>Mordedura com presenca de sangue</li>
+            <li>Exposição sexual desprotegida vaginal, anal ou oral com contexto de risco</li>
+            <li>Cutânea em pele não íntegra</li>
+            <li>Mordedura com presença de sangue</li>
           </ul>
         </div>
       `,
       options: [
-        { text: 'Sim - exposicao com risco', nextStep: 'pep_janela_72h', value: 'risco' },
-        { text: 'Nao - exposicao sem risco', nextStep: 'pep_sem_exposicao_risco', value: 'sem_risco' }
+        { text: 'Sim - exposição com risco', nextStep: 'pep_janela_72h', value: 'risco' },
+        { text: 'Não - exposição sem risco', nextStep: 'pep_sem_exposicao_risco', value: 'sem_risco' }
       ]
     },
     pep_janela_72h: {
       id: 'pep_janela_72h',
-      title: 'Atendimento em Ate 72 Horas?',
-      description: 'A PEP deve ser iniciada no maximo ate 72 horas apos a exposicao.',
+      title: 'Atendimento em até 72 horas?',
+      description: 'A PEP deve ser iniciada no máximo até 72 horas após a exposição.',
       type: 'question',
       critical: true,
       timeSensitive: true,
       content: `
         <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500 text-sm">
-          <p><strong>Janela de oportunidade:</strong> apos 72 horas, nao ha beneficio comprovado para iniciar PEP. Manter acompanhamento sorologico da pessoa exposta.</p>
+          <p><strong>Janela de oportunidade:</strong> após 72 horas, não há benefício comprovado para iniciar PEP. Manter acompanhamento sorológico da pessoa exposta quando indicado.</p>
         </div>
       `,
       options: [
-        { text: 'Sim - ate 72 horas', nextStep: 'pep_exposta_hiv', value: 'ate_72h', critical: true },
-        { text: 'Nao - mais de 72 horas', nextStep: 'pep_fora_janela', value: 'fora_72h' }
+        { text: 'Sim - até 72 horas', nextStep: 'pep_exposta_hiv', value: 'ate_72h', critical: true },
+        { text: 'Não - mais de 72 horas', nextStep: 'pep_fora_janela', value: 'fora_72h' }
       ]
     },
     pep_exposta_hiv: {
       id: 'pep_exposta_hiv',
-      title: 'Pessoa Exposta: HIV Positivo ou Reagente?',
+      title: 'Pessoa exposta: HIV positivo ou reagente?',
       description: 'Testagem da pessoa exposta antes de decidir PEP.',
       type: 'question',
       critical: true,
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-600">
-            <p><strong>Teste da pessoa exposta:</strong> se HIV positivo ou reagente, PEP nao esta indicada. Encaminhar para acompanhamento clinico especializado.</p>
+            <p><strong>Teste da pessoa exposta:</strong> se HIV positivo ou reagente, PEP não está indicada. Encaminhar para acompanhamento clínico especializado.</p>
           </div>
-          <p>Se teste nao reagente, seguir avaliacao da pessoa fonte.</p>
+          <p>Se teste não reagente, seguir avaliação da pessoa fonte.</p>
         </div>
       `,
       options: [
         { text: 'Sim - positivo/reagente', nextStep: 'pep_exposta_hiv_positivo', value: 'exposta_positivo', critical: true },
-        { text: 'Nao - negativo/nao reagente', nextStep: 'pep_fonte_hiv', value: 'exposta_negativo' }
+        { text: 'Não - negativo/não reagente', nextStep: 'pep_fonte_hiv', value: 'exposta_negativo' }
       ]
     },
     pep_fonte_hiv: {
       id: 'pep_fonte_hiv',
-      title: 'Pessoa Fonte: HIV Positivo, Reagente ou Desconhecido?',
+      title: 'Pessoa fonte: HIV positivo, reagente ou desconhecido?',
       description: 'Fonte positiva, reagente ou desconhecida indica iniciar PEP.',
       type: 'question',
       critical: true,
       content: `
         <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p><strong>Indicar PEP:</strong> fonte com HIV positivo, teste reagente ou status desconhecido no contexto de exposicao de risco dentro da janela de 72 horas.</p>
+          <p><strong>Indicar PEP:</strong> fonte com HIV positivo, teste reagente ou status desconhecido no contexto de exposição de risco dentro da janela de 72 horas.</p>
         </div>
       `,
       options: [
         { text: 'Sim - positiva/reagente/desconhecida', nextStep: 'pep_iniciar', value: 'fonte_indica', critical: true, requiresImmediateAction: true },
-        { text: 'Nao - fonte HIV negativa', nextStep: 'pep_fonte_risco_30d', value: 'fonte_negativa' }
+        { text: 'Não - fonte HIV negativa', nextStep: 'pep_fonte_risco_30d', value: 'fonte_negativa' }
       ]
     },
     pep_fonte_risco_30d: {
       id: 'pep_fonte_risco_30d',
-      title: 'Pessoa Fonte Teve Exposicao de Risco nos Ultimos 30 Dias?',
-      description: 'Risco recente pode representar janela imunologica.',
+      title: 'Pessoa fonte teve exposição de risco nos últimos 30 dias?',
+      description: 'Risco recente pode representar janela imunológica.',
       type: 'question',
       critical: true,
       content: `
         <div class="bg-yellow-50 p-3 rounded border-l-4 border-yellow-500 text-sm">
-          <p><strong>Janela imunologica:</strong> se a fonte teve exposicao de risco nos ultimos 30 dias, iniciar PEP e encaminhar para acompanhamento sorologico.</p>
+          <p><strong>Janela imunológica:</strong> se a fonte teve exposição de risco nos últimos 30 dias, iniciar PEP e encaminhar para acompanhamento sorológico.</p>
         </div>
       `,
       options: [
-        { text: 'Sim - risco nos ultimos 30 dias', nextStep: 'pep_iniciar', value: 'risco_30d', critical: true, requiresImmediateAction: true },
-        { text: 'Nao - sem risco recente', nextStep: 'pep_nao_indicada_fonte_sem_risco', value: 'sem_risco_30d' }
+        { text: 'Sim - risco nos últimos 30 dias', nextStep: 'pep_iniciar', value: 'risco_30d', critical: true, requiresImmediateAction: true },
+        { text: 'Não - sem risco recente', nextStep: 'pep_nao_indicada_fonte_sem_risco', value: 'sem_risco_30d' }
       ]
     },
     pep_iniciar: {
       id: 'pep_iniciar',
       title: 'Iniciar PEP',
-      description: 'Iniciar PEP e encaminhar para acompanhamento sorologico.',
+      description: 'Iniciar PEP e encaminhar para acompanhamento sorológico.',
       type: 'result',
       critical: true,
       group: 'PEP indicada',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p><strong>Conduta:</strong> iniciar PEP imediatamente e encaminhar para acompanhamento sorologico.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p class="font-extrabold">Conduta: iniciar PEP imediatamente</p>
+                <p class="mt-1">Prescrever por 28 dias e garantir acompanhamento sorológico.</p>
+              </div>
+              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-400 bg-white text-sm font-extrabold text-emerald-800 transition-colors hover:bg-emerald-100" title="Ver esquemas de PEP" aria-label="Ver esquemas de PEP">i</button>
+            </div>
           </div>
-          <div class="overflow-hidden rounded-lg border border-slate-300">
-            <table class="w-full text-left">
-              <thead class="bg-yellow-100 text-slate-900">
-                <tr><th class="px-3 py-2 font-bold">Situacao</th><th class="px-3 py-2 font-bold">Esquema</th><th class="px-3 py-2 font-bold">Posologia</th></tr>
+          <div class="overflow-x-auto rounded-xl border border-slate-300 bg-white">
+            <table class="w-full min-w-[760px] text-left">
+              <thead class="bg-yellow-100 text-slate-950">
+                <tr><th class="px-3 py-2 font-bold">Situação</th><th class="px-3 py-2 font-bold">Esquema</th><th class="px-3 py-2 font-bold">Posologia</th></tr>
               </thead>
               <tbody class="divide-y divide-slate-200">
-                <tr><td class="px-3 py-2 font-bold">Preferencial</td><td class="px-3 py-2">Tenofovir + Lamivudina + Dolutegravir</td><td class="px-3 py-2">TDF/3TC 300/300 mg 1 cp VO 1x/dia + DTG 50 mg 1 cp VO 1x/dia, por 28 dias.</td></tr>
+                <tr><td class="px-3 py-2 font-bold">Preferencial</td><td class="px-3 py-2">Tenofovir/lamivudina + Dolutegravir</td><td class="px-3 py-2">TDF/3TC 300/300 mg 1 cp VO 1x/dia + DTG 50 mg 1 cp VO 1x/dia, por 28 dias.</td></tr>
                 <tr><td class="px-3 py-2 font-bold">Sem tenofovir</td><td class="px-3 py-2">Zidovudina/lamivudina + Dolutegravir</td><td class="px-3 py-2">AZT/3TC 300/150 mg 12/12h + DTG 50 mg 1x/dia, por 28 dias.</td></tr>
                 <tr><td class="px-3 py-2 font-bold">Sem dolutegravir</td><td class="px-3 py-2">Tenofovir/lamivudina + Darunavir/ritonavir</td><td class="px-3 py-2">TDF/3TC 1x/dia + DRV 800 mg + RTV 100 mg 1x/dia, por 28 dias.</td></tr>
               </tbody>
             </table>
           </div>
-          <p>Orientar sinais de toxicidade e repetir testagem para HIV 30 dias apos a exposicao.</p>
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+            <p><strong>Seguimento:</strong> repetir testagem para HIV em 30 dias, avaliar outras ISTs/hepatites e orientar retorno se toxicidade grave, rash extenso, icterícia ou vômitos persistentes.</p>
+          </div>
         </div>
       `,
       options: []
     },
     pep_sem_material_risco: {
       id: 'pep_sem_material_risco',
-      title: 'PEP Nao Indicada',
-      description: 'Nao houve exposicao a material biologico com risco de transmissao do HIV.',
+      title: 'PEP não indicada',
+      description: 'Não houve exposição a material biológico com risco de transmissão do HIV.',
       type: 'result',
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP nao esta indicada. Acompanhamento sorologico nao e necessario para HIV por esta exposicao.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada. Acompanhamento sorológico não é necessário para HIV por esta exposição.</p>
         </div>
       `,
       options: []
     },
     pep_sem_exposicao_risco: {
       id: 'pep_sem_exposicao_risco',
-      title: 'PEP Nao Indicada',
-      description: 'Nao houve tipo de exposicao com risco de transmissao do HIV.',
+      title: 'PEP não indicada',
+      description: 'Não houve tipo de exposição com risco de transmissão do HIV.',
       type: 'result',
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP nao esta indicada. Acompanhamento sorologico nao e necessario para HIV por esta exposicao.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada. Acompanhamento sorológico não é necessário para HIV por esta exposição.</p>
         </div>
       `,
       options: []
     },
     pep_fora_janela: {
       id: 'pep_fora_janela',
-      title: 'PEP Nao Indicada: Fora da Janela',
-      description: 'Atendimento apos 72 horas da exposicao.',
+      title: 'PEP não indicada: fora da janela',
+      description: 'Atendimento após 72 horas da exposição.',
       type: 'result',
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP nao esta indicada apos 72 horas. Manter acompanhamento sorologico da pessoa exposta.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada após 72 horas. Manter acompanhamento sorológico da pessoa exposta.</p>
         </div>
       `,
       options: []
     },
     pep_exposta_hiv_positivo: {
       id: 'pep_exposta_hiv_positivo',
-      title: 'Pessoa Exposta com HIV Positivo/Reagente',
-      description: 'PEP nao indicada; encaminhar para cuidado especializado.',
+      title: 'Pessoa exposta com HIV positivo/reagente',
+      description: 'PEP não indicada; encaminhar para cuidado especializado.',
       type: 'result',
       critical: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP nao esta indicada. Encaminhar para acompanhamento clinico especializado.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada. Encaminhar para acompanhamento clínico especializado.</p>
         </div>
       `,
       options: []
     },
     pep_nao_indicada_fonte_sem_risco: {
       id: 'pep_nao_indicada_fonte_sem_risco',
-      title: 'PEP Nao Indicada',
-      description: 'Pessoa fonte HIV negativa e sem exposicao de risco recente.',
+      title: 'PEP não indicada',
+      description: 'Pessoa fonte HIV negativa e sem exposição de risco recente.',
       type: 'result',
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP nao esta indicada. Acompanhamento sorologico nao e necessario para HIV por esta exposicao.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada. Acompanhamento sorológico não é necessário para HIV por esta exposição.</p>
         </div>
       `,
       options: []
