@@ -2058,6 +2058,45 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const handleAnswer = (nextStep: string, value?: string) => {
+    if (flowchart.id === 'tvp') {
+      try {
+        const savedClinicalEvaluation = JSON.parse(answers.avaliacao_clinica || '{}')
+        const savedFindings = Array.isArray(savedClinicalEvaluation?.sinaisEAchados)
+          ? savedClinicalEvaluation.sinaisEAchados
+          : []
+        const hasSavedAlert = savedFindings.some((item: unknown) =>
+          typeof item === 'string' && tvpAlertSigns.includes(item)
+        )
+
+        if (hasSavedAlert) {
+          if (currentStep === 'wells_score') {
+            nextStep = 'pocus_antes_d_dimero'
+            value = 'alerta_investigacao_obrigatoria'
+          } else if (currentStep === 'pocus_antes_d_dimero') {
+            nextStep = 'pocus_resultado_pre_d_dimero'
+          } else if (currentStep === 'pocus_resultado_pre_d_dimero') {
+            nextStep = 'tvp_d_dimero_alerta'
+            value = `${value || 'pocus_registrado'}_com_alerta`
+          } else if (currentStep === 'tvp_d_dimero_alerta' || currentStep === 'baixa_probabilidade') {
+            nextStep = 'tvp_urgencia_vascular_imediata'
+            value = `${value || 'd_dimero_registrado'}_com_alerta`
+          } else {
+            const isAllowedAlertTransition =
+              nextStep === 'wells_score' ||
+              currentStep === 'tvp_urgencia_vascular_imediata' ||
+              currentStep === 'tvp_internacao_uti'
+
+            if (!isAllowedAlertTransition) {
+              nextStep = 'tvp_urgencia_vascular_imediata'
+              value = 'alerta_gravidade_confirmado'
+            }
+          }
+        }
+      } catch {
+        // Mantém a navegação padrão apenas quando não existe checklist salvo válido.
+      }
+    }
+
     const newHistory = [...history, currentStep]
     const isTVPLegSelection = flowchart.id === 'tvp' && currentStep === 'start'
     const isTVPClinicalEvaluation = flowchart.id === 'tvp' && currentStep === 'avaliacao_clinica'
@@ -3143,17 +3182,30 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       : tvpPocusResult === 'us_inconclusive'
         ? 'POCUS compressivo de 3 pontos inconclusivo ou tecnicamente limitado.'
         : 'Resultado não informado no fluxo.'
+  const persistedTVPClinicalFindings = useMemo(() => {
+    try {
+      const savedClinicalEvaluation = JSON.parse(answers.avaliacao_clinica || '{}')
+      return Array.isArray(savedClinicalEvaluation?.sinaisEAchados)
+        ? savedClinicalEvaluation.sinaisEAchados.filter((item: unknown): item is string => typeof item === 'string')
+        : []
+    } catch {
+      return []
+    }
+  }, [answers.avaliacao_clinica])
+  const activeTVPClinicalFindings: string[] = isTVPClinicalEvaluation
+    ? selectedClinicalFindings
+    : persistedTVPClinicalFindings
   const hasTVPAlertSignSelected = useMemo(
-    () => selectedClinicalFindings.some((item) => tvpAlertSigns.includes(item)),
-    [selectedClinicalFindings]
+    () => activeTVPClinicalFindings.some((item) => tvpAlertSigns.includes(item)),
+    [activeTVPClinicalFindings]
   )
   const hasTVPVascularAlertSelected = useMemo(
-    () => selectedClinicalFindings.some((item) => tvpVascularSurgeryAlertSigns.includes(item)),
-    [selectedClinicalFindings]
+    () => activeTVPClinicalFindings.some((item) => tvpVascularSurgeryAlertSigns.includes(item)),
+    [activeTVPClinicalFindings]
   )
   const hasTVPRespiratoryAlertSelected = useMemo(
-    () => selectedClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
-    [selectedClinicalFindings]
+    () => activeTVPClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
+    [activeTVPClinicalFindings]
   )
   const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
@@ -3163,6 +3215,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const wellsRisk = wellsScoreTotal <= 0 ? 'baixa' : wellsScoreTotal <= 2 ? 'moderada' : 'alta'
   const wellsNextStep = wellsScoreTotal <= 0 ? 'pocus_antes_d_dimero' : 'moderada_probabilidade'
   const wellsDecisionValue = wellsScoreTotal <= 0 ? 'low' : wellsScoreTotal <= 2 ? 'moderate' : 'high'
+  const tvpWellsDestination = hasTVPAlertSignSelected ? 'pocus_antes_d_dimero' : wellsNextStep
+  const tvpWellsDecisionValue = hasTVPAlertSignSelected ? 'alerta_investigacao_obrigatoria' : wellsDecisionValue
   const hasAbsoluteContraindication = selectedContraindications.some(item => item.startsWith('abs_'))
   const hasRelativeContraindication = selectedContraindications.some(item => item.startsWith('rel_'))
   const hasSelectedTherapy = selectedTherapies.length > 0
@@ -11219,8 +11273,19 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </ul>
                     </div>
 
+                    {hasTVPAlertSignSelected && (
+                      <div className="rounded-xl border-l-4 border-l-red-700 border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+                        <p className="font-extrabold uppercase tracking-wide">Ramo de alta bloqueado</p>
+                        <p className="mt-1">
+                          Há sinal de alerta registrado no checklist. O Wells permanece documentado e a investigação
+                          seguirá obrigatoriamente por POCUS e D-dímero. Resultados que normalmente permitiriam alta
+                          ou exclusão de TVP não liberarão o ramo ambulatorial.
+                        </p>
+                      </div>
+                    )}
+
                     <motion.button
-                      onClick={() => handleAnswer(wellsNextStep, wellsDecisionValue)}
+                      onClick={() => handleAnswer(tvpWellsDestination, tvpWellsDecisionValue)}
                       className={clsx(
                         'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
                         wellsRisk === 'alta'
@@ -11233,7 +11298,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileTap={{ scale: 0.99 }}
                     >
                       <span className="font-semibold text-slate-800">
-                        Continuar conforme escore: {wellsRisk === 'baixa' ? 'Probabilidade Baixa' : wellsRisk === 'moderada' ? 'Probabilidade Moderada' : 'Probabilidade Alta'}
+                        {hasTVPAlertSignSelected
+                          ? 'Continuar para POCUS e D-dímero obrigatórios'
+                          : `Continuar conforme escore: ${wellsRisk === 'baixa' ? 'Probabilidade Baixa' : wellsRisk === 'moderada' ? 'Probabilidade Moderada' : 'Probabilidade Alta'}`}
                       </span>
                       <ChevronRight className="w-5 h-5 text-slate-500" />
                     </motion.button>
@@ -13317,26 +13384,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               {isTVPTreatmentInitial && (
                 <div className="mb-6 p-5 bg-red-50 rounded-2xl border border-red-200">
                   <div className="space-y-5">
-                    <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-bold text-amber-900 uppercase tracking-wide">
-                            Considerações essenciais da anticoagulação
-                          </p>
-                          <p className="text-sm text-amber-800 mt-1">
-                            Abra o resumo em pop-up para revisar os pontos-chave antes da decisão final.
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setTVPAnticoagConsiderationsOpen(true)}
-                          className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 text-sm font-semibold hover:bg-amber-100 transition-colors"
-                        >
-                          Ver considerações
-                        </button>
-                      </div>
-                    </div>
-
                     <div className="bg-white rounded-2xl border border-slate-200 p-4">
                       <button
                         type="button"

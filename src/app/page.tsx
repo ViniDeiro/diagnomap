@@ -476,6 +476,8 @@ export default function Home() {
             selectedFlowchart: currentPatient.selectedFlowchart,
             generalObservations: currentPatient.generalObservations,
             symptoms: currentPatient.admission?.symptoms || [],
+            chiefComplaint: currentPatient.admission?.chiefComplaint || currentPatient.admission?.symptoms?.[0] || '',
+            complaintDuration: currentPatient.admission?.complaintDuration || '',
             vitalSigns: currentPatient.admission?.vitalSigns || {
               temperature: undefined,
               feverDays: undefined,
@@ -562,6 +564,8 @@ export default function Home() {
                     date: new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()),
                     time: new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()).toLocaleTimeString(),
                     symptoms: currentPatient.admission?.symptoms || [],
+                    chiefComplaint: currentPatient.admission?.chiefComplaint,
+                    complaintDuration: currentPatient.admission?.complaintDuration,
                     vitalSigns: currentPatient.admission?.vitalSigns
                   },
                   flowchartState: {

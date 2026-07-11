@@ -284,6 +284,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
         selectedFlowchart: initialData.selectedFlowchart ?? (presetFlowchart ?? 'dengue'),
         allergies: initialData.allergies ?? [],
         symptoms: initialData.symptoms ?? [],
+        chiefComplaint: initialData.chiefComplaint ?? initialData.symptoms?.[0] ?? '',
+        complaintDuration: initialData.complaintDuration ?? '',
         vitalSigns: initialData.vitalSigns ?? {
           temperature: undefined,
           feverDays: undefined,
@@ -304,6 +306,8 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
       allergies: [],
       medicalRecord: generatePatientId(),
       symptoms: [],
+      chiefComplaint: '',
+      complaintDuration: '',
       vitalSigns: {
         temperature: undefined,
         feverDays: undefined,
@@ -993,6 +997,44 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                       <Shield className="w-4 h-4 mr-2" />
                       ID gerado automaticamente e não pode ser alterado
                     </p>
+                  </div>
+
+                  <div className="lg:col-span-2 grid gap-6 lg:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
+                        Queixa principal
+                      </label>
+                      <div className="relative">
+                        <MessageSquare className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={formData.chiefComplaint || ''}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            chiefComplaint: e.target.value,
+                            symptoms: e.target.value.trim() ? [e.target.value.trim()] : []
+                          }))}
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                          placeholder="Ex.: dor e inchaço na perna direita"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-700 mb-3 uppercase tracking-wider">
+                        Duração da queixa
+                      </label>
+                      <div className="relative">
+                        <Clock className="absolute left-4 top-4 h-5 w-5 text-slate-400" />
+                        <input
+                          type="text"
+                          value={formData.complaintDuration || ''}
+                          onChange={(e) => setFormData(prev => ({ ...prev, complaintDuration: e.target.value }))}
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
+                          placeholder="Ex.: há 3 dias"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 

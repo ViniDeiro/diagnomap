@@ -2876,7 +2876,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
   icon: 'activity',
   color: 'from-indigo-600 to-blue-800',
   initialStep: 'start',
-  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_concluida', 'tvp_internacao_investigacao_clinica', 'tvp_internacao_investigar_tep'],
+  finalSteps: ['tvp_excluida', 'seguimento_ambulatorial', 'anticoagulacao_iniciada', 'encaminhamento_urgente', 'tvp_urgencia_vascular_concluida', 'tvp_internacao_uti', 'tvp_internacao_investigacao_clinica', 'tvp_internacao_investigar_tep'],
   steps: {
     start: {
       id: 'start',
@@ -3010,6 +3010,28 @@ export const tvpFlowchart: EmergencyFlowchart = {
       options: [
         { text: 'D-dímero negativo', nextStep: 'tvp_excluida', value: 'ddimer_negative' },
         { text: 'D-dímero positivo', nextStep: 'us_negativa_conduta', value: 'ddimer_positive' }
+      ]
+    },
+    tvp_d_dimero_alerta: {
+      id: 'tvp_d_dimero_alerta',
+      title: 'D-dímero obrigatório - TVP com sinal de alerta',
+      description: 'Registrar o D-dímero sem liberar caminhos de alta ou exclusão ambulatorial.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p><strong>Investigação mantida:</strong> registrar o resultado do D-dímero após o POCUS.</p>
+          </div>
+          <div class="rounded-xl border-l-4 border-l-red-700 border border-red-200 bg-red-50 p-4 text-red-950">
+            <p><strong>Ramo ambulatorial bloqueado:</strong> como existe sinal de alerta, resultado negativo ou positivo não permite alta nem exclusão da TVP neste fluxo.</p>
+            <p class="mt-2">Após o registro, prosseguir obrigatoriamente para o manejo de flegmasia/ameaça ao membro.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'D-dímero negativo', nextStep: 'tvp_urgencia_vascular_imediata', value: 'ddimer_negative_alert', critical: true },
+        { text: 'D-dímero positivo', nextStep: 'tvp_urgencia_vascular_imediata', value: 'ddimer_positive_alert', critical: true }
       ]
     },
     moderada_probabilidade: {
@@ -3401,14 +3423,31 @@ export const tvpFlowchart: EmergencyFlowchart = {
       `,
       options: [
         {
-          text: 'Confirmar manejo de urgência vascular',
-          description: 'Registra estabilização, anticoagulação e acionamento imediato da Cirurgia Vascular.',
-          nextStep: 'tvp_aguarda_avaliacao_vascular',
+          text: 'Confirmar manejo e encaminhar para UTI',
+          description: 'Registra estabilização, anticoagulação, acionamento imediato da Cirurgia Vascular e internação em UTI.',
+          nextStep: 'tvp_internacao_uti',
           value: 'protocolo_flegmasia_aplicado',
           critical: true,
           requiresImmediateAction: true
         }
       ]
+    },
+    tvp_internacao_uti: {
+      id: 'tvp_internacao_uti',
+      title: 'Internação em UTI - TVP com sinais de alerta',
+      description: 'TVP grave com ramo ambulatorial bloqueado e indicação de cuidado intensivo.',
+      type: 'result',
+      critical: true,
+      content: `
+        <div class="space-y-3">
+          <div class="rounded-xl border-l-4 border-l-red-800 border border-red-300 bg-red-100 p-4 text-red-950">
+            <h4 class="font-bold">INTERNAÇÃO EM UTI</h4>
+            <p class="mt-2">Sinal de alerta identificado no checklist clínico. O paciente deve permanecer internado, monitorizado e sob avaliação imediata da Cirurgia Vascular.</p>
+            <p class="mt-2 font-semibold">Não liberar para alta ou seguimento ambulatorial por este ramo.</p>
+          </div>
+        </div>
+      `,
+      options: []
     },
     tvp_urgencia_vascular_concluida: {
       id: 'tvp_urgencia_vascular_concluida',

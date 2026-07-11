@@ -26,6 +26,8 @@ export interface Patient {
         date: Date
         time: string
         symptoms: string[]
+        chiefComplaint?: string
+        complaintDuration?: string
         vitalSigns?: {
             temperature?: number
             heartRate?: number
@@ -33,7 +35,7 @@ export interface Patient {
             bloodPressure?: string
             oxygenSaturation?: number
             painLevel?: number
-            glucose?: number
+            glucose?: string | number
             [key: string]: any
         }
     }
@@ -74,4 +76,40 @@ export interface Patient {
 
     createdAt: Date
     updatedAt: Date
+}
+
+export interface PatientFormData {
+    name: string
+    birthDate: Date
+    gender: string
+    weight?: number
+    allergies?: string[]
+    medicalRecord: string
+    selectedFlowchart: string
+    generalObservations: string
+    symptoms: string[]
+    chiefComplaint?: string
+    complaintDuration?: string
+    vitalSigns: {
+        temperature?: number
+        feverDays?: number
+        heartRate?: number
+        respiratoryRate?: number
+        bloodPressure?: string
+        pam?: number
+        oxygenSaturation?: number
+        painLevel?: number
+        glucose?: string
+        [key: string]: unknown
+    }
+}
+
+export interface DashboardStats {
+    totalPatients: number
+    activeFlowcharts: number
+    waitingLabs: number
+    groupA: number
+    groupB: number
+    groupC: number
+    groupD: number
 }

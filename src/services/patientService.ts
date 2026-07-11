@@ -93,6 +93,8 @@ class PatientService {
         date: now,
         time: now.toLocaleTimeString('pt-BR'),
         symptoms: formData.symptoms,
+        chiefComplaint: formData.chiefComplaint?.trim() || formData.symptoms?.[0] || '',
+        complaintDuration: formData.complaintDuration?.trim() || '',
         vitalSigns: formData.vitalSigns
       },
       flowchartState: {
@@ -572,6 +574,8 @@ class PatientService {
         date: now,
         time: now.toLocaleTimeString('pt-BR'),
         symptoms: formData.symptoms,
+        chiefComplaint: formData.chiefComplaint?.trim() || formData.symptoms?.[0] || '',
+        complaintDuration: formData.complaintDuration?.trim() || '',
         vitalSigns: formData.vitalSigns
       },
       // flowchartState permanece "start" conforme prepareReturnVisit
