@@ -1718,6 +1718,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pneumoniaRxImageOpen, setPneumoniaRxImageOpen] = useState(false)
   const [pneumoniaCtInfoOpen, setPneumoniaCtInfoOpen] = useState(false)
   const [pneumoniaReferenceImage, setPneumoniaReferenceImage] = useState<PneumoniaReferenceImageKey | null>(null)
+  const [keepPneumoniaPocusDetailsOpen, setKeepPneumoniaPocusDetailsOpen] = useState(false)
   const [pneumoniaAtsIdsaMajorCriteria, setPneumoniaAtsIdsaMajorCriteria] = useState<string[]>([])
   const [pneumoniaAtsIdsaMinorCriteria, setPneumoniaAtsIdsaMinorCriteria] = useState<string[]>([])
   const [pneumoniaSmartCopCriteria, setPneumoniaSmartCopCriteria] = useState<string[]>([])
@@ -5500,6 +5501,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [isTVPLegSelection, answers, currentStep])
 
   useEffect(() => {
+    if (!keepPneumoniaPocusDetailsOpen) return
+
+    const frame = window.requestAnimationFrame(() => {
+      const details = document.querySelector<HTMLDetailsElement>('[data-pac-pocus-details="true"]')
+      if (details) details.open = true
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [keepPneumoniaPocusDetailsOpen, pneumoniaReferenceImage])
+
+  useEffect(() => {
     if (!isTVPClinicalEvaluation) {
       setSelectedClinicalFindings([])
       setOtherClinicalFinding('')
@@ -7640,6 +7652,10 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     className="prose prose-sm max-w-none"
                     onClick={(event) => {
                       const target = event.target as HTMLElement
+                      const pocusDetails = target.closest<HTMLDetailsElement>('[data-pac-pocus-details="true"]')
+                      if (pocusDetails?.open) {
+                        setKeepPneumoniaPocusDetailsOpen(true)
+                      }
                       if (target.closest('[data-influenza-request-exams="true"]')) {
                         event.preventDefault()
                         event.stopPropagation()
