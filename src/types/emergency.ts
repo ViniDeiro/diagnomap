@@ -45,6 +45,7 @@ export type EmergencyType =
   | 'amniotic_embolism'
   | 'spider_bite' // Picada de Aranha
   | 'tvp'
+  | 'tep'
   | 'dpoc_exacerbado'
   | 'influenza'
   | 'sinusite'

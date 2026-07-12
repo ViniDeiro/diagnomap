@@ -574,6 +574,95 @@ const getAnswerDecision = (flowchart: EmergencyFlowchart, stepId: string, raw?: 
   return formatStructuredAnswer(parsed)
 }
 
+const buildTEPClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const exam = parseFlowAnswerForSummary(answers.tep_exame_fisico)
+  const wells = parseFlowAnswerForSummary(answers.tep_wells)
+  const perc = parseFlowAnswerForSummary(answers.tep_perc)
+  const years = parseFlowAnswerForSummary(answers.tep_years)
+  const spesi = parseFlowAnswerForSummary(answers.tep_spesi)
+  const category = parseFlowAnswerForSummary(answers.tep_categoria)
+  const contraindications = parseFlowAnswerForSummary(answers.tep_trombolise_contra)
+  const current = flowchart.steps[currentStep]
+  const vital = exam?.sinaisVitais && typeof exam.sinaisVitais === 'object' ? exam.sinaisVitais as Record<string, unknown> : {}
+  const physical = exam?.exameFisico && typeof exam.exameFisico === 'object' ? exam.exameFisico as Record<string, unknown> : {}
+  const vitalLines = uniqueTextItems([
+    vital.bloodPressure ? `PA ${vital.bloodPressure} mmHg` : null,
+    vital.heartRate != null ? `FC ${vital.heartRate} bpm` : null,
+    vital.respiratoryRate != null ? `FR ${vital.respiratoryRate} irpm` : null,
+    vital.oxygenSaturation != null ? `SpO₂ ${vital.oxygenSaturation}%` : null,
+    vital.temperature != null ? `temperatura ${String(vital.temperature).replace('.', ',')} °C` : null,
+    vital.glucose ? `glicemia ${vital.glucose} mg/dL` : null
+  ])
+  const examLines = Object.entries(physical).flatMap(([system, value]) => {
+    if (!value || typeof value !== 'object') return []
+    const record = value as Record<string, unknown>
+    const altered = typeof record.altered === 'string' ? record.altered.trim() : ''
+    return altered ? [`${system}: ${altered}`] : []
+  })
+  const scoreLines = uniqueTextItems([
+    typeof wells?.score === 'number' ? `Wells ${String(wells.score).replace('.', ',')} (${formatClinicalValue(wells.classificacao)})` : null,
+    perc?.resultado ? `PERC ${formatClinicalValue(perc.resultado)}` : null,
+    years?.dDimero != null ? `YEARS: ${Array.isArray(years.criteriosSelecionados) ? years.criteriosSelecionados.length : 0} critério(s), D-dímero ${years.dDimero} ng/mL, corte ${years.pontoDeCorte} ng/mL (${formatClinicalValue(years.resultado)})` : null,
+    typeof spesi?.score === 'number' ? `sPESI ${spesi.score} (${formatClinicalValue(spesi.classificacao)})` : null,
+    category?.categoria ? `categoria de risco ${category.categoria}` : null
+  ])
+  const decisions = history.map((stepId) => {
+    const step = flowchart.steps[stepId]
+    const decision = getAnswerDecision(flowchart, stepId, answers[stepId])
+    return step && decision ? `${step.title}: ${decision}` : ''
+  }).filter(Boolean)
+  const isExcluded = currentStep === 'tep_excluido'
+  const isOutpatient = currentStep === 'tep_alta'
+  const isIcu = currentStep === 'tep_uti' || history.includes('tep_instavel_conduta')
+  const isConfirmed = isOutpatient || isIcu || currentStep === 'tep_internacao' || history.includes('tep_spesi')
+  const absoluteContra = contraindications?.contraindicaoAbsoluta === true
+  const impression = isExcluded
+    ? 'A estratégia diagnóstica aplicada excluiu TEP agudo no contexto clínico registrado.'
+    : isConfirmed
+      ? `Tromboembolismo pulmonar confirmado ou sustentado pela investigação, classificado como risco ${category?.categoria || 'ainda não definido'}.`
+      : 'Suspeita de tromboembolismo pulmonar em investigação, ainda sem desfecho diagnóstico final registrado.'
+  const conduct = isIcu
+    ? `Indicados suporte intensivo, anticoagulação quando segura e avaliação imediata de reperfusão${absoluteContra ? ', evitando trombólise sistêmica devido à contraindicação absoluta registrada e priorizando estratégia por cateter ou cirúrgica' : ''}.`
+    : isOutpatient
+      ? 'Paciente direcionado a tratamento ambulatorial por baixo risco, com anticoagulação, seguimento precoce, plano de duração terapêutica e sinais de alarme.'
+      : currentStep === 'tep_internacao'
+        ? 'Indicada internação para anticoagulação, monitorização de deterioração hemodinâmica/respiratória e reavaliação de biomarcadores e ventrículo direito.'
+        : isExcluded
+          ? 'Orientada investigação de diagnósticos diferenciais e retorno imediato diante de piora respiratória, dor torácica, síncope, hemoptise ou hipoxemia.'
+          : 'Prosseguir com a estratégia diagnóstica conforme probabilidade pré-teste e estabilidade clínica.'
+  const chiefComplaint = patient.admission?.chiefComplaint || patient.admission?.symptoms?.join('; ') || 'suspeita clínica de tromboembolismo pulmonar'
+  const doctorSignature = formatDoctorSignature(doctor)
+  const finalTitle = current?.title || flowchart.name
+  const finalDescription = current?.description || flowchart.description
+  const historyLines = decisions.slice(-10)
+  const examinationLines = [...(vitalLines.length ? [`Sinais vitais: ${vitalLines.join(', ')}`] : []), ...examLines]
+  const finalNarrative = `${impression} ${conduct}`
+  const text = [
+    'RESUMO CLÍNICO SEMIOLÓGICO - TEP', '', 'Identificação e contexto',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`,
+    '', 'Queixa principal / HMA', chiefComplaint,
+    '', 'Sinais vitais e exame físico', examinationLines.length ? examinationLines.map(item => `- ${item}`).join('\n') : '- Não registrados.',
+    '', 'Raciocínio diagnóstico e estratificação', scoreLines.length ? scoreLines.map(item => `- ${item}`).join('\n') : '- Estratificação ainda não concluída.',
+    '', 'Caminho percorrido', historyLines.length ? historyLines.map(item => `- ${item}`).join('\n') : '- Avaliação inicial.',
+    '', 'Impressão clínica e conduta', finalNarrative, '', 'Médico responsável', doctorSignature
+  ].join('\n')
+  const continuousText = [
+    'RELATÓRIO MÉDICO - TROMBOEMBOLISMO PULMONAR', '',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, avaliado(a) por ${chiefComplaint}.`,
+    examinationLines.length ? `Na avaliação objetiva, foram registrados ${examinationLines.join('; ')}.` : 'Sinais vitais e exame físico ainda não foram registrados.',
+    scoreLines.length ? `A estratificação demonstrou ${scoreLines.join('; ')}.` : 'A estratificação diagnóstica ainda está em andamento.',
+    impression, conduct, '', doctorSignature
+  ].join('\n\n')
+  return { chiefComplaint, historyLines, examinationLines, scoreLines, finalTitle, finalDescription, finalNarrative, doctorSignature, conductLines: [conduct], continuousText, text }
+}
+
 export function buildClinicalSummary(
   patient: Patient,
   options?: {
@@ -609,6 +698,10 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'tvp') {
     return buildTVPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'tep') {
+    return buildTEPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
   }
 
   if (flowchart.id === 'pep_hiv') {

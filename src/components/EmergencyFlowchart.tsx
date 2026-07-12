@@ -34,6 +34,7 @@ import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, Em
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
+import TEPAssessment from './TEPAssessment'
 import {
   INFLUENZA_SEVERITY_SIGNS,
   INFLUENZA_RISK_FACTORS,
@@ -288,7 +289,7 @@ const PNEUMONIA_REFERENCE_IMAGES: Record<PneumoniaReferenceImageKey, {
   },
   blueAlgorithm: {
     title: 'Algoritmo do Protocolo BLUE',
-    src: '/algoritmo.jpeg',
+    src: '/algoritimo.jpeg',
     alt: 'Algoritmo de decisão do protocolo BLUE'
   },
   lus: {
@@ -1705,6 +1706,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [influenzaVitalSigns, setInfluenzaVitalSigns] = useState<FlowVitalSigns>(() => defaultFlowVitalSigns(patient))
   const [tvpPhysicalExam, setTVPPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
   const [tvpVitalSigns, setTVPVitalSigns] = useState<FlowVitalSigns>(() => defaultFlowVitalSigns(patient))
+  const [tepPhysicalExam, setTEPPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
+  const [tepVitalSigns, setTEPVitalSigns] = useState<FlowVitalSigns>(() => defaultFlowVitalSigns(patient))
   const [pneumoniaPhysicalExam, setPneumoniaPhysicalExam] = useState<PhysicalExamData>(defaultPneumoniaPhysicalExam)
   const [pneumoniaVitalSigns, setPneumoniaVitalSigns] = useState<FlowVitalSigns>(() => defaultFlowVitalSigns(patient))
   const [pneumoniaPsiValues, setPneumoniaPsiValues] = useState<PneumoniaPsiValues>(() => defaultPsiValues(patient))
@@ -1877,6 +1880,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 
   const updateTVPVitalSign = <K extends keyof FlowVitalSigns>(key: K, value: FlowVitalSigns[K]) => {
     setTVPVitalSigns(prev => ({ ...prev, [key]: value }))
+  }
+
+  const updateTEPVitalSign = <K extends keyof FlowVitalSigns>(key: K, value: FlowVitalSigns[K]) => {
+    setTEPVitalSigns(prev => ({ ...prev, [key]: value }))
   }
 
   const parseOptionalNumber = (value: string) => {
@@ -2109,6 +2116,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStep === 'influenza_criterios_uti'
     const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStep === 'influenza_exame_fisico'
     const isTVPPhysicalExamStep = flowchart.id === 'tvp' && currentStep === 'tvp_exame_fisico'
+    const isTEPPhysicalExamStep = flowchart.id === 'tep' && currentStep === 'tep_exame_fisico'
     const isInfluenzaViralPanelStep = flowchart.id === 'influenza' && ['influenza_painel_viral_enfermaria', 'influenza_painel_viral_uti'].includes(currentStep)
     const isPneumoniaPhysicalExamStep = flowchart.id === 'pneumonia' && currentStep === 'pac_exame_fisico'
     const isPneumoniaCrbProtocolStep = flowchart.id === 'pneumonia' && currentStep === 'pac_crb65_triagem'
@@ -2203,6 +2211,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       sinaisVitais: tvpVitalSigns,
       exameFisico: tvpPhysicalExam
+    })
+    const tepPhysicalExamAnswer = JSON.stringify({
+      decision: value || nextStep,
+      sinaisVitais: tepVitalSigns,
+      exameFisico: tepPhysicalExam
     })
     const influenzaViralPanelAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -2377,6 +2390,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         ? influenzaViralPanelAnswer
                       : isTVPPhysicalExamStep
                         ? tvpPhysicalExamAnswer
+                      : isTEPPhysicalExamStep
+                        ? tepPhysicalExamAnswer
                       : isPneumoniaPhysicalExamStep
                           ? pneumoniaPhysicalExamAnswer
                           : isPneumoniaCrbProtocolStep
@@ -2723,6 +2738,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setInfluenzaVitalSigns(defaultFlowVitalSigns(patient))
     setTVPPhysicalExam(defaultPneumoniaPhysicalExam())
     setTVPVitalSigns(defaultFlowVitalSigns(patient))
+    setTEPPhysicalExam(defaultPneumoniaPhysicalExam())
+    setTEPVitalSigns(defaultFlowVitalSigns(patient))
     setPepHivGuideOpen(false)
     setAnsiedadeGuideOpen(false)
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
@@ -3231,6 +3248,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isInfluenzaICUStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_criterios_uti'
   const isInfluenzaPhysicalExamStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_exame_fisico'
   const isTVPPhysicalExamStep = flowchart.id === 'tvp' && currentStepData?.id === 'tvp_exame_fisico'
+  const isTEPPhysicalExamStep = flowchart.id === 'tep' && currentStepData?.id === 'tep_exame_fisico'
+  const isTEPAssessmentStep = flowchart.id === 'tep' && ['tep_wells', 'tep_perc', 'tep_years', 'tep_spesi', 'tep_categoria', 'tep_tratamento', 'tep_trombolise_contra'].includes(currentStepData?.id || '')
   const isInfluenzaViralPanelStep = flowchart.id === 'influenza' && ['influenza_painel_viral_enfermaria', 'influenza_painel_viral_uti'].includes(currentStepData?.id || '')
   const isInfluenzaAmbulatoryConductStep = flowchart.id === 'influenza' && ['influenza_ambulatorial_sintomaticos', 'influenza_ambulatorial_oseltamivir'].includes(currentStepData?.id || '')
   const isInfluenzaAmbulatoryFinalStep = isInfluenzaAmbulatoryConductStep
@@ -3248,12 +3267,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaAmbulatoryConductStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_conduta_ambulatorial'
   const isPneumoniaWardDestinationStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_destino_enfermaria'
   const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep
-  const currentRespiratoryVitalSigns = isTVPPhysicalExamStep
+  const currentRespiratoryVitalSigns = isTEPPhysicalExamStep
+    ? tepVitalSigns
+    : isTVPPhysicalExamStep
     ? tvpVitalSigns
     : isInfluenzaPhysicalExamStep
       ? influenzaVitalSigns
       : pneumoniaVitalSigns
-  const updateCurrentRespiratoryVitalSign = isTVPPhysicalExamStep
+  const updateCurrentRespiratoryVitalSign = isTEPPhysicalExamStep
+    ? updateTEPVitalSign
+    : isTVPPhysicalExamStep
     ? updateTVPVitalSign
     : isInfluenzaPhysicalExamStep
       ? updateInfluenzaVitalSign
@@ -5775,6 +5798,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers.tvp_exame_fisico, isTVPPhysicalExamStep, patient])
 
   useEffect(() => {
+    if (!isTEPPhysicalExamStep) return
+    const saved = answers.tep_exame_fisico
+    if (!saved) {
+      setTEPPhysicalExam(defaultPneumoniaPhysicalExam())
+      setTEPVitalSigns(defaultFlowVitalSigns(patient))
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      if (parsed?.sinaisVitais) setTEPVitalSigns({ ...defaultFlowVitalSigns(patient), ...parsed.sinaisVitais })
+      if (parsed?.exameFisico) setTEPPhysicalExam({ ...defaultPneumoniaPhysicalExam(), ...parsed.exameFisico })
+    } catch {
+      setTEPPhysicalExam(defaultPneumoniaPhysicalExam())
+      setTEPVitalSigns(defaultFlowVitalSigns(patient))
+    }
+  }, [answers.tep_exame_fisico, isTEPPhysicalExamStep, patient])
+
+  useEffect(() => {
     if (!isPneumoniaPhysicalExamStep) return
     const saved = answers[currentStep]
     if (!saved) {
@@ -7395,7 +7436,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep || isTVPPhysicalExamStep) && (
+              {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep || isTVPPhysicalExamStep || isTEPPhysicalExamStep) && (
                 <div className="mb-8 space-y-6">
                   <div className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
                     <div className="bg-sky-950 px-5 py-5 text-white sm:px-6">
@@ -7405,7 +7446,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </span>
                         <div>
                           <h3 className="text-xl font-extrabold">
-                            {isTVPPhysicalExamStep
+                            {isTEPPhysicalExamStep
+                              ? 'Sinais vitais e exame físico na suspeita de TEP'
+                              : isTVPPhysicalExamStep
                               ? 'Sinais vitais e exame físico antes do checklist clínico de TVP'
                               : isPneumoniaPhysicalExamStep
                                 ? 'Sinais vitais e exame físico antes do CRB-65'
@@ -7433,7 +7476,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                   </div>
 
-                  {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep || isTVPPhysicalExamStep) && (
+                  {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep || isTVPPhysicalExamStep || isTEPPhysicalExamStep) && (
                     <div className="overflow-hidden rounded-2xl border border-sky-300 bg-white shadow-sm ring-1 ring-sky-100">
                       <div className="border-b border-sky-200 bg-sky-50 px-5 py-4">
                         <div className="flex items-center gap-3">
@@ -7443,7 +7486,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           <div>
                             <h4 className="text-lg font-extrabold text-slate-950">Sinais vitais obrigatórios</h4>
                             <p className="text-sm text-slate-600">
-                              {isTVPPhysicalExamStep
+                              {isTEPPhysicalExamStep
+                                ? 'Avalie choque, hipoxemia, taquicardia e repercussão de ventrículo direito. A instabilidade muda imediatamente a estratégia diagnóstica e terapêutica.'
+                                : isTVPPhysicalExamStep
                                 ? 'Esses dados entram no relatório médico e antecedem o checklist clínico de TVP.'
                                 : isInfluenzaPhysicalExamStep
                                   ? 'Esses dados entram no resumo médico e orientam a classificação de SRAG.'
@@ -7591,15 +7636,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   )}
 
                   <PhysicalExamForm
-                    value={isTVPPhysicalExamStep ? tvpPhysicalExam : isInfluenzaPhysicalExamStep ? influenzaPhysicalExam : pneumoniaPhysicalExam}
-                    onChange={isTVPPhysicalExamStep ? setTVPPhysicalExam : isInfluenzaPhysicalExamStep ? setInfluenzaPhysicalExam : setPneumoniaPhysicalExam}
+                    value={isTEPPhysicalExamStep ? tepPhysicalExam : isTVPPhysicalExamStep ? tvpPhysicalExam : isInfluenzaPhysicalExamStep ? influenzaPhysicalExam : pneumoniaPhysicalExam}
+                    onChange={isTEPPhysicalExamStep ? setTEPPhysicalExam : isTVPPhysicalExamStep ? setTVPPhysicalExam : isInfluenzaPhysicalExamStep ? setInfluenzaPhysicalExam : setPneumoniaPhysicalExam}
                   />
 
                   <div className="flex justify-end rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <motion.button
                       type="button"
                       onClick={() => handleAnswer(
-                        isTVPPhysicalExamStep
+                        isTEPPhysicalExamStep
+                          ? 'tep_instabilidade'
+                          : isTVPPhysicalExamStep
                           ? 'avaliacao_clinica'
                           : isInfluenzaPhysicalExamStep
                             ? 'influenza_sinais_gravidade'
@@ -7610,7 +7657,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                     >
-                      {isTVPPhysicalExamStep
+                      {isTEPPhysicalExamStep
+                        ? 'Salvar exame e avaliar estabilidade'
+                        : isTVPPhysicalExamStep
                         ? 'Salvar exame e abrir checklist clínico'
                         : isInfluenzaPhysicalExamStep
                           ? 'Salvar exame e avaliar gravidade'
@@ -7621,7 +7670,20 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {isTEPAssessmentStep && (
+                <div className="mb-8">
+                  <TEPAssessment
+                    key={currentStepData.id}
+                    stepId={currentStepData.id}
+                    savedAnswer={currentStepData.id === 'tep_tratamento' ? answers.tep_categoria : answers[currentStepData.id]}
+                    patientAge={patient.age}
+                    vitalSigns={tepVitalSigns}
+                    onContinue={handleAnswer}
+                  />
+                </div>
+              )}
+
+              {currentStepData.content && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {isTVPWaitingForVascularStep && (
                     <div className={clsx(
@@ -13739,7 +13801,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPPhysicalExamStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

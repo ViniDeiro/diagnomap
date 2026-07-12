@@ -4666,6 +4666,101 @@ const pacWaitingICUCareContent = pacWaitingAdmissionCareContent.replace(`
       </div>
 `, '')
 
+// Fluxograma de Tromboembolismo Pulmonar (TEP)
+export const tepFlowchart: EmergencyFlowchart = {
+  id: 'tep',
+  name: 'Tromboembolismo Pulmonar (TEP)',
+  description: 'Avaliação diagnóstica, estratificação de risco e tratamento do tromboembolismo pulmonar agudo.',
+  category: 'respiratory',
+  priority: 'high',
+  icon: 'lungs',
+  color: 'blue',
+  initialStep: 'tep_inicio',
+  finalSteps: ['tep_excluido', 'tep_alta', 'tep_internacao', 'tep_uti'],
+  steps: {
+    tep_inicio: {
+      id: 'tep_inicio', title: 'Suspeita de tromboembolismo pulmonar',
+      description: 'Inicie pela avaliação clínica estruturada. Hipoxemia com radiografia de tórax sem alteração não exclui TEP.',
+      type: 'question',
+      content: `<div class="space-y-3 text-sm"><p>Considere TEP diante de dispneia súbita, dor torácica pleurítica, taquicardia, hipoxemia, hemoptise, síncope ou sinais de TVP.</p><div class="rounded-lg border border-blue-200 bg-blue-50 p-3"><strong>Fatores de risco:</strong> idade avançada, cirurgia ou imobilização recente, neoplasia, estrogênios, obesidade, TEV prévio, trombofilia, gravidez e puerpério.</div></div>`,
+      options: [{ text: 'Iniciar avaliação', nextStep: 'tep_exame_fisico', value: 'suspeita_tep' }]
+    },
+    tep_exame_fisico: {
+      id: 'tep_exame_fisico', title: 'Sinais vitais e exame físico',
+      description: 'Registre estabilidade hemodinâmica, repercussão respiratória e sinais de TVP ou disfunção de ventrículo direito.', type: 'action'
+    },
+    tep_instabilidade: {
+      id: 'tep_instabilidade', title: 'Há instabilidade hemodinâmica?',
+      description: 'Considere hipotensão persistente, choque, parada cardiorrespiratória ou falência cardiopulmonar iminente.', type: 'question', critical: true,
+      options: [
+        { text: 'Sim — paciente instável', description: 'PAS < 90 mmHg, queda ≥ 40 mmHg por > 15 min, choque/PCR ou hipoperfusão sem outra causa.', nextStep: 'tep_instavel_conduta', value: 'instavel', critical: true, requiresImmediateAction: true },
+        { text: 'Não — paciente estável', nextStep: 'tep_wells', value: 'estavel' }
+      ]
+    },
+    tep_instavel_conduta: {
+      id: 'tep_instavel_conduta', title: 'TEP de alto risco — estabilização imediata',
+      description: 'Não atrasar suporte e avaliação para reperfusão.', type: 'action', critical: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-lg border border-red-300 bg-red-50 p-4"><strong>ABCDE, monitorização contínua e UTI.</strong> Oxigênio; evitar sedação e intubação precipitadas. Se necessária, usar estratégia hemodinamicamente protetora.</div><ul class="list-disc space-y-1 pl-5"><li>Cristaloide em bolus cauteloso de até 500 mL se hipotensão; evitar sobrecarga.</li><li>Norepinefrina como vasopressor de escolha; considerar dobutamina se baixo débito com pressão adequada.</li><li>Se Angio-TC for inviável pela instabilidade, realizar ecocardiografia/POCUS à beira-leito e US venosa.</li><li>Na alta suspeita sem contraindicação, iniciar anticoagulação parenteral e avaliar reperfusão emergencial.</li></ul></div>`,
+      options: [{ text: 'Prosseguir para reperfusão/contraindicações', nextStep: 'tep_trombolise_contra', value: 'alto_risco' }]
+    },
+    tep_wells: { id: 'tep_wells', title: 'Escore de Wells para TEP', description: 'Marque os critérios presentes; o escore direcionará a investigação.', type: 'question' },
+    tep_perc: { id: 'tep_perc', title: 'Regra PERC', description: 'Aplicável somente quando a probabilidade clínica é baixa. Todos os oito critérios devem ser negativos para encerrar a investigação.', type: 'question' },
+    tep_years: { id: 'tep_years', title: 'Critérios YEARS e D-dímero', description: 'Informe os critérios e o D-dímero para aplicar o ponto de corte apropriado.', type: 'question' },
+    tep_angio_tc: {
+      id: 'tep_angio_tc', title: 'Angiotomografia de tórax', description: 'Solicitar Angio-TC de artérias pulmonares.', type: 'question',
+      content: `<div class="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">Se houver contraindicação a contraste ou impossibilidade técnica, considerar cintilografia V/Q conforme disponibilidade. Em instabilidade que impeça transporte, usar ecocardiografia/POCUS e US venosa para decisão emergencial contextualizada.</div>`,
+      options: [
+        { text: 'TEP confirmado', nextStep: 'tep_spesi', value: 'angio_positiva', critical: true },
+        { text: 'TEP não demonstrado', nextStep: 'tep_excluido', value: 'angio_negativa' },
+        { text: 'Exame inconclusivo ou inviável', nextStep: 'tep_exame_alternativo', value: 'angio_inconclusiva' }
+      ]
+    },
+    tep_exame_alternativo: {
+      id: 'tep_exame_alternativo', title: 'Investigação complementar', description: 'Escolha o exame alternativo conforme estabilidade e disponibilidade.', type: 'question',
+      options: [
+        { text: 'TEP sustentado por exame alternativo', description: 'Cintilografia V/Q de alta probabilidade, TVP proximal ou repercussão direita compatível no contexto de alta suspeita.', nextStep: 'tep_spesi', value: 'confirmado_alternativo' },
+        { text: 'TEP excluído após investigação complementar', nextStep: 'tep_excluido', value: 'excluido_alternativo' },
+        { text: 'Persistem dúvida e risco clínico', nextStep: 'tep_internacao', value: 'investigacao_hospitalar' }
+      ]
+    },
+    tep_spesi: { id: 'tep_spesi', title: 'sPESI e repercussão cardiopulmonar', description: 'Estratifique mortalidade, biomarcadores e função do ventrículo direito.', type: 'question' },
+    tep_categoria: { id: 'tep_categoria', title: 'Categoria de risco A–E', description: 'Classificação integrada por clínica, hemodinâmica, biomarcadores e ventrículo direito.', type: 'question' },
+    tep_tratamento: {
+      id: 'tep_tratamento', title: 'Tratamento conforme categoria de risco', description: 'A conduta deve considerar risco de deterioração, sangramento, função renal e acesso ao sistema de saúde.', type: 'question',
+      options: [
+        { text: 'Categoria A/B — tratamento ambulatorial elegível', nextStep: 'tep_alta', value: 'categoria_ab' },
+        { text: 'Categoria C — internação e anticoagulação', nextStep: 'tep_internacao', value: 'categoria_c' },
+        { text: 'Categoria D/E — reperfusão e UTI', nextStep: 'tep_trombolise_contra', value: 'categoria_de', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    tep_trombolise_contra: { id: 'tep_trombolise_contra', title: 'Segurança para trombólise', description: 'Revise contraindicações absolutas e relativas antes da reperfusão sistêmica.', type: 'question', critical: true },
+    tep_reperfusao: {
+      id: 'tep_reperfusao', title: 'Estratégia de reperfusão', description: 'Selecionar a estratégia em equipe e sem atrasos evitáveis.', type: 'question', critical: true,
+      options: [
+        { text: 'Trombólise sistêmica', description: 'Alteplase 100 mg EV em 2 h; em PCR/iminência, protocolo de bolus conforme rotina institucional.', nextStep: 'tep_uti', value: 'trombolise_sistemica', critical: true },
+        { text: 'Terapia dirigida por cateter / trombectomia', description: 'Preferir quando trombólise for contraindicada, falhar ou houver indicação da equipe especializada.', nextStep: 'tep_uti', value: 'terapia_cateter', critical: true },
+        { text: 'Embolectomia cirúrgica', description: 'Alternativa em contraindicação/falha de trombólise ou anatomia/contexto favorável.', nextStep: 'tep_uti', value: 'embolectomia', critical: true }
+      ]
+    },
+    tep_excluido: {
+      id: 'tep_excluido', title: 'TEP excluído', description: 'A estratégia diagnóstica aplicada não sustenta tromboembolismo pulmonar agudo.', type: 'result',
+      content: `<div class="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm"><strong>Buscar diagnósticos diferenciais</strong> e orientar retorno imediato se houver piora da dispneia, dor torácica, síncope, hemoptise ou hipoxemia.</div>`
+    },
+    tep_alta: {
+      id: 'tep_alta', title: 'Tratamento ambulatorial', description: 'TEP de baixo risco, paciente estável e com seguimento seguro.', type: 'result',
+      content: `<div class="space-y-3 text-sm"><p><strong>Anticoagulação oral:</strong> selecionar conforme função renal, interações, risco hemorrágico, gestação e acesso. Opções usuais incluem rivaroxabana ou apixabana desde o início; dabigatrana/edoxabana após heparina; varfarina com ponte até INR terapêutico.</p><p>Planejar no mínimo 3 meses, reavaliar causa provocada/não provocada e duração estendida. Entregar sinais de alarme e retorno precoce.</p></div>`
+    },
+    tep_internacao: {
+      id: 'tep_internacao', title: 'Internação hospitalar', description: 'Monitorização e anticoagulação para risco intermediário ou investigação não concluída.', type: 'result',
+      content: `<div class="space-y-3 text-sm"><p><strong>Anticoagulação plena:</strong> HBPM é preferencial na maioria dos estáveis; HNF é útil quando há instabilidade, alto risco de sangramento, insuficiência renal grave ou possibilidade de procedimento/reperfusão.</p><p>Monitorar sinais de deterioração, troponina/BNP, função do VD, hemograma, função renal e sangramento. Reavaliar necessidade de terapia de resgate.</p></div>`
+    },
+    tep_uti: {
+      id: 'tep_uti', title: 'UTI e manejo do TEP de alto risco', description: 'Choque/PCR ou falência cardiopulmonar iminente.', type: 'result', critical: true,
+      content: `<div class="rounded-lg border border-red-300 bg-red-50 p-4 text-sm"><strong>Manter suporte hemodinâmico e respiratório, anticoagulação quando segura, estratégia de reperfusão definida e vigilância intensiva para sangramento e falência de VD.</strong></div>`
+    }
+  }
+}
+
 // Fluxograma de Pneumonia Adquirida na Comunidade (PAC)
 export const pneumoniaFlowchart: EmergencyFlowchart = {
   id: 'pneumonia',
@@ -9333,6 +9428,7 @@ export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   geca: gecaFlowchart,
   spider_bite: spiderBiteFlowchart,
   tvp: tvpFlowchart,
+  tep: tepFlowchart,
   dpoc_exacerbado: dpocFlowchart,
   influenza: influenzaFlowchart,
   pneumonia: pneumoniaFlowchart,
@@ -9441,7 +9537,7 @@ export const allFlowcharts = [
   { id: 'dispneia', name: 'Dispnéia', category: 'respiratory', implemented: false },
   { id: 'dpoc_exacerbado', name: 'DPOC exacerbado', category: 'respiratory', implemented: true },
   { id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', category: 'respiratory', implemented: false },
-  { id: 'tep', name: 'TEP', category: 'respiratory', implemented: false },
+  { id: 'tep', name: 'Tromboembolismo Pulmonar (TEP)', category: 'respiratory', implemented: true },
   { id: 'tosse', name: 'Tosse', category: 'respiratory', implemented: false },
 
   // Psiquiátricos
