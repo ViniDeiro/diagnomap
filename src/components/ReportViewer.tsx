@@ -649,7 +649,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const isHospital = admissionDecision === 'internar'
         || reevaluation === 'falha_ambulatorial'
         || history.includes('itu_antibiotico_hospitalar')
-        || ['itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar'].includes(currentStep)
+        || history.includes('itu_cuidados_aguarda_enfermaria')
+        || ['itu_cuidados_aguarda_enfermaria', 'itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar'].includes(currentStep)
       const isPyelonephritis = presentation === 'pielonefrite'
         || cystitisProfile === 'possivel_pielonefrite'
         || history.includes('itu_pielo_sepse')
@@ -701,6 +702,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             items: uniqueItems([
               isSepsis ? 'Presença de suspeita de sepse/instabilidade, com estabilização e internação imediatas.' : null,
               admissionDecision === 'internar' ? 'Identificado critério clínico para internação hospitalar.' : null,
+              answers.itu_cuidados_aguarda_enfermaria === 'cuidados_aguarda_enfermaria_aplicados' ? 'Mantidos monitorização, antibioticoterapia EV e suporte clínico enquanto aguardava leito de enfermaria.' : null,
               admissionDecision === 'ambulatorial' ? 'Sem critério atual de internação, com condições para tratamento ambulatorial e retorno em 48–72 horas.' : null,
               reevaluation === 'falha_ambulatorial' ? 'Ausência de melhora ou piora em 48–72 horas, indicando escalonamento para tratamento hospitalar.' : null,
               dischargeDecision === 'alta' ? 'Critérios de alta hospitalar preenchidos.' : null,

@@ -9278,10 +9278,92 @@ export const ituFlowchart: EmergencyFlowchart = {
       id: 'itu_antibiotico_hospitalar', title: 'Pielonefrite: tratamento hospitalar', description: 'Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"><p>Manter internação, hidratação e sintomáticos conforme necessidade. Revisar culturas e função renal. Pesquisar obstrução/abscesso e solicitar avaliação urológica quando indicada.</p></div>`,
       options: [
-        { text: 'Ceftriaxona 1 g EV 1x/dia', nextStep: 'itu_criterios_alta', value: 'ceftriaxona_ev' },
-        { text: 'Ciprofloxacino 400 mg EV 12/12h', nextStep: 'itu_criterios_alta', value: 'ciprofloxacino_ev' },
-        { text: 'Piperacilina-tazobactam 4,5 g EV 6/6h', nextStep: 'itu_criterios_alta', value: 'piperacilina_tazobactam' },
-        { text: 'Meropenem 1 g EV 8/8h para quadro grave/alto risco MDR', nextStep: 'itu_criterios_alta', value: 'meropenem', critical: true }
+        { text: 'Ceftriaxona 1 g EV 1x/dia', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'ceftriaxona_ev' },
+        { text: 'Ciprofloxacino 400 mg EV 12/12h', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'ciprofloxacino_ev' },
+        { text: 'Piperacilina-tazobactam 4,5 g EV 6/6h', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'piperacilina_tazobactam' },
+        { text: 'Meropenem 1 g EV 8/8h para quadro grave/alto risco MDR', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'meropenem', critical: true }
+      ]
+    },
+    itu_cuidados_aguarda_enfermaria: {
+      id: 'itu_cuidados_aguarda_enfermaria',
+      title: 'Cuidados enquanto aguarda leito de enfermaria',
+      description: 'Manter antibioticoterapia, monitorização e suporte clínico até a transferência para a enfermaria.',
+      type: 'action',
+      critical: true,
+      group: 'Enfermaria',
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <h4 class="font-bold text-sky-950">Cuidados do paciente com pielonefrite enquanto aguarda leito de enfermaria</h4>
+            <p class="mt-2">Após definida a necessidade de internação e selecionado o antimicrobiano, o paciente deve permanecer em observação, receber o tratamento prescrito e ser reavaliado até a transferência efetiva.</p>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <h5 class="font-bold text-slate-950">Monitorização clínica</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Acompanhar pressão arterial, frequência cardíaca, frequência respiratória, SpO2 e temperatura.</li>
+                <li>Reavaliar dor lombar, náuseas, vômitos, nível de consciência e perfusão periférica.</li>
+                <li>Manter balanço hídrico e controle da diurese.</li>
+                <li>Reavaliar periodicamente ou imediatamente se houver piora clínica.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+              <h5 class="font-bold text-rose-950">Antibioticoterapia hospitalar</h5>
+              <p class="mt-2">Administrar o antimicrobiano selecionado nos horários prescritos, sem atrasar o início do tratamento.</p>
+              <p class="mt-2">Revisar urocultura, hemoculturas quando coletadas e TSA; ajustar ou descalonar o esquema conforme sensibilidade, resposta clínica e função renal.</p>
+            </div>
+
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <h5 class="font-bold text-emerald-950">Hidratação e controle de sintomas</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Realizar hidratação individualizada conforme estado volêmico, função renal e comorbidades.</li>
+                <li>Evitar sobrecarga hídrica e acompanhar creatinina e eletrólitos.</li>
+                <li>Tratar febre, dor, náuseas e vômitos conforme necessidade e contraindicações.</li>
+                <li>Manter alimentação e hidratação oral quando toleradas.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <h5 class="font-bold text-amber-950">Pesquisa e controle de complicações</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Investigar obstrução, cálculo infectado ou abscesso diante de suspeita clínica ou evolução desfavorável.</li>
+                <li>Solicitar ultrassonografia ou tomografia conforme indicação e disponibilidade.</li>
+                <li>Acionar urologia com urgência se houver obstrução associada à infecção ou necessidade de drenagem.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <h5 class="font-bold text-violet-950">Prevenção de complicações da internação</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Instituir profilaxia para tromboembolismo venoso quando indicada e sem contraindicação.</li>
+                <li>Prevenir lesão por pressão e estimular mobilização segura quando possível.</li>
+                <li>Revisar acessos, alergias, interações medicamentosas e necessidade de ajuste renal.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+              <h5 class="font-bold text-orange-950">Vigilância para deterioração</h5>
+              <p class="mt-2">Reavaliar imediatamente diante de hipotensão, taquipneia, hipoxemia, confusão, oligúria, piora da dor, febre persistente ou sinais de hipoperfusão.</p>
+              <p class="mt-2 font-semibold">Se houver suspeita de sepse ou nova disfunção orgânica, iniciar protocolo de estabilização e reavaliar necessidade de unidade de maior complexidade.</p>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
+            <h5 class="font-bold text-cyan-950">Mensagem prática para o protocolo</h5>
+            <p class="mt-2">Manter o paciente monitorizado, com antibioticoterapia EV, hidratação individualizada, controle de sintomas e investigação de complicações até a admissão na enfermaria.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        {
+          text: 'Confirmar cuidados e seguir para reavaliação hospitalar',
+          description: 'Registra os cuidados mantidos enquanto aguarda leito de enfermaria.',
+          nextStep: 'itu_criterios_alta',
+          value: 'cuidados_aguarda_enfermaria_aplicados',
+          critical: true
+        }
       ]
     },
     itu_criterios_alta: {
