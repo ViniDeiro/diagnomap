@@ -1426,6 +1426,9 @@ const tvpTherapeuticOptions = [
   { id: 'varfarina', group: 'VKA', text: 'Varfarina: alvo INR 2–3; sobrepor com heparina por ≥5 dias e INR terapêutico por 24h' }
 ]
 
+const isTVPICUDisposition = (currentStep: string, history: string[]) =>
+  currentStep === 'tvp_internacao_uti' || history.includes('tvp_internacao_uti')
+
 const tvpAnticoagulationConsiderations = [
   {
     id: 'consideracoes_tratamento_tvp',
@@ -2077,13 +2080,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         const hasSavedAlert = savedFindings.some((item: unknown) =>
           typeof item === 'string' && tvpAlertSigns.includes(item)
         )
-        const hasSavedVascularAlert = savedFindings.some((item: unknown) =>
-          typeof item === 'string' && tvpVascularSurgeryAlertSigns.includes(item)
-        )
-        const hasSavedRespiratoryAlert = savedFindings.some((item: unknown) =>
-          typeof item === 'string' && tvpRespiratoryTEPAlertSigns.includes(item)
-        )
-
         if (hasSavedAlert) {
           if (currentStep === 'wells_score') {
             nextStep = 'pocus_antes_d_dimero'
@@ -2094,11 +2090,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             nextStep = 'tvp_d_dimero_alerta'
             value = `${value || 'pocus_registrado'}_com_alerta`
           } else if (currentStep === 'tvp_d_dimero_alerta' || currentStep === 'baixa_probabilidade') {
-            nextStep = hasSavedVascularAlert
-              ? 'tvp_urgencia_vascular_imediata'
-              : hasSavedRespiratoryAlert
-                ? 'tvp_internacao_investigar_tep'
-                : 'tvp_internacao_investigacao_clinica'
+            nextStep = 'tvp_urgencia_vascular_imediata'
             value = `${value || 'd_dimero_registrado'}_com_alerta`
           } else {
             const isAllowedAlertTransition =
@@ -2195,7 +2187,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     const treatmentAnswer = JSON.stringify({
       decision: value || nextStep,
-      opcoesTerapeuticasSelecionadas: selectedTherapies,
+      opcoesTerapeuticasSelecionadas: selectedTherapies.filter(
+        (therapyId) => therapyId !== 'hnf' || isTVPICUDisposition(currentStep, history)
+      ),
       planoDuracaoSelecionado: selectedDurationPlan,
       solicitarAvaliacaoCirurgiaoVascular: true
     })
@@ -3183,6 +3177,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
   const isTVPWaitingForVascularStep = flowchart.id === 'tvp' && currentStepData?.id === 'tvp_aguarda_avaliacao_vascular'
+  const hasTVPICUDisposition = flowchart.id === 'tvp' && isTVPICUDisposition(currentStep, history)
+  const availableTVPTherapeuticOptions = tvpTherapeuticOptions.filter(
+    (item) => item.id !== 'hnf' || hasTVPICUDisposition
+  )
+  const availableSelectedTherapies = selectedTherapies.filter(
+    (therapyId) => therapyId !== 'hnf' || hasTVPICUDisposition
+  )
   const isTVPVascularReferralStep = flowchart.id === 'tvp' && [
     'encaminhamento_urgente',
     'tvp_urgencia_vascular_concluida'
@@ -3192,7 +3193,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     ...selectedWellsCriteria.map((criterionId) => tvpWellsCriteria.find((item) => item.id === criterionId)?.text),
     ...selectedClinicalFindings.filter((item) => /imobilização|cirurgia|trauma|câncer|gravidez|estrogênios|trombofilia|TVP\/TEV/i.test(item))
   ].filter((item): item is string => Boolean(item))
-  const tvpReferralTherapies = selectedTherapies
+  const tvpReferralTherapies = availableSelectedTherapies
     .map((therapyId) => tvpTherapeuticOptions.find((item) => item.id === therapyId))
     .filter((item): item is (typeof tvpTherapeuticOptions)[number] => Boolean(item))
   const tvpReferralHasEdema = selectedClinicalFindings.some((item) => /edema|aumento da circunferência/i.test(item))
@@ -3250,7 +3251,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const tvpWellsDecisionValue = hasTVPAlertSignSelected ? 'alerta_investigacao_obrigatoria' : wellsDecisionValue
   const hasAbsoluteContraindication = selectedContraindications.some(item => item.startsWith('abs_'))
   const hasRelativeContraindication = selectedContraindications.some(item => item.startsWith('rel_'))
-  const hasSelectedTherapy = selectedTherapies.length > 0
+  const hasSelectedTherapy = availableSelectedTherapies.length > 0
   const isSectionOpen = (key: string, defaultValue = true) => sectionOpen[key] ?? defaultValue
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
   const isGasometryFlow = flowchart.id === 'gasometria'
@@ -5623,7 +5624,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
     try {
       const parsed = JSON.parse(saved)
-      const therapies = Array.isArray(parsed?.opcoesTerapeuticasSelecionadas) ? parsed.opcoesTerapeuticasSelecionadas : []
+      const therapies = Array.isArray(parsed?.opcoesTerapeuticasSelecionadas)
+        ? parsed.opcoesTerapeuticasSelecionadas.filter(
+            (therapyId: unknown) => typeof therapyId === 'string' && (therapyId !== 'hnf' || hasTVPICUDisposition)
+          )
+        : []
       const duration = typeof parsed?.planoDuracaoSelecionado === 'string' ? parsed.planoDuracaoSelecionado : ''
       setSelectedTherapies(therapies)
       setSelectedDurationPlan(duration)
@@ -5631,7 +5636,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSelectedTherapies([])
       setSelectedDurationPlan('')
     }
-  }, [isTVPTreatmentInitial, answers, currentStep])
+  }, [isTVPTreatmentInitial, answers, currentStep, hasTVPICUDisposition])
 
   useEffect(() => {
     if (!isInfluenzaSeverityStep) {
@@ -10968,17 +10973,20 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         {hasTVPVascularAlertSelected ? (
                           <>
                             Sinal de <strong>urgência vascular</strong> identificado. Manter atenção para gravidade e
-                            prosseguir com a estratificação diagnóstica do fluxo antes da decisão de conduta.
+                            prosseguir com a estratificação diagnóstica. Após POCUS e D-dímero, o fluxo abrirá
+                            obrigatoriamente o manejo de Flegmasia/ameaça ao membro.
                           </>
                         ) : hasTVPRespiratoryAlertSelected ? (
                           <>
                             Atenção para possível <strong>embolia pulmonar associada</strong>. Prosseguir com a
-                            estratificação diagnóstica e manter monitorização conforme estabilidade clínica.
+                            estratificação diagnóstica e manter monitorização conforme estabilidade clínica. O manejo
+                            de Flegmasia/ameaça ao membro será exibido antes da continuidade assistencial.
                           </>
                         ) : (
                           <>
                             <strong>Maior suspeita/gravidade de TVP</strong>. Prosseguir para Wells, POCUS e D-dímero
-                            conforme o caminho do fluxograma, mantendo cautela na decisão final.
+                            conforme o caminho do fluxograma; em seguida, abrir obrigatoriamente o manejo de
+                            Flegmasia/ameaça ao membro.
                           </>
                         )}
                       </p>
@@ -13485,13 +13493,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           Opções terapêuticas, doses e sugestão de prescrições
                         </h4>
                         <span className="text-xs font-semibold px-2 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 inline-flex items-center gap-2">
-                          {selectedTherapies.length} opção(ões)
+                          {availableSelectedTherapies.length} opção(ões)
                           <ChevronRight className={clsx('w-3 h-3 text-blue-700 transition-transform', isSectionOpen('tvp_treatment_therapies', true) ? 'rotate-90' : '')} />
                         </span>
                       </button>
                       {isSectionOpen('tvp_treatment_therapies', true) && (
                       <div className="space-y-2">
-                        {tvpTherapeuticOptions.map((item) => {
+                        {availableTVPTherapeuticOptions.map((item) => {
                           const checked = selectedTherapies.includes(item.id)
                           const canGeneratePrescription = [
                             'rivaroxabana',
