@@ -33,6 +33,62 @@ export type PneumoniaCurbFieldKey =
 export type PneumoniaPsiValues = Record<PneumoniaPsiFieldKey, boolean | number | ''>
 export type PneumoniaCurbValues = Record<PneumoniaCurbFieldKey, boolean>
 
+export type PneumoniaSmartCopRiskLevel = 'none' | 'low' | 'moderate' | 'high' | 'very_high'
+
+export type PneumoniaSmartCopRisk = {
+  level: PneumoniaSmartCopRiskLevel
+  label: string
+  scoreRange: string
+  description: string
+}
+
+export const getPneumoniaSmartCopRisk = (score: number): PneumoniaSmartCopRisk => {
+  const normalizedScore = Math.max(0, Math.floor(Number.isFinite(score) ? score : 0))
+
+  if (normalizedScore === 0) {
+    return {
+      level: 'none',
+      label: 'Sem risco',
+      scoreRange: '0 ponto',
+      description: 'Baixa probabilidade de necessidade de ventilação mecânica. Manter tratamento clínico, monitorização de rotina e reavaliação periódica conforme evolução clínica.'
+    }
+  }
+
+  if (normalizedScore <= 2) {
+    return {
+      level: 'low',
+      label: 'Baixo risco',
+      scoreRange: '1–2 pontos',
+      description: 'Baixa probabilidade de necessidade de ventilação mecânica. Manter monitorização clínica, oxigenoterapia se indicada e reavaliar caso haja piora respiratória ou aumento da demanda de oxigênio.'
+    }
+  }
+
+  if (normalizedScore <= 4) {
+    return {
+      level: 'moderate',
+      label: 'Risco moderado',
+      scoreRange: '3–4 pontos',
+      description: 'Risco intermediário de necessidade de ventilação mecânica. Intensificar a monitorização clínica e respiratória, reavaliar frequentemente e considerar suporte ventilatório não invasivo ou cânula nasal de alto fluxo, conforme indicação clínica.'
+    }
+  }
+
+  if (normalizedScore <= 6) {
+    return {
+      level: 'high',
+      label: 'Alto risco',
+      scoreRange: '5–6 pontos',
+      description: 'Elevada probabilidade de necessidade de ventilação mecânica. Recomenda-se monitorização contínua, avaliação precoce pela equipe de terapia intensiva e preparo para escalonamento do suporte ventilatório caso haja deterioração clínica.'
+    }
+  }
+
+  return {
+    level: 'very_high',
+    label: 'Muito alto risco',
+    scoreRange: '7 pontos ou mais',
+    description: 'Probabilidade muito elevada de necessidade de ventilação mecânica. Recomenda-se avaliação imediata pela equipe de terapia intensiva, monitorização contínua e preparo para intubação orotraqueal e ventilação mecânica, caso presentes critérios clínicos de insuficiência respiratória aguda.'
+  }
+}
+
 export const PNEUMONIA_MANDATORY_ADMISSION_LIMITERS = [
   'Impossibilidade da via oral',
   'Vulnerabilidade social',

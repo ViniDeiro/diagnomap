@@ -56,6 +56,7 @@ import {
   calculatePneumoniaPsi,
   defaultCurbValues,
   defaultPsiValues,
+  getPneumoniaSmartCopRisk,
   hasPneumoniaPrescriptionSet
 } from '@/lib/pneumonia'
 import {
@@ -1244,6 +1245,34 @@ const pneumoniaSmartCopItems: Array<{ label: string; points: number }> = [
   { label: 'pH arterial < 7,35', points: 2 }
 ]
 
+const pneumoniaSmartCopRiskStyles = {
+  none: {
+    icon: '🟢',
+    panel: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+    badge: 'border-emerald-200 bg-white text-emerald-800'
+  },
+  low: {
+    icon: '🟢',
+    panel: 'border-green-200 bg-green-50 text-green-950',
+    badge: 'border-green-200 bg-white text-green-800'
+  },
+  moderate: {
+    icon: '🟡',
+    panel: 'border-amber-300 bg-amber-50 text-amber-950',
+    badge: 'border-amber-300 bg-white text-amber-800'
+  },
+  high: {
+    icon: '🟠',
+    panel: 'border-orange-300 bg-orange-50 text-orange-950',
+    badge: 'border-orange-300 bg-white text-orange-800'
+  },
+  very_high: {
+    icon: '🔴',
+    panel: 'border-red-300 bg-red-50 text-red-950',
+    badge: 'border-red-300 bg-white text-red-800'
+  }
+} as const
+
 const pneumoniaDripMajorItems = [
   'Antibiótico nos últimos 60 dias',
   'Instituição de longa permanência',
@@ -2274,6 +2303,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const pneumoniaSmartCopProtocolAnswer = JSON.stringify({
       decision: value || nextStep,
       score: pneumoniaSmartCopScore,
+      classificacao: pneumoniaSmartCopRisk.label,
+      orientacao: pneumoniaSmartCopGuidance,
       criteriosSelecionados: pneumoniaSmartCopCriteria
     })
     const pneumoniaPsiAnswer = JSON.stringify({
@@ -3457,13 +3488,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const item = pneumoniaSmartCopItems.find((criterion) => criterion.label === label)
     return total + (item?.points || 0)
   }, 0)
-  const pneumoniaSmartCopInterpretation = pneumoniaSmartCopScore <= 2
-    ? 'Baixo risco'
-    : pneumoniaSmartCopScore <= 4
-      ? 'Risco moderado'
-      : pneumoniaSmartCopScore <= 6
-        ? 'Alto risco'
-        : 'Risco muito alto'
+  const pneumoniaSmartCopRisk = getPneumoniaSmartCopRisk(pneumoniaSmartCopScore)
+  const pneumoniaSmartCopRiskStyle = pneumoniaSmartCopRiskStyles[pneumoniaSmartCopRisk.level]
+  const pneumoniaSmartCopInterpretation = pneumoniaSmartCopRisk.label
+  const pneumoniaSmartCopGuidance = currentStepData?.id === 'pac_smartcop_uti'
+    && ['none', 'low'].includes(pneumoniaSmartCopRisk.level)
+    ? `${pneumoniaSmartCopRisk.description} Como a indicação de UTI já foi definida por outros critérios, a pontuação baixa no SMART-COP não deve reverter o destino; manter o suporte intensivo conforme a gravidade global.`
+    : pneumoniaSmartCopRisk.description
   const pneumoniaDripScore = (pneumoniaDripMajorCriteria.length * 2) + pneumoniaDripMinorCriteria.length
   const savedPneumoniaDripScore = useMemo(() => {
     const raw = answers.pac_drip_enfermaria || answers.pac_drip_uti
@@ -9153,6 +9184,23 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </label>
                       )
                     })}
+                  </div>
+                  <div
+                    aria-live="polite"
+                    className={clsx('mt-4 rounded-xl border p-4 transition-colors', pneumoniaSmartCopRiskStyle.panel)}
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3">
+                        <span className="text-xl" aria-hidden="true">{pneumoniaSmartCopRiskStyle.icon}</span>
+                        <div>
+                          <h5 className="font-extrabold">{pneumoniaSmartCopRisk.label}</h5>
+                          <p className="mt-1 text-sm leading-relaxed">{pneumoniaSmartCopGuidance}</p>
+                        </div>
+                      </div>
+                      <span className={clsx('shrink-0 rounded-lg border px-3 py-1.5 text-xs font-bold', pneumoniaSmartCopRiskStyle.badge)}>
+                        {pneumoniaSmartCopRisk.scoreRange}
+                      </span>
+                    </div>
                   </div>
                   <details className="mt-4 rounded-xl border border-orange-200 bg-white p-4 text-sm text-slate-800">
                     <summary className="cursor-pointer font-bold text-orange-950">Ferramentas complementares de prognóstico</summary>

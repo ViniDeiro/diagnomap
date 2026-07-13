@@ -4613,7 +4613,7 @@ const pacWaitingAdmissionCareContent = `
       <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
         <h5 class="font-bold text-rose-950">Antibioticoterapia precoce</h5>
         <p class="mt-2">Administrar o antibiótico empírico o mais precocemente possível, preferencialmente nas primeiras horas após o diagnóstico.</p>
-        <p class="mt-2">Não aguardar resultado de culturas quando houver indicação clínica de tratamento imediato.</p>
+        <p class="mt-2">Não aguardar resultado de culturas quando houver indicação clínica de tratamento imediato. Sugestão de coleta de culturas para investigação de agente etiológico.</p>
       </div>
 
       <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">

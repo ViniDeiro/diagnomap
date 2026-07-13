@@ -2,6 +2,7 @@ import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import type { Patient } from '@/types/patient'
 import type { EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
 import { getOseltamivirDoseText } from '@/lib/influenza'
+import { getPneumoniaSmartCopRisk } from '@/lib/pneumonia'
 
 export type ClinicalSummaryData = {
   chiefComplaint: string
@@ -930,6 +931,7 @@ const buildPneumoniaClinicalSummary = (
   const atsSevere = ats?.pacGrave === true || atsMajor.length >= 1 || atsMinor.length >= 3 || ['ats_idsa_uti', 'ats_idsa_pac_grave'].includes(atsDecision)
   const dripScore = savedScore(drip, answers.pac_drip_enfermaria || answers.pac_drip_uti, 'drip')
   const smartCopScore = savedScore(smartCop, answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti, 'smartcop')
+  const smartCopRisk = smartCopScore != null ? getPneumoniaSmartCopRisk(smartCopScore) : null
   const psiScore = savedScore(psi, answers.pac_calcular_psi, 'psi')
 
   const destination = (() => {
@@ -941,6 +943,11 @@ const buildPneumoniaClinicalSummary = (
     if (atsSevere) return 'uti'
     return 'avaliacao'
   })()
+  const smartCopGuidance = smartCopRisk
+    ? destination === 'uti' && ['none', 'low'].includes(smartCopRisk.level)
+      ? `${smartCopRisk.description} Como a indicação de UTI foi definida por outros critérios de gravidade, a pontuação baixa no SMART-COP não reverte o destino assistencial.`
+      : smartCopRisk.description
+    : null
 
   const chiefComplaint = patient.admission?.chiefComplaint?.trim()
     || patient.admission?.symptoms?.filter(Boolean).join('; ')
@@ -996,7 +1003,7 @@ const buildPneumoniaClinicalSummary = (
     atsMajor.length ? `Critérios maiores ATS/IDSA: ${formatClinicalListText(atsMajor)}` : null,
     atsMinor.length ? `Critérios menores ATS/IDSA: ${formatClinicalListText(atsMinor)}` : null,
     dripScore != null ? `DRIP ${dripScore} (${dripScore >= 4 ? 'risco aumentado para patógenos resistentes' : 'baixo risco para patógenos resistentes'})` : null,
-    smartCopScore != null ? `SMART-COP ${smartCopScore} (${smartCopScore <= 2 ? 'baixo risco de suporte intensivo' : smartCopScore <= 4 ? 'risco moderado' : smartCopScore <= 6 ? 'alto risco' : 'risco muito alto'})` : null
+    smartCopScore != null && smartCopRisk ? `SMART-COP ${smartCopScore} (${smartCopRisk.label.toLowerCase()})` : null
   ])
 
   const title = 'RELATÓRIO MÉDICO - PNEUMONIA ADQUIRIDA NA COMUNIDADE'
@@ -1015,6 +1022,7 @@ const buildPneumoniaClinicalSummary = (
     destination === 'enfermaria' || destination === 'limitador' ? 'Internação em enfermaria ou unidade intermediária, com antibioticoterapia, controle de sintomas, oxigênio se necessário e reavaliação seriada.' : null,
     destination === 'ambulatorial' ? 'Tratamento ambulatorial conforme prescrição, orientações de retorno e reavaliação em 48 a 72 horas.' : null,
     dripScore != null && dripScore >= 4 ? 'Considerar cobertura ampliada para patógenos resistentes conforme epidemiologia, culturas, gravidade e protocolo institucional.' : null,
+    smartCopGuidance,
     destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, função renal, eletrólitos e disfunção orgânica conforme disponibilidade e contexto clínico.' : null,
     destination === 'ambulatorial' ? 'Orientar retorno imediato em caso de piora da dispneia, hipoxemia, confusão, hipotensão, febre persistente, intolerância oral ou piora do estado geral.' : null
   ])
