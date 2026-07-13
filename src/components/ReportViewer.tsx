@@ -643,6 +643,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const chosenAntibiotic = antibioticLabels[hospitalAntibiotic || ambulatoryAntibiotic || cystitisAntibiotic] || ''
       const isSepsis = sepsisDecision === 'sepse'
         || history.includes('itu_estabilizacao_sepse')
+        || history.includes('itu_cuidados_aguarda_internacao')
+        || currentStep === 'itu_cuidados_aguarda_internacao'
         || currentStep === 'itu_sepse_encaminhada'
       const isHospital = admissionDecision === 'internar'
         || reevaluation === 'falha_ambulatorial'

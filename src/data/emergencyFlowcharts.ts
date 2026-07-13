@@ -4109,6 +4109,14 @@ const influenzaBoardingCareContent = `
   </div>
 `
 
+const influenzaWardDeteriorationPreventionContent = `
+  <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
+    <h5 class="font-bold text-red-950">Prevenção de deterioração</h5>
+    <p class="mt-2">A cada reavaliação, perguntar se o paciente está respirando mais rápido, precisando de mais oxigênio, ficando sonolento, hipotenso, com lactato em elevação, diurese em queda, gasometria piorando ou trabalho respiratório aumentando.</p>
+    <p class="mt-2 font-semibold">Se qualquer resposta for sim, reclassificar imediatamente e avaliar necessidade de UTI.</p>
+  </div>
+`
+
 export const influenzaFlowchart: EmergencyFlowchart = {
   id: 'influenza',
   name: 'Influenza / Síndrome Gripal',
@@ -4354,7 +4362,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       description: 'Boarding do paciente com SRAG aguardando enfermaria.',
       type: 'action',
       critical: true,
-      content: influenzaBoardingCareContent,
+      content: `${influenzaBoardingCareContent}${influenzaWardDeteriorationPreventionContent}`,
       options: [
         {
           text: 'Confirmar cuidados e seguir para internação em enfermaria',
@@ -9019,7 +9027,6 @@ export const ituFlowchart: EmergencyFlowchart = {
     'itu_cistite_cefuroxima',
     'itu_cistite_sulfametoxazol',
     'itu_bacteriuria_nao_tratar',
-    'itu_bacteriuria_grupo_especial',
     'itu_ambulatorial_concluido',
     'itu_alta_hospitalar',
     'itu_sepse_encaminhada'
@@ -9063,7 +9070,7 @@ export const ituFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Pertence a grupo com indicação específica', nextStep: 'itu_bacteriuria_grupo_especial', value: 'grupo_especial' },
+        { text: 'Pertence a grupo com indicação específica', nextStep: 'itu_cistite_antibiotico', value: 'grupo_especial' },
         { text: 'Não pertence: não tratar', nextStep: 'itu_bacteriuria_nao_tratar', value: 'nao_tratar' }
       ]
     },
@@ -9079,9 +9086,11 @@ export const ituFlowchart: EmergencyFlowchart = {
       id: 'itu_bacteriuria_grupo_especial',
       title: 'Bacteriúria em grupo especial',
       description: 'Tratamento guiado pela condição clínica e pela urocultura com TSA.',
-      type: 'result',
+      type: 'action',
       content: `<div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Conduta:</strong> coletar/revisar urocultura com antibiograma e seguir protocolo específico para gestação, procedimento urológico ou condição imunológica. Não extrapolar automaticamente os esquemas de cistite simples.</div>`,
-      options: []
+      options: [
+        { text: 'Seguir para seleção de antibioticoterapia', nextStep: 'itu_cistite_antibiotico', value: 'selecionar_antibiotico' }
+      ]
     },
     itu_cistite_complicadores: {
       id: 'itu_cistite_complicadores',
@@ -9144,7 +9153,88 @@ export const ituFlowchart: EmergencyFlowchart = {
     itu_estabilizacao_sepse: {
       id: 'itu_estabilizacao_sepse', title: 'Estabilização clínica imediata', description: 'Seguir protocolo institucional de sepse e garantir controle do foco urinário.', type: 'action', critical: true, timeSensitive: true,
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-100 p-4 text-red-950"><strong>Prioridade:</strong> monitorização contínua, acessos venosos, lactato, culturas quando não atrasarem, antibioticoterapia EV precoce, reposição volêmica individualizada e vasopressor se choque persistente.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Controle do foco:</strong> pesquisar obstrução urinária, cálculo infectado, abscesso ou necessidade de drenagem; acionar urologia com urgência quando houver obstrução associada à infecção.</div></div>`,
-      options: [{ text: 'Estabilização iniciada e internação solicitada', nextStep: 'itu_sepse_encaminhada', value: 'sepse_estabilizada', critical: true }]
+      options: [{ text: 'Estabilização iniciada e internação solicitada', nextStep: 'itu_cuidados_aguarda_internacao', value: 'sepse_estabilizada', critical: true }]
+    },
+    itu_cuidados_aguarda_internacao: {
+      id: 'itu_cuidados_aguarda_internacao',
+      title: 'Cuidados enquanto aguarda internação',
+      description: 'Manter o manejo da sepse urinária e o controle do foco até a transferência para unidade compatível com a gravidade.',
+      type: 'action',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
+            <h4 class="font-bold text-sky-950">Cuidados do paciente com sepse urinária enquanto aguarda internação</h4>
+            <p class="mt-2">Após iniciada a estabilização e solicitada a internação, o paciente deve permanecer monitorizado e receber tratamento contínuo enquanto aguarda disponibilidade de leito.</p>
+          </div>
+
+          <div class="grid gap-4 lg:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <h5 class="font-bold text-slate-950">Monitorização e reavaliação contínuas</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Pressão arterial, frequência cardíaca, frequência respiratória, SpO2 e temperatura.</li>
+                <li>Nível de consciência, perfusão periférica e sinais de disfunção orgânica.</li>
+                <li>Balanço hídrico rigoroso e controle da diurese.</li>
+                <li>Reavaliar a cada 30 minutos a 1 hora, ou imediatamente se houver piora.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
+              <h5 class="font-bold text-rose-950">Antibioticoterapia EV precoce</h5>
+              <p class="mt-2">Administrar antimicrobiano empírico EV o mais precocemente possível, conforme gravidade, função renal, alergias e perfil local de resistência.</p>
+              <p class="mt-2">Coletar culturas antes do antibiótico quando isso não atrasar o tratamento. Não aguardar os resultados para iniciar a terapia e ajustar ou descalonar conforme o TSA.</p>
+            </div>
+
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+              <h5 class="font-bold text-emerald-950">Suporte hemodinâmico</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Dosar e acompanhar lactato conforme a evolução clínica.</li>
+                <li>Realizar reposição com cristaloide de forma individualizada, com reavaliação de perfusão, responsividade e congestão.</li>
+                <li>Se o choque persistir, iniciar vasopressor conforme protocolo institucional, preferencialmente norepinefrina.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+              <h5 class="font-bold text-amber-950">Controle urgente do foco urinário</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Pesquisar obstrução urinária, cálculo infectado, pionefrose ou abscesso.</li>
+                <li>Providenciar ultrassonografia ou tomografia conforme estabilidade e disponibilidade.</li>
+                <li>Acionar urologia com urgência diante de obstrução associada à infecção e não atrasar drenagem quando indicada.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <h5 class="font-bold text-blue-950">Culturas e acompanhamento laboratorial</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Urocultura com TSA e dois pares de hemoculturas, preferencialmente antes do antimicrobiano.</li>
+                <li>Acompanhar hemograma, função renal, eletrólitos e gasometria conforme gravidade.</li>
+                <li>Repetir lactato e demais exames de acordo com a resposta clínica.</li>
+              </ul>
+            </div>
+
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
+              <h5 class="font-bold text-violet-950">Suporte clínico e prevenção de complicações</h5>
+              <ul class="mt-2 list-disc space-y-1 pl-5">
+                <li>Ofertar oxigênio se houver hipoxemia e escalar o suporte respiratório quando necessário.</li>
+                <li>Controlar febre, dor, náuseas e glicemia, respeitando contraindicações.</li>
+                <li>Instituir profilaxia para tromboembolismo venoso e prevenção de lesão por pressão quando indicadas.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="rounded-xl border border-orange-200 bg-orange-50 p-4">
+            <h5 class="font-bold text-orange-950">Reavaliação e escalonamento</h5>
+            <p class="mt-2">Na presença de hipotensão persistente, lactato crescente, oligúria, hipoxemia, alteração do nível de consciência ou nova disfunção orgânica, escalar imediatamente o suporte e reavaliar necessidade de UTI.</p>
+          </div>
+
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <h5 class="font-bold text-amber-950">Mensagem prática para o protocolo</h5>
+            <p class="mt-2">Manter monitorização, antimicrobiano EV, suporte hemodinâmico, controle de diurese e investigação ou tratamento do foco urinário até a transferência efetiva.</p>
+          </div>
+        </div>
+      `,
+      options: [{ text: 'Cuidados mantidos: finalizar encaminhamento para internação', nextStep: 'itu_sepse_encaminhada', value: 'cuidados_sepse_urinaria_aplicados', critical: true, requiresImmediateAction: true }]
     },
     itu_sepse_encaminhada: {
       id: 'itu_sepse_encaminhada', title: 'Sepse urinária: manejo hospitalar', description: 'Paciente encaminhado para internação após início da estabilização.', type: 'result', critical: true,

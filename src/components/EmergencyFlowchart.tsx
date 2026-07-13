@@ -59,6 +59,7 @@ import {
   getPneumoniaSmartCopRisk,
   hasPneumoniaPrescriptionSet
 } from '@/lib/pneumonia'
+import { buildItuPrescriptionItems, ITU_PRESCRIBER } from '@/lib/itu'
 import {
   SinusitisEtiology,
   buildSinusitisPrescriptionItems,
@@ -2100,6 +2101,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const handleAnswer = (nextStep: string, value?: string) => {
+    if (flowchart.id === 'itu') {
+      const ituPrescriptionItems = buildItuPrescriptionItems(value)
+      if (ituPrescriptionItems.length > 0) {
+        patientService.replacePrescriptionsByPrescriber(patient.id, ITU_PRESCRIBER, ituPrescriptionItems)
+      }
+    }
+
     if (flowchart.id === 'tvp') {
       try {
         const savedClinicalEvaluation = JSON.parse(answers.avaliacao_clinica || '{}')

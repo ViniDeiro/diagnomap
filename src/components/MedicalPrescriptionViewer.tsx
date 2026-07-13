@@ -14,6 +14,7 @@ import { Patient, Prescription } from '@/types/patient'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
+import { buildItuPrescriptionItems } from '@/lib/itu'
 import jsPDF from 'jspdf'
 import html2canvas from 'html2canvas'
 import clsx from 'clsx'
@@ -239,6 +240,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
 
   const getDynamicFlowPrescriptions = (): Prescription[] => {
     if (!livePatient.flowchartState?.answers) return []
+    const flowAnswers = livePatient.flowchartState.answers
     const parsedEntries = Object.values(livePatient.flowchartState.answers).map((value) => {
       try {
         return JSON.parse(value)
@@ -250,7 +252,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
       .filter(item => item && Array.isArray(item.opcoesTerapeuticasSelecionadas))
       .flatMap(item => item.opcoesTerapeuticasSelecionadas as string[])
     const uniqueTherapies = Array.from(new Set(selectedTherapies))
-    return uniqueTherapies
+    const tvpPrescriptions = uniqueTherapies
       .filter(id => tvpPrescriptionTemplates[id])
       .map((id) => ({
         id: `flow_${id}`,
@@ -258,6 +260,16 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
         prescribedAt: new Date(livePatient.updatedAt || new Date()),
         prescribedBy: doctorPrescribedBy
       }))
+    const ituChoice = flowAnswers.itu_antibiotico_hospitalar
+      || flowAnswers.itu_antibiotico_ambulatorial
+      || flowAnswers.itu_cistite_antibiotico
+    const ituPrescriptions = buildItuPrescriptionItems(ituChoice).map((prescription, index) => ({
+      id: `flow_itu_${ituChoice}_${index}`,
+      ...prescription,
+      prescribedAt: new Date(livePatient.updatedAt || new Date())
+    }))
+
+    return [...tvpPrescriptions, ...ituPrescriptions]
   }
 
   const allPrescriptions = (() => {
