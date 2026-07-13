@@ -3239,6 +3239,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => activeTVPClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
     [activeTVPClinicalFindings]
   )
+  const shouldOfferTEPFlow = flowchart.id === 'tvp'
+    && hasTVPRespiratoryAlertSelected
+    && flowchart.finalSteps.includes(currentStep)
   const isAVCCincinnatiStep = flowchart.id === 'avc' && currentStepData?.id === 'avaliacao_cincinnati_fast'
   const wellsScoreTotal = selectedWellsCriteria.reduce((acc, criterionId) => {
     const criterion = tvpWellsCriteria.find(item => item.id === criterionId)
@@ -14862,7 +14865,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         {finalClinicalReportText}
                       </div>
                     </div>
-                    {flowchart.id === 'tvp' && currentStep === 'tvp_internacao_investigar_tep' && onSwitchFlowchart && (
+                    {shouldOfferTEPFlow && onSwitchFlowchart && (
                       <div className="w-full rounded-2xl border border-red-300 bg-red-50 p-5 text-left shadow-sm">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div>
