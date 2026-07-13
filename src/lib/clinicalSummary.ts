@@ -1,6 +1,7 @@
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import type { Patient } from '@/types/patient'
 import type { EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
+import { getOseltamivirDoseText } from '@/lib/influenza'
 
 export type ClinicalSummaryData = {
   chiefComplaint: string
@@ -26,6 +27,20 @@ type TVPExamSummary = {
   extremities?: { altered?: string }
   cardiac?: { altered?: string }
   pulmonary?: { altered?: string }
+}
+type PneumoniaExamSummary = {
+  generalState?: string
+  coloration?: { status?: string; grade?: number }
+  hydration?: { status?: string; grade?: number }
+  cyanosis?: { status?: string; grade?: number }
+  jaundice?: { status?: string; grade?: number }
+  temperature?: { status?: string; value?: number }
+  respiration?: { status?: string; grade?: number }
+  neuro?: { glasgow?: number; altered?: string }
+  pulmonary?: { altered?: string }
+  cardiac?: { altered?: string }
+  abdomen?: { altered?: string }
+  extremities?: { altered?: string }
 }
 
 const houseBrackmannLabels: Record<string, string> = {
@@ -144,13 +159,20 @@ const getTVPLegLabel = (value?: string) => {
 }
 
 const getTVPPocusText = (value?: string) => {
-  if (value === 'us_positive' || value === 'repeat_positive') {
+  const normalized = String(value || '').toLowerCase()
+  if (normalized.includes('repeat_positive')) {
+    return 'Ultrassonografia vascular repetida positiva, com veia não compressível, confirmando trombose venosa no segmento avaliado.'
+  }
+  if (normalized.includes('us_positive')) {
     return 'POCUS vascular compressivo positivo, com veia não compressível, achado compatível com TVP proximal no contexto clínico.'
   }
-  if (value === 'us_negative' || value === 'repeat_negative') {
+  if (normalized.includes('repeat_negative')) {
+    return 'Ultrassonografia vascular repetida negativa, sem trombose demonstrada nas janelas avaliadas.'
+  }
+  if (normalized.includes('us_negative')) {
     return 'POCUS vascular compressivo negativo, com compressibilidade preservada nas janelas avaliadas.'
   }
-  if (value === 'us_inconclusive') {
+  if (normalized.includes('us_inconclusive')) {
     return 'POCUS vascular compressivo inconclusivo ou tecnicamente limitado, sem permitir exclusão segura de TVP.'
   }
   return 'Resultado do POCUS vascular não registrado no fluxo.'
@@ -174,9 +196,13 @@ const buildTVPClinicalSummary = (
   const doctorSignature = formatDoctorSignature(doctor)
 
   const selectedLeg = typeof startData?.selectedLeg === 'string' ? startData.selectedLeg : ''
-  const selectedLegLabel = typeof startData?.selectedLegLabel === 'string' && startData.selectedLegLabel.trim()
-    ? startData.selectedLegLabel.toLowerCase()
-    : getTVPLegLabel(selectedLeg)
+  const selectedLegLabel = selectedLeg
+    ? getTVPLegLabel(selectedLeg)
+    : typeof startData?.selectedLegLabel === 'string' && /esquerd/i.test(startData.selectedLegLabel)
+      ? 'membro inferior esquerdo'
+      : typeof startData?.selectedLegLabel === 'string' && /direit/i.test(startData.selectedLegLabel)
+        ? 'membro inferior direito'
+        : 'membro acometido não especificado'
   const selectedFindings = Array.isArray(clinicalData?.sinaisEAchados)
     ? clinicalData.sinaisEAchados.map((item) => formatClinicalValue(item)).filter(Boolean)
     : []
@@ -215,16 +241,32 @@ const buildTVPClinicalSummary = (
 
   const wellsScore = typeof wellsData?.score === 'number' ? wellsData.score : undefined
   const wellsClassification = typeof wellsData?.classificacao === 'string' ? wellsData.classificacao : ''
+  const wellsClassificationLabel = /baix/i.test(wellsClassification)
+    ? 'baixa probabilidade clínica'
+    : /moder/i.test(wellsClassification)
+      ? 'probabilidade clínica moderada'
+      : /alt/i.test(wellsClassification)
+        ? 'alta probabilidade clínica'
+        : wellsClassification || 'classificação não informada'
   const wellsCriteria = Array.isArray(wellsData?.criteriosSelecionados)
     ? uniqueTextItems(wellsData.criteriosSelecionados.map((item) => tvpWellsLabels[String(item)] || formatClinicalValue(item)))
     : []
-  const pocusValue = answers.pocus_resultado_pre_d_dimero || answers.us_compressiva || answers.repetir_us
-  const dDimerText = answers.baixa_probabilidade === 'ddimer_negative'
+  // O exame mais recente deve prevalecer sobre o POCUS inicial.
+  const pocusValue = answers.repetir_us || answers.us_compressiva || answers.pocus_resultado_pre_d_dimero
+  const normalizedPocus = String(pocusValue || '').toLowerCase()
+  const hasPositiveImaging = normalizedPocus.includes('us_positive') || normalizedPocus.includes('repeat_positive')
+  const hasNegativeImaging = normalizedPocus.includes('us_negative') || normalizedPocus.includes('repeat_negative')
+  const hasInconclusiveImaging = normalizedPocus.includes('us_inconclusive')
+  const dDimerValue = answers.tvp_d_dimero_alerta || answers.baixa_probabilidade
+  const normalizedDDimer = String(dDimerValue || '').toLowerCase()
+  const hasNegativeDDimer = normalizedDDimer.includes('ddimer_negative')
+  const hasPositiveDDimer = normalizedDDimer.includes('ddimer_positive')
+  const dDimerText = hasNegativeDDimer
     ? 'D-dímero negativo.'
-    : answers.baixa_probabilidade === 'ddimer_positive'
-      ? 'D-dímero positivo.'
+    : hasPositiveDDimer
+      ? 'D-dímero positivo, devendo ser interpretado em conjunto com a probabilidade pré-teste e a imagem vascular.'
       : answers.moderada_probabilidade
-        ? 'D-dímero não foi utilizado como etapa inicial por probabilidade clínica moderada/alta.'
+        ? 'D-dímero não foi utilizado como etapa inicial, conforme a estratégia para probabilidade clínica moderada/alta.'
         : 'D-dímero não registrado no fluxo.'
   const contraindications = Array.isArray(contraData?.contraindicacoesSelecionadas)
     ? uniqueTextItems(contraData.contraindicacoesSelecionadas.map((item) => tvpContraindicationLabels[String(item)] || formatClinicalValue(item)))
@@ -233,46 +275,82 @@ const buildTVPClinicalSummary = (
     ? uniqueTextItems(treatmentData.opcoesTerapeuticasSelecionadas.map((item) => tvpTherapyLabels[String(item)] || formatClinicalValue(item)))
     : []
 
-  const isVascularReferral = currentStep === 'encaminhamento_urgente' || currentStep === 'tvp_aguarda_avaliacao_vascular' || history.includes('tvp_aguarda_avaliacao_vascular')
-  const isUrgentVascular = currentStep === 'tvp_urgencia_vascular_concluida' || history.includes('tvp_urgencia_vascular_imediata')
-  const isExcluded = currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial'
-  const isTEPInvestigation = currentStep === 'tvp_internacao_investigar_tep'
-  const isConfirmed = pocusValue === 'us_positive' || pocusValue === 'repeat_positive' || currentStep === 'anticoagulacao_iniciada' || isVascularReferral || isUrgentVascular
+  const path = new Set([...history, currentStep])
+  const isVascularReferral = path.has('encaminhamento_urgente') || path.has('tvp_aguarda_avaliacao_vascular')
+  const isUrgentVascular = path.has('tvp_urgencia_vascular_imediata') || path.has('tvp_urgencia_vascular_concluida') || path.has('tvp_internacao_uti')
+  const isExcluded = (currentStep === 'tvp_excluida' || currentStep === 'seguimento_ambulatorial') && !hasPositiveImaging
+  const isTEPInvestigation = path.has('tvp_internacao_investigar_tep')
+  const isInvestigationAdmission = path.has('tvp_internacao_investigacao_clinica')
+  const isPendingRepeatImaging = path.has('repetir_us') && !hasPositiveImaging && !isExcluded
+  const isAnticoagulated = therapies.length > 0 || path.has('anticoagulacao_iniciada')
+  const isConfirmed = hasPositiveImaging || (!isExcluded && (path.has('anticoagulacao_iniciada') || (isVascularReferral && !isUrgentVascular)))
 
-  const chiefComplaint = symptoms.length > 0
-    ? formatClinicalListText(symptoms.slice(0, 3))
-    : `suspeita clínica de trombose venosa profunda em ${selectedLegLabel}`
-  const title = isConfirmed
-    ? 'RELATÓRIO MÉDICO - TROMBOSE VENOSA PROFUNDA'
-    : isExcluded
-      ? 'RELATÓRIO MÉDICO - INVESTIGAÇÃO DE TVP'
-      : 'RELATÓRIO MÉDICO - SUSPEITA DE TROMBOSE VENOSA PROFUNDA'
+  const chiefComplaint = patient.admission?.chiefComplaint?.trim()
+    || patient.admission?.symptoms?.filter(Boolean).join('; ')
+    || (symptoms.length > 0 ? formatClinicalListText(symptoms.slice(0, 3)) : '')
+    || `suspeita clínica de trombose venosa profunda em ${selectedLegLabel}`
+  const title = 'RELATÓRIO MÉDICO - TROMBOSE VENOSA PROFUNDA'
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
   const conductText = isUrgentVascular
-    ? 'Diante de sinais de gravidade vascular, foi indicada internação imediata, monitorização, estabilização clínica e acionamento urgente da Cirurgia Vascular.'
+    ? 'Foi indicada interrupção do fluxo ambulatorial, internação imediata, monitorização contínua, estabilização clínica e avaliação presencial urgente pela Cirurgia Vascular. Manter vigilância de perfusão distal, progressão do edema, dor, déficit sensitivo ou motor e sinais de embolia pulmonar enquanto a equipe especializada não assumir formalmente o caso.'
     : isVascularReferral
-      ? 'Foi solicitado encaminhamento/avaliação pela Cirurgia Vascular, mantendo responsabilidade assistencial, monitorização e tratamento instituído até transferência formal do caso.'
-      : isConfirmed
-        ? 'O quadro foi conduzido como TVP confirmada ou altamente provável, com avaliação de contraindicações e instituição de anticoagulação conforme risco clínico e protocolo local.'
-        : isExcluded
-          ? 'A investigação realizada não sustentou TVP no desfecho do fluxo, sendo indicada alta/seguimento com sinais de retorno e reavaliação se houver piora clínica.'
-          : isTEPInvestigation
-            ? 'Pela presença de sintomas respiratórios associados, foi indicada internação e investigação imediata de possível tromboembolismo pulmonar.'
-            : 'Mantida investigação clínica para TVP conforme estratificação, exame complementar e evolução.'
-  const anticoagulationText = contraindications.length > 0
-    ? `Na checagem terapêutica, foram registradas contraindicações ou alertas para anticoagulação: ${formatClinicalListText(contraindications)}.`
-    : contraData
-      ? 'Contraindicações relevantes à anticoagulação foram avaliadas no fluxo e não foram documentadas.'
-      : 'Contraindicações à anticoagulação não foram registradas de forma estruturada.'
-  const therapyText = therapies.length > 0
-    ? `A terapêutica selecionada incluiu ${formatClinicalListText(therapies)}.`
-    : 'Não há anticoagulante específico registrado como prescrição final neste relatório.'
+      ? 'Foi solicitada avaliação prioritária pela Cirurgia Vascular. O paciente deve permanecer internado ou em observação monitorizada, mantendo o tratamento instituído e a responsabilidade assistencial da equipe de emergência até a transferência formal do caso.'
+      : isTEPInvestigation
+        ? 'Pela presença de sintomas respiratórios ou sinais de possível embolização, foi indicada internação e investigação imediata de tromboembolismo pulmonar, com monitorização e suporte conforme estabilidade clínica.'
+        : isInvestigationAdmission
+          ? 'Foi indicada internação para aprofundamento da investigação, monitorização clínica e obtenção de imagem vascular definitiva, sem liberação para seguimento ambulatorial nesta etapa.'
+          : isConfirmed
+            ? 'O quadro foi conduzido como TVP confirmada, com anticoagulação terapêutica quando não contraindicada, orientação sobre risco hemorrágico e sinais de embolia pulmonar, além de seguimento clínico e revisão da duração do tratamento conforme fator desencadeante.'
+            : isExcluded
+              ? 'A estratégia diagnóstica não demonstrou TVP no desfecho registrado. Orienta-se investigar diagnósticos diferenciais e retornar imediatamente diante de progressão do edema ou da dor, cianose, dispneia, dor torácica, hemoptise, síncope ou outra piora clínica.'
+              : isPendingRepeatImaging
+                ? 'A investigação permanece inconclusiva. Deve-se realizar ultrassonografia venosa completa ou repetir o exame em 5 a 7 dias, antecipando a reavaliação diante de piora ou aparecimento de sinais de alarme.'
+                : 'A investigação de TVP permanece em andamento e a conduta definitiva depende da integração entre probabilidade clínica, imagem vascular e evolução.'
+  const absoluteContraindication = contraData?.possuiContraindicacaoAbsoluta === true
+  const anticoagulationText = isExcluded
+    ? 'Como a investigação não demonstrou TVP no desfecho registrado, não houve indicação de iniciar anticoagulação terapêutica por este fluxo.'
+    : absoluteContraindication
+      ? `Foi documentada contraindicação absoluta à anticoagulação${contraindications.length ? `: ${formatClinicalListText(contraindications)}` : ''}. Não iniciar ou suspender temporariamente a anticoagulação e discutir imediatamente estratégia alternativa com a Cirurgia Vascular.`
+      : contraindications.length > 0
+        ? `Foram registrados alertas ou contraindicações relativas à anticoagulação: ${formatClinicalListText(contraindications)}. A relação entre benefício trombótico e risco hemorrágico deve ser individualizada.`
+        : contraData
+          ? 'A segurança para anticoagulação foi avaliada e não foram registradas contraindicações relevantes no checklist aplicado.'
+          : 'A avaliação estruturada de contraindicações à anticoagulação não foi registrada neste caminho.'
+  const therapyText = isExcluded
+    ? ''
+    : therapies.length > 0
+    ? `A terapêutica antitrombótica selecionada foi ${formatClinicalListText(therapies)}, devendo constar em prescrição própria a dose, a via, o horário de início, os ajustes clínicos e a duração planejada.`
+    : isAnticoagulated
+      ? 'A anticoagulação foi registrada como iniciada, porém o fármaco e o esquema posológico não constam de forma estruturada neste relatório.'
+      : 'Não há esquema anticoagulante final registrado neste momento.'
+  const specialContextText = path.has('conduta_gestante')
+    ? 'No contexto de gestação ou puerpério, foi indicada estratégia com heparina de baixo peso molecular, com ajuste individual e manutenção pelo período recomendado no fluxo; durante a gestação, evitar varfarina e anticoagulantes orais diretos.'
+    : path.has('conduta_cancer')
+      ? 'No contexto de câncer ativo, a escolha e a duração da anticoagulação devem considerar risco hemorrágico, interações medicamentosas, localização tumoral, função renal e manutenção enquanto houver doença ou tratamento oncológico ativo.'
+      : ''
+  const diagnosticConclusion = isUrgentVascular
+    ? 'o quadro apresenta sinais de flegmasia ou ameaça ao membro, configurando emergência vascular, independentemente da conclusão do fluxo ambulatorial.'
+    : isExcluded
+      ? 'a investigação registrada não sustentou trombose venosa profunda no desfecho atual.'
+      : hasPositiveImaging
+        ? 'os achados clínicos e de imagem são compatíveis com trombose venosa profunda no membro avaliado.'
+        : isConfirmed
+          ? 'o caminho assistencial registra TVP confirmada ou tratada, porém o resultado positivo da imagem vascular não está disponível nos dados estruturados; recomenda-se revisar e complementar esse registro antes de finalizar o documento.'
+        : hasInconclusiveImaging
+          ? 'o exame vascular foi inconclusivo e não permite excluir trombose venosa profunda.'
+          : hasNegativeImaging && hasPositiveDDimer
+            ? 'o POCUS inicial foi negativo, mas o D-dímero positivo mantém necessidade de investigação complementar conforme a probabilidade clínica; esse conjunto isolado não confirma TVP.'
+            : isTEPInvestigation
+              ? 'há suspeita de doença tromboembólica venosa com necessidade de investigação imediata de possível embolia pulmonar.'
+              : 'a suspeita de trombose venosa profunda permanece em investigação, sem confirmação definitiva registrada até o momento.'
+  const diagnosticSentence = `${wellsScore != null ? `O escore de Wells para TVP foi de ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}, correspondente a ${wellsClassificationLabel}.` : 'O escore de Wells não foi registrado de forma estruturada.'}${wellsCriteria.length > 0 ? ` Os critérios pontuados foram ${formatClinicalListText(wellsCriteria)}.` : ''} ${getTVPPocusText(pocusValue)} ${dDimerText}`
+  const finalNarrative = `Conclusão: ${diagnosticConclusion} ${conductText}`
 
   const paragraphs = [
     title,
     '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint}. O atendimento foi conduzido no contexto do fluxograma de TVP, com avaliação dirigida do ${selectedLegLabel}.`,
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaint.replace(/[.]+$/, '')}". Durante a avaliação, foi realizada investigação estruturada para trombose venosa profunda, com exame direcionado ao ${selectedLegLabel}, estratificação da probabilidade pré-teste, avaliação vascular por imagem e definição de segurança para anticoagulação.`,
     '',
     symptoms.length > 0
       ? `Na história da moléstia atual, foram documentados achados compatíveis com suspeita de TVP, incluindo ${formatClinicalListText(symptoms)}.${riskFactors.length > 0 ? ` Como fatores de risco ou contexto predisponente, constaram ${formatClinicalListText(riskFactors)}.` : ''}${alertFindings.length > 0 ? ` Também foram assinalados sinais de alerta: ${formatClinicalListText(alertFindings)}.` : ''}`
@@ -280,11 +358,14 @@ const buildTVPClinicalSummary = (
     '',
     `${vitalLines.length > 0 ? `Na avaliação inicial, sinais vitais registrados: ${formatClinicalListText(vitalLines)}. ` : ''}${directedExamLines.length > 0 ? `Ao exame físico direcionado, observaram-se ${formatClinicalListText(directedExamLines)}.` : 'O exame físico direcionado de membro inferior não apresentou descrição estruturada suficiente no fluxo, devendo ser correlacionado com a avaliação presencial.'}`,
     '',
-    `${wellsScore != null ? `Foi aplicado o escore de Wells para TVP, com ${wellsScore} ponto${wellsScore === 1 ? '' : 's'} e classificação clínica ${wellsClassification || 'não informada'}.` : 'O escore de Wells não foi registrado de forma estruturada.'}${wellsCriteria.length > 0 ? ` Os critérios pontuados foram: ${formatClinicalListText(wellsCriteria)}.` : ''} ${getTVPPocusText(pocusValue)} ${dDimerText}`,
+    diagnosticSentence,
     '',
-    `${anticoagulationText} ${therapyText} ${conductText}`,
+    [anticoagulationText, therapyText, specialContextText].filter(Boolean).join(' '),
     '',
-    doctorSignature
+    finalNarrative,
+    '',
+    doctorSignature,
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
   ]
   const continuousText = paragraphs.join('\n')
 
@@ -299,7 +380,7 @@ const buildTVPClinicalSummary = (
     ]),
     finalTitle,
     finalDescription,
-    finalNarrative: conductText,
+    finalNarrative,
     doctorSignature,
     conductLines: [conductText],
     continuousText,
@@ -574,6 +655,421 @@ const getAnswerDecision = (flowchart: EmergencyFlowchart, stepId: string, raw?: 
   return formatStructuredAnswer(parsed)
 }
 
+const buildInfluenzaClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const physicalAnswer = parseFlowAnswerForSummary(answers.influenza_exame_fisico)
+  const severity = parseFlowAnswerForSummary(answers.influenza_sinais_gravidade)
+  const risk = parseFlowAnswerForSummary(answers.influenza_fatores_risco)
+  const icu = parseFlowAnswerForSummary(answers.influenza_criterios_uti)
+  const viralPanel = parseFlowAnswerForSummary(answers.influenza_painel_viral_enfermaria || answers.influenza_painel_viral_uti)
+  const exam = physicalAnswer?.exameFisico && typeof physicalAnswer.exameFisico === 'object'
+    ? physicalAnswer.exameFisico as PneumoniaExamSummary
+    : null
+  const savedVitals = physicalAnswer?.sinaisVitais && typeof physicalAnswer.sinaisVitais === 'object'
+    ? physicalAnswer.sinaisVitais as Record<string, unknown>
+    : {}
+  const vitals = { ...(patient.admission?.vitalSigns || {}), ...savedVitals }
+  const path = new Set([...history, currentStep])
+  const current = flowchart.steps[currentStep]
+
+  const severitySigns = Array.isArray(severity?.sinaisGravidadeSelecionados)
+    ? uniqueTextItems(severity.sinaisGravidadeSelecionados.map(String))
+    : []
+  const riskFactors = Array.isArray(risk?.fatoresRiscoSelecionados)
+    ? uniqueTextItems(risk.fatoresRiscoSelecionados.map(String))
+    : []
+  const worseningSigns = Array.isArray(risk?.sinaisPioraSelecionados)
+    ? uniqueTextItems(risk.sinaisPioraSelecionados.map(String))
+    : []
+  const icuCriteria = Array.isArray(icu?.criteriosUTISelecionados)
+    ? uniqueTextItems(icu.criteriosUTISelecionados.map(String))
+    : []
+  const requestedExams = Array.isArray(viralPanel?.examesSolicitados)
+    ? uniqueTextItems(viralPanel.examesSolicitados.map(String))
+    : []
+  const severityDecision = String(severity?.decision || answers.influenza_sinais_gravidade || '')
+  const icuDecision = String(icu?.decision || answers.influenza_criterios_uti || '')
+  const hasSRAG = severity?.classificadoComoSRAG === true
+    || severitySigns.length > 0
+    || severityDecision === 'srag'
+    || path.has('influenza_criterios_uti')
+    || path.has('influenza_painel_viral_enfermaria')
+    || path.has('influenza_painel_viral_uti')
+  const needsICU = icu?.indicarUTI === true
+    || icuCriteria.length > 0
+    || icuDecision === 'uti'
+    || path.has('influenza_painel_viral_uti')
+    || path.has('influenza_boarding_uti')
+    || path.has('influenza_internacao_uti')
+    || path.has('influenza_uti_protocolo_concluido')
+  const isWard = !needsICU && (
+    path.has('influenza_painel_viral_enfermaria')
+    || path.has('influenza_boarding_enfermaria')
+    || path.has('influenza_internacao_enfermaria')
+  )
+  const isAmbulatoryOseltamivir = path.has('influenza_ambulatorial_oseltamivir') || path.has('influenza_ambulatorial_oseltamivir_concluido')
+  const isAmbulatorySymptomatic = path.has('influenza_ambulatorial_sintomaticos') || path.has('influenza_ambulatorial_sintomaticos_concluido')
+  const isBoarding = path.has('influenza_boarding_uti') || path.has('influenza_boarding_enfermaria')
+  const hasOseltamivirIndication = hasSRAG || risk?.indicarOseltamivir === true || riskFactors.length > 0 || worseningSigns.length > 0 || isAmbulatoryOseltamivir
+  const oseltamivirDose = getOseltamivirDoseText(patient)
+
+  const numeric = (value: unknown) => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+    const match = String(value ?? '').trim().replace(',', '.').match(/-?\d+(?:\.\d+)?/)
+    return match ? Number(match[0]) : undefined
+  }
+  const vitalItems = uniqueTextItems([
+    numeric(vitals.temperature) != null ? `temperatura ${String(numeric(vitals.temperature)).replace('.', ',')} °C` : null,
+    numeric(vitals.feverDays) != null ? `febre há ${numeric(vitals.feverDays)} dia(s)` : null,
+    numeric(vitals.heartRate) != null ? `frequência cardíaca ${numeric(vitals.heartRate)} bpm` : null,
+    numeric(vitals.respiratoryRate) != null ? `frequência respiratória ${numeric(vitals.respiratoryRate)} irpm` : null,
+    vitals.bloodPressure ? `pressão arterial ${vitals.bloodPressure} mmHg` : null,
+    numeric(vitals.oxygenSaturation) != null ? `saturação de oxigênio ${numeric(vitals.oxygenSaturation)}%` : null,
+    vitals.glucose ? `glicemia capilar ${vitals.glucose} mg/dL` : null
+  ])
+  const grade = (value: unknown) => numeric(value) ? ` ${numeric(value)}/4+` : ''
+  const generalLabels: Record<string, string> = {
+    bom: 'bom estado geral',
+    regular: 'regular estado geral',
+    mal: 'mal estado geral',
+    grave: 'grave estado geral',
+    pessimo: 'péssimo estado geral'
+  }
+  const physicalItems = exam ? uniqueTextItems([
+    generalLabels[String(exam.generalState)] || null,
+    exam.coloration?.status === 'corado' ? 'corado' : exam.coloration?.status ? `descorado${grade(exam.coloration.grade)}` : null,
+    exam.hydration?.status === 'hidratado' ? 'hidratado' : exam.hydration?.status ? `desidratado${grade(exam.hydration.grade)}` : null,
+    exam.cyanosis?.status === 'acianotico' ? 'acianótico' : exam.cyanosis?.status ? `cianótico${grade(exam.cyanosis.grade)}` : null,
+    exam.jaundice?.status === 'anicterico' ? 'anictérico' : exam.jaundice?.status ? `ictérico${grade(exam.jaundice.grade)}` : null,
+    exam.temperature?.status === 'afebril' ? 'afebril' : exam.temperature?.status === 'febril' ? 'febril' : null,
+    exam.respiration?.status === 'eupneico' ? 'eupneico' : exam.respiration?.status === 'taquipneico' ? 'taquipneico' : exam.respiration?.status ? `dispneico${grade(exam.respiration.grade)}` : null,
+    exam.neuro?.glasgow != null ? `Glasgow ${exam.neuro.glasgow}` : null
+  ]) : []
+  const systemExamItems = exam ? uniqueTextItems([
+    exam.pulmonary?.altered?.trim() ? `Ausculta pulmonar: ${exam.pulmonary.altered.trim()}` : null,
+    exam.cardiac?.altered?.trim() ? `Aparelho cardiovascular: ${exam.cardiac.altered.trim()}` : null,
+    exam.neuro?.altered?.trim() ? `Neurológico: ${exam.neuro.altered.trim()}` : null,
+    exam.extremities?.altered?.trim() ? `Extremidades: ${exam.extremities.altered.trim()}` : null
+  ]) : []
+  const examinationLines = uniqueTextItems([
+    vitalItems.length ? `Sinais vitais: ${vitalItems.join(', ')}` : null,
+    physicalItems.length ? `Ao exame físico: ${physicalItems.join(', ')}` : null,
+    ...systemExamItems
+  ])
+
+  const chiefComplaint = patient.admission?.chiefComplaint?.trim()
+    || patient.admission?.symptoms?.filter(Boolean).join('; ')
+    || 'quadro respiratório agudo compatível com síndrome gripal'
+  const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
+  const durationText = patient.admission?.complaintDuration?.trim()
+  const historySentence = [
+    `Na história da moléstia atual, consta quadro respiratório agudo com queixa de ${chiefComplaint.replace(/[.]+$/, '')}`,
+    durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
+    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `associado a ${symptomText.replace(/[.]+$/, '')}` : null,
+    patient.generalObservations?.trim() ? `Observações adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}` : null
+  ].filter(Boolean).join(', ') + '.'
+  const examinationSentence = examinationLines.length
+    ? `Na avaliação clínica e semiológica, foram registrados: ${examinationLines.join('; ')}.`
+    : 'Sinais vitais e exame físico estruturado não foram registrados neste caminho, devendo ser complementados na avaliação presencial.'
+  const severitySentence = [
+    severitySigns.length
+      ? `Foram identificados sinais de gravidade compatíveis com SRAG: ${formatClinicalListText(severitySigns)}`
+      : hasSRAG
+        ? 'O caso foi classificado como síndrome respiratória aguda grave; os critérios específicos não estão disponíveis no registro estruturado'
+        : 'Não foram registrados critérios de síndrome respiratória aguda grave',
+    riskFactors.length ? `Fatores de risco para complicações: ${formatClinicalListText(riskFactors)}` : null,
+    worseningSigns.length ? `Sinais de piora clínica: ${formatClinicalListText(worseningSigns)}` : null,
+    icuCriteria.length
+      ? `Critérios para terapia intensiva: ${formatClinicalListText(icuCriteria)}`
+      : needsICU
+        ? 'Foi indicada terapia intensiva; os critérios específicos não estão disponíveis no registro estruturado'
+        : null
+  ].filter(Boolean).join('. ') + '.'
+  const investigationSentence = requestedExams.length
+    ? `Foi registrada coleta respiratória e solicitação dos seguintes exames: ${formatClinicalListText(requestedExams)}. A investigação etiológica não deve atrasar o início do antiviral nem as medidas de suporte indicadas.`
+    : hasSRAG
+      ? 'Em razão da classificação como SRAG, recomenda-se coleta respiratória precoce para RT-PCR ou painel viral e investigação laboratorial e radiológica conforme gravidade, sem atrasar o tratamento.'
+      : 'Não há exames complementares estruturados registrados neste caminho.'
+
+  const prescribedItems = uniqueTextItems(
+    patient.treatment.prescriptions
+      .filter((item) => item.prescribedBy === 'Fluxograma Influenza')
+      .map((item) => [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean).join(' - '))
+  )
+  const treatmentSentence = hasOseltamivirIndication
+    ? `Foi indicado oseltamivir ${oseltamivirDose}, com ajuste à função renal quando aplicável.${prescribedItems.length ? ` Prescrição registrada: ${formatClinicalListText(prescribedItems)}.` : ''}`
+    : isAmbulatorySymptomatic
+      ? 'Foi definido tratamento sintomático, hidratação, repouso relativo e orientação de sinais de alarme, sem indicação obrigatória de antiviral pelo checklist atual.'
+      : 'A indicação definitiva de antiviral ainda não foi registrada neste caminho.'
+  const diagnosticImpression = needsICU
+    ? 'o quadro é compatível com síndrome respiratória aguda grave, com indicação de terapia intensiva e risco de deterioração respiratória ou hemodinâmica.'
+    : isWard
+      ? 'o quadro é compatível com síndrome respiratória aguda grave, sem critério imediato de UTI no registro atual, porém com indicação de internação hospitalar e vigilância clínica.'
+      : isAmbulatoryOseltamivir
+        ? 'trata-se de síndrome gripal sem critérios atuais de SRAG, mas com indicação de antiviral por risco de complicação ou piora clínica.'
+        : isAmbulatorySymptomatic
+          ? 'trata-se de síndrome gripal sem sinais de gravidade ou fatores de risco relevantes registrados, permitindo manejo ambulatorial sintomático.'
+          : hasSRAG
+            ? 'há síndrome respiratória aguda grave ainda em estratificação quanto ao nível de internação.'
+            : 'o quadro permanece em avaliação para síndrome gripal ou influenza, sem desfecho assistencial definitivo registrado.'
+  const conductSentence = needsICU
+    ? `Manter internação e estabilização no pronto-socorro até a transferência efetiva para a UTI, com isolamento respiratório, monitorização contínua, oxigenoterapia e escalonamento do suporte ventilatório ou hemodinâmico conforme necessidade.${isBoarding ? ' A indisponibilidade de leito não deve atrasar as medidas compatíveis com cuidado intensivo.' : ''}`
+    : isWard
+      ? `Manter internação em enfermaria, isolamento por gotículas, oseltamivir ${oseltamivirDose}, oxigenoterapia conforme necessidade e reavaliação clínica e respiratória seriada.${isBoarding ? ' Enquanto aguarda leito, manter os cuidados correspondentes ao nível de internação indicado.' : ''}`
+      : isAmbulatoryOseltamivir
+        ? 'Orientar hidratação, medidas sintomáticas, reavaliação em 48 a 72 horas e retorno imediato diante de dispneia, hipoxemia, confusão, hipotensão, desidratação ou piora do estado geral.'
+        : isAmbulatorySymptomatic
+          ? 'Orientar hidratação, repouso relativo, controle de febre e dor, reavaliação em 48 a 72 horas e retorno imediato diante de sinais de alarme.'
+          : 'Completar a avaliação de gravidade e definir tratamento e destino assistencial conforme evolução clínica.'
+  const finalNarrative = `Conclusão: ${diagnosticImpression} ${conductSentence}`
+  const doctorSignature = formatDoctorSignature(doctor)
+  const title = 'RELATÓRIO MÉDICO - INFLUENZA / SÍNDROME GRIPAL'
+  const continuousText = [
+    title, '',
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaint.replace(/[.]+$/, '')}". Durante a avaliação, foi realizada investigação estruturada para síndrome gripal e influenza, com registro de sinais vitais, exame físico, critérios de SRAG, fatores de risco, necessidade de antiviral e definição do nível de cuidado.`, '',
+    historySentence, '',
+    examinationSentence, '',
+    severitySentence, '',
+    investigationSentence, '',
+    treatmentSentence, '',
+    finalNarrative, '',
+    doctorSignature,
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
+  ].join('\n')
+
+  return {
+    chiefComplaint,
+    historyLines: [historySentence],
+    examinationLines,
+    scoreLines: uniqueTextItems([...severitySigns, ...riskFactors, ...worseningSigns, ...icuCriteria, ...requestedExams]),
+    finalTitle: current?.title || flowchart.name,
+    finalDescription: current?.description || flowchart.description,
+    finalNarrative,
+    doctorSignature,
+    conductLines: [conductSentence],
+    continuousText,
+    text: continuousText
+  }
+}
+
+const buildPneumoniaClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const parsedExam = parseFlowAnswerForSummary(answers.pac_exame_fisico)
+  const exam = parsedExam?.exameFisico && typeof parsedExam.exameFisico === 'object'
+    ? parsedExam.exameFisico as PneumoniaExamSummary
+    : null
+  const savedVitals = parsedExam?.sinaisVitais && typeof parsedExam.sinaisVitais === 'object'
+    ? parsedExam.sinaisVitais as Record<string, unknown>
+    : {}
+  const vitals = { ...(patient.admission?.vitalSigns || {}), ...savedVitals }
+  const labData = parseFlowAnswerForSummary(answers.pac_resultados_exames)
+  const labResults = labData?.resultados && typeof labData.resultados === 'object'
+    ? labData.resultados as Record<string, unknown>
+    : {}
+  const examRequest = parseFlowAnswerForSummary(answers.pac_solicitacao_exames)
+  const ats = parseFlowAnswerForSummary(answers.pac_ats_idsa_gravidade)
+  const drip = parseFlowAnswerForSummary(answers.pac_drip_enfermaria || answers.pac_drip_uti)
+  const smartCop = parseFlowAnswerForSummary(answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti)
+  const psi = parseFlowAnswerForSummary(answers.pac_calcular_psi)
+  const curbSaved = parseFlowAnswerForSummary(answers.pac_curb65_protocolo || answers.pac_calcular_curb65)
+  const current = flowchart.steps[currentStep]
+  const path = new Set([...history, currentStep])
+
+  const numeric = (value: unknown) => {
+    if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+    const normalized = String(value ?? '').trim().replace(',', '.').match(/-?\d+(?:\.\d+)?/)
+    return normalized ? Number(normalized[0]) : undefined
+  }
+  const savedScore = (parsed: FlowSummaryAnswer | null, raw: string | undefined, prefix: string) => {
+    const structuredScore = numeric(parsed?.score)
+    if (structuredScore != null) return structuredScore
+    const legacyMatch = String(raw || '').match(new RegExp(`${prefix}_(\\d+(?:[.,]\\d+)?)`, 'i'))
+    return legacyMatch ? numeric(legacyMatch[1]) : undefined
+  }
+  const pressure = String(vitals.bloodPressure || '').match(/(\d{2,3})\D+(\d{2,3})/)
+  const systolic = pressure ? Number(pressure[1]) : undefined
+  const diastolic = pressure ? Number(pressure[2]) : undefined
+  const respiratoryRate = numeric(vitals.respiratoryRate)
+  const heartRate = numeric(vitals.heartRate)
+  const saturation = numeric(vitals.oxygenSaturation)
+  const temperature = numeric(vitals.temperature)
+  const glasgow = numeric(exam?.neuro?.glasgow)
+  const neuroAltered = String(exam?.neuro?.altered || '').trim()
+  const confusion = (glasgow != null && glasgow < 15) || /confus|desorient|rebaix|sonol|torpor|agita/i.test(neuroAltered)
+  const lowPressure = (systolic != null && systolic < 90) || (diastolic != null && diastolic <= 60)
+  const tachypnea = respiratoryRate != null && respiratoryRate >= 30
+  const advancedAge = Number(patient.age) >= 65
+  const crbCriteria = uniqueTextItems([
+    confusion ? 'confusão mental nova' : null,
+    tachypnea ? 'frequência respiratória ≥ 30 irpm' : null,
+    lowPressure ? 'PAS < 90 mmHg ou PAD ≤ 60 mmHg' : null,
+    advancedAge ? 'idade ≥ 65 anos' : null
+  ])
+  const crbScore = crbCriteria.length
+  const objectiveCrbComplete = respiratoryRate != null && systolic != null && diastolic != null && glasgow != null
+  const ureaEntry = Object.entries(labResults).find(([key]) => /ureia|urea|bun/i.test(key))
+  const urea = numeric(ureaEntry?.[1])
+  const elevatedUrea = urea != null ? urea > 43 : Boolean((curbSaved?.criterios as Record<string, unknown> | undefined)?.ureiaMaior43)
+  const curbScore = crbScore + (elevatedUrea ? 1 : 0)
+
+  const atsMajor = Array.isArray(ats?.criteriosMaioresSelecionados) ? ats.criteriosMaioresSelecionados.map(String) : []
+  const atsMinor = Array.isArray(ats?.criteriosMenoresSelecionados) ? ats.criteriosMenoresSelecionados.map(String) : []
+  const atsDecision = String(ats?.decision || '')
+  const atsSevere = ats?.pacGrave === true || atsMajor.length >= 1 || atsMinor.length >= 3 || ['ats_idsa_uti', 'ats_idsa_pac_grave'].includes(atsDecision)
+  const dripScore = savedScore(drip, answers.pac_drip_enfermaria || answers.pac_drip_uti, 'drip')
+  const smartCopScore = savedScore(smartCop, answers.pac_smartcop_enfermaria || answers.pac_smartcop_uti, 'smartcop')
+  const psiScore = savedScore(psi, answers.pac_calcular_psi, 'psi')
+
+  const destination = (() => {
+    if (path.has('pac_estabilizacao_seguir_sepse')) return 'estabilizacao'
+    if (path.has('pac_internacao_limitacao')) return 'limitador'
+    if (path.has('pac_cuidados_aguarda_uti') || path.has('pac_destino_uti') || path.has('pac_uti_protocolo_concluido') || path.has('pac_psi_alto')) return 'uti'
+    if (path.has('pac_cuidados_aguarda_enfermaria') || path.has('pac_destino_enfermaria') || path.has('pac_psi_intermediario') || path.has('pac_curb_intermediario')) return 'enfermaria'
+    if (path.has('pac_destino_ambulatorial') || path.has('pac_psi_baixo') || path.has('pac_curb_baixo')) return 'ambulatorial'
+    if (atsSevere) return 'uti'
+    return 'avaliacao'
+  })()
+
+  const chiefComplaint = patient.admission?.chiefComplaint?.trim()
+    || patient.admission?.symptoms?.filter(Boolean).join('; ')
+    || 'quadro respiratório sugestivo de pneumonia adquirida na comunidade'
+  const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
+  const durationText = patient.admission?.complaintDuration?.trim()
+  const historyNarrative = [
+    `Paciente em avaliação por ${chiefComplaint.replace(/[.]+$/, '')}`,
+    durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
+    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `apresentando ${symptomText.replace(/[.]+$/, '')}` : null,
+    patient.generalObservations?.trim() ? `Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}` : null
+  ].filter(Boolean).join(', ') + '.'
+
+  const generalLabels: Record<string, string> = { bom: 'bom estado geral', regular: 'regular estado geral', mal: 'mal estado geral', grave: 'grave estado geral', pessimo: 'péssimo estado geral' }
+  const grade = (value: unknown) => numeric(value) ? ` ${numeric(value)}/4+` : ''
+  const physicalItems = exam ? uniqueTextItems([
+    generalLabels[String(exam.generalState)] || null,
+    exam.coloration?.status === 'corado' ? 'corado' : exam.coloration?.status ? `descorado${grade(exam.coloration?.grade)}` : null,
+    exam.hydration?.status === 'hidratado' ? 'hidratado' : exam.hydration?.status ? `desidratado${grade(exam.hydration?.grade)}` : null,
+    exam.cyanosis?.status === 'acianotico' ? 'acianótico' : exam.cyanosis?.status ? `cianótico${grade(exam.cyanosis?.grade)}` : null,
+    exam.jaundice?.status === 'anicterico' ? 'anictérico' : exam.jaundice?.status ? `ictérico${grade(exam.jaundice?.grade)}` : null,
+    exam.temperature?.status === 'afebril' ? 'afebril' : exam.temperature?.status === 'febril' ? 'febril' : null,
+    exam.respiration?.status === 'eupneico' ? 'eupneico' : exam.respiration?.status === 'taquipneico' ? 'taquipneico' : exam.respiration?.status ? `dispneico${grade(exam.respiration?.grade)}` : null,
+    glasgow != null ? `Glasgow ${glasgow}` : null
+  ]) : []
+  const systemExamItems = exam ? uniqueTextItems([
+    exam.pulmonary?.altered?.trim() ? `Aparelho respiratório: ${exam.pulmonary.altered.trim()}` : 'Aparelho respiratório sem alterações adicionais registradas no campo descritivo',
+    exam.cardiac?.altered?.trim() ? `Aparelho cardiovascular: ${exam.cardiac.altered.trim()}` : null,
+    exam.abdomen?.altered?.trim() ? `Abdome: ${exam.abdomen.altered.trim()}` : null,
+    neuroAltered ? `Neurológico: ${neuroAltered}` : null,
+    exam.extremities?.altered?.trim() ? `Extremidades: ${exam.extremities.altered.trim()}` : null
+  ]) : []
+  const vitalItems = uniqueTextItems([
+    temperature != null ? `temperatura ${String(temperature).replace('.', ',')} °C` : null,
+    numeric(vitals.feverDays) != null ? `febre há ${numeric(vitals.feverDays)} dia(s)` : null,
+    heartRate != null ? `FC ${heartRate} bpm` : null,
+    respiratoryRate != null ? `FR ${respiratoryRate} irpm` : null,
+    systolic != null && diastolic != null ? `PA ${systolic}/${diastolic} mmHg` : null,
+    saturation != null ? `SpO₂ ${saturation}%` : null,
+    vitals.glucose ? `glicemia capilar ${vitals.glucose} mg/dL` : null
+  ])
+
+  const requestedExams = Array.isArray(examRequest?.examesSelecionados) ? examRequest.examesSelecionados.map(String) : []
+  const recordedLabs = Object.entries(labResults)
+    .filter(([, value]) => String(value ?? '').trim())
+    .map(([name, value]) => `${name}: ${String(value).trim()}`)
+  const scoreLines = uniqueTextItems([
+    `CRB-65 ${crbScore}/4 (${crbScore === 0 ? 'baixo risco' : crbScore <= 2 ? 'risco intermediário' : 'alto risco'})${objectiveCrbComplete ? ', recalculado a partir dos dados objetivos registrados' : ', calculado com os dados objetivos disponíveis'}`,
+    crbCriteria.length ? `Critérios CRB-65 presentes: ${formatClinicalListText(crbCriteria)}` : 'Nenhum critério CRB-65 objetivo identificado nos dados registrados',
+    urea != null || curbSaved ? `CURB-65 ${curbScore}/5 (${curbScore <= 1 ? 'baixo risco' : curbScore === 2 ? 'risco moderado' : 'alto risco'})` : null,
+    psiScore != null ? `PSI/PORT ${psiScore} pontos${psi?.grupo ? `, ${psi.grupo}` : ''}${psi?.destino ? `, com destino sugerido: ${psi.destino}` : ''}` : null,
+    ats ? `ATS/IDSA: ${atsSevere ? 'PAC grave' : 'sem critérios suficientes para PAC grave'}${atsMajor.length || atsMinor.length ? ` (${atsMajor.length} maior(es) e ${atsMinor.length} menor(es))` : '; critérios específicos não documentados'}` : null,
+    atsMajor.length ? `Critérios maiores ATS/IDSA: ${formatClinicalListText(atsMajor)}` : null,
+    atsMinor.length ? `Critérios menores ATS/IDSA: ${formatClinicalListText(atsMinor)}` : null,
+    dripScore != null ? `DRIP ${dripScore} (${dripScore >= 4 ? 'risco aumentado para patógenos resistentes' : 'baixo risco para patógenos resistentes'})` : null,
+    smartCopScore != null ? `SMART-COP ${smartCopScore} (${smartCopScore <= 2 ? 'baixo risco de suporte intensivo' : smartCopScore <= 4 ? 'risco moderado' : smartCopScore <= 6 ? 'alto risco' : 'risco muito alto'})` : null
+  ])
+
+  const title = 'RELATÓRIO MÉDICO - PNEUMONIA ADQUIRIDA NA COMUNIDADE'
+  const impression = destination === 'uti'
+    ? 'Quadro conduzido como pneumonia adquirida na comunidade grave, com indicação de terapia intensiva e risco de deterioração respiratória e/ou hemodinâmica.'
+    : destination === 'enfermaria'
+      ? 'Pneumonia adquirida na comunidade com indicação de internação hospitalar para antibioticoterapia, monitorização e suporte clínico.'
+      : destination === 'limitador'
+        ? 'Pneumonia adquirida na comunidade com limitador para manejo ambulatorial, justificando internação independentemente do escore isolado.'
+        : destination === 'ambulatorial'
+          ? 'Pneumonia adquirida na comunidade sem critérios atuais de gravidade ou limitadores registrados, com manejo ambulatorial e reavaliação precoce.'
+          : 'Suspeita de pneumonia adquirida na comunidade ainda em estratificação clínica e prognóstica.'
+  const conductItems = uniqueTextItems([
+    destination === 'uti' ? 'Manter monitorização contínua, oxigenoterapia titulada, antibioticoterapia precoce, suporte hemodinâmico/ventilatório conforme necessidade e comunicação com a equipe da UTI.' : null,
+    destination === 'uti' && path.has('pac_cuidados_aguarda_uti') ? 'Enquanto aguarda leito, reavaliar em intervalos de 30 a 60 minutos ou imediatamente diante de deterioração.' : null,
+    destination === 'enfermaria' || destination === 'limitador' ? 'Internação em enfermaria ou unidade intermediária, com antibioticoterapia, controle de sintomas, oxigênio se necessário e reavaliação seriada.' : null,
+    destination === 'ambulatorial' ? 'Tratamento ambulatorial conforme prescrição, orientações de retorno e reavaliação em 48 a 72 horas.' : null,
+    dripScore != null && dripScore >= 4 ? 'Considerar cobertura ampliada para patógenos resistentes conforme epidemiologia, culturas, gravidade e protocolo institucional.' : null,
+    destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, função renal, eletrólitos e disfunção orgânica conforme disponibilidade e contexto clínico.' : null,
+    destination === 'ambulatorial' ? 'Orientar retorno imediato em caso de piora da dispneia, hipoxemia, confusão, hipotensão, febre persistente, intolerância oral ou piora do estado geral.' : null
+  ])
+  const doctorSignature = formatDoctorSignature(doctor)
+  const examinationLines = uniqueTextItems([
+    vitalItems.length ? `Sinais vitais: ${vitalItems.join(', ')}` : null,
+    physicalItems.length ? `Estado geral: ${physicalItems.join(', ')}` : null,
+    ...systemExamItems
+  ])
+  const investigationLines = uniqueTextItems([
+    requestedExams.length ? `Exames solicitados: ${requestedExams.join('; ')}` : null,
+    recordedLabs.length ? `Resultados disponíveis: ${recordedLabs.join('; ')}` : null
+  ])
+  const finalNarrative = `${impression} ${conductItems.join(' ')}`.trim()
+  const identificationSentence = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${patient.gender || 'não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaint.replace(/[.]+$/, '')}". Durante a avaliação, foi realizada investigação estruturada para pneumonia adquirida na comunidade, com registro da história clínica, sinais vitais, exame físico, exames complementares e escores de gravidade para definição do destino assistencial.`
+  const examinationSentence = examinationLines.length
+    ? `Na avaliação clínica e semiológica, foram registrados: ${examinationLines.join('; ')}.`
+    : 'Na avaliação clínica e semiológica, não foram registrados sinais vitais ou achados de exame físico estruturado, devendo esses dados ser complementados e correlacionados com a avaliação presencial.'
+  const investigationSentence = investigationLines.length
+    ? `Quanto à investigação complementar, constam: ${investigationLines.join('; ')}.`
+    : 'Não há exames complementares solicitados ou resultados laboratoriais registrados até o momento.'
+  const severitySentence = scoreLines.length
+    ? `A estratificação de gravidade demonstrou: ${scoreLines.join('; ')}.`
+    : 'A estratificação prognóstica ainda não foi concluída neste caminho do fluxo.'
+  const conclusionSentence = `Conclusão: ${impression}`
+  const planSentence = conductItems.length
+    ? conductItems.join(' ')
+    : 'Recomenda-se completar a avaliação clínica e a estratificação de gravidade antes da definição do tratamento e do destino assistencial.'
+  const continuousSections = [
+    title, '',
+    identificationSentence, '',
+    historyNarrative, '',
+    examinationSentence, '',
+    investigationSentence, '',
+    severitySentence, '',
+    `${conclusionSentence} ${planSentence}`, '',
+    doctorSignature,
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
+  ]
+  const continuousText = continuousSections.join('\n')
+  return {
+    chiefComplaint,
+    historyLines: [historyNarrative],
+    examinationLines,
+    scoreLines: [...scoreLines, ...investigationLines],
+    finalTitle: current?.title || flowchart.name,
+    finalDescription: current?.description || flowchart.description,
+    finalNarrative,
+    doctorSignature,
+    conductLines: conductItems,
+    continuousText,
+    text: continuousText
+  }
+}
+
 const buildTEPClinicalSummary = (
   patient: Patient,
   flowchart: EmergencyFlowchart,
@@ -698,6 +1194,14 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'tvp') {
     return buildTVPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'influenza') {
+    return buildInfluenzaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'pneumonia') {
+    return buildPneumoniaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
   }
 
   if (flowchart.id === 'tep') {

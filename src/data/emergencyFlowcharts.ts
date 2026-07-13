@@ -3423,9 +3423,9 @@ export const tvpFlowchart: EmergencyFlowchart = {
       `,
       options: [
         {
-          text: 'Confirmar manejo e encaminhar para UTI',
-          description: 'Registra estabilização, anticoagulação, acionamento imediato da Cirurgia Vascular e internação em UTI.',
-          nextStep: 'tvp_internacao_uti',
+          text: 'Confirmar manejo e seguir para cuidados enquanto aguarda a Cirurgia Vascular',
+          description: 'Registra a estabilização, a anticoagulação e o acionamento imediato da Cirurgia Vascular, mantendo o paciente monitorizado até a equipe especializada assumir o caso.',
+          nextStep: 'tvp_aguarda_avaliacao_vascular',
           value: 'protocolo_flegmasia_aplicado',
           critical: true,
           requiresImmediateAction: true
@@ -4099,11 +4099,6 @@ const influenzaBoardingCareContent = `
         </ul>
       </div>
 
-      <div class="rounded-xl border border-red-200 bg-red-50 p-4">
-        <h5 class="font-bold text-red-950">Prevenção de deterioração</h5>
-        <p class="mt-2">A cada reavaliação, perguntar se o paciente está respirando mais rápido, precisando de mais oxigênio, ficando sonolento, hipotenso, com lactato em elevação, diurese em queda, gasometria piorando ou trabalho respiratório aumentando.</p>
-        <p class="mt-2 font-semibold">Se qualquer resposta for sim, reclassificar imediatamente e avaliar necessidade de UTI.</p>
-      </div>
     </div>
 
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">

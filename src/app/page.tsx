@@ -14,7 +14,7 @@ import ReportViewer from '@/components/ReportViewer'
 import MedicalPrescriptionViewer from '@/components/MedicalPrescriptionViewer'
 import { Patient, PatientFormData } from '@/types/patient'
 
-import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType } from '@/types/emergency'
+import { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, EmergencyType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
 import { updatePatientWithFlowLink } from '@/services/patientRepo'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
@@ -110,10 +110,6 @@ export default function Home() {
     setAppState('new-patient')
   }
 
-  const handleEmergencySelector = () => {
-    setAppState('emergency-selector')
-  }
-
   const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
     // Caso especial: Dengue deve usar o fluxo completo dedicado
     if (flowchart.id === 'dengue') {
@@ -143,8 +139,10 @@ export default function Home() {
       birthDate: new Date(),
       age: 0,
       gender: 'masculino',
+      allergies: [],
       medicalRecord: `EM-${Date.now()}`,
       selectedFlowchart: flowchart.id,
+      generalObservations: '',
       admission: {
         date: new Date(),
         time: new Date().toLocaleTimeString(),
@@ -175,7 +173,7 @@ export default function Home() {
         progress: 0,
         lastUpdate: new Date()
       }
-    } as EmergencyPatient
+    }
     setCurrentEmergencyPatient(emergencyPatient)
 
     setSafetyAlertRequired(true)
@@ -363,6 +361,50 @@ export default function Home() {
     setRefreshTrigger(prev => prev + 1)
   }
 
+  const handleSwitchFlowchart = (targetFlowchartId: EmergencyType) => {
+    const targetFlowchart = getFlowchartById(targetFlowchartId)
+    if (!targetFlowchart) return
+
+    if (currentPatient) {
+      const storedPatient = patientService.getPatientById(currentPatient.id)
+        || patientService.getAllPatients().find((patient) => patient.medicalRecord === currentPatient.medicalRecord)
+      const switchedPatient = patientService.switchFlowchart(storedPatient?.id || currentPatient.id, targetFlowchartId)
+      if (switchedPatient) {
+        setCurrentPatient(switchedPatient)
+        setAppState('flowchart')
+        setRefreshTrigger((previous) => previous + 1)
+      }
+      return
+    }
+
+    if (currentEmergencyPatient) {
+      const now = new Date()
+      const originRecord = JSON.stringify({
+        flowchart: currentEmergencyPatient.selectedFlowchart,
+        completedAt: now.toISOString(),
+        state: currentEmergencyPatient.emergencyState
+      })
+      const nextState = {
+        currentStep: targetFlowchart.initialStep,
+        history: [],
+        answers: { __linkedFlowOrigin: originRecord },
+        progress: 0,
+        lastUpdate: now
+      }
+      setCurrentEmergencyPatient({
+        ...currentEmergencyPatient,
+        selectedFlowchart: targetFlowchartId,
+        emergencyType: targetFlowchartId,
+        flowchartState: nextState,
+        emergencyState: nextState,
+        status: 'active',
+        updatedAt: now
+      })
+      setSelectedFlowchart(targetFlowchart)
+      setAppState('emergency-flowchart')
+    }
+  }
+
   const handlePrescriptionsClose = () => {
     // Atualizar dados do paciente para preservar progresso e prescrições
     if (currentPatient) {
@@ -478,7 +520,7 @@ export default function Home() {
             symptoms: currentPatient.admission?.symptoms || [],
             chiefComplaint: currentPatient.admission?.chiefComplaint || currentPatient.admission?.symptoms?.[0] || '',
             complaintDuration: currentPatient.admission?.complaintDuration || '',
-            vitalSigns: currentPatient.admission?.vitalSigns || {
+            vitalSigns: (currentPatient.admission?.vitalSigns || {
               temperature: undefined,
               feverDays: undefined,
               bloodPressure: '',
@@ -487,7 +529,7 @@ export default function Home() {
               respiratoryRate: undefined,
               oxygenSaturation: undefined,
               glucose: undefined
-            }
+            }) as PatientFormData['vitalSigns']
           }}
         />
       ) : null
@@ -498,10 +540,12 @@ export default function Home() {
     if (appState === 'emergency-flowchart') {
       return currentEmergencyPatient && selectedFlowchart ? (
         <EmergencyFlowchart
+          key={selectedFlowchart.id}
           patient={currentEmergencyPatient}
           flowchart={selectedFlowchart}
           onComplete={handleEmergencyFlowchartComplete}
           onUpdate={handleEmergencyFlowchartUpdate}
+          onSwitchFlowchart={handleSwitchFlowchart}
         />
       ) : null
     }
@@ -558,52 +602,42 @@ export default function Home() {
                   age: currentPatient.age,
                   gender: currentPatient.gender,
                   weight: currentPatient.weight,
+                  allergies: currentPatient.allergies || [],
                   medicalRecord: currentPatient.medicalRecord,
                   selectedFlowchart: currentPatient.selectedFlowchart,
+                  generalObservations: currentPatient.generalObservations || '',
                   admission: {
                     date: new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()),
-                    time: new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()).toLocaleTimeString(),
+                    time: currentPatient.admission?.time || new Date(currentPatient.admission?.date || currentPatient.createdAt || new Date()).toLocaleTimeString(),
                     symptoms: currentPatient.admission?.symptoms || [],
                     chiefComplaint: currentPatient.admission?.chiefComplaint,
                     complaintDuration: currentPatient.admission?.complaintDuration,
                     vitalSigns: currentPatient.admission?.vitalSigns
                   },
-                  flowchartState: {
-                    currentStep: genericFlowchart.initialStep,
-                    history: [],
-                    answers: {},
-                    progress: 0,
-                    lastUpdate: new Date(),
-                    ...currentPatient.flowchartState
-                  },
-                  labResults: { status: 'not_requested' },
-                  treatment: {
-                    prescriptions: [],
-                    observations: []
-                  },
-                  status: 'active',
+                  flowchartState: currentPatient.flowchartState,
+                  labResults: currentPatient.labResults || { status: 'not_requested' },
+                  treatment: currentPatient.treatment,
+                  status: currentPatient.status,
                   createdAt: new Date(currentPatient.createdAt || new Date()),
                   updatedAt: new Date(currentPatient.updatedAt || new Date()),
-                  emergencyType: currentPatient.selectedFlowchart as any,
+                  emergencyType: currentPatient.selectedFlowchart as EmergencyType,
                   emergencyState: {
-                    currentStep: genericFlowchart.initialStep,
-                    history: [],
-                    answers: {},
-                    progress: 0,
-                    lastUpdate: new Date(),
-                    ...currentPatient.flowchartState
+                    ...currentPatient.flowchartState,
+                    riskGroup: currentPatient.flowchartState.group
                   }
                 }
 
                 return (
                   <EmergencyFlowchart
+                    key={genericFlowchart.id}
                     patient={emergencyPatientAdapter}
                     flowchart={genericFlowchart}
                     onComplete={handleFlowchartComplete}
                     onBack={() => setAppState('dashboard')}
+                    onSwitchFlowchart={handleSwitchFlowchart}
                     onUpdate={(pid, step, hist, ans, prog, risk) => {
                       // Usa o handler padrão que atualiza o Patient no storage
-                      handleFlowchartUpdate(pid, step, hist, ans, prog, risk as any)
+                      handleFlowchartUpdate(pid, step, hist, ans, prog, risk as 'A' | 'B' | 'C' | 'D' | undefined)
                     }}
                   />
                 )

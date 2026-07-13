@@ -209,6 +209,54 @@ class PatientService {
     }
   }
 
+  switchFlowchart(patientId: string, targetFlowchartId: EmergencyType): Patient | null {
+    const patients = this.loadFromStorage()
+    const patientIndex = patients.findIndex((patient) => patient.id === patientId)
+    const targetFlowchart = getFlowchartById(targetFlowchartId)
+    if (patientIndex === -1 || !targetFlowchart) return null
+
+    const patient = patients[patientIndex]
+    const now = new Date()
+    const originFlowchartId = patient.selectedFlowchart
+    const originRecord = JSON.stringify({
+      flowchart: originFlowchartId,
+      completedAt: now.toISOString(),
+      state: patient.flowchartState
+    })
+
+    patient.selectedFlowchart = targetFlowchartId
+    patient.flowchartState = {
+      currentStep: targetFlowchart.initialStep,
+      history: [],
+      answers: { __linkedFlowOrigin: originRecord },
+      progress: 0,
+      lastUpdate: now
+    }
+    patient.status = 'active'
+    patient.updatedAt = now
+    patient.treatment = {
+      ...patient.treatment,
+      observations: [
+        ...(patient.treatment.observations || []),
+        `Atendimento direcionado de ${originFlowchartId} para ${targetFlowchartId} em ${now.toLocaleString('pt-BR')}.`
+      ]
+    }
+    delete patient.treatment.dischargeDate
+    delete patient.treatment.dischargeCriteria
+
+    patients[patientIndex] = patient
+    this.saveToStorage(patients)
+    try {
+      updatePatientWithFlowLink(patientId, fromUIPatient(patient)).catch((error) => {
+        console.error('Erro ao sincronizar troca de fluxograma:', error)
+      })
+    } catch (error) {
+      console.error('Erro ao preparar troca de fluxograma:', error)
+    }
+
+    return patient
+  }
+
   // Adicionar resultados de exames
   updateLabResults(patientId: string, results: Partial<Patient['labResults']>): void {
     const patients = this.loadFromStorage()

@@ -30,7 +30,7 @@ import {
   X
 } from 'lucide-react'
 import { clsx } from 'clsx'
-import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, EmergencyOption, EmergencyStep } from '@/types/emergency'
+import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, EmergencyOption, EmergencyStep, EmergencyType } from '@/types/emergency'
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
@@ -1649,6 +1649,7 @@ interface EmergencyFlowchartProps {
   onComplete: () => void
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => void
   onBack?: () => void
+  onSwitchFlowchart?: (targetFlowchart: EmergencyType) => void
 }
 
 const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({ 
@@ -1656,7 +1657,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   flowchart, 
   onComplete, 
   onUpdate,
-  onBack
+  onBack,
+  onSwitchFlowchart
 }) => {
   const resolveCurrentStep = useCallback((step?: string) => {
     if (step && flowchart.steps[step]) return step
@@ -2075,6 +2077,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         const hasSavedAlert = savedFindings.some((item: unknown) =>
           typeof item === 'string' && tvpAlertSigns.includes(item)
         )
+        const hasSavedVascularAlert = savedFindings.some((item: unknown) =>
+          typeof item === 'string' && tvpVascularSurgeryAlertSigns.includes(item)
+        )
+        const hasSavedRespiratoryAlert = savedFindings.some((item: unknown) =>
+          typeof item === 'string' && tvpRespiratoryTEPAlertSigns.includes(item)
+        )
 
         if (hasSavedAlert) {
           if (currentStep === 'wells_score') {
@@ -2086,12 +2094,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             nextStep = 'tvp_d_dimero_alerta'
             value = `${value || 'pocus_registrado'}_com_alerta`
           } else if (currentStep === 'tvp_d_dimero_alerta' || currentStep === 'baixa_probabilidade') {
-            nextStep = 'tvp_urgencia_vascular_imediata'
+            nextStep = hasSavedVascularAlert
+              ? 'tvp_urgencia_vascular_imediata'
+              : hasSavedRespiratoryAlert
+                ? 'tvp_internacao_investigar_tep'
+                : 'tvp_internacao_investigacao_clinica'
             value = `${value || 'd_dimero_registrado'}_com_alerta`
           } else {
             const isAllowedAlertTransition =
               nextStep === 'wells_score' ||
               currentStep === 'tvp_urgencia_vascular_imediata' ||
+              currentStep === 'tvp_aguarda_avaliacao_vascular' ||
               currentStep === 'tvp_internacao_uti'
 
             if (!isAllowedAlertTransition) {
@@ -14841,6 +14854,28 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         {finalClinicalReportText}
                       </div>
                     </div>
+                    {flowchart.id === 'tvp' && currentStep === 'tvp_internacao_investigar_tep' && onSwitchFlowchart && (
+                      <div className="w-full rounded-2xl border border-red-300 bg-red-50 p-5 text-left shadow-sm">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-extrabold uppercase tracking-wide text-red-900">
+                              Continuar investigação de embolia pulmonar
+                            </p>
+                            <p className="mt-1 text-sm leading-relaxed text-red-800">
+                              Os dados de identificação, admissão e sinais vitais deste paciente serão mantidos. Não será necessário preencher um novo cadastro.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => onSwitchFlowchart('tep')}
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-extrabold text-white shadow-md transition-colors hover:bg-red-800"
+                          >
+                            Iniciar fluxograma de TEP
+                            <ChevronRight className="h-5 w-5" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <button
                       onClick={onComplete}
                       className={clsx(
