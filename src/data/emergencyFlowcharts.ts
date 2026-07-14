@@ -4099,6 +4099,7 @@ const influenzaBoardingCareContent = `
         </ul>
       </div>
 
+      <!-- influenza-ward-icu-reassessment-slot -->
     </div>
 
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
@@ -4110,12 +4111,25 @@ const influenzaBoardingCareContent = `
 `
 
 const influenzaWardDeteriorationPreventionContent = `
-  <div class="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm">
-    <h5 class="font-bold text-red-950">Prevenção de deterioração</h5>
+  <div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950">
+    <div class="flex items-center justify-between gap-3">
+      <h5 class="font-bold">Reavaliação para UTI</h5>
+      <span class="rounded-full bg-red-700 px-2.5 py-1 text-xs font-bold text-white">UTI</span>
+    </div>
     <p class="mt-2">A cada reavaliação, perguntar se o paciente está respirando mais rápido, precisando de mais oxigênio, ficando sonolento, hipotenso, com lactato em elevação, diurese em queda, gasometria piorando ou trabalho respiratório aumentando.</p>
-    <p class="mt-2 font-semibold">Se qualquer resposta for sim, reclassificar imediatamente e avaliar necessidade de UTI.</p>
+    <p class="mt-2 font-semibold">Se qualquer resposta for sim, reclassificar imediatamente, acionar a equipe responsável e avaliar transferência para UTI.</p>
   </div>
 `
+
+const influenzaWardBoardingCareContent = influenzaBoardingCareContent.replace(
+  '<!-- influenza-ward-icu-reassessment-slot -->',
+  influenzaWardDeteriorationPreventionContent
+)
+
+const influenzaICUBoardingCareContent = influenzaBoardingCareContent.replace(
+  '<!-- influenza-ward-icu-reassessment-slot -->',
+  ''
+)
 
 export const influenzaFlowchart: EmergencyFlowchart = {
   id: 'influenza',
@@ -4362,7 +4376,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       description: 'Boarding do paciente com SRAG aguardando enfermaria.',
       type: 'action',
       critical: true,
-      content: `${influenzaBoardingCareContent}${influenzaWardDeteriorationPreventionContent}`,
+      content: influenzaWardBoardingCareContent,
       options: [
         {
           text: 'Confirmar cuidados e seguir para internação em enfermaria',
@@ -4491,7 +4505,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       description: 'Boarding do paciente com SRAG grave aguardando UTI.',
       type: 'action',
       critical: true,
-      content: influenzaBoardingCareContent,
+      content: influenzaICUBoardingCareContent,
       options: [
         {
           text: 'Confirmar cuidados e seguir para protocolo de UTI',
