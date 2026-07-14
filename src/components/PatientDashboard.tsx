@@ -194,15 +194,21 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
     return `${count}º retorno`
   }
 
-  const getGroupBadge = (group?: 'A' | 'B' | 'C' | 'D') => {
+  const getGroupBadge = (group?: string) => {
     if (!group) return null
 
-    const colors = {
+    const colors: Record<string, string> = {
       A: 'from-blue-600 to-blue-700 border-blue-500',
       B: 'from-emerald-600 to-emerald-700 border-emerald-500',
       C: 'from-amber-600 to-amber-700 border-amber-500',
-      D: 'from-red-600 to-red-700 border-red-500'
+      D: 'from-red-600 to-red-700 border-red-500',
+      Ambulatório: 'from-emerald-600 to-teal-700 border-emerald-500',
+      Enfermaria: 'from-blue-600 to-indigo-700 border-blue-500',
+      UTI: 'from-red-600 to-rose-800 border-red-500',
+      Alta: 'from-cyan-600 to-sky-700 border-cyan-500',
+      Internação: 'from-violet-600 to-indigo-700 border-violet-500'
     }
+    const badgeColors = colors[group] || 'from-slate-600 to-slate-700 border-slate-500'
 
     return (
       <motion.span
@@ -210,7 +216,7 @@ const PatientDashboard: React.FC<PatientDashboardProps> = ({
         animate={{ scale: 1 }}
         className={clsx(
           'inline-flex items-center px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest bg-gradient-to-r text-white shadow-lg border-l-4',
-          colors[group]
+          badgeColors
         )}
       >
         <Award className="w-3.5 h-3.5 mr-2" />

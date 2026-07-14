@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   ChevronRight, 
@@ -1676,6 +1677,59 @@ const TVPLegIllustration: React.FC<{ side: TVPLegSide; selected: boolean }> = ({
   )
 }
 
+type AnsiedadeRouteAlertId = 'sca' | 'arritmia' | 'neurologico' | 'respiratorio_toxico'
+
+type AnsiedadeRouteAlert = {
+  id: AnsiedadeRouteAlertId
+  title: string
+  description: string
+  destinations: Array<{ flowchartId: EmergencyType; label: string }>
+}
+
+const ANSIEDADE_ROUTE_ALERTS: AnsiedadeRouteAlert[] = [
+  {
+    id: 'sca',
+    title: 'Suspeita de síndrome coronariana aguda',
+    description: 'Dor precordial, irradiação, sudorese fria ou fatores de risco cardiovasculares.',
+    destinations: [{ flowchartId: 'iam', label: 'Iniciar fluxograma de IAM / SCA' }]
+  },
+  {
+    id: 'arritmia',
+    title: 'Suspeita de arritmia',
+    description: 'Taquicardia sustentada, pulso irregular, síncope ou palpitações importantes.',
+    destinations: []
+  },
+  {
+    id: 'neurologico',
+    title: 'Suspeita de AVC ou causa neurológica',
+    description: 'Parestesias assimétricas, déficit focal, alteração da fala ou confusão.',
+    destinations: [{ flowchartId: 'avc', label: 'Iniciar fluxograma de AVC' }]
+  },
+  {
+    id: 'respiratorio_toxico',
+    title: 'Suspeita de causa respiratória ou tóxica',
+    description: 'Dispneia, sibilância, hipoxemia, dor pleurítica ou possível uso de substâncias.',
+    destinations: [
+      { flowchartId: 'asthma', label: 'Avaliar crise asmática' },
+      { flowchartId: 'tep', label: 'Avaliar TEP' },
+      { flowchartId: 'dpoc_exacerbado', label: 'Avaliar DPOC exacerbado' },
+      { flowchartId: 'gasometria', label: 'Abrir fluxograma de gasometria' }
+    ]
+  }
+]
+
+const parseAnsiedadeRouteAlerts = (rawAnswer?: string): AnsiedadeRouteAlertId[] => {
+  if (!rawAnswer) return []
+  try {
+    const parsed = JSON.parse(rawAnswer) as { routeAlerts?: unknown }
+    if (!Array.isArray(parsed.routeAlerts)) return []
+    const validIds = new Set(ANSIEDADE_ROUTE_ALERTS.map((item) => item.id))
+    return parsed.routeAlerts.filter((item): item is AnsiedadeRouteAlertId => typeof item === 'string' && validIds.has(item as AnsiedadeRouteAlertId))
+  } catch {
+    return []
+  }
+}
+
 interface EmergencyFlowchartProps {
   patient: EmergencyPatient
   flowchart: EmergencyFlowchartType
@@ -1726,6 +1780,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
   const [pepHivGuideOpen, setPepHivGuideOpen] = useState(false)
   const [ansiedadeGuideOpen, setAnsiedadeGuideOpen] = useState(false)
+  const [ansiedadeRouteAlerts, setAnsiedadeRouteAlerts] = useState<AnsiedadeRouteAlertId[]>(() =>
+    parseAnsiedadeRouteAlerts(patient.emergencyState.answers?.ansiedade_excluir_organico)
+  )
   const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
   const [influenzaSeveritySigns, setInfluenzaSeveritySigns] = useState<string[]>([])
   const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
@@ -2046,6 +2103,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setHistory(patient.emergencyState.history || [])
       setAnswers(patient.emergencyState.answers || {})
       setProgress(patient.emergencyState.progress || 0)
+      setAnsiedadeRouteAlerts(parseAnsiedadeRouteAlerts(patient.emergencyState.answers?.ansiedade_excluir_organico))
     }
   }, [
     patient.id,
@@ -2410,6 +2468,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       houseBrackmann: selectedBellHouseGrade,
       houseBrackmannLabel: bellHouseGradeLabels[selectedBellHouseGrade] || ''
     })
+    const ansiedadeOrganicAnswer = JSON.stringify({
+      decision: value || nextStep,
+      routeAlerts: ansiedadeRouteAlerts
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -2484,9 +2546,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                                           ? bellSupportAnswer
                                                           : isBellRedFlagsStep
                                                             ? bellRedFlagsAnswer
-                                                            : isBellHouseStep
-                                                              ? bellHouseAnswer
-                                                              : value || nextStep
+                                    : isBellHouseStep
+                                      ? bellHouseAnswer
+                                      : isAnsiedadeOrganicExclusionStep
+                                        ? ansiedadeOrganicAnswer
+                                      : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
 
@@ -2788,6 +2852,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setTEPVitalSigns(defaultFlowVitalSigns(patient))
     setPepHivGuideOpen(false)
     setAnsiedadeGuideOpen(false)
+    setAnsiedadeRouteAlerts([])
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
     setPneumoniaVitalSigns(defaultFlowVitalSigns(patient))
     setPneumoniaCrbCriteria([])
@@ -3340,7 +3405,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isSinusitisPrescriptionFinalStep = flowchart.id === 'sinusite' && ['rino_alergica', 'rino_viral', 'rino_bacteriana', 'rino_reavaliar_sem_antibiotico'].includes(currentStepData?.id || '')
   const isFaringoamigdalitePrescriptionFinalStep = flowchart.id === 'faringoamigdalite' && ['faringo_alta_sintomatica', 'faringo_considerar_antibiotico', 'faringo_bacteriana_antibiotico'].includes(currentStepData?.id || '')
   const isMonoartritePrescriptionFinalStep = flowchart.id === 'monoartrite' && ['mono_gota_tratamento', 'mono_artrite_septica_internacao'].includes(currentStepData?.id || '')
+  const isAnsiedadeOrganicExclusionStep = flowchart.id === 'crise_ansiedade' && currentStepData?.id === 'ansiedade_excluir_organico'
   const isAnsiedadeMedicationStep = flowchart.id === 'crise_ansiedade' && currentStepData?.id === 'ansiedade_medicamentosa'
+  const selectedAnsiedadeRouteAlerts = ANSIEDADE_ROUTE_ALERTS.filter((item) => ansiedadeRouteAlerts.includes(item.id))
+  const shouldOfferAnsiedadeRelatedFlows = flowchart.id === 'crise_ansiedade'
+    && flowchart.finalSteps.includes(currentStep)
+    && selectedAnsiedadeRouteAlerts.length > 0
   const isVertigemPrescriptionFinalStep = flowchart.id === 'sindrome_vertiginosa' && ['vertigem_neurite_vestibular', 'vertigem_vppb_hipotensao'].includes(currentStepData?.id || '')
   const isCefaleiaPrescriptionFinalStep = flowchart.id === 'cefaleia' && ['cefaleia_tensional', 'cefaleia_migranea', 'cefaleia_salvas'].includes(currentStepData?.id || '')
   const isAgitacaoPrescriptionFinalStep = flowchart.id === 'agitacao_psicomotora' && ['agitacao_moderada_medicacao_oral', 'agitacao_grave_contencao_quimica'].includes(currentStepData?.id || '')
@@ -7842,6 +7912,60 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
+                  {isAnsiedadeOrganicExclusionStep && (
+                    <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                        <div>
+                          <p className="text-sm font-extrabold uppercase tracking-wide text-slate-950">Selecione os sinais presentes</p>
+                          <p className="mt-1 text-sm text-slate-600">É possível marcar mais de um. Os protocolos indicados aparecerão somente no resumo final.</p>
+                        </div>
+                        {ansiedadeRouteAlerts.length > 0 && (
+                          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-800">
+                            {ansiedadeRouteAlerts.length} alerta{ansiedadeRouteAlerts.length === 1 ? '' : 's'} selecionado{ansiedadeRouteAlerts.length === 1 ? '' : 's'}
+                          </span>
+                        )}
+                      </div>
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {ANSIEDADE_ROUTE_ALERTS.map((alert) => {
+                          const selected = ansiedadeRouteAlerts.includes(alert.id)
+                          return (
+                            <button
+                              key={alert.id}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => setAnsiedadeRouteAlerts((previous) =>
+                                previous.includes(alert.id)
+                                  ? previous.filter((item) => item !== alert.id)
+                                  : [...previous, alert.id]
+                              )}
+                              className={clsx(
+                                'flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all',
+                                selected
+                                  ? 'border-red-400 bg-red-50 text-red-950 shadow-sm'
+                                  : 'border-slate-200 bg-white text-slate-800 hover:border-blue-300 hover:bg-blue-50'
+                              )}
+                            >
+                              <span className={clsx(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-black',
+                                selected ? 'border-red-600 bg-red-600 text-white' : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                ✓
+                              </span>
+                              <span>
+                                <span className="block font-bold">{alert.title}</span>
+                                <span className="mt-1 block text-sm leading-relaxed opacity-80">{alert.description}</span>
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {ansiedadeRouteAlerts.length > 0 && (
+                        <p className="mt-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-900">
+                          Com sinal de alerta selecionado, o caso seguirá para o resumo de investigação orgânica. O redirecionamento ocorrerá apenas quando o protocolo desejado for escolhido no final.
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {isBellCriteriaStep && (
                     <div className="mt-4 flex justify-end">
                       <button
@@ -13878,6 +14002,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       ? asthmaStepOptions
                       : isBellTreatmentStep
                           ? currentStepData.options?.filter((option) => option.value !== 'prescricao')
+                        : isAnsiedadeOrganicExclusionStep && ansiedadeRouteAlerts.length > 0
+                          ? currentStepData.options?.filter((option) => option.value === 'organico')
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
@@ -14148,12 +14274,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {ansiedadeGuideOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-                  <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+              {ansiedadeGuideOpen && typeof document !== 'undefined' && createPortal(
+                <div
+                  className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 backdrop-blur-sm sm:p-4"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="ansiedade-guide-title"
+                >
+                  <div className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[calc(100dvh-2rem)]">
+                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                       <div>
-                        <h4 className="text-lg font-extrabold text-slate-950">Guia rápido - Crise de ansiedade</h4>
+                        <h4 id="ansiedade-guide-title" className="text-lg font-extrabold text-slate-950">Guia rápido - Crise de ansiedade</h4>
                         <p className="mt-1 text-sm leading-relaxed text-slate-600">
                           Roteiro prático para diferenciar ataque de pânico de causas orgânicas e conduzir o manejo inicial.
                         </p>
@@ -14169,7 +14300,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </button>
                     </div>
 
-                    <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                    <div className="min-h-0 flex-1 space-y-5 overscroll-contain overflow-y-auto p-4 text-sm leading-relaxed text-slate-700 sm:p-5">
                       <section className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
                         <h5 className="font-extrabold">Antes de chamar de ansiedade</h5>
                         <p className="mt-2">
@@ -14230,7 +14361,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </section>
                     </div>
                   </div>
-                </div>
+                </div>,
+                document.body
               )}
 
               {isVertigemPrescriptionFinalStep && (
@@ -14921,6 +15053,45 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         {finalClinicalReportText}
                       </div>
                     </div>
+                    {shouldOfferAnsiedadeRelatedFlows && onSwitchFlowchart && (
+                      <div className="w-full rounded-2xl border border-amber-300 bg-amber-50 p-5 text-left shadow-sm">
+                        <div>
+                          <p className="text-sm font-extrabold uppercase tracking-wide text-amber-950">
+                            Sinais de alerta selecionados — escolher próximo protocolo
+                          </p>
+                          <p className="mt-1 text-sm leading-relaxed text-amber-900">
+                            A seleção não redirecionou o atendimento automaticamente. Escolha abaixo o fluxograma compatível com a suspeita clínica; os dados do paciente serão mantidos.
+                          </p>
+                        </div>
+                        <div className="mt-4 space-y-3">
+                          {selectedAnsiedadeRouteAlerts.map((alert) => (
+                            <div key={alert.id} className="rounded-xl border border-amber-200 bg-white p-4">
+                              <p className="font-bold text-slate-950">{alert.title}</p>
+                              <p className="mt-1 text-sm text-slate-600">{alert.description}</p>
+                              {alert.destinations.length > 0 ? (
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                  {alert.destinations.map((destination) => (
+                                    <button
+                                      key={destination.flowchartId}
+                                      type="button"
+                                      onClick={() => onSwitchFlowchart(destination.flowchartId)}
+                                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-800"
+                                    >
+                                      {destination.label}
+                                      <ChevronRight className="h-4 w-4" />
+                                    </button>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm font-semibold text-slate-700">
+                                  O fluxograma específico de arritmia ainda não está disponível. Manter monitorização e ECG, com investigação clínica direcionada.
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {shouldOfferTEPFlow && onSwitchFlowchart && (
                       <div className="w-full rounded-2xl border border-red-300 bg-red-50 p-5 text-left shadow-sm">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

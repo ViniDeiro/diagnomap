@@ -521,6 +521,13 @@ const ansiedadeDecisionLabels: Record<string, string> = {
   avaliacao_saude_mental: 'foi indicado seguimento ou avaliação psicológica/psiquiátrica conforme disponibilidade e contexto clínico'
 }
 
+const ansiedadeRouteAlertLabels: Record<string, string> = {
+  sca: 'suspeita de síndrome coronariana aguda',
+  arritmia: 'suspeita de arritmia',
+  neurologico: 'suspeita de AVC ou outra causa neurológica',
+  respiratorio_toxico: 'suspeita de causa respiratória ou tóxica'
+}
+
 const getAnsiedadeDecision = (answers: Record<string, string>, stepId: string) => {
   const parsed = parseFlowAnswerForSummary(answers[stepId])
   const decision = typeof parsed?.decision === 'string' ? parsed.decision : answers[stepId]
@@ -539,11 +546,22 @@ const buildAnsiedadeClinicalSummary = (
   const doctorSignature = formatDoctorSignature(doctor)
   const initialDecision = getAnsiedadeDecision(answers, 'ansiedade_inicio')
   const organicDecision = getAnsiedadeDecision(answers, 'ansiedade_excluir_organico')
+  const organicAnswer = parseFlowAnswerForSummary(answers.ansiedade_excluir_organico)
+  const selectedRouteAlerts = Array.isArray(organicAnswer?.routeAlerts)
+    ? organicAnswer.routeAlerts
+        .filter((item): item is string => typeof item === 'string')
+        .map((item) => ansiedadeRouteAlertLabels[item])
+        .filter(Boolean)
+    : []
+  const routeAlertDecision = selectedRouteAlerts.length > 0
+    ? `foram selecionados sinais que direcionam a investigação para ${formatClinicalListText(selectedRouteAlerts)}`
+    : ''
   const nonDrugDecision = getAnsiedadeDecision(answers, 'ansiedade_abordagem_nao_medicamentosa')
   const medicationDecision = getAnsiedadeDecision(answers, 'ansiedade_medicamentosa')
   const decisionLines = uniqueTextItems([
     initialDecision,
     organicDecision,
+    routeAlertDecision,
     nonDrugDecision,
     medicationDecision
   ])
@@ -609,6 +627,7 @@ const buildAnsiedadeClinicalSummary = (
     examinationLines: [examinationLine],
     scoreLines: uniqueTextItems([
       organicDecision || null,
+      routeAlertDecision || null,
       nonDrugDecision || null,
       medicationDecision || null
     ]),

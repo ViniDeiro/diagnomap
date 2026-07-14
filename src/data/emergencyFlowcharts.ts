@@ -6375,12 +6375,7 @@ export const ansiedadeFlowchart: EmergencyFlowchart = {
           <div class="grid gap-3 md:grid-cols-2">
             <div class="rounded-xl border border-slate-200 bg-white p-4">
               <p class="font-bold text-slate-950">Sinais que mudam a rota</p>
-              <ul class="mt-2 list-disc space-y-1 pl-5 text-slate-800">
-                <li>Dor precordial, irradiação, sudorese fria ou fatores de risco cardiovasculares → avaliar SCA.</li>
-                <li>Taquicardia sustentada, pulso irregular, síncope ou palpitações importantes → avaliar arritmia.</li>
-                <li>Parestesias com assimetria, déficit focal, alteração de fala ou confusão → avaliar AVC/causa neurológica.</li>
-                <li>Dispneia, sibilância, hipoxemia, dor pleurítica ou uso de substâncias → avaliar causa respiratória/tóxica.</li>
-              </ul>
+              <p class="mt-2 text-slate-800">Selecione abaixo todos os sinais presentes. A avaliação de ansiedade não será interrompida; ao final, o resumo exibirá os protocolos relacionados disponíveis.</p>
             </div>
             <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-950">
               <p class="font-bold">Avaliação mínima sugerida conforme quadro</p>
