@@ -15838,17 +15838,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {pepHivImageOpen && (
+              {pepHivImageOpen && typeof document !== 'undefined' && createPortal((
                 <div
                   className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
                   onClick={() => setPepHivImageOpen(false)}
                   role="presentation"
                 >
                   <div
-                    className="flex max-h-[94vh] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                    className="flex h-[92vh] max-h-[92vh] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
                     onClick={(event) => event.stopPropagation()}
                   >
-                    <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
                       <div>
                         <h4 className="text-lg font-extrabold text-slate-950">Fluxo visual da PEP ao HIV</h4>
                         <p className="mt-1 text-sm text-slate-600">Referência rápida para decisão após exposição de risco.</p>
@@ -15863,18 +15863,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         <X className="h-5 w-5" />
                       </button>
                     </div>
-                    <div className="overflow-auto bg-slate-50 p-4 sm:p-6">
+                    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50 p-4 sm:p-6">
                       <img
                         src="/pephiv.jpeg"
                         alt="Fluxo visual de profilaxia pós-exposição ao HIV"
-                        className="h-auto w-auto max-w-none rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
+                        className="max-h-full max-w-full rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
                       />
                     </div>
                   </div>
                 </div>
-              )}
+              ), document.body)}
 
-              {pepHivGuideOpen && (
+              {pepHivGuideOpen && typeof document !== 'undefined' && createPortal((
                 <div
                   className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
                   onClick={() => setPepHivGuideOpen(false)}
@@ -15972,7 +15972,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                   </div>
                 </div>
-              )}
+              ), document.body)}
 
               {isAnaphylaxisDischargeStep && (
                 <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5">
