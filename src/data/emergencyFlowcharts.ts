@@ -6775,7 +6775,7 @@ export const pepHivFlowchart: EmergencyFlowchart = {
                 <p class="font-extrabold">PEP ao HIV é urgência médica</p>
                 <p class="mt-1">Iniciar o mais precocemente possível, no máximo até 72 horas após a exposição.</p>
               </div>
-              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-400 bg-white font-sans text-sm font-extrabold leading-none text-cyan-800 transition-colors hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2" title="Ver guia rápido de PEP ao HIV" aria-label="Ver guia rápido de PEP ao HIV">i</button>
+              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 self-end items-center justify-center rounded-full border border-cyan-400 bg-white font-sans text-sm font-extrabold leading-none text-cyan-800 transition-colors hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2 sm:self-start" title="Ver informações rápidas sobre PEP ao HIV" aria-label="Ver informações rápidas sobre PEP ao HIV">i</button>
             </div>
           </div>
           <div class="grid gap-3 md:grid-cols-2">

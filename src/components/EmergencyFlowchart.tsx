@@ -1991,6 +1991,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [tvpNoacInfoOpen, setTVPNoacInfoOpen] = useState<string | null>(null)
   const [varfarinaDietInfoOpen, setVarfarinaDietInfoOpen] = useState(false)
   const [pepHivGuideOpen, setPepHivGuideOpen] = useState(false)
+  const [pepHivImageOpen, setPepHivImageOpen] = useState(false)
   const [ansiedadeGuideOpen, setAnsiedadeGuideOpen] = useState(false)
   const [ansiedadeRouteAlerts, setAnsiedadeRouteAlerts] = useState<AnsiedadeRouteAlertId[]>(() =>
     parseAnsiedadeRouteAlerts(patient.emergencyState.answers?.ansiedade_excluir_organico)
@@ -3165,6 +3166,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setTEPPhysicalExam(defaultPneumoniaPhysicalExam())
     setTEPVitalSigns(defaultFlowVitalSigns(patient))
     setPepHivGuideOpen(false)
+    setPepHivImageOpen(false)
     setAnsiedadeGuideOpen(false)
     setAnsiedadeRouteAlerts([])
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
@@ -7058,6 +7060,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                           className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/40 bg-white/20 text-sm font-black text-white shadow-sm transition-colors hover:bg-white/30"
                           title="Ver referência visual de mordedura"
                           aria-label="Ver referência visual de mordedura"
+                        >
+                          i
+                        </button>
+                      )}
+                      {flowchart.id === 'pep_hiv' && currentStepData.id === 'pep_inicio' && (
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setPepHivImageOpen(true)
+                          }}
+                          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/50 bg-white/20 font-sans text-sm font-black leading-none text-white shadow-sm transition-colors hover:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/70 focus:ring-offset-2 focus:ring-offset-red-700"
+                          title="Ver imagem do fluxo de PEP ao HIV"
+                          aria-label="Ver imagem do fluxo de PEP ao HIV"
                         >
                           i
                         </button>
@@ -15817,6 +15833,35 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
+              {pepHivImageOpen && (
+                <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+                  <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                      <div>
+                        <h4 className="text-lg font-extrabold text-slate-950">Fluxo visual da PEP ao HIV</h4>
+                        <p className="mt-1 text-sm text-slate-600">Referência rápida para decisão após exposição de risco.</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPepHivImageOpen(false)}
+                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
+                        title="Fechar imagem"
+                        aria-label="Fechar imagem do fluxo de PEP ao HIV"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+                    <div className="overflow-auto bg-slate-50 p-4 sm:p-6">
+                      <img
+                        src="/pephiv.jpeg"
+                        alt="Fluxo visual de profilaxia pós-exposição ao HIV"
+                        className="mx-auto h-auto max-h-[78vh] w-auto max-w-full rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {pepHivGuideOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
                   <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
@@ -15839,21 +15884,6 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
 
                     <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
-                      <section className="overflow-hidden rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
-                        <div className="mb-3 flex items-center justify-between gap-3">
-                          <h5 className="font-extrabold">Referência visual da PEP ao HIV</h5>
-                          <span className="rounded-full border border-cyan-300 bg-white px-2.5 py-1 text-xs font-bold text-cyan-800">
-                            Guia rápido
-                          </span>
-                        </div>
-                        <div className="flex justify-center rounded-lg border border-cyan-100 bg-white p-2">
-                          <img
-                            src="/pephiv.jpeg"
-                            alt="Referência visual do fluxo de profilaxia pós-exposição ao HIV"
-                            className="max-h-[42vh] w-full rounded-md object-contain"
-                          />
-                        </div>
-                      </section>
                       <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
                         <h5 className="font-extrabold">Decisão em 5 perguntas</h5>
                         <ol className="mt-2 list-decimal space-y-1 pl-5">
