@@ -47,11 +47,14 @@ export default function Home() {
       const shouldOpenDashboardDirectly =
         typeof window !== 'undefined' &&
         new URLSearchParams(window.location.search).get('view') === 'dashboard'
+      const shouldOpenNewPatientDirectly =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('view') === 'new-patient'
 
       if (!isSupabaseConfigured) {
-        if (shouldOpenDashboardDirectly) {
+        if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly) {
           window.history.replaceState(null, '', '/')
-          setAppState('dashboard')
+          setAppState(shouldOpenNewPatientDirectly ? 'new-patient' : 'dashboard')
           return
         }
         setTimeout(() => {
@@ -78,9 +81,9 @@ export default function Home() {
           }, 4000)
           return
         }
-        if (shouldOpenDashboardDirectly) {
+        if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly) {
           window.history.replaceState(null, '', '/')
-          setAppState('dashboard')
+          setAppState(shouldOpenNewPatientDirectly ? 'new-patient' : 'dashboard')
           return
         }
         setTimeout(() => {
@@ -97,7 +100,7 @@ export default function Home() {
           setIsFading(true)
           setTimeout(() => {
             if (!active) return
-            setAppState('dashboard')
+            setAppState(shouldOpenNewPatientDirectly ? 'new-patient' : 'dashboard')
           }, 500)
         }, 1200)
       }

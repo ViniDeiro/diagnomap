@@ -75,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuGroups: SidebarGroup[] = [
     {
       items: [
-        { icon: Plus, label: 'Novo atendimento', href: '#' },
+        { icon: Plus, label: 'Novo atendimento', href: '/?view=new-patient' },
         { icon: Activity, label: 'Fluxos clínicos', href: '#' },
         { icon: Clock, label: 'Histórico de atendimentos', href: '#' },
       ]
