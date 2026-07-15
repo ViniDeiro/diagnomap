@@ -27,7 +27,7 @@ interface MedicalPrescriptionViewerProps {
 const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ patient, onClose }) => {
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
-  const [activeTab, setActiveTab] = React.useState<'orientations' | 'prescriptions'>('orientations')
+  const [activeTab, setActiveTab] = React.useState<'orientations' | 'prescriptions'>('prescriptions')
   const [doctorProfile, setDoctorProfile] = React.useState<DoctorProfile | null>(null)
   const livePatient = patientService.getPatientById(patient.id) || patient
   const isDengue = !livePatient.selectedFlowchart || livePatient.selectedFlowchart === 'dengue'
@@ -627,16 +627,16 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
           <div className="mt-4 px-2">
             <div className="inline-flex rounded-xl overflow-hidden border border-white/20">
               <button
-                className={clsx('px-4 py-2 text-sm font-medium transition-colors', activeTab === 'orientations' ? 'bg-white/20 text-white' : 'bg-white/10 text-blue-100 hover:bg-white/20')}
-                onClick={() => setActiveTab('orientations')}
-              >
-                Orientações
-              </button>
-              <button
                 className={clsx('px-4 py-2 text-sm font-medium transition-colors', activeTab === 'prescriptions' ? 'bg-white/20 text-white' : 'bg-white/10 text-blue-100 hover:bg-white/20')}
                 onClick={() => setActiveTab('prescriptions')}
               >
                 Medicamentos Prescritos
+              </button>
+              <button
+                className={clsx('px-4 py-2 text-sm font-medium transition-colors', activeTab === 'orientations' ? 'bg-white/20 text-white' : 'bg-white/10 text-blue-100 hover:bg-white/20')}
+                onClick={() => setActiveTab('orientations')}
+              >
+                Orientações
               </button>
             </div>
           </div>

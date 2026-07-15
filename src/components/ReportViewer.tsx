@@ -6,8 +6,6 @@ import {
   X, 
   Download, 
   FileText, 
-  Stethoscope,
-  Zap,
   Clipboard,
   ClipboardCheck
 } from 'lucide-react'
@@ -176,12 +174,6 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
   const reportRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = React.useState(false)
   const [doctorProfile, setDoctorProfile] = React.useState<DoctorProfile | null>(null)
-  const activeFlowState = ((patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState?.answers &&
-    Object.keys((patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState?.answers || {}).length > Object.keys(patient.flowchartState?.answers || {}).length)
-    ? (patient as Patient & { emergencyState?: Patient['flowchartState'] }).emergencyState
-    : patient.flowchartState
-  const activeGroup = activeFlowState?.group || patient.flowchartState?.group
-
   React.useEffect(() => {
     let mounted = true
     getCurrentDoctor()
@@ -263,27 +255,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
   const copyReportText = async () => {
     try {
-      const report = buildStructuredReport()
-      const fullText = [
-        report.title,
-        `Data do relatório: ${formatDate(new Date())}`,
-        `Número do protocolo: ${patient.id}`,
-        '',
-        ...report.sections.flatMap((section, index) => {
-          const content = [`${index + 1}. ${section.title}`]
-          if (section.text) content.push(section.text)
-          if (section.items?.length) {
-            content.push(...section.items.map((item) => `- ${item}`))
-          }
-          content.push('')
-          return content
-        }),
-        '---',
-        'Relatório gerado automaticamente pelo Sistema Siga o Fluxo',
-        formatDate(new Date())
-      ].join('\n')
-
-      await navigator.clipboard.writeText(fullText)
+      const narrativeText = report.sections[0]?.text || report.title
+      await navigator.clipboard.writeText(narrativeText)
       setCopied(true)
       
       // Reset do feedback após 2 segundos
@@ -449,6 +422,24 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       patientForReport.generalObservations,
       ...(patientForReport.treatment.observations || [])
     ])
+
+    const narrativeSummary = buildClinicalSummary(patientForReport, {
+      flowchart: flowchart || undefined,
+      currentStep,
+      history,
+      answers,
+      doctor: doctorProfile
+    })
+
+    return {
+      title: 'RESUMO CLÍNICO',
+      sections: [
+        {
+          title: 'Resumo clínico',
+          text: narrativeSummary.continuousText
+        }
+      ]
+    }
 
     const usesSemiologicReport = !['dengue', 'atendimento_antirrabico', 'itu', 'tvp', 'anafilaxia', 'influenza'].includes(flowId)
 
@@ -2595,8 +2586,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                 <FileText className="w-6 h-6" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">Relatório Médico Estruturado</h2>
-                <p className="text-blue-100">Sistema Siga o Fluxo - Protocolo MS 2024</p>
+                <h2 className="text-2xl font-bold">Resumo Clínico</h2>
+                <p className="text-blue-100">Sistema Siga o Fluxo</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -2650,90 +2641,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
           <div ref={reportRef} className="p-8 bg-white">
             
-            {/* Report Header */}
-            <div className="border-b-2 border-slate-200 pb-6 mb-8">
-              <div className="text-center mb-6">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-slate-700 rounded-2xl flex items-center justify-center">
-                    <Stethoscope className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">{report.title}</h1>
-                <p className="text-lg text-slate-600">Sistema Siga o Fluxo</p>
-                <p className="text-sm text-slate-500">Protocolo de Diagnóstico Clínico - {patient.selectedFlowchart?.toUpperCase() || 'DENGUE'}</p>
-              </div>
-              
-              <div className="text-right">
-                <p className="text-sm text-slate-600">Data do relatório: {formatDate(new Date())}</p>
-                <p className="text-sm text-slate-600">Número do protocolo: {patient.id}</p>
-              </div>
-            </div>
-
-            {/* Classificação em Destaque */}
-            {activeGroup && (
-              <div className="mb-8">
-                <div className={`${getGroupInfo(activeGroup)?.bg} p-6 rounded-xl border-2 ${getGroupInfo(activeGroup)?.color.replace('text-', 'border-')}`}>
-                  <div className="flex items-center space-x-4">
-                    <div className={`w-16 h-16 ${getGroupInfo(activeGroup)?.color.replace('text-', 'bg-')} rounded-2xl flex items-center justify-center`}>
-                      <span className="text-white text-2xl font-bold">{activeGroup}</span>
-                    </div>
-                    <div>
-                      <h3 className={`text-xl font-bold ${getGroupInfo(activeGroup)?.color} mb-1`}>
-                        {getGroupInfo(activeGroup)?.name}
-                      </h3>
-                      <p className={`text-sm ${getGroupInfo(activeGroup)?.color.replace('600', '700')}`}>
-                        {getGroupInfo(activeGroup)?.description}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Report - Formato estruturado por seções */}
-            <div className="bg-white p-8 rounded-xl shadow-sm border border-slate-200">
-              <div className="space-y-6 text-slate-800">
-                {report.sections.map((section, index) => (
-                  <section key={section.title} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                    <h3 className="text-lg font-bold text-slate-900">
-                      {index + 1}. {section.title}
-                    </h3>
-                    {section.text && (
-                      <p className="mt-3 text-base leading-8 text-slate-800 whitespace-pre-line">
-                        {section.text}
-                      </p>
-                    )}
-                    {section.items && section.items.length > 0 && (
-                      <ul className="mt-3 space-y-2">
-                        {section.items.map((item) => (
-                          <li key={`${section.title}-${item}`} className="flex items-start gap-3 text-base leading-7 text-slate-800">
-                            <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </section>
-                ))}
-              </div>
-            </div>
-
-            {/* Footer do Relatório */}
-            <div className="border-t-2 border-slate-200 pt-6 mt-8">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-slate-700 rounded-xl flex items-center justify-center">
-                    <Zap className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800">Siga o Fluxo</p>
-                    <p className="text-sm text-slate-600">Protocolo Oficial - Ministério da Saúde 2024</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-600">Relatório gerado automaticamente pelo sistema</p>
-                  <p className="text-xs text-slate-500">{formatDate(new Date())}</p>
-                </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+              <div className="whitespace-pre-line text-base leading-8 text-slate-800">
+                {report.sections[0]?.text || report.title}
               </div>
             </div>
           </div>
