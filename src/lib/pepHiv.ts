@@ -2,6 +2,8 @@ import type { Prescription } from '@/types/patient'
 
 type PrescriptionDraft = Omit<Prescription, 'id' | 'prescribedAt'>
 
+export type PepHivScheme = 'preferencial' | 'sem_tenofovir' | 'sem_dolutegravir'
+
 const prescribedBy = 'Fluxograma PEP HIV'
 
 export const PEP_HIV_RISK_MATERIALS = [
@@ -34,32 +36,64 @@ export const PEP_HIV_FOLLOW_UP_ORIENTATIONS = [
   'A PEP pode ser continuada/acompanhada em unidades de Atenção Primária do SUS; garantir sigilo e referência adequada quando necessário.'
 ]
 
-export const buildPepHivPrescriptionItems = (): PrescriptionDraft[] => [
-  {
-    medication: 'Tenofovir/Lamivudina (TDF/3TC)',
-    dosage: '300 mg/300 mg',
-    frequency: 'Tomar 1 comprimido VO 1x/dia',
-    duration: '28 dias',
-    instructions: 'Iniciar o quanto antes, no máximo até 72 horas após a exposição.',
-    prescribedBy
-  },
-  {
-    medication: 'Dolutegravir (DTG)',
-    dosage: '50 mg',
-    frequency: 'Tomar 1 comprimido VO 1x/dia',
-    duration: '28 dias',
-    instructions: 'Tomar junto com tenofovir/lamivudina.',
-    prescribedBy
-  },
-  {
-    medication: 'Bromoprida 10 mg ou Ondansetrona 4 mg',
-    dosage: '1 comprimido',
-    frequency: 'VO a cada 8 horas se enjoo ou vômitos',
-    duration: 'Conforme sintomas',
-    instructions: 'Usar apenas se necessário para controle de náuseas ou vômitos.',
-    prescribedBy
-  }
-]
+export const buildPepHivPrescriptionItems = (scheme: PepHivScheme = 'preferencial'): PrescriptionDraft[] => {
+  const regimen = scheme === 'sem_tenofovir'
+    ? [
+        {
+          medication: 'Zidovudina/Lamivudina (AZT/3TC)',
+          dosage: '300 mg/150 mg',
+          frequency: 'Tomar 1 comprimido VO 12/12h',
+          instructions: 'Usar como alternativa quando tenofovir for contraindicado ou indisponível.'
+        },
+        {
+          medication: 'Dolutegravir (DTG)',
+          dosage: '50 mg',
+          frequency: 'Tomar 1 comprimido VO 1x/dia',
+          instructions: 'Tomar junto com zidovudina/lamivudina.'
+        }
+      ]
+    : scheme === 'sem_dolutegravir'
+      ? [
+          {
+            medication: 'Tenofovir/Lamivudina (TDF/3TC)',
+            dosage: '300 mg/300 mg',
+            frequency: 'Tomar 1 comprimido VO 1x/dia',
+            instructions: 'Usar como parte do esquema alternativo sem dolutegravir.'
+          },
+          {
+            medication: 'Darunavir (DRV) + Ritonavir (RTV)',
+            dosage: '800 mg + 100 mg',
+            frequency: 'Tomar 1 dose VO 1x/dia',
+            instructions: 'Usar como alternativa quando dolutegravir for contraindicado ou indisponível.'
+          }
+        ]
+      : [
+          {
+            medication: 'Tenofovir/Lamivudina (TDF/3TC)',
+            dosage: '300 mg/300 mg',
+            frequency: 'Tomar 1 comprimido VO 1x/dia',
+            instructions: 'Iniciar o quanto antes, no máximo até 72 horas após a exposição.'
+          },
+          {
+            medication: 'Dolutegravir (DTG)',
+            dosage: '50 mg',
+            frequency: 'Tomar 1 comprimido VO 1x/dia',
+            instructions: 'Tomar junto com tenofovir/lamivudina.'
+          }
+        ]
+
+  return [
+    ...regimen.map((item) => ({ ...item, duration: '28 dias', prescribedBy })),
+    {
+      medication: 'Bromoprida 10 mg ou Ondansetrona 4 mg',
+      dosage: '1 comprimido',
+      frequency: 'VO a cada 8 horas se enjoo ou vômitos',
+      duration: 'Conforme sintomas',
+      instructions: 'Usar apenas se necessário para controle de náuseas ou vômitos.',
+      prescribedBy
+    }
+  ]
+}
 
 export const hasPepHivPrescriptionSet = (prescriptions: Prescription[]) => {
   const names = new Set(

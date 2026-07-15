@@ -109,6 +109,7 @@ import {
   PEP_HIV_FOLLOW_UP_ORIENTATIONS,
   PEP_HIV_RISK_EXPOSURES,
   PEP_HIV_RISK_MATERIALS,
+  type PepHivScheme,
   buildPepHivPrescriptionItems,
   hasPepHivPrescriptionSet
 } from '@/lib/pepHiv'
@@ -1400,6 +1401,49 @@ const tvpAlertSigns = [
 const tvpVascularSurgeryAlertSigns = tvpAlertSigns.slice(0, 4)
 const tvpRespiratoryTEPAlertSigns = [tvpAlertSigns[5]]
 
+const getTVPAlertPresentation = (findings: string[]) => {
+  const selectedAlertFindings = findings.filter((item) => tvpAlertSigns.includes(item))
+  const hasFinding = (pattern: RegExp) => selectedAlertFindings.some((item) => pattern.test(item))
+
+  const candidates = [
+    {
+      match: hasFinding(/flegmasia/i),
+      title: 'Flegmasia Cerulea Dolens — manejo imediato',
+      description: 'Ameaça ao membro associada a TVP extensa, exigindo estabilização e avaliação vascular sem atraso.'
+    },
+    {
+      match: hasFinding(/dispneia|dor torácica|hemoptise|síncope|embolia pulmonar/i),
+      title: 'Suspeita de TEP — avaliação imediata',
+      description: 'Sintomas respiratórios associados à suspeita de TVP exigem investigação paralela para tromboembolismo pulmonar.'
+    },
+    {
+      match: hasFinding(/iliofemoral|raiz da coxa/i),
+      title: 'Suspeita de possível TVP iliofemoral',
+      description: 'Edema de toda a perna ou da raiz da coxa sugere acometimento venoso proximal extenso.'
+    },
+    {
+      match: hasFinding(/Progressão rápida/i),
+      title: 'Suspeita de edema rapidamente progressivo',
+      description: 'A progressão rápida do edema e da dor exige reavaliação imediata e avaliação vascular.'
+    },
+    {
+      match: hasFinding(/Veias superficiais muito proeminentes/i),
+      title: 'Suspeita de trombose extensa',
+      description: 'Veias superficiais muito proeminentes e tensas podem indicar obstrução venosa extensa.'
+    },
+    {
+      match: hasFinding(/imobilização|cirurgia recente|trauma|câncer ativo|gravidez|estrogênios|TVP\/TEV|trombofilia/i),
+      title: 'Suspeita de TVP grave',
+      description: 'O conjunto de fatores de risco reforça a necessidade de investigação e manejo hospitalar.'
+    }
+  ]
+
+  return candidates.find((candidate) => candidate.match) || {
+    title: 'Sinal de alerta em TVP — manejo imediato',
+    description: 'O achado selecionado exige estabilização, monitorização e avaliação vascular presencial sem atraso.'
+  }
+}
+
 const flegmasiaReferenceImages = [
   '/flegmasia.jpeg',
   '/flegmasia-1.jpg',
@@ -2017,6 +2061,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pepHivPrescriptionPreview, setPepHivPrescriptionPreview] = useState<PepHivPrescriptionPreview | null>(null)
   const [pepHivPrescriptionCopied, setPepHivPrescriptionCopied] = useState(false)
   const [pepHivPrescriptionGenerated, setPepHivPrescriptionGenerated] = useState(false)
+  const [selectedPepHivScheme, setSelectedPepHivScheme] = useState<PepHivScheme>('preferencial')
   const [selectedAnaphylaxisAdjuncts, setSelectedAnaphylaxisAdjuncts] = useState<AnaphylaxisAdjunctKey[]>([])
   const [selectedAnaphylaxisCriteria, setSelectedAnaphylaxisCriteria] = useState<AnaphylaxisCriteriaKey[]>([])
   const [anaphylaxisCriteriaInfo, setAnaphylaxisCriteriaInfo] = useState<AnaphylaxisCriteriaInfo | null>(null)
@@ -3600,6 +3645,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const activeTVPClinicalFindings: string[] = isTVPClinicalEvaluation
     ? selectedClinicalFindings
     : persistedTVPClinicalFindings
+  const tvpAlertPresentation = useMemo(
+    () => getTVPAlertPresentation(activeTVPClinicalFindings),
+    [activeTVPClinicalFindings]
+  )
+  const isTVPUrgentAlertStep = flowchart.id === 'tvp' && currentStepData?.id === 'tvp_urgencia_vascular_imediata'
   const hasTVPAlertSignSelected = useMemo(
     () => activeTVPClinicalFindings.some((item) => tvpAlertSigns.includes(item)),
     [activeTVPClinicalFindings]
@@ -4684,8 +4734,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
   }, [agitacaoPrescriptionPreview])
 
-  const buildPepHivPrescriptionPreview = useCallback((): PepHivPrescriptionPreview => {
-    const items = buildPepHivPrescriptionItems()
+  const buildPepHivPrescriptionPreview = useCallback((scheme: PepHivScheme = selectedPepHivScheme): PepHivPrescriptionPreview => {
+    const items = buildPepHivPrescriptionItems(scheme)
     const content = [
       'PROFILAXIA PÓS-EXPOSIÇÃO (PEP) AO HIV',
       '',
@@ -4707,10 +4757,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     ].filter(Boolean)
 
     return {
-      title: 'Receita de PEP ao HIV',
+      title: `Receita de PEP ao HIV — ${scheme === 'preferencial' ? 'esquema preferencial' : scheme === 'sem_tenofovir' ? 'sem tenofovir' : 'sem dolutegravir'}`,
       content
     }
-  }, [])
+  }, [selectedPepHivScheme])
 
   const getPersistedPepHivPrescriptions = useCallback(() => {
     const livePatient = patientService.getPatientById(patient.id) || patient
@@ -4720,7 +4770,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const handleOpenPepHivPrescription = useCallback(() => {
     if (!currentStepData || !isPepHivPrescriptionFinalStep) return
 
-    const draftItems = buildPepHivPrescriptionItems()
+    const draftItems = buildPepHivPrescriptionItems(selectedPepHivScheme)
     const persisted = getPersistedPepHivPrescriptions()
     const existingKeys = new Set(persisted.map((item) => `${item.medication}_${item.dosage}`))
 
@@ -4732,7 +4782,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
 
     setPepHivPrescriptionGenerated(true)
-    setPepHivPrescriptionPreview(buildPepHivPrescriptionPreview())
+    setPepHivPrescriptionPreview(buildPepHivPrescriptionPreview(selectedPepHivScheme))
     setPepHivPrescriptionCopied(false)
     onUpdate(patient.id, currentStep, history, answers, progress)
   }, [
@@ -4745,7 +4795,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     isPepHivPrescriptionFinalStep,
     onUpdate,
     patient,
-    progress
+    progress,
+    selectedPepHivScheme
   ])
 
   const copyPepHivPrescriptionText = useCallback(async () => {
@@ -6417,6 +6468,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setPepHivPrescriptionPreview(null)
       setPepHivPrescriptionCopied(false)
       setPepHivPrescriptionGenerated(false)
+      setSelectedPepHivScheme('preferencial')
     }
   }, [isPepHivPrescriptionFinalStep])
 
@@ -6995,7 +7047,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   {getStepIcon(currentStepData)}
                   <div>
                     <h2 className="flex items-center gap-2 text-xl font-bold">
-                      <span>{currentStepData.title}</span>
+                      <span>{isTVPUrgentAlertStep ? tvpAlertPresentation.title : currentStepData.title}</span>
                       {flowchart.id === 'atendimento_antirrabico' && currentStepData.id === 'raiva_tipo_contato' && (
                         <button
                           type="button"
@@ -7011,7 +7063,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                         </button>
                       )}
                     </h2>
-                    <p className="text-sm opacity-90">{currentStepData.description}</p>
+                    <p className="text-sm opacity-90">{isTVPUrgentAlertStep ? tvpAlertPresentation.description : currentStepData.description}</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -15698,28 +15750,69 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {isPepHivPrescriptionFinalStep && (
-                <div className="mt-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-950">
-                        Receita de PEP ao HIV
-                      </h4>
-                      <p className="mt-1 text-sm text-cyan-950">
-                        Gera TDF/3TC + dolutegravir por 28 dias, antiemético se necessário e orientações de acompanhamento sorológico.
-                      </p>
+                <div className="mt-6 space-y-4">
+                  <div className="rounded-2xl border border-cyan-200 bg-cyan-50 p-5">
+                    <h4 className="text-sm font-bold uppercase tracking-wide text-cyan-950">
+                      Selecione o esquema para a receita
+                    </h4>
+                    <p className="mt-1 text-sm text-cyan-950">
+                      Escolha o esquema indicado para este paciente. A receita será montada com a opção selecionada.
+                    </p>
+                    <div className="mt-4 grid gap-3 md:grid-cols-3">
+                      {[
+                        { value: 'preferencial' as const, label: 'Preferencial', detail: 'Tenofovir/lamivudina + dolutegravir' },
+                        { value: 'sem_tenofovir' as const, label: 'Sem tenofovir', detail: 'Zidovudina/lamivudina + dolutegravir' },
+                        { value: 'sem_dolutegravir' as const, label: 'Sem dolutegravir', detail: 'Tenofovir/lamivudina + darunavir/ritonavir' }
+                      ].map((scheme) => {
+                        const selected = selectedPepHivScheme === scheme.value
+                        return (
+                          <label
+                            key={scheme.value}
+                            className={clsx(
+                              'cursor-pointer rounded-xl border-2 p-4 transition-colors',
+                              selected
+                                ? 'border-cyan-600 bg-white text-cyan-950 shadow-sm'
+                                : 'border-cyan-200 bg-cyan-50/60 text-slate-700 hover:border-cyan-400 hover:bg-white'
+                            )}
+                          >
+                            <span className="flex items-start gap-3">
+                              <input
+                                type="radio"
+                                name="pep-hiv-scheme"
+                                value={scheme.value}
+                                checked={selected}
+                                onChange={() => {
+                                  setSelectedPepHivScheme(scheme.value)
+                                  setPepHivPrescriptionPreview(null)
+                                  setPepHivPrescriptionCopied(false)
+                                  setPepHivPrescriptionGenerated(false)
+                                }}
+                                className="mt-1 h-4 w-4 accent-cyan-700"
+                              />
+                              <span>
+                                <span className="block font-bold">{scheme.label}</span>
+                                <span className="mt-1 block text-xs leading-relaxed">{scheme.detail}</span>
+                              </span>
+                            </span>
+                          </label>
+                        )
+                      })}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleOpenPepHivPrescription}
-                      className={clsx(
-                        'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
-                        pepHivPrescriptionGenerated || hasPepHivPrescriptionSet(getPersistedPepHivPrescriptions())
-                          ? 'border border-cyan-300 bg-white text-cyan-900 hover:bg-cyan-100'
-                          : 'bg-cyan-700 text-white hover:bg-cyan-800'
-                      )}
-                    >
-                      {pepHivPrescriptionGenerated || hasPepHivPrescriptionSet(getPersistedPepHivPrescriptions()) ? 'Receita' : 'Gerar receita'}
-                    </button>
+                    <div className="mt-4 flex flex-col gap-3 border-t border-cyan-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm text-cyan-950">A seleção será refletida na receita gerada.</p>
+                      <button
+                        type="button"
+                        onClick={handleOpenPepHivPrescription}
+                        className={clsx(
+                          'inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors',
+                          pepHivPrescriptionGenerated || hasPepHivPrescriptionSet(getPersistedPepHivPrescriptions())
+                            ? 'border border-cyan-300 bg-white text-cyan-900 hover:bg-cyan-100'
+                            : 'bg-cyan-700 text-white hover:bg-cyan-800'
+                        )}
+                      >
+                        {pepHivPrescriptionGenerated || hasPepHivPrescriptionSet(getPersistedPepHivPrescriptions()) ? 'Receita' : 'Gerar receita'}
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -15746,6 +15839,21 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
 
                     <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                      <section className="overflow-hidden rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <h5 className="font-extrabold">Referência visual da PEP ao HIV</h5>
+                          <span className="rounded-full border border-cyan-300 bg-white px-2.5 py-1 text-xs font-bold text-cyan-800">
+                            Guia rápido
+                          </span>
+                        </div>
+                        <div className="flex justify-center rounded-lg border border-cyan-100 bg-white p-2">
+                          <img
+                            src="/pephiv.jpeg"
+                            alt="Referência visual do fluxo de profilaxia pós-exposição ao HIV"
+                            className="max-h-[42vh] w-full rounded-md object-contain"
+                          />
+                        </div>
+                      </section>
                       <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
                         <h5 className="font-extrabold">Decisão em 5 perguntas</h5>
                         <ol className="mt-2 list-decimal space-y-1 pl-5">

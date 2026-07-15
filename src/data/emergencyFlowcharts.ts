@@ -2831,16 +2831,16 @@ export const tvpFlowchart: EmergencyFlowchart = {
     },
     tvp_urgencia_vascular_imediata: {
       id: 'tvp_urgencia_vascular_imediata',
-      title: 'Flegmasia / ameaça ao membro - manejo imediato',
-      description: 'Estabilização, anticoagulação e avaliação vascular presencial sem atraso.',
+      title: 'Sinal de alerta em TVP - manejo imediato',
+      description: 'Estabilização, investigação de gravidade e avaliação vascular presencial sem atraso.',
       type: 'action',
       critical: true,
       timeSensitive: true,
       content: `
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-red-300 bg-red-100 p-4 text-red-950">
-            <h4 class="font-bold text-red-950">URGÊNCIA VASCULAR + INTERNAÇÃO IMEDIATA</h4>
-            <p class="mt-2">Edema maciço, dor intensa e cianose sugerem <strong>Flegmasia Cerulea Dolens</strong>, TVP iliofemoral extensa e possível ameaça ao membro.</p>
+            <h4 class="font-bold text-red-950">SINAL DE ALERTA + INTERNAÇÃO IMEDIATA</h4>
+            <p class="mt-2">O achado selecionado indica possível TVP extensa ou grave, ameaça ao membro ou TEP associado. A interpretação deve ser correlacionada com a avaliação clínica e vascular.</p>
             <p class="mt-2 font-semibold">Interromper o fluxo ambulatorial, iniciar estabilização e acionar presencialmente a Cirurgia Vascular. Não postergar a avaliação para o dia seguinte.</p>
           </div>
 
@@ -2953,7 +2953,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
     tvp_urgencia_vascular_concluida: {
       id: 'tvp_urgencia_vascular_concluida',
       title: 'Manejo da urgência vascular confirmado',
-      description: 'Protocolo de Flegmasia/ameaça ao membro aplicado e avaliação vascular acionada.',
+      description: 'Manejo do sinal de alerta em TVP aplicado e avaliação vascular acionada.',
       type: 'result',
       critical: true,
       content: '',
@@ -6771,11 +6771,11 @@ export const pepHivFlowchart: EmergencyFlowchart = {
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div class="min-w-0">
                 <p class="font-extrabold">PEP ao HIV é urgência médica</p>
                 <p class="mt-1">Iniciar o mais precocemente possível, no máximo até 72 horas após a exposição.</p>
               </div>
-              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-400 bg-white text-sm font-extrabold text-cyan-800 transition-colors hover:bg-cyan-100" title="Ver guia rápido de PEP ao HIV" aria-label="Ver guia rápido de PEP ao HIV">i</button>
+              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-cyan-400 bg-white font-sans text-sm font-extrabold leading-none text-cyan-800 transition-colors hover:bg-cyan-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2" title="Ver guia rápido de PEP ao HIV" aria-label="Ver guia rápido de PEP ao HIV">i</button>
             </div>
           </div>
           <div class="grid gap-3 md:grid-cols-2">
@@ -6934,11 +6934,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div class="min-w-0">
                 <p class="font-extrabold">Conduta: iniciar PEP imediatamente</p>
                 <p class="mt-1">Prescrever por 28 dias e garantir acompanhamento sorológico.</p>
               </div>
-              <button type="button" data-pep-hiv-guide="true" class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-emerald-400 bg-white text-sm font-extrabold text-emerald-800 transition-colors hover:bg-emerald-100" title="Ver esquemas de PEP" aria-label="Ver esquemas de PEP">i</button>
             </div>
           </div>
           <div class="overflow-x-auto rounded-xl border border-slate-300 bg-white">

@@ -159,26 +159,6 @@ const getTVPLegLabel = (value?: string) => {
   return 'membro acometido não especificado'
 }
 
-const getTVPPocusText = (value?: string) => {
-  const normalized = String(value || '').toLowerCase()
-  if (normalized.includes('repeat_positive')) {
-    return 'Ultrassonografia vascular repetida positiva, com veia não compressível, confirmando trombose venosa no segmento avaliado.'
-  }
-  if (normalized.includes('us_positive')) {
-    return 'POCUS vascular compressivo positivo, com veia não compressível, achado compatível com TVP proximal no contexto clínico.'
-  }
-  if (normalized.includes('repeat_negative')) {
-    return 'Ultrassonografia vascular repetida negativa, sem trombose demonstrada nas janelas avaliadas.'
-  }
-  if (normalized.includes('us_negative')) {
-    return 'POCUS vascular compressivo negativo, com compressibilidade preservada nas janelas avaliadas.'
-  }
-  if (normalized.includes('us_inconclusive')) {
-    return 'POCUS vascular compressivo inconclusivo ou tecnicamente limitado, sem permitir exclusão segura de TVP.'
-  }
-  return 'Resultado do POCUS vascular não registrado no fluxo.'
-}
-
 const buildTVPClinicalSummary = (
   patient: Patient,
   flowchart: EmergencyFlowchart,
@@ -208,16 +188,30 @@ const buildTVPClinicalSummary = (
     ? clinicalData.sinaisEAchados.map((item) => formatClinicalValue(item)).filter(Boolean)
     : []
   const otherFindings = typeof clinicalData?.outrosAchados === 'string' ? clinicalData.outrosAchados.trim() : ''
-  const symptoms = uniqueTextItems([
+  const respiratoryAlertPattern = /dispneia|dor torácica|hemoptise|síncope|embolia pulmonar|tromboembolismo pulmonar/i
+  const limbThreatPattern = /flegmasia|cianose|palidez|ameaça ao membro|déficit sensitivo|déficit motor|iliofemoral|progressão rápida/i
+  const riskFactorPattern = /imobilização|cirurgia|trauma|câncer|gravidez|puerpério|estrogênios|trombofilia|TVP\/TEV|prévia/i
+  const allReportedFindings = uniqueTextItems([
+    patient.admission?.chiefComplaint,
     ...(patient.admission?.symptoms || []),
-    ...selectedFindings.filter((item) => /dor|edema|panturrilha|coxa|calor|rubor|cianose|taquicardia|sensibilidade|circunferência/i.test(item)),
+    ...selectedFindings,
     otherFindings
   ])
-  const riskFactors = uniqueTextItems([
-    ...selectedFindings.filter((item) => /imobilização|cirurgia|trauma|câncer|gravidez|puerpério|estrogênios|trombofilia|TVP\/TEV|prévia/i.test(item))
+  const hasRespiratoryAlert = allReportedFindings.some((item) => respiratoryAlertPattern.test(item))
+  const hasLimbThreat = allReportedFindings.some((item) => limbThreatPattern.test(item))
+  const symptoms = uniqueTextItems([
+    ...allReportedFindings.filter((item) =>
+      !respiratoryAlertPattern.test(item)
+      && !limbThreatPattern.test(item)
+      && !riskFactorPattern.test(item)
+      && /dor|edema|panturrilha|coxa|calor|rubor|cianose|taquicardia|sensibilidade|circunferência|assimetria/i.test(item)
+    )
   ])
-  const alertFindings = uniqueTextItems([
-    ...selectedFindings.filter((item) => /flegmasia|cianose|dispneia|dor torácica|hemoptise|síncope|iliofemoral|progressão rápida|urgência/i.test(item))
+  const riskFactors = uniqueTextItems([
+    ...allReportedFindings.filter((item) => riskFactorPattern.test(item))
+  ])
+  const vascularAlertFindings = uniqueTextItems([
+    ...allReportedFindings.filter((item) => limbThreatPattern.test(item))
   ])
   const vitalSigns = examData?.sinaisVitais && typeof examData.sinaisVitais === 'object'
     ? examData.sinaisVitais as Record<string, unknown>
@@ -248,7 +242,13 @@ const buildTVPClinicalSummary = (
       ? 'probabilidade clínica moderada'
       : /alt/i.test(wellsClassification)
         ? 'alta probabilidade clínica'
-        : wellsClassification || 'classificação não informada'
+        : wellsClassification || (wellsScore == null
+          ? 'classificação não informada'
+          : wellsScore <= 0
+            ? 'baixa probabilidade clínica'
+            : wellsScore <= 2
+              ? 'probabilidade clínica moderada'
+              : 'alta probabilidade clínica')
   const wellsCriteria = Array.isArray(wellsData?.criteriosSelecionados)
     ? uniqueTextItems(wellsData.criteriosSelecionados.map((item) => tvpWellsLabels[String(item)] || formatClinicalValue(item)))
     : []
@@ -262,13 +262,6 @@ const buildTVPClinicalSummary = (
   const normalizedDDimer = String(dDimerValue || '').toLowerCase()
   const hasNegativeDDimer = normalizedDDimer.includes('ddimer_negative')
   const hasPositiveDDimer = normalizedDDimer.includes('ddimer_positive')
-  const dDimerText = hasNegativeDDimer
-    ? 'D-dímero negativo.'
-    : hasPositiveDDimer
-      ? 'D-dímero positivo, devendo ser interpretado em conjunto com a probabilidade pré-teste e a imagem vascular.'
-      : answers.moderada_probabilidade
-        ? 'D-dímero não foi utilizado como etapa inicial, conforme a estratégia para probabilidade clínica moderada/alta.'
-        : 'D-dímero não registrado no fluxo.'
   const contraindications = Array.isArray(contraData?.contraindicacoesSelecionadas)
     ? uniqueTextItems(contraData.contraindicacoesSelecionadas.map((item) => tvpContraindicationLabels[String(item)] || formatClinicalValue(item)))
     : []
@@ -286,10 +279,15 @@ const buildTVPClinicalSummary = (
   const isAnticoagulated = therapies.length > 0 || path.has('anticoagulacao_iniciada')
   const isConfirmed = hasPositiveImaging || (!isExcluded && (path.has('anticoagulacao_iniciada') || (isVascularReferral && !isUrgentVascular)))
 
-  const chiefComplaint = patient.admission?.chiefComplaint?.trim()
-    || patient.admission?.symptoms?.filter(Boolean).join('; ')
-    || (symptoms.length > 0 ? formatClinicalListText(symptoms.slice(0, 3)) : '')
-    || `suspeita clínica de trombose venosa profunda em ${selectedLegLabel}`
+  const recordedChiefComplaint = patient.admission?.chiefComplaint?.trim() || ''
+  const chiefComplaintLooksLikeChecklist = /sintomas respiratórios concomitantes|suspeitar embolia pulmonar/i.test(recordedChiefComplaint)
+  const chiefComplaint = recordedChiefComplaint && !chiefComplaintLooksLikeChecklist
+    ? recordedChiefComplaint
+    : (hasRespiratoryAlert
+      ? 'sintomas respiratórios associados, com preocupação para possível tromboembolismo pulmonar'
+      : symptoms.length > 0
+        ? formatClinicalListText(symptoms.slice(0, 3))
+        : `suspeita clínica de trombose venosa profunda em ${selectedLegLabel}`)
   const title = 'RELATÓRIO MÉDICO - TROMBOSE VENOSA PROFUNDA'
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
@@ -316,52 +314,87 @@ const buildTVPClinicalSummary = (
       : contraindications.length > 0
         ? `Foram registrados alertas ou contraindicações relativas à anticoagulação: ${formatClinicalListText(contraindications)}. A relação entre benefício trombótico e risco hemorrágico deve ser individualizada.`
         : contraData
-          ? 'A segurança para anticoagulação foi avaliada e não foram registradas contraindicações relevantes no checklist aplicado.'
-          : 'A avaliação estruturada de contraindicações à anticoagulação não foi registrada neste caminho.'
+          ? 'A segurança para anticoagulação foi avaliada, sem documentação de contraindicações formais no atendimento.'
+          : 'A avaliação de contraindicações para anticoagulação não foi registrada durante este atendimento.'
   const therapyText = isExcluded
     ? ''
     : therapies.length > 0
     ? `A terapêutica antitrombótica selecionada foi ${formatClinicalListText(therapies)}, devendo constar em prescrição própria a dose, a via, o horário de início, os ajustes clínicos e a duração planejada.`
     : isAnticoagulated
-      ? 'A anticoagulação foi registrada como iniciada, porém o fármaco e o esquema posológico não constam de forma estruturada neste relatório.'
-      : 'Não há esquema anticoagulante final registrado neste momento.'
+      ? 'Consta início de anticoagulação, porém o fármaco, a dose e o esquema posológico não foram documentados neste relatório.'
+      : 'Não foi documentada definição de esquema anticoagulante específico até o momento.'
   const specialContextText = path.has('conduta_gestante')
     ? 'No contexto de gestação ou puerpério, foi indicada estratégia com heparina de baixo peso molecular, com ajuste individual e manutenção pelo período recomendado no fluxo; durante a gestação, evitar varfarina e anticoagulantes orais diretos.'
     : path.has('conduta_cancer')
       ? 'No contexto de câncer ativo, a escolha e a duração da anticoagulação devem considerar risco hemorrágico, interações medicamentosas, localização tumoral, função renal e manutenção enquanto houver doença ou tratamento oncológico ativo.'
       : ''
-  const diagnosticConclusion = isUrgentVascular
-    ? 'o quadro apresenta sinais de flegmasia ou ameaça ao membro, configurando emergência vascular, independentemente da conclusão do fluxo ambulatorial.'
-    : isExcluded
-      ? 'a investigação registrada não sustentou trombose venosa profunda no desfecho atual.'
-      : hasPositiveImaging
-        ? 'os achados clínicos e de imagem são compatíveis com trombose venosa profunda no membro avaliado.'
-        : isConfirmed
-          ? 'o caminho assistencial registra TVP confirmada ou tratada, porém o resultado positivo da imagem vascular não está disponível nos dados estruturados; recomenda-se revisar e complementar esse registro antes de finalizar o documento.'
+  const wellsSentence = wellsScore != null
+    ? `A probabilidade clínica pré-teste foi classificada como ${wellsClassificationLabel}, com escore de Wells igual a ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}.${wellsCriteria.length > 0 ? ` Contribuíram para o escore ${formatClinicalListText(wellsCriteria)}.` : ''}`
+    : 'A probabilidade clínica pré-teste pelo escore de Wells não foi documentada durante esta avaliação.'
+  const imagingAndLaboratorySentence = hasPositiveImaging
+    ? `${wellsScore != null && /baix/i.test(wellsClassificationLabel) ? 'Embora a probabilidade clínica inicial tenha sido baixa, a' : 'A'} avaliação ultrassonográfica vascular à beira do leito demonstrou veia não compressível, achado compatível com trombose venosa profunda proximal e de forte valor diagnóstico no contexto avaliado.${hasPositiveDDimer ? ' O D-dímero também foi positivo; embora inespecífico, o resultado é concordante com a investigação, sem substituir o achado de imagem.' : hasNegativeDDimer ? ' O D-dímero foi negativo, resultado que não afasta trombose diante da imagem vascular positiva.' : ''}`
+    : hasNegativeImaging && hasPositiveDDimer
+      ? 'O POCUS vascular inicial mostrou compressibilidade preservada, porém o D-dímero foi positivo. Esse conjunto não confirma TVP e indica complementação com ultrassonografia vascular formal ou exame seriado conforme a probabilidade clínica.'
+      : hasNegativeImaging && hasNegativeDDimer
+        ? `O POCUS vascular não demonstrou veia não compressível e o D-dímero foi negativo${/baix/i.test(wellsClassificationLabel) ? ', combinação que reduz significativamente a probabilidade de TVP no cenário de baixa probabilidade clínica' : ''}.`
         : hasInconclusiveImaging
-          ? 'o exame vascular foi inconclusivo e não permite excluir trombose venosa profunda.'
+          ? 'A avaliação ultrassonográfica vascular foi inconclusiva ou tecnicamente limitada, não permitindo excluir TVP; permanece indicada complementação diagnóstica.'
+          : hasNegativeImaging
+            ? 'O POCUS vascular mostrou compressibilidade preservada, devendo o resultado ser interpretado com a probabilidade clínica e a necessidade de imagem formal ou seriada.'
+            : 'Não foi documentado resultado conclusivo de imagem vascular nesta avaliação.'
+  const diagnosticInterpretation = `${wellsSentence} ${imagingAndLaboratorySentence}`
+
+  const diagnosticImpression = hasPositiveImaging
+    ? `Os achados obtidos são compatíveis com trombose venosa profunda proximal em ${selectedLegLabel}.`
+    : isExcluded
+      ? 'A estratégia diagnóstica aplicada não sustentou trombose venosa profunda no desfecho atual.'
+      : isConfirmed
+        ? 'O conjunto clínico e a conduta instituída sustentam o diagnóstico de trombose venosa profunda, embora o resultado confirmatório da imagem não esteja descrito no documento.'
+        : hasInconclusiveImaging
+          ? 'A investigação permanece inconclusiva, sem possibilidade de excluir trombose venosa profunda até complementação da imagem vascular.'
           : hasNegativeImaging && hasPositiveDDimer
-            ? 'o POCUS inicial foi negativo, mas o D-dímero positivo mantém necessidade de investigação complementar conforme a probabilidade clínica; esse conjunto isolado não confirma TVP.'
-            : isTEPInvestigation
-              ? 'há suspeita de doença tromboembólica venosa com necessidade de investigação imediata de possível embolia pulmonar.'
-              : 'a suspeita de trombose venosa profunda permanece em investigação, sem confirmação definitiva registrada até o momento.'
-  const diagnosticSentence = `${wellsScore != null ? `O escore de Wells para TVP foi de ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}, correspondente a ${wellsClassificationLabel}.` : 'O escore de Wells não foi registrado de forma estruturada.'}${wellsCriteria.length > 0 ? ` Os critérios pontuados foram ${formatClinicalListText(wellsCriteria)}.` : ''} ${getTVPPocusText(pocusValue)} ${dDimerText}`
+            ? 'A suspeita de trombose venosa profunda permanece em investigação e ainda não há confirmação diagnóstica.'
+            : 'Não há confirmação definitiva de trombose venosa profunda nos dados disponíveis até o momento.'
+  const respiratoryImpression = hasRespiratoryAlert || isTEPInvestigation
+    ? 'A presença de sintomas respiratórios associados impõe preocupação com possível embolia pulmonar concomitante e requer investigação imediata conforme a estabilidade clínica.'
+    : ''
+  const vascularSeverityImpression = hasLimbThreat
+    ? 'Os sinais de comprometimento venoso extenso ou ameaça ao membro configuram emergência vascular.'
+    : isUrgentVascular
+      ? 'A gravidade clínica registrada motivou abordagem vascular em caráter de urgência.'
+      : ''
+  const diagnosticConclusion = [diagnosticImpression, respiratoryImpression, vascularSeverityImpression].filter(Boolean).join(' ')
   const finalNarrative = `Conclusão: ${diagnosticConclusion} ${conductText}`
+
+  const historyNarrative = [
+    symptoms.length > 0
+      ? `Na história clínica, foram registrados sintomas locais compatíveis com doença tromboembólica venosa, incluindo ${formatClinicalListText(symptoms)}.`
+      : `A investigação foi motivada por suspeita clínica de trombose venosa profunda em ${selectedLegLabel}.`,
+    riskFactors.length > 0
+      ? `Como fatores predisponentes, foram identificados ${formatClinicalListText(riskFactors)}.`
+      : '',
+    hasRespiratoryAlert
+      ? 'Também foram identificados sintomas respiratórios de alerta, levantando a possibilidade de embolia pulmonar associada.'
+      : '',
+    vascularAlertFindings.length > 0
+      ? `Foram ainda observados sinais de possível comprometimento venoso extenso ou ameaça ao membro: ${formatClinicalListText(vascularAlertFindings)}.`
+      : ''
+  ].filter(Boolean).join(' ')
+  const examinationNarrative = `${vitalLines.length > 0 ? `Na avaliação inicial, foram registrados ${formatClinicalListText(vitalLines)}. ` : ''}${directedExamLines.length > 0 ? `Ao exame físico direcionado do ${selectedLegLabel}, observaram-se ${formatClinicalListText(directedExamLines)}.` : `O exame físico direcionado do ${selectedLegLabel} não apresentou registro estruturado suficiente no fluxo aplicado, devendo seus achados ser correlacionados com a avaliação presencial realizada pela equipe assistente.`}`
+  const antithromboticNarrative = [anticoagulationText, therapyText, specialContextText].filter(Boolean).join(' ')
 
   const paragraphs = [
     title,
     '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaint.replace(/[.]+$/, '')}". Durante a avaliação, foi realizada investigação estruturada para trombose venosa profunda, com exame direcionado ao ${selectedLegLabel}, estratificação da probabilidade pré-teste, avaliação vascular por imagem e definição de segurança para anticoagulação.`,
+    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint.replace(/[.]+$/, '')}. Durante a avaliação, foram analisados fatores clínicos de risco, sinais de gravidade, probabilidade pré-teste pelo escore de Wells, marcadores laboratoriais e achados de imagem vascular.`,
     '',
-    symptoms.length > 0
-      ? `Na história da moléstia atual, foram documentados achados compatíveis com suspeita de TVP, incluindo ${formatClinicalListText(symptoms)}.${riskFactors.length > 0 ? ` Como fatores de risco ou contexto predisponente, constaram ${formatClinicalListText(riskFactors)}.` : ''}${alertFindings.length > 0 ? ` Também foram assinalados sinais de alerta: ${formatClinicalListText(alertFindings)}.` : ''}`
-      : `Na história da moléstia atual, o fluxo foi iniciado por suspeita clínica de TVP em ${selectedLegLabel}, sem descrição adicional estruturada de sintomas na admissão.`,
+    historyNarrative,
     '',
-    `${vitalLines.length > 0 ? `Na avaliação inicial, sinais vitais registrados: ${formatClinicalListText(vitalLines)}. ` : ''}${directedExamLines.length > 0 ? `Ao exame físico direcionado, observaram-se ${formatClinicalListText(directedExamLines)}.` : 'O exame físico direcionado de membro inferior não apresentou descrição estruturada suficiente no fluxo, devendo ser correlacionado com a avaliação presencial.'}`,
+    examinationNarrative,
     '',
-    diagnosticSentence,
+    diagnosticInterpretation,
     '',
-    [anticoagulationText, therapyText, specialContextText].filter(Boolean).join(' '),
+    antithromboticNarrative,
     '',
     finalNarrative,
     '',
@@ -372,18 +405,14 @@ const buildTVPClinicalSummary = (
 
   return {
     chiefComplaint,
-    historyLines: symptoms,
-    examinationLines: [...vitalLines, ...directedExamLines],
-    scoreLines: uniqueTextItems([
-      wellsScore != null ? `Wells ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}${wellsClassification ? ` - ${wellsClassification}` : ''}` : null,
-      getTVPPocusText(pocusValue),
-      dDimerText
-    ]),
+    historyLines: [historyNarrative],
+    examinationLines: [examinationNarrative],
+    scoreLines: [diagnosticInterpretation],
     finalTitle,
     finalDescription,
     finalNarrative,
     doctorSignature,
-    conductLines: [conductText],
+    conductLines: uniqueTextItems([antithromboticNarrative, conductText]),
     continuousText,
     text: continuousText
   }
