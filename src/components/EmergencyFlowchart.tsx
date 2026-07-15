@@ -1718,6 +1718,156 @@ const ANSIEDADE_ROUTE_ALERTS: AnsiedadeRouteAlert[] = [
   }
 ]
 
+const GECA_IMMEDIATE_ALARM_SIGNS = [
+  { id: 'instabilidade_hemodinamica', label: 'Hipotensão, choque, perfusão ruim, extremidades frias ou pulso fraco/ausente.' },
+  { id: 'alteracao_neurologica_ou_incapacidade_beber', label: 'Letargia, rebaixamento, síncope ou incapacidade de beber.' },
+  { id: 'vomitos_incoerciveis', label: 'Vômitos incoercíveis com falha da hidratação oral.' },
+  { id: 'abdome_agudo', label: 'Dor abdominal intensa/localizada, defesa, rigidez, distensão ou sinais peritoneais.' },
+  { id: 'febre_sepse_ou_sangramento', label: 'Febre alta persistente, toxemia, suspeita de sepse ou sangramento importante.' },
+  { id: 'oliguria_injuria_renal_ou_desidratacao_grave', label: 'Oligúria/anúria, suspeita de injúria renal, distúrbio eletrolítico ou desidratação grave.' }
+] as const
+
+const GECA_PLAN_C_ABCDE = [
+  { id: 'airway', letter: 'A', title: 'Via aérea', description: 'Confirmar permeabilidade e proteger a via aérea se houver rebaixamento.' },
+  { id: 'breathing', letter: 'B', title: 'Respiração', description: 'Avaliar frequência respiratória, SpO₂ e necessidade de oxigênio.' },
+  { id: 'circulation', letter: 'C', title: 'Circulação', description: 'Avaliar pulsos, pressão arterial, perfusão e sinais de choque.' },
+  { id: 'disability', letter: 'D', title: 'Déficit neurológico', description: 'Registrar nível de consciência e glicemia capilar.' },
+  { id: 'exposure', letter: 'E', title: 'Exposição e exame', description: 'Verificar temperatura, perdas e possíveis causas associadas.' }
+] as const
+
+const GECA_PLAN_C_INITIAL_ACTIONS = [
+  { id: 'dois_acessos', label: 'Dois acessos venosos periféricos, quando possível' },
+  { id: 'monitorizacao_continua', label: 'Monitorização cardiorrespiratória contínua' },
+  { id: 'glicemia', label: 'Glicemia capilar realizada' },
+  { id: 'balanco_hidrico', label: 'Balanço hídrico rigoroso iniciado' }
+] as const
+
+const GECA_PLAN_C_EXAMS = [
+  { id: 'hemograma', label: 'Hemograma' },
+  { id: 'eletrolitos', label: 'Eletrólitos (Na⁺, K⁺, Cl⁻)' },
+  { id: 'funcao_renal', label: 'Ureia e creatinina' },
+  { id: 'gasometria_lactato', label: 'Gasometria e lactato, se choque/grave' }
+] as const
+
+const GECA_PLAN_C_IMPROVEMENT_CRITERIA = [
+  { id: 'frequencia_cardiaca_adequada', label: 'FC adequada para a idade' },
+  { id: 'pressao_estavel', label: 'Pressão arterial estável' },
+  { id: 'enchimento_capilar_normal', label: 'Enchimento capilar < 2 segundos' },
+  { id: 'diurese_adequada', label: 'Diurese adequada' },
+  { id: 'melhora_estado_mental', label: 'Melhora do estado mental' },
+  { id: 'tolerancia_oral', label: 'Tolerando hidratação oral' }
+] as const
+
+const GECA_PLAN_C_INSTABILITY_CRITERIA = [
+  { id: 'choque_refratario', label: 'Choque refratário' },
+  { id: 'lactato_persistente', label: 'Lactato elevado persistente' },
+  { id: 'oliguria_anuria', label: 'Oligúria ou anúria' },
+  { id: 'alteracao_consciencia', label: 'Alteração do nível de consciência' },
+  { id: 'acidose_grave', label: 'Acidose grave' },
+  { id: 'instabilidade_hemodinamica', label: 'Instabilidade hemodinâmica' }
+] as const
+
+type GecaPlanCMonitoring = {
+  heartRate: string
+  bloodPressure: string
+  respiratoryRate: string
+  oxygenSaturation: string
+  temperature: string
+  urineOutput: string
+  glucose: string
+  capillaryRefill: string
+}
+
+type GecaPlanCBalance = {
+  saline: string
+  otherIv: string
+  oral: string
+  otherInput: string
+  urine: string
+  vomiting: string
+  diarrhea: string
+  otherOutput: string
+}
+
+type GecaPlanCReassessmentClinical = {
+  heartRate: string
+  bloodPressure: string
+  respiratoryRate: string
+  oxygenSaturation: string
+  temperature: string
+  capillaryRefill: string
+  urineOutput: string
+  mentalStatus: string
+}
+
+type GecaPlanCReassessmentLabs = {
+  sodium: string
+  potassium: string
+  creatinine: string
+  glucose: string
+  lactate: string
+  ph: string
+  bicarbonate: string
+  baseExcess: string
+  others: string
+}
+
+const defaultGecaPlanCMonitoring = (patient: EmergencyPatient): GecaPlanCMonitoring => {
+  const vitalSigns = defaultFlowVitalSigns(patient)
+  return {
+    heartRate: vitalSigns.heartRate != null ? String(vitalSigns.heartRate) : '',
+    bloodPressure: vitalSigns.bloodPressure || '',
+    respiratoryRate: vitalSigns.respiratoryRate != null ? String(vitalSigns.respiratoryRate) : '',
+    oxygenSaturation: vitalSigns.oxygenSaturation != null ? String(vitalSigns.oxygenSaturation) : '',
+    temperature: vitalSigns.temperature != null ? String(vitalSigns.temperature).replace('.', ',') : '',
+    urineOutput: '',
+    glucose: vitalSigns.glucose || '',
+    capillaryRefill: ''
+  }
+}
+
+const emptyGecaPlanCBalance = (): GecaPlanCBalance => ({
+  saline: '',
+  otherIv: '',
+  oral: '',
+  otherInput: '',
+  urine: '',
+  vomiting: '',
+  diarrhea: '',
+  otherOutput: ''
+})
+
+const defaultGecaPlanCReassessmentClinical = (patient: EmergencyPatient): GecaPlanCReassessmentClinical => {
+  const monitoring = defaultGecaPlanCMonitoring(patient)
+  return {
+    heartRate: monitoring.heartRate,
+    bloodPressure: monitoring.bloodPressure,
+    respiratoryRate: monitoring.respiratoryRate,
+    oxygenSaturation: monitoring.oxygenSaturation,
+    temperature: monitoring.temperature,
+    capillaryRefill: monitoring.capillaryRefill,
+    urineOutput: monitoring.urineOutput,
+    mentalStatus: ''
+  }
+}
+
+const emptyGecaPlanCReassessmentLabs = (): GecaPlanCReassessmentLabs => ({
+  sodium: '',
+  potassium: '',
+  creatinine: '',
+  glucose: '',
+  lactate: '',
+  ph: '',
+  bicarbonate: '',
+  baseExcess: '',
+  others: ''
+})
+
+const parseGecaBalanceValue = (value: string) => {
+  const parsed = Number.parseFloat(value.replace(',', '.'))
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 const parseAnsiedadeRouteAlerts = (rawAnswer?: string): AnsiedadeRouteAlertId[] => {
   if (!rawAnswer) return []
   try {
@@ -1756,6 +1906,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [history, setHistory] = useState<string[]>(patient.emergencyState.history || [])
   const [answers, setAnswers] = useState<Record<string, string>>(patient.emergencyState.answers || {})
   const [progress, setProgress] = useState(patient.emergencyState.progress || 0)
+  const [selectedGecaDiarrheaProfile, setSelectedGecaDiarrheaProfile] = useState('')
+  const [selectedGecaAlarmSigns, setSelectedGecaAlarmSigns] = useState<string[]>([])
+  const [gecaPlanCAbcde, setGecaPlanCAbcde] = useState<string[]>([])
+  const [gecaPlanCInitialActions, setGecaPlanCInitialActions] = useState<string[]>([])
+  const [gecaPlanCExams, setGecaPlanCExams] = useState<string[]>([])
+  const [gecaPlanCSolution, setGecaPlanCSolution] = useState<'sf09' | 'ringer' | ''>('')
+  const [gecaPlanCMonitoringInterval, setGecaPlanCMonitoringInterval] = useState<'15_min' | '30_min' | '1_h'>('15_min')
+  const [gecaPlanCMonitoring, setGecaPlanCMonitoring] = useState<GecaPlanCMonitoring>(() => defaultGecaPlanCMonitoring(patient))
+  const [gecaPlanCBalance, setGecaPlanCBalance] = useState<GecaPlanCBalance>(() => emptyGecaPlanCBalance())
+  const [gecaPlanCReassessmentTime, setGecaPlanCReassessmentTime] = useState('')
+  const [gecaPlanCReassessmentHydration, setGecaPlanCReassessmentHydration] = useState('')
+  const [gecaPlanCReassessmentPerfusion, setGecaPlanCReassessmentPerfusion] = useState('')
+  const [gecaPlanCReassessmentGeneralState, setGecaPlanCReassessmentGeneralState] = useState('')
+  const [gecaPlanCReassessmentClinical, setGecaPlanCReassessmentClinical] = useState<GecaPlanCReassessmentClinical>(() => defaultGecaPlanCReassessmentClinical(patient))
+  const [gecaPlanCReassessmentBalance, setGecaPlanCReassessmentBalance] = useState<GecaPlanCBalance>(() => emptyGecaPlanCBalance())
+  const [gecaPlanCReassessmentLabs, setGecaPlanCReassessmentLabs] = useState<GecaPlanCReassessmentLabs>(() => emptyGecaPlanCReassessmentLabs())
+  const [gecaPlanCImprovementCriteria, setGecaPlanCImprovementCriteria] = useState<string[]>([])
+  const [gecaPlanCInstabilityCriteria, setGecaPlanCInstabilityCriteria] = useState<string[]>([])
   const [selectedClinicalFindings, setSelectedClinicalFindings] = useState<string[]>([])
   const [otherClinicalFinding, setOtherClinicalFinding] = useState('')
   const [selectedTVPLeg, setSelectedTVPLeg] = useState<TVPLegSide | ''>('')
@@ -2103,6 +2271,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setHistory(patient.emergencyState.history || [])
       setAnswers(patient.emergencyState.answers || {})
       setProgress(patient.emergencyState.progress || 0)
+      setSelectedGecaDiarrheaProfile('')
+      setSelectedGecaAlarmSigns([])
+      setGecaPlanCAbcde([])
+      setGecaPlanCInitialActions([])
+      setGecaPlanCExams([])
+      setGecaPlanCSolution('')
+      setGecaPlanCMonitoringInterval('15_min')
+      setGecaPlanCMonitoring(defaultGecaPlanCMonitoring(patient))
+      setGecaPlanCBalance(emptyGecaPlanCBalance())
+      setGecaPlanCReassessmentTime('')
+      setGecaPlanCReassessmentHydration('')
+      setGecaPlanCReassessmentPerfusion('')
+      setGecaPlanCReassessmentGeneralState('')
+      setGecaPlanCReassessmentClinical(defaultGecaPlanCReassessmentClinical(patient))
+      setGecaPlanCReassessmentBalance(emptyGecaPlanCBalance())
+      setGecaPlanCReassessmentLabs(emptyGecaPlanCReassessmentLabs())
+      setGecaPlanCImprovementCriteria([])
+      setGecaPlanCInstabilityCriteria([])
       setAnsiedadeRouteAlerts(parseAnsiedadeRouteAlerts(patient.emergencyState.answers?.ansiedade_excluir_organico))
     }
   }, [
@@ -2111,6 +2297,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     patient.emergencyState.history,
     patient.emergencyState.answers,
     patient.emergencyState.progress,
+    patient,
     flowchart.id,
     resolveCurrentStep
   ])
@@ -2472,6 +2659,64 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       routeAlerts: ansiedadeRouteAlerts
     })
+    const gecaImmediateAlarmAnswer = JSON.stringify({
+      decision: value || nextStep,
+      sinaisSelecionados: selectedGecaAlarmSigns,
+      sinaisSelecionadosLabels: GECA_IMMEDIATE_ALARM_SIGNS
+        .filter((item) => selectedGecaAlarmSigns.includes(item.id))
+        .map((item) => item.label),
+      possuiSinalAlarme: selectedGecaAlarmSigns.length > 0
+    })
+    const gecaPlanCInputTotal = ['saline', 'otherIv', 'oral', 'otherInput']
+      .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCBalance[key as keyof GecaPlanCBalance]), 0)
+    const gecaPlanCOutputTotal = ['urine', 'vomiting', 'diarrhea', 'otherOutput']
+      .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCBalance[key as keyof GecaPlanCBalance]), 0)
+    const gecaPlanCAnswer = JSON.stringify({
+      decision: value || nextStep,
+      abcdeConcluido: gecaPlanCAbcde,
+      acoesIniciais: gecaPlanCInitialActions,
+      examesSelecionados: gecaPlanCExams,
+      cristaloide: gecaPlanCSolution,
+      cristaloideLabel: gecaPlanCSolution === 'sf09' ? 'SF 0,9%' : gecaPlanCSolution === 'ringer' ? 'Ringer Lactato' : '',
+      intervaloMonitorizacao: gecaPlanCMonitoringInterval,
+      monitorizacaoInicial: gecaPlanCMonitoring,
+      balancoHidrico: {
+        ...gecaPlanCBalance,
+        totalEntradasMl: gecaPlanCInputTotal,
+        totalSaidasMl: gecaPlanCOutputTotal,
+        saldoMl: gecaPlanCInputTotal - gecaPlanCOutputTotal
+      },
+      pesoKg: gecaWeight,
+      volumesCalculados: gecaPlanCVolume
+    })
+    const gecaPlanCReassessmentInputTotal = ['saline', 'otherIv', 'oral', 'otherInput']
+      .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCReassessmentBalance[key as keyof GecaPlanCBalance]), 0)
+    const gecaPlanCReassessmentOutputTotal = ['urine', 'vomiting', 'diarrhea', 'otherOutput']
+      .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCReassessmentBalance[key as keyof GecaPlanCBalance]), 0)
+    const gecaPlanCReassessmentAnswer = JSON.stringify({
+      decision: value || nextStep,
+      registradoEm: new Date().toISOString(),
+      tempoDesdeInicioEv: gecaPlanCReassessmentTime,
+      hidratacaoAtual: gecaPlanCReassessmentHydration,
+      perfusaoAtual: gecaPlanCReassessmentPerfusion,
+      estadoGeral: gecaPlanCReassessmentGeneralState,
+      sinaisClinicos: gecaPlanCReassessmentClinical,
+      balancoHidrico: {
+        ...gecaPlanCReassessmentBalance,
+        totalEntradasMl: gecaPlanCReassessmentInputTotal,
+        totalSaidasMl: gecaPlanCReassessmentOutputTotal,
+        saldoMl: gecaPlanCReassessmentInputTotal - gecaPlanCReassessmentOutputTotal
+      },
+      examesLaboratoriais: gecaPlanCReassessmentLabs,
+      criteriosMelhora: gecaPlanCImprovementCriteria,
+      criteriosMelhoraLabels: GECA_PLAN_C_IMPROVEMENT_CRITERIA
+        .filter((item) => gecaPlanCImprovementCriteria.includes(item.id))
+        .map((item) => item.label),
+      criteriosInstabilidade: gecaPlanCInstabilityCriteria,
+      criteriosInstabilidadeLabels: GECA_PLAN_C_INSTABILITY_CRITERIA
+        .filter((item) => gecaPlanCInstabilityCriteria.includes(item.id))
+        .map((item) => item.label)
+    })
     const newAnswers = {
       ...answers,
       [currentStep]: isTVPLegSelection
@@ -2550,6 +2795,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                       ? bellHouseAnswer
                                       : isAnsiedadeOrganicExclusionStep
                                         ? ansiedadeOrganicAnswer
+                                      : isGecaImmediateAlarmStep
+                                        ? gecaImmediateAlarmAnswer
+                                      : isGecaPlanCStep
+                                        ? gecaPlanCAnswer
+                                      : isGecaPlanCReassessmentStep
+                                        ? gecaPlanCReassessmentAnswer
                                       : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
@@ -2824,6 +3075,24 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setHistory([])
     setAnswers({})
     setProgress(0)
+    setSelectedGecaDiarrheaProfile('')
+    setSelectedGecaAlarmSigns([])
+    setGecaPlanCAbcde([])
+    setGecaPlanCInitialActions([])
+    setGecaPlanCExams([])
+    setGecaPlanCSolution('')
+    setGecaPlanCMonitoringInterval('15_min')
+    setGecaPlanCMonitoring(defaultGecaPlanCMonitoring(patient))
+    setGecaPlanCBalance(emptyGecaPlanCBalance())
+    setGecaPlanCReassessmentTime('')
+    setGecaPlanCReassessmentHydration('')
+    setGecaPlanCReassessmentPerfusion('')
+    setGecaPlanCReassessmentGeneralState('')
+    setGecaPlanCReassessmentClinical(defaultGecaPlanCReassessmentClinical(patient))
+    setGecaPlanCReassessmentBalance(emptyGecaPlanCBalance())
+    setGecaPlanCReassessmentLabs(emptyGecaPlanCReassessmentLabs())
+    setGecaPlanCImprovementCriteria([])
+    setGecaPlanCInstabilityCriteria([])
     setGasometryInfoOpen(null)
     setCincinnatiInfoOpen(false)
     setTVPWellsIntroOpen(false)
@@ -3365,6 +3634,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isAsthmaFlow = flowchart.id === 'asthma'
   const isGecaPlanBStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_plano_b'
   const isGecaPlanCStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_plano_c'
+  const isGecaPlanCReassessmentStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_reavaliacao_plano_c'
+  const isGecaDiarrheaProfileStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_perfil_diarreia'
+  const isGecaImmediateAlarmStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_sinais_alarme'
+  const selectedGecaDiarrheaOption = isGecaDiarrheaProfileStep
+    ? currentStepData.options?.find((option) => option.value === selectedGecaDiarrheaProfile)
+    : undefined
+  const selectedGecaAlarmOption = isGecaImmediateAlarmStep
+    ? currentStepData.options?.find((option) => option.value === (selectedGecaAlarmSigns.length > 0 ? 'com_sinal_alarme' : 'sem_sinal_alarme'))
+    : undefined
+  const gecaPlanCImprovementOption = isGecaPlanCReassessmentStep
+    ? currentStepData.options?.find((option) => option.value === 'melhora_apos_plano_c')
+    : undefined
+  const gecaPlanCInstabilityOption = isGecaPlanCReassessmentStep
+    ? currentStepData.options?.find((option) => option.value === 'instabilidade_persistente')
+    : undefined
   const gecaWeight = typeof patient.weight === 'number' && patient.weight > 0 ? patient.weight : null
   const gecaPlanBVolume = gecaWeight
     ? { minimum: Math.round(gecaWeight * 50), target: Math.round(gecaWeight * 75), maximum: Math.round(gecaWeight * 100) }
@@ -3372,6 +3656,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const gecaPlanCVolume = gecaWeight
     ? { first: Math.round(gecaWeight * 30), second: Math.round(gecaWeight * 70), cautious: Math.round(gecaWeight * 10) }
     : null
+  const gecaPlanCBalanceInputTotal = ['saline', 'otherIv', 'oral', 'otherInput']
+    .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCBalance[key as keyof GecaPlanCBalance]), 0)
+  const gecaPlanCBalanceOutputTotal = ['urine', 'vomiting', 'diarrhea', 'otherOutput']
+    .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCBalance[key as keyof GecaPlanCBalance]), 0)
+  const gecaPlanCBalanceNet = gecaPlanCBalanceInputTotal - gecaPlanCBalanceOutputTotal
+  const gecaPlanCReassessmentInputTotal = ['saline', 'otherIv', 'oral', 'otherInput']
+    .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCReassessmentBalance[key as keyof GecaPlanCBalance]), 0)
+  const gecaPlanCReassessmentOutputTotal = ['urine', 'vomiting', 'diarrhea', 'otherOutput']
+    .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCReassessmentBalance[key as keyof GecaPlanCBalance]), 0)
+  const gecaPlanCReassessmentNet = gecaPlanCReassessmentInputTotal - gecaPlanCReassessmentOutputTotal
   const gecaOndansetronDose = patient.age < 0.5
     ? 'Não há dose de rotina prevista neste protocolo para menores de 6 meses; individualizar e priorizar avaliação médica.'
     : patient.age <= 2
@@ -5835,6 +6129,47 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [isAVCCincinnatiStep])
 
   useEffect(() => {
+    if (!isGecaPlanCReassessmentStep) return
+
+    const defaultClinical = defaultGecaPlanCReassessmentClinical(patient)
+    const savedPlanC = answers.geca_plano_c
+    if (!savedPlanC) {
+      setGecaPlanCReassessmentClinical(defaultClinical)
+      setGecaPlanCReassessmentBalance(emptyGecaPlanCBalance())
+      return
+    }
+
+    try {
+      const parsed = JSON.parse(savedPlanC) as {
+        monitorizacaoInicial?: Partial<GecaPlanCMonitoring>
+        balancoHidrico?: Partial<GecaPlanCBalance>
+      }
+      const monitoring = parsed.monitorizacaoInicial || {}
+      setGecaPlanCReassessmentClinical({
+        ...defaultClinical,
+        heartRate: monitoring.heartRate || defaultClinical.heartRate,
+        bloodPressure: monitoring.bloodPressure || defaultClinical.bloodPressure,
+        respiratoryRate: monitoring.respiratoryRate || defaultClinical.respiratoryRate,
+        oxygenSaturation: monitoring.oxygenSaturation || defaultClinical.oxygenSaturation,
+        temperature: monitoring.temperature || defaultClinical.temperature,
+        capillaryRefill: monitoring.capillaryRefill || '',
+        urineOutput: monitoring.urineOutput || ''
+      })
+      setGecaPlanCReassessmentLabs((current) => ({
+        ...current,
+        glucose: monitoring.glucose || current.glucose
+      }))
+      setGecaPlanCReassessmentBalance({
+        ...emptyGecaPlanCBalance(),
+        ...(parsed.balancoHidrico || {})
+      })
+    } catch {
+      setGecaPlanCReassessmentClinical(defaultClinical)
+      setGecaPlanCReassessmentBalance(emptyGecaPlanCBalance())
+    }
+  }, [answers.geca_plano_c, isGecaPlanCReassessmentStep, patient])
+
+  useEffect(() => {
     if (!isInfluenzaAmbulatoryFinalStep) {
       setInfluenzaPrescriptionPreview(null)
       setInfluenzaPrescriptionCopied(false)
@@ -7829,7 +8164,828 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {isGecaDiarrheaProfileStep && (
+                <div className="mb-6 space-y-4" role="radiogroup" aria-label="Padrão da diarreia">
+                  {[
+                    {
+                      value: 'aguda_aquosa',
+                      title: 'Aquosa/não inflamatória',
+                      description: 'Fezes líquidas, usualmente volumosas, sem sangue ou muco; febre ausente ou baixa, podendo haver cólicas, náuseas e vômitos.',
+                      selectedClass: 'border-cyan-500 bg-cyan-50 ring-cyan-200',
+                      idleClass: 'border-cyan-200 bg-cyan-50/50 hover:border-cyan-400 hover:bg-cyan-50',
+                      textClass: 'text-cyan-950',
+                      markerClass: 'bg-cyan-600'
+                    },
+                    {
+                      value: 'aguda_inflamatoria_disenteria',
+                      title: 'Inflamatória/disenteria',
+                      description: 'Sangue e/ou muco, geralmente menor volume, febre mais alta, dor, cólica ou tenesmo. Exige avaliação de gravidade e etiologia invasiva.',
+                      selectedClass: 'border-red-500 bg-red-50 ring-red-200',
+                      idleClass: 'border-red-200 bg-red-50/50 hover:border-red-400 hover:bg-red-50',
+                      textClass: 'text-red-950',
+                      markerClass: 'bg-red-600'
+                    },
+                    {
+                      value: 'persistente_14_dias',
+                      title: 'Persistente',
+                      description: 'Duração igual ou superior a 14 dias. Sai do escopo de GECA simples e requer investigação dirigida, sem deixar de tratar a desidratação primeiro.',
+                      selectedClass: 'border-violet-500 bg-violet-50 ring-violet-200',
+                      idleClass: 'border-violet-200 bg-violet-50/50 hover:border-violet-400 hover:bg-violet-50',
+                      textClass: 'text-violet-950',
+                      markerClass: 'bg-violet-600'
+                    }
+                  ].map((profile) => {
+                    const isSelected = selectedGecaDiarrheaProfile === profile.value
+                    return (
+                      <motion.button
+                        key={profile.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSelectedGecaDiarrheaProfile(profile.value)}
+                        className={clsx(
+                          'w-full rounded-2xl border-2 p-5 text-left transition-all sm:p-6',
+                          isSelected
+                            ? `${profile.selectedClass} shadow-md ring-4`
+                            : profile.idleClass
+                        )}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <div className="flex items-start gap-4">
+                          <span
+                            className={clsx(
+                              'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                              isSelected
+                                ? `${profile.markerClass} border-transparent text-white`
+                                : 'border-slate-300 bg-white text-transparent'
+                            )}
+                            aria-hidden="true"
+                          >
+                            <CheckCircle className="h-5 w-5" />
+                          </span>
+                          <span className={clsx('text-sm leading-relaxed sm:text-base', profile.textClass)}>
+                            <strong className="font-extrabold">{profile.title}:</strong>{' '}
+                            {profile.description}
+                          </span>
+                        </div>
+                      </motion.button>
+                    )
+                  })}
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaDiarrheaOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaDiarrheaOption)}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-bold text-white shadow-md transition-colors hover:bg-blue-800 sm:w-auto"
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Seguir
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaImmediateAlarmStep && (
+                <div className="mb-6 space-y-4">
+                  <div className="rounded-2xl border border-red-200 bg-red-50 p-4 text-red-950 sm:p-5">
+                    <p className="font-extrabold">Marque todos os sinais de alarme presentes:</p>
+                    <p className="mt-1 text-sm">A presença de apenas um item já indica estabilização imediata e Plano C.</p>
+                  </div>
+
+                  <div className="grid gap-3" role="group" aria-label="Sinais de alarme imediato">
+                    {GECA_IMMEDIATE_ALARM_SIGNS.map((sign) => {
+                      const isSelected = selectedGecaAlarmSigns.includes(sign.id)
+                      return (
+                        <motion.button
+                          key={sign.id}
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          onClick={() => setSelectedGecaAlarmSigns((current) =>
+                            current.includes(sign.id)
+                              ? current.filter((item) => item !== sign.id)
+                              : [...current, sign.id]
+                          )}
+                          className={clsx(
+                            'w-full rounded-xl border-2 p-4 text-left transition-all sm:p-5',
+                            isSelected
+                              ? 'border-red-500 bg-red-50 text-red-950 shadow-sm ring-4 ring-red-100'
+                              : 'border-slate-200 bg-white text-slate-800 hover:border-red-300 hover:bg-red-50/50'
+                          )}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          <span className="flex items-start gap-3">
+                            <span
+                              className={clsx(
+                                'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
+                                isSelected
+                                  ? 'border-red-600 bg-red-600 text-white'
+                                  : 'border-slate-300 bg-white text-transparent'
+                              )}
+                              aria-hidden="true"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </span>
+                            <span className="text-sm font-semibold leading-relaxed sm:text-base">{sign.label}</span>
+                          </span>
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+
+                  {selectedGecaAlarmOption && (
+                    <div className="flex justify-end pt-2">
+                      <motion.button
+                        type="button"
+                        onClick={() => handleOptionSelect(selectedGecaAlarmOption)}
+                        className={clsx(
+                          'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                          selectedGecaAlarmSigns.length > 0
+                            ? 'bg-red-700 hover:bg-red-800'
+                            : 'bg-blue-700 hover:bg-blue-800'
+                        )}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        {selectedGecaAlarmSigns.length > 0
+                          ? `${selectedGecaAlarmSigns.length} ${selectedGecaAlarmSigns.length === 1 ? 'sinal selecionado' : 'sinais selecionados'} — estabilização e Plano C`
+                          : 'Nenhum sinal — classificar hidratação'}
+                        <ChevronRight className="h-5 w-5" />
+                      </motion.button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {isGecaPlanCStep && (
+                <div className="mb-6 space-y-5">
+                  <section className="rounded-2xl border border-red-300 bg-gradient-to-r from-red-50 to-rose-50 p-5 text-red-950 shadow-sm">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-extrabold uppercase tracking-wider text-red-700">Conduta imediata</p>
+                        <h3 className="mt-1 text-xl font-extrabold">Iniciar estabilização sem aguardar transferência</h3>
+                        <p className="mt-1 text-sm leading-relaxed">Reavalie o ABCDE continuamente. A coleta de exames não deve atrasar a expansão volêmica.</p>
+                      </div>
+                      <span className="inline-flex w-fit items-center gap-2 rounded-full bg-red-700 px-4 py-2 text-sm font-bold text-white">
+                        <Timer className="h-4 w-4" />
+                        Tempo crítico
+                      </span>
+                    </div>
+                  </section>
+
+                  <section className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
+                    <div className="border-b border-red-100 bg-red-50 px-5 py-4">
+                      <h3 className="font-extrabold text-red-950">1. Avaliação e manejo inicial — ABCDE</h3>
+                      <p className="mt-1 text-sm text-red-800">Marque cada domínio assim que for avaliado e conduzido.</p>
+                    </div>
+                    <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
+                      {GECA_PLAN_C_ABCDE.map((item) => {
+                        const isSelected = gecaPlanCAbcde.includes(item.id)
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            aria-pressed={isSelected}
+                            onClick={() => setGecaPlanCAbcde((current) =>
+                              current.includes(item.id)
+                                ? current.filter((value) => value !== item.id)
+                                : [...current, item.id]
+                            )}
+                            className={clsx(
+                              'rounded-xl border-2 p-4 text-left transition-all',
+                              isSelected
+                                ? 'border-red-500 bg-red-50 shadow-sm ring-2 ring-red-100'
+                                : 'border-slate-200 bg-white hover:border-red-300 hover:bg-red-50/40'
+                            )}
+                          >
+                            <span className="flex items-center justify-between gap-2">
+                              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-xl font-black text-white">{item.letter}</span>
+                              <CheckCircle className={clsx('h-5 w-5', isSelected ? 'text-red-600' : 'text-slate-300')} />
+                            </span>
+                            <strong className="mt-3 block text-sm text-slate-950">{item.title}</strong>
+                            <span className="mt-1 block text-xs leading-relaxed text-slate-600">{item.description}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+                    <div className="flex flex-col gap-3 border-b border-blue-100 bg-blue-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <h3 className="font-extrabold text-blue-950">2. Monitorização contínua</h3>
+                        <p className="mt-1 text-sm text-blue-800">Registre os valores iniciais e atualize durante a estabilização.</p>
+                      </div>
+                      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Intervalo de reavaliação">
+                        {[
+                          { value: '15_min', label: '15 min' },
+                          { value: '30_min', label: '30 min' },
+                          { value: '1_h', label: '1 hora' }
+                        ].map((interval) => (
+                          <button
+                            key={interval.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={gecaPlanCMonitoringInterval === interval.value}
+                            onClick={() => setGecaPlanCMonitoringInterval(interval.value as '15_min' | '30_min' | '1_h')}
+                            className={clsx(
+                              'rounded-lg border px-3 py-2 text-xs font-bold transition-colors',
+                              gecaPlanCMonitoringInterval === interval.value
+                                ? 'border-blue-600 bg-blue-600 text-white'
+                                : 'border-blue-200 bg-white text-blue-800 hover:bg-blue-100'
+                            )}
+                          >
+                            {interval.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {[
+                        { key: 'heartRate', label: 'Frequência cardíaca', unit: 'bpm', target: 'Adequada para idade' },
+                        { key: 'bloodPressure', label: 'Pressão arterial', unit: 'mmHg', target: 'PAM adequada' },
+                        { key: 'respiratoryRate', label: 'Frequência respiratória', unit: 'irpm', target: 'Adequada para idade' },
+                        { key: 'oxygenSaturation', label: 'SpO₂', unit: '%', target: 'Meta ≥ 94%' },
+                        { key: 'temperature', label: 'Temperatura', unit: '°C', target: '36–37,5 °C' },
+                        { key: 'urineOutput', label: 'Diurese', unit: 'mL/kg/h', target: 'Meta ≥ 1 mL/kg/h' },
+                        { key: 'glucose', label: 'Glicemia capilar', unit: 'mg/dL', target: '70–140 mg/dL' },
+                        { key: 'capillaryRefill', label: 'Enchimento capilar', unit: 's', target: 'Meta < 2 s' }
+                      ].map((field) => (
+                        <label key={field.key} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                          <span className="text-xs font-bold text-slate-800">{field.label}</span>
+                          <span className="mt-2 flex items-center gap-2">
+                            <input
+                              value={gecaPlanCMonitoring[field.key as keyof GecaPlanCMonitoring]}
+                              onChange={(event) => setGecaPlanCMonitoring((current) => ({ ...current, [field.key]: event.target.value }))}
+                              inputMode={field.key === 'bloodPressure' ? 'text' : 'decimal'}
+                              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              aria-label={field.label}
+                            />
+                            <span className="shrink-0 text-xs font-semibold text-slate-500">{field.unit}</span>
+                          </span>
+                          <span className="mt-2 block text-[11px] font-medium text-blue-700">{field.target}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section className="grid gap-5 lg:grid-cols-2">
+                    <div className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+                      <div className="border-b border-blue-100 bg-blue-50 px-5 py-4">
+                        <h3 className="font-extrabold text-blue-950">3. Acessos e exames iniciais</h3>
+                      </div>
+                      <div className="space-y-5 p-4">
+                        <div>
+                          <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-slate-600">Condutas</p>
+                          <div className="space-y-2">
+                            {GECA_PLAN_C_INITIAL_ACTIONS.map((item) => {
+                              const checked = gecaPlanCInitialActions.includes(item.id)
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  aria-pressed={checked}
+                                  onClick={() => setGecaPlanCInitialActions((current) =>
+                                    current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id]
+                                  )}
+                                  className={clsx(
+                                    'flex w-full items-center gap-3 rounded-lg border p-3 text-left text-sm font-semibold transition-colors',
+                                    checked ? 'border-blue-400 bg-blue-50 text-blue-950' : 'border-slate-200 hover:bg-slate-50'
+                                  )}
+                                >
+                                  <span className={clsx('flex h-5 w-5 shrink-0 items-center justify-center rounded border', checked ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-transparent')}>
+                                    <CheckCircle className="h-4 w-4" />
+                                  </span>
+                                  {item.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-xs font-extrabold uppercase tracking-wide text-slate-600">Exames — sem atrasar a hidratação</p>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {GECA_PLAN_C_EXAMS.map((item) => {
+                              const checked = gecaPlanCExams.includes(item.id)
+                              return (
+                                <button
+                                  key={item.id}
+                                  type="button"
+                                  aria-pressed={checked}
+                                  onClick={() => setGecaPlanCExams((current) =>
+                                    current.includes(item.id) ? current.filter((value) => value !== item.id) : [...current, item.id]
+                                  )}
+                                  className={clsx(
+                                    'flex items-center gap-2 rounded-lg border p-3 text-left text-xs font-semibold transition-colors',
+                                    checked ? 'border-blue-400 bg-blue-50 text-blue-950' : 'border-slate-200 hover:bg-slate-50'
+                                  )}
+                                >
+                                  <CheckCircle className={clsx('h-4 w-4 shrink-0', checked ? 'text-blue-600' : 'text-slate-300')} />
+                                  {item.label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-cyan-200 bg-white shadow-sm">
+                      <div className="border-b border-cyan-100 bg-cyan-50 px-5 py-4">
+                        <h3 className="font-extrabold text-cyan-950">Balanço hídrico rigoroso</h3>
+                        <p className="mt-1 text-sm text-cyan-800">Informe os volumes acumulados em mL.</p>
+                      </div>
+                      <div className="grid gap-4 p-4 sm:grid-cols-2">
+                        <div>
+                          <p className="mb-2 text-xs font-extrabold uppercase text-emerald-700">Entradas</p>
+                          <div className="space-y-2">
+                            {[
+                              { key: 'saline', label: 'SF 0,9% / Ringer' },
+                              { key: 'otherIv', label: 'Outros EV' },
+                              { key: 'oral', label: 'Via oral' },
+                              { key: 'otherInput', label: 'Outras entradas' }
+                            ].map((field) => (
+                              <label key={field.key} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                <span className="flex-1">{field.label}</span>
+                                <input
+                                  value={gecaPlanCBalance[field.key as keyof GecaPlanCBalance]}
+                                  onChange={(event) => setGecaPlanCBalance((current) => ({ ...current, [field.key]: event.target.value }))}
+                                  inputMode="decimal"
+                                  className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                                  aria-label={`${field.label} em mL`}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-2 text-xs font-extrabold uppercase text-red-700">Saídas</p>
+                          <div className="space-y-2">
+                            {[
+                              { key: 'urine', label: 'Diurese' },
+                              { key: 'vomiting', label: 'Vômitos' },
+                              { key: 'diarrhea', label: 'Diarreia' },
+                              { key: 'otherOutput', label: 'Outras saídas' }
+                            ].map((field) => (
+                              <label key={field.key} className="flex items-center gap-2 text-xs font-semibold text-slate-700">
+                                <span className="flex-1">{field.label}</span>
+                                <input
+                                  value={gecaPlanCBalance[field.key as keyof GecaPlanCBalance]}
+                                  onChange={(event) => setGecaPlanCBalance((current) => ({ ...current, [field.key]: event.target.value }))}
+                                  inputMode="decimal"
+                                  className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-100"
+                                  aria-label={`${field.label} em mL`}
+                                />
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 border-t border-cyan-100 bg-cyan-50 p-4 text-center text-xs">
+                        <div><span className="block text-slate-500">Entradas</span><strong className="text-emerald-700">{gecaPlanCBalanceInputTotal.toLocaleString('pt-BR')} mL</strong></div>
+                        <div><span className="block text-slate-500">Saídas</span><strong className="text-red-700">{gecaPlanCBalanceOutputTotal.toLocaleString('pt-BR')} mL</strong></div>
+                        <div><span className="block text-slate-500">Saldo</span><strong className={gecaPlanCBalanceNet < 0 ? 'text-red-700' : 'text-blue-800'}>{gecaPlanCBalanceNet.toLocaleString('pt-BR')} mL</strong></div>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm">
+                    <div className="border-b border-indigo-100 bg-indigo-50 px-5 py-4">
+                      <h3 className="font-extrabold text-indigo-950">4. Reposição volêmica com cristaloide isotônico</h3>
+                      <p className="mt-1 text-sm text-indigo-800">Selecione a solução disponível e confira o cálculo individualizado.</p>
+                    </div>
+                    <div className="grid gap-5 p-5 lg:grid-cols-[0.75fr_1.25fr]">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1" role="radiogroup" aria-label="Cristaloide selecionado">
+                        {[
+                          { value: 'sf09', label: 'SF 0,9%', detail: 'Cloreto de sódio isotônico' },
+                          { value: 'ringer', label: 'Ringer Lactato', detail: 'Cristaloide balanceado' }
+                        ].map((solution) => {
+                          const selected = gecaPlanCSolution === solution.value
+                          return (
+                            <button
+                              key={solution.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              onClick={() => setGecaPlanCSolution(solution.value as 'sf09' | 'ringer')}
+                              className={clsx(
+                                'rounded-xl border-2 p-4 text-left transition-all',
+                                selected ? 'border-indigo-600 bg-indigo-50 ring-2 ring-indigo-100' : 'border-slate-200 hover:border-indigo-300'
+                              )}
+                            >
+                              <span className="flex items-center justify-between">
+                                <strong className="text-indigo-950">{solution.label}</strong>
+                                <CheckCircle className={clsx('h-5 w-5', selected ? 'text-indigo-600' : 'text-slate-300')} />
+                              </span>
+                              <span className="mt-1 block text-xs text-slate-600">{solution.detail}</span>
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-red-950">
+                        <p className="text-xs font-extrabold uppercase tracking-wide text-red-700">Cálculo para este paciente</p>
+                        {gecaWeight && gecaPlanCVolume ? (
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="rounded-lg border border-red-200 bg-white p-3">
+                              <span className="text-xs text-slate-500">Peso registrado</span>
+                              <strong className="mt-1 block text-lg">{gecaWeight.toLocaleString('pt-BR')} kg</strong>
+                            </div>
+                            <div className="rounded-lg border border-red-200 bg-white p-3">
+                              <span className="text-xs text-slate-500">1ª etapa — 30 mL/kg</span>
+                              <strong className="mt-1 block text-lg">{gecaPlanCVolume.first.toLocaleString('pt-BR')} mL</strong>
+                              <span className="mt-1 block text-[11px] text-slate-600">{patient.age < 1 ? 'Em 1 hora' : 'Em 30 minutos'}</span>
+                            </div>
+                            <div className="rounded-lg border border-red-200 bg-white p-3">
+                              <span className="text-xs text-slate-500">2ª etapa — 70 mL/kg</span>
+                              <strong className="mt-1 block text-lg">{gecaPlanCVolume.second.toLocaleString('pt-BR')} mL</strong>
+                              <span className="mt-1 block text-[11px] text-slate-600">{patient.age < 1 ? 'Em 5 horas' : 'Em 2 h 30 min'}</span>
+                            </div>
+                            <div className="rounded-lg border border-red-200 bg-white p-3">
+                              <span className="text-xs text-slate-500">Volume total — 100 mL/kg</span>
+                              <strong className="mt-1 block text-lg">{(gecaPlanCVolume.first + gecaPlanCVolume.second).toLocaleString('pt-BR')} mL</strong>
+                              <span className="mt-1 block text-[11px] text-slate-600">Com reavaliação contínua</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                            Peso não registrado. Confirme o peso antes de calcular o volume individualizado.
+                          </div>
+                        )}
+                        <p className="mt-4 text-xs leading-relaxed">
+                          RN ou criança menor de 5 anos com cardiopatia grave: considerar início cauteloso de 10 mL/kg e reavaliar sinais de sobrecarga.
+                          Iniciar SRO em pequenos volumes quando puder beber, geralmente após 2–3 horas da via EV.
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600">
+                    Base clínica: Ministério da Saúde — Manejo do paciente com diarreia (Planos A, B e C). O cálculo apoia a decisão e deve ser confirmado conforme idade, comorbidades, perfusão, perdas contínuas e resposta ao tratamento.
+                  </div>
+
+                  <section className="grid gap-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-5 lg:grid-cols-[1fr_auto] lg:items-center">
+                    <div>
+                      <h3 className="font-extrabold text-emerald-950">5. Reavaliar resposta clínica</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-emerald-900">
+                        Verifique PAM, enchimento capilar, temperatura das extremidades, diurese, consciência e sinais de sobrecarga. Se o choque persistir, reavalie diagnóstico, perdas, acesso e necessidade de suporte vasoativo/UTI.
+                      </p>
+                    </div>
+                    <motion.button
+                      type="button"
+                      disabled={!gecaPlanCSolution || !currentStepData.options?.[0]}
+                      onClick={() => {
+                        const option = currentStepData.options?.[0]
+                        if (option) handleOptionSelect(option)
+                      }}
+                      className={clsx(
+                        'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold transition-colors lg:w-auto',
+                        gecaPlanCSolution
+                          ? 'bg-emerald-700 text-white shadow-md hover:bg-emerald-800'
+                          : 'cursor-not-allowed bg-slate-200 text-slate-500'
+                      )}
+                      whileHover={gecaPlanCSolution ? { scale: 1.02 } : {}}
+                      whileTap={gecaPlanCSolution ? { scale: 0.98 } : {}}
+                    >
+                      {gecaPlanCSolution ? 'Registrar expansão e reavaliar' : 'Selecione o cristaloide para seguir'}
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.button>
+                  </section>
+                </div>
+              )}
+
+              {isGecaPlanCReassessmentStep && (
+                <div className="mb-6 space-y-5">
+                  <section className="grid gap-5 lg:grid-cols-2">
+                    <div className="rounded-2xl border border-red-200 bg-gradient-to-br from-red-50 to-white p-5 shadow-sm">
+                      <div className="flex items-center gap-3 text-red-950">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white">
+                          <Activity className="h-5 w-5" />
+                        </span>
+                        <div>
+                          <h3 className="font-extrabold">Reavaliar continuamente</h3>
+                          <p className="text-sm text-red-800">A resposta clínica define o próximo passo do fluxo.</p>
+                        </div>
+                      </div>
+                      <div className="mt-5 grid gap-3 text-sm text-slate-700">
+                        <div className="flex gap-3 rounded-xl border border-red-100 bg-white p-3">
+                          <Heart className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                          <span>Estado mental, FC, PA, perfusão, enchimento capilar, diurese e ausculta pulmonar.</span>
+                        </div>
+                        <div className="flex gap-3 rounded-xl border border-red-100 bg-white p-3">
+                          <Microscope className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                          <span>Eletrólitos, função renal, glicemia, gasometria/lactato e balanço das perdas conforme gravidade.</span>
+                        </div>
+                        <div className="flex gap-3 rounded-xl border border-red-100 bg-white p-3">
+                          <Timer className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+                          <span>Observar por pelo menos 6 horas e manter no serviço até hidratação completa e tolerância oral.</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
+                      <div className="border-b border-red-100 bg-red-50 px-5 py-4">
+                        <h3 className="font-extrabold text-red-950">Reavaliação atual</h3>
+                        <p className="mt-1 text-sm text-red-800">Plano anterior: Plano C — expansão com cristaloide.</p>
+                      </div>
+                      <div className="grid gap-4 p-5 sm:grid-cols-2">
+                        <label className="text-xs font-bold text-slate-700">
+                          Tempo desde o início da via EV
+                          <input
+                            value={gecaPlanCReassessmentTime}
+                            onChange={(event) => setGecaPlanCReassessmentTime(event.target.value)}
+                            placeholder="Ex.: 2 h 30 min"
+                            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          />
+                        </label>
+                        <label className="text-xs font-bold text-slate-700">
+                          Hidratação atual
+                          <select
+                            value={gecaPlanCReassessmentHydration}
+                            onChange={(event) => setGecaPlanCReassessmentHydration(event.target.value)}
+                            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="reidratado">Reidratado</option>
+                            <option value="desidratacao_residual">Desidratação residual</option>
+                            <option value="desidratacao_grave">Desidratação grave persistente</option>
+                          </select>
+                        </label>
+                        <label className="text-xs font-bold text-slate-700">
+                          Perfusão atual
+                          <select
+                            value={gecaPlanCReassessmentPerfusion}
+                            onChange={(event) => setGecaPlanCReassessmentPerfusion(event.target.value)}
+                            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="adequada">Adequada</option>
+                            <option value="limítrofe">Limítrofe</option>
+                            <option value="inadequada">Inadequada</option>
+                          </select>
+                        </label>
+                        <label className="text-xs font-bold text-slate-700">
+                          Estado geral
+                          <select
+                            value={gecaPlanCReassessmentGeneralState}
+                            onChange={(event) => setGecaPlanCReassessmentGeneralState(event.target.value)}
+                            className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-normal outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                          >
+                            <option value="">Selecione...</option>
+                            <option value="melhorado">Melhorado</option>
+                            <option value="inalterado">Inalterado</option>
+                            <option value="piorado">Piorado</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-200 bg-slate-50 px-5 py-4">
+                      <h3 className="font-extrabold text-slate-950">Sinais e parâmetros clínicos</h3>
+                      <p className="mt-1 text-sm text-slate-600">Os valores iniciais do Plano C são recuperados quando estiverem disponíveis.</p>
+                    </div>
+                    <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
+                      {[
+                        { key: 'heartRate', label: 'Frequência cardíaca', unit: 'bpm', type: 'input' },
+                        { key: 'bloodPressure', label: 'Pressão arterial', unit: 'mmHg', type: 'input' },
+                        { key: 'respiratoryRate', label: 'Frequência respiratória', unit: 'irpm', type: 'input' },
+                        { key: 'oxygenSaturation', label: 'SpO₂', unit: '%', type: 'input' },
+                        { key: 'temperature', label: 'Temperatura', unit: '°C', type: 'input' },
+                        { key: 'capillaryRefill', label: 'Enchimento capilar', unit: 's', type: 'input' },
+                        { key: 'urineOutput', label: 'Diurese', unit: 'mL/kg/h', type: 'input' }
+                      ].map((field) => (
+                        <label key={field.key} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                          <span className="text-xs font-bold text-slate-800">{field.label}</span>
+                          <span className="mt-2 flex items-center gap-2">
+                            <input
+                              value={gecaPlanCReassessmentClinical[field.key as keyof GecaPlanCReassessmentClinical]}
+                              onChange={(event) => setGecaPlanCReassessmentClinical((current) => ({ ...current, [field.key]: event.target.value }))}
+                              inputMode={field.key === 'bloodPressure' ? 'text' : 'decimal'}
+                              className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                            />
+                            <span className="shrink-0 text-xs font-semibold text-slate-500">{field.unit}</span>
+                          </span>
+                        </label>
+                      ))}
+                      <label className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <span className="text-xs font-bold text-slate-800">Estado mental</span>
+                        <select
+                          value={gecaPlanCReassessmentClinical.mentalStatus}
+                          onChange={(event) => setGecaPlanCReassessmentClinical((current) => ({ ...current, mentalStatus: event.target.value }))}
+                          className="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                        >
+                          <option value="">Selecione...</option>
+                          <option value="alerta">Alerta</option>
+                          <option value="sonolento">Sonolento</option>
+                          <option value="responde_voz">Responde à voz</option>
+                          <option value="responde_dor">Responde à dor</option>
+                          <option value="inconsciente">Inconsciente</option>
+                        </select>
+                      </label>
+                    </div>
+                  </section>
+
+                  <section className="grid gap-5 lg:grid-cols-2">
+                    <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+                      <div className="border-b border-emerald-100 bg-emerald-50 px-5 py-4">
+                        <h3 className="font-extrabold text-emerald-950">Balanço hídrico — período reavaliado</h3>
+                        <p className="mt-1 text-sm text-emerald-800">Atualize os volumes acumulados em mL.</p>
+                      </div>
+                      <div className="grid gap-4 p-4 sm:grid-cols-2">
+                        <div>
+                          <p className="mb-2 text-xs font-extrabold uppercase text-emerald-700">Entradas</p>
+                          {[
+                            { key: 'saline', label: 'SF 0,9% / Ringer' },
+                            { key: 'otherIv', label: 'Outros EV' },
+                            { key: 'oral', label: 'Via oral' },
+                            { key: 'otherInput', label: 'Outras entradas' }
+                          ].map((field) => (
+                            <label key={field.key} className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700">
+                              <span className="flex-1">{field.label}</span>
+                              <input
+                                value={gecaPlanCReassessmentBalance[field.key as keyof GecaPlanCBalance]}
+                                onChange={(event) => setGecaPlanCReassessmentBalance((current) => ({ ...current, [field.key]: event.target.value }))}
+                                inputMode="decimal"
+                                className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                        <div>
+                          <p className="mb-2 text-xs font-extrabold uppercase text-red-700">Saídas</p>
+                          {[
+                            { key: 'urine', label: 'Diurese' },
+                            { key: 'vomiting', label: 'Vômitos' },
+                            { key: 'diarrhea', label: 'Diarreia' },
+                            { key: 'otherOutput', label: 'Outras saídas' }
+                          ].map((field) => (
+                            <label key={field.key} className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-700">
+                              <span className="flex-1">{field.label}</span>
+                              <input
+                                value={gecaPlanCReassessmentBalance[field.key as keyof GecaPlanCBalance]}
+                                onChange={(event) => setGecaPlanCReassessmentBalance((current) => ({ ...current, [field.key]: event.target.value }))}
+                                inputMode="decimal"
+                                className="w-24 rounded-lg border border-slate-300 px-2 py-2 text-right outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"
+                              />
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 border-t border-emerald-100 bg-emerald-50 p-4 text-center text-xs">
+                        <div><span className="block text-slate-500">Entradas</span><strong className="text-emerald-700">{gecaPlanCReassessmentInputTotal.toLocaleString('pt-BR')} mL</strong></div>
+                        <div><span className="block text-slate-500">Saídas</span><strong className="text-red-700">{gecaPlanCReassessmentOutputTotal.toLocaleString('pt-BR')} mL</strong></div>
+                        <div><span className="block text-slate-500">Saldo</span><strong className={gecaPlanCReassessmentNet < 0 ? 'text-red-700' : 'text-blue-800'}>{gecaPlanCReassessmentNet.toLocaleString('pt-BR')} mL</strong></div>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+                      <div className="border-b border-blue-100 bg-blue-50 px-5 py-4">
+                        <h3 className="font-extrabold text-blue-950">Exames laboratoriais</h3>
+                        <p className="mt-1 text-sm text-blue-800">Registre apenas os resultados disponíveis.</p>
+                      </div>
+                      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {[
+                          { key: 'sodium', label: 'Sódio', unit: 'mEq/L' },
+                          { key: 'potassium', label: 'Potássio', unit: 'mEq/L' },
+                          { key: 'creatinine', label: 'Creatinina', unit: 'mg/dL' },
+                          { key: 'glucose', label: 'Glicemia', unit: 'mg/dL' },
+                          { key: 'lactate', label: 'Lactato', unit: 'mmol/L' },
+                          { key: 'ph', label: 'pH', unit: '' },
+                          { key: 'bicarbonate', label: 'HCO₃⁻', unit: 'mmol/L' },
+                          { key: 'baseExcess', label: 'BE', unit: 'mmol/L' },
+                          { key: 'others', label: 'Outros', unit: '' }
+                        ].map((field) => (
+                          <label key={field.key} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                            <span className="text-xs font-bold text-slate-800">{field.label}</span>
+                            <span className="mt-2 flex items-center gap-2">
+                              <input
+                                value={gecaPlanCReassessmentLabs[field.key as keyof GecaPlanCReassessmentLabs]}
+                                onChange={(event) => setGecaPlanCReassessmentLabs((current) => ({ ...current, [field.key]: event.target.value }))}
+                                inputMode={field.key === 'others' ? 'text' : 'decimal'}
+                                className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                              />
+                              {field.unit && <span className="shrink-0 text-[10px] font-semibold text-slate-500">{field.unit}</span>}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="grid gap-5 lg:grid-cols-2">
+                    <div className="overflow-hidden rounded-2xl border border-emerald-300 bg-emerald-50 shadow-sm">
+                      <div className="border-b border-emerald-200 px-5 py-4">
+                        <h3 className="flex items-center gap-2 font-extrabold text-emerald-950">
+                          <CheckCircle className="h-5 w-5 text-emerald-600" />
+                          Critérios de melhora hemodinâmica
+                        </h3>
+                        <p className="mt-1 text-sm text-emerald-800">Marque os achados favoráveis presentes.</p>
+                      </div>
+                      <div className="grid gap-2 p-4 sm:grid-cols-2">
+                        {GECA_PLAN_C_IMPROVEMENT_CRITERIA.map((criterion) => {
+                          const checked = gecaPlanCImprovementCriteria.includes(criterion.id)
+                          return (
+                            <button
+                              key={criterion.id}
+                              type="button"
+                              aria-pressed={checked}
+                              onClick={() => setGecaPlanCImprovementCriteria((current) =>
+                                current.includes(criterion.id) ? current.filter((value) => value !== criterion.id) : [...current, criterion.id]
+                              )}
+                              className={clsx(
+                                'flex items-center gap-2 rounded-lg border p-3 text-left text-xs font-semibold transition-colors',
+                                checked ? 'border-emerald-500 bg-white text-emerald-950' : 'border-emerald-200 bg-emerald-50/50 text-slate-700 hover:bg-white'
+                              )}
+                            >
+                              <CheckCircle className={clsx('h-4 w-4 shrink-0', checked ? 'text-emerald-600' : 'text-slate-300')} />
+                              {criterion.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="border-t border-emerald-200 p-4">
+                        <motion.button
+                          type="button"
+                          disabled={!gecaPlanCImprovementOption}
+                          onClick={() => gecaPlanCImprovementOption && handleOptionSelect(gecaPlanCImprovementOption)}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-800"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          Melhora hemodinâmica — manter hospital/observação
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </div>
+                    </div>
+
+                    <div className="overflow-hidden rounded-2xl border border-red-300 bg-red-50 shadow-sm">
+                      <div className="border-b border-red-200 px-5 py-4">
+                        <h3 className="flex items-center gap-2 font-extrabold text-red-950">
+                          <AlertTriangle className="h-5 w-5 text-red-600" />
+                          Critérios de instabilidade persistente
+                        </h3>
+                        <p className="mt-1 text-sm text-red-800">Marque os achados críticos presentes.</p>
+                      </div>
+                      <div className="grid gap-2 p-4 sm:grid-cols-2">
+                        {GECA_PLAN_C_INSTABILITY_CRITERIA.map((criterion) => {
+                          const checked = gecaPlanCInstabilityCriteria.includes(criterion.id)
+                          return (
+                            <button
+                              key={criterion.id}
+                              type="button"
+                              aria-pressed={checked}
+                              onClick={() => setGecaPlanCInstabilityCriteria((current) =>
+                                current.includes(criterion.id) ? current.filter((value) => value !== criterion.id) : [...current, criterion.id]
+                              )}
+                              className={clsx(
+                                'flex items-center gap-2 rounded-lg border p-3 text-left text-xs font-semibold transition-colors',
+                                checked ? 'border-red-500 bg-white text-red-950' : 'border-red-200 bg-red-50/50 text-slate-700 hover:bg-white'
+                              )}
+                            >
+                              <AlertTriangle className={clsx('h-4 w-4 shrink-0', checked ? 'text-red-600' : 'text-slate-300')} />
+                              {criterion.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                      <div className="border-t border-red-200 p-4">
+                        <motion.button
+                          type="button"
+                          disabled={!gecaPlanCInstabilityOption}
+                          onClick={() => gecaPlanCInstabilityOption && handleOptionSelect(gecaPlanCInstabilityOption)}
+                          className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-red-800"
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          Choque ou instabilidade persistente — transferência imediata
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </section>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-relaxed text-slate-600">
+                    Os critérios preenchidos apoiam a reavaliação, mas não escolhem o desfecho automaticamente. A decisão é registrada somente ao clicar em um dos dois botões acima.
+                  </div>
+                </div>
+              )}
+
+              {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {isTVPWaitingForVascularStep && (
                     <div className={clsx(
@@ -14061,7 +15217,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

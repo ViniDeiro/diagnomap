@@ -1214,9 +1214,66 @@ const buildGecaClinicalSummary = (
     plano_b_com_desidratacao: 'com desidratação, sem critérios de gravidade (Plano B)',
     plano_c_desidratacao_grave: 'com desidratação grave (Plano C)'
   }
+  const alarmAnswer = parseFlowAnswerForSummary(answers.geca_sinais_alarme)
+  const alarmDecision = typeof alarmAnswer?.decision === 'string'
+    ? alarmAnswer.decision
+    : answers.geca_sinais_alarme
+  const selectedAlarmLabels = Array.isArray(alarmAnswer?.sinaisSelecionadosLabels)
+    ? alarmAnswer.sinaisSelecionadosLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const planCAnswer = parseFlowAnswerForSummary(answers.geca_plano_c)
+  const planCMonitoring = planCAnswer?.monitorizacaoInicial && typeof planCAnswer.monitorizacaoInicial === 'object'
+    ? planCAnswer.monitorizacaoInicial as Record<string, unknown>
+    : null
+  const planCBalance = planCAnswer?.balancoHidrico && typeof planCAnswer.balancoHidrico === 'object'
+    ? planCAnswer.balancoHidrico as Record<string, unknown>
+    : null
+  const planCVolumes = planCAnswer?.volumesCalculados && typeof planCAnswer.volumesCalculados === 'object'
+    ? planCAnswer.volumesCalculados as Record<string, unknown>
+    : null
+  const planCMonitoringLines = planCMonitoring
+    ? uniqueTextItems([
+        planCMonitoring.heartRate ? `FC ${planCMonitoring.heartRate} bpm` : null,
+        planCMonitoring.bloodPressure ? `PA ${planCMonitoring.bloodPressure} mmHg` : null,
+        planCMonitoring.respiratoryRate ? `FR ${planCMonitoring.respiratoryRate} irpm` : null,
+        planCMonitoring.oxygenSaturation ? `SpO₂ ${planCMonitoring.oxygenSaturation}%` : null,
+        planCMonitoring.temperature ? `temperatura ${planCMonitoring.temperature} °C` : null,
+        planCMonitoring.glucose ? `glicemia ${planCMonitoring.glucose} mg/dL` : null,
+        planCMonitoring.capillaryRefill ? `TEC ${planCMonitoring.capillaryRefill} s` : null,
+        planCMonitoring.urineOutput ? `diurese ${planCMonitoring.urineOutput} mL/kg/h` : null
+      ])
+    : []
+  const planCReassessment = parseFlowAnswerForSummary(answers.geca_reavaliacao_plano_c)
+  const planCReassessmentDecision = typeof planCReassessment?.decision === 'string'
+    ? planCReassessment.decision
+    : answers.geca_reavaliacao_plano_c
+  const planCReassessmentClinical = planCReassessment?.sinaisClinicos && typeof planCReassessment.sinaisClinicos === 'object'
+    ? planCReassessment.sinaisClinicos as Record<string, unknown>
+    : null
+  const planCReassessmentBalance = planCReassessment?.balancoHidrico && typeof planCReassessment.balancoHidrico === 'object'
+    ? planCReassessment.balancoHidrico as Record<string, unknown>
+    : null
+  const improvementLabels = Array.isArray(planCReassessment?.criteriosMelhoraLabels)
+    ? planCReassessment.criteriosMelhoraLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const instabilityLabels = Array.isArray(planCReassessment?.criteriosInstabilidadeLabels)
+    ? planCReassessment.criteriosInstabilidadeLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const planCReassessmentClinicalLines = planCReassessmentClinical
+    ? uniqueTextItems([
+        planCReassessmentClinical.heartRate ? `FC ${planCReassessmentClinical.heartRate} bpm` : null,
+        planCReassessmentClinical.bloodPressure ? `PA ${planCReassessmentClinical.bloodPressure} mmHg` : null,
+        planCReassessmentClinical.respiratoryRate ? `FR ${planCReassessmentClinical.respiratoryRate} irpm` : null,
+        planCReassessmentClinical.oxygenSaturation ? `SpO₂ ${planCReassessmentClinical.oxygenSaturation}%` : null,
+        planCReassessmentClinical.temperature ? `temperatura ${planCReassessmentClinical.temperature} °C` : null,
+        planCReassessmentClinical.capillaryRefill ? `TEC ${planCReassessmentClinical.capillaryRefill} s` : null,
+        planCReassessmentClinical.urineOutput ? `diurese ${planCReassessmentClinical.urineOutput} mL/kg/h` : null,
+        planCReassessmentClinical.mentalStatus ? `estado mental ${formatClinicalValue(planCReassessmentClinical.mentalStatus)}` : null
+      ])
+    : []
   const profile = profileLabels[answers.geca_perfil_diarreia] || 'padrão das fezes ainda não classificado'
   const hydration = hydrationLabels[answers.geca_classificacao_hidratacao]
-    || (answers.geca_sinais_alarme === 'com_sinal_alarme' ? 'com sinal de alarme, conduzido pelo Plano C' : 'estado de hidratação ainda não classificado')
+    || (alarmDecision === 'com_sinal_alarme' ? 'com sinal de alarme, conduzido pelo Plano C' : 'estado de hidratação ainda não classificado')
   const symptoms = uniqueTextItems([
     patient.admission?.chiefComplaint,
     ...(patient.admission?.symptoms || [])
@@ -1238,9 +1295,11 @@ const buildGecaClinicalSummary = (
   const examinationLines = uniqueTextItems([
     vitalLines.length > 0 ? `Sinais vitais: ${vitalLines.join(', ')}` : null,
     `Avaliação do estado de hidratação: ${hydration}.`,
-    answers.geca_sinais_alarme === 'com_sinal_alarme'
-      ? 'Foram identificados sinais de alarme que exigiram estabilização imediata.'
-      : answers.geca_sinais_alarme === 'sem_sinal_alarme'
+    planCMonitoringLines.length > 0 ? `Monitorização inicial do Plano C: ${planCMonitoringLines.join(', ')}.` : null,
+    planCReassessmentClinicalLines.length > 0 ? `Reavaliação após expansão: ${planCReassessmentClinicalLines.join(', ')}.` : null,
+    alarmDecision === 'com_sinal_alarme'
+      ? `Foram identificados sinais de alarme que exigiram estabilização imediata${selectedAlarmLabels.length > 0 ? `: ${selectedAlarmLabels.join('; ')}.` : '.'}`
+      : alarmDecision === 'sem_sinal_alarme'
         ? 'Não foram selecionados sinais de alarme imediato na triagem.'
         : null
   ])
@@ -1248,6 +1307,17 @@ const buildGecaClinicalSummary = (
   const scoreLines = uniqueTextItems([
     `Padrão clínico: ${profile}.`,
     `Classificação hídrica: ${hydration}.`,
+    typeof planCAnswer?.cristaloideLabel === 'string' && planCAnswer.cristaloideLabel
+      ? `Cristaloide selecionado no Plano C: ${planCAnswer.cristaloideLabel}${planCVolumes?.first != null && planCVolumes?.second != null ? `; 1ª etapa ${planCVolumes.first} mL e 2ª etapa ${planCVolumes.second} mL` : ''}.`
+      : null,
+    planCBalance && typeof planCBalance.saldoMl === 'number'
+      ? `Balanço hídrico registrado: entradas ${formatClinicalValue(planCBalance.totalEntradasMl)} mL, saídas ${formatClinicalValue(planCBalance.totalSaidasMl)} mL, saldo ${formatClinicalValue(planCBalance.saldoMl)} mL.`
+      : null,
+    planCReassessmentBalance && typeof planCReassessmentBalance.saldoMl === 'number'
+      ? `Balanço na reavaliação: entradas ${formatClinicalValue(planCReassessmentBalance.totalEntradasMl)} mL, saídas ${formatClinicalValue(planCReassessmentBalance.totalSaidasMl)} mL, saldo ${formatClinicalValue(planCReassessmentBalance.saldoMl)} mL.`
+      : null,
+    improvementLabels.length > 0 ? `Critérios de melhora registrados: ${improvementLabels.join('; ')}.` : null,
+    instabilityLabels.length > 0 ? `Critérios de instabilidade registrados: ${instabilityLabels.join('; ')}.` : null,
     answers.geca_indicacao_exames === 'exames_indicados' ? 'Houve indicação de investigação complementar dirigida.' : null,
     answers.geca_diarreia_persistente === 'persistente' ? 'Duração igual ou superior a 14 dias, direcionando investigação de diarreia persistente.' : null,
     answers.geca_indicacao_antibiotico === 'antibiotico_indicado' ? 'Foram reconhecidos critérios clínicos para considerar antibioticoterapia.' : null,
@@ -1269,7 +1339,13 @@ const buildGecaClinicalSummary = (
       ? 'Houve persistência da desidratação ou falha da terapia de reidratação oral, indicando gastróclise e/ou encaminhamento hospitalar.'
       : null,
     path.has('geca_plano_c')
-      ? 'Foi iniciado o Plano C, com cristaloide isotônico por via endovenosa, monitorização contínua e reavaliação da perfusão e das perdas.'
+      ? `Foi iniciado o Plano C, com cristaloide isotônico por via endovenosa, monitorização contínua e reavaliação da perfusão e das perdas${Array.isArray(planCAnswer?.abcdeConcluido) ? `; ${planCAnswer.abcdeConcluido.length} domínio(s) do ABCDE foram registrados` : ''}.`
+      : null,
+    planCReassessmentDecision === 'melhora_apos_plano_c'
+      ? 'Na reavaliação, houve melhora hemodinâmica; foi indicada manutenção em ambiente hospitalar/observação, com reposição conforme necessidade e progressão da hidratação oral.'
+      : null,
+    planCReassessmentDecision === 'instabilidade_persistente'
+      ? 'Na reavaliação, persistiram choque ou instabilidade; foi indicada transferência imediata com estabilização e suporte avançado durante a passagem do cuidado.'
       : null,
     path.has('geca_exames_dirigidos')
       ? 'A investigação complementar foi orientada pela gravidade, padrão das fezes, imunidade e contexto epidemiológico.'
