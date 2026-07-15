@@ -58,8 +58,16 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     const allAvailableFlowcharts = allFlowcharts
     const implementedFlowchartsCount = allAvailableFlowcharts.filter(flowchart => flowchart.implemented).length
     const totalFlowchartsCount = allAvailableFlowcharts.length
-    const inProgressFlowchartIds = ['pneumonia', 'influenza', 'itu', 'crise_ansiedade']
-    const finishedFlowchartIds = ['paralisia_bell', 'tvp', 'atendimento_antirrabico']
+    const inProgressFlowchartIds = ['geca', 'asthma', 'dengue', 'anafilaxia', 'pep_hiv']
+    const finishedFlowchartIds = [
+        'paralisia_bell',
+        'tvp',
+        'atendimento_antirrabico',
+        'pneumonia',
+        'influenza',
+        'itu',
+        'crise_ansiedade'
+    ]
     const finishedFlowchartsCount = finishedFlowchartIds.length
 
     const normalizeText = (value: string) =>
