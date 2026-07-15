@@ -6953,7 +6953,7 @@ export const pepHivFlowchart: EmergencyFlowchart = {
             </table>
           </div>
           <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
-            <p><strong>Seguimento:</strong> repetir testagem para HIV em 30 dias, avaliar outras ISTs/hepatites e orientar retorno se toxicidade grave, rash extenso, icterícia ou vômitos persistentes.</p>
+            <p><strong>Seguimento:</strong> repetir testagem para HIV em 30 dias, procurar infectologista para seguimento, avaliar outras ISTs/hepatites e orientar retorno se toxicidade grave, rash extenso, icterícia ou vômitos persistentes.</p>
           </div>
         </div>
       `,

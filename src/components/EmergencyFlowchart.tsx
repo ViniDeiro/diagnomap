@@ -105,7 +105,6 @@ import {
   hasAgitacaoPrescriptionSet
 } from '@/lib/agitacao'
 import {
-  PEP_HIV_ALTERNATIVE_SCHEMES,
   PEP_HIV_FOLLOW_UP_ORIENTATIONS,
   PEP_HIV_RISK_EXPOSURES,
   PEP_HIV_RISK_MATERIALS,
@@ -4751,9 +4750,6 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         item.instructions ? `- ${item.instructions}` : '',
         ''
       ]),
-      'ESQUEMAS ALTERNATIVOS:',
-      ...PEP_HIV_ALTERNATIVE_SCHEMES.map((item) => `- ${item}`),
-      '',
       'ALÉM DAS MEDICAÇÕES, ORIENTE:',
       ...PEP_HIV_FOLLOW_UP_ORIENTATIONS.map((item) => `- ${item}`)
     ].filter(Boolean)
@@ -6473,6 +6469,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSelectedPepHivScheme('preferencial')
     }
   }, [isPepHivPrescriptionFinalStep])
+
+  useEffect(() => {
+    if (!pepHivImageOpen) return
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setPepHivImageOpen(false)
+    }
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [pepHivImageOpen])
 
   useEffect(() => {
     if (!isAnaphylaxisCriteriaStep) {
@@ -15094,7 +15099,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               {tvpPocusInfoOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
                   <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                       <div>
                         <h4 className="text-lg font-extrabold text-slate-950">POCUS vascular para TVP: compressão de 3 / 4 pontos</h4>
                         <p className="mt-1 text-sm leading-relaxed text-slate-600">
@@ -15834,8 +15839,15 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {pepHivImageOpen && (
-                <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-                  <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <div
+                  className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
+                  onClick={() => setPepHivImageOpen(false)}
+                  role="presentation"
+                >
+                  <div
+                    className="flex max-h-[94vh] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                    onClick={(event) => event.stopPropagation()}
+                  >
                     <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
                       <div>
                         <h4 className="text-lg font-extrabold text-slate-950">Fluxo visual da PEP ao HIV</h4>
@@ -15855,7 +15867,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <img
                         src="/pephiv.jpeg"
                         alt="Fluxo visual de profilaxia pós-exposição ao HIV"
-                        className="mx-auto h-auto max-h-[78vh] w-auto max-w-full rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
+                        className="h-auto w-auto max-w-none rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
                       />
                     </div>
                   </div>
@@ -15863,9 +15875,16 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {pepHivGuideOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
-                  <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+                <div
+                  className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+                  onClick={() => setPepHivGuideOpen(false)}
+                  role="presentation"
+                >
+                  <div
+                    className="flex h-[92vh] max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
                       <div>
                         <h4 className="text-lg font-extrabold text-slate-950">Guia rápido - PEP ao HIV</h4>
                         <p className="mt-1 text-sm leading-relaxed text-slate-600">
@@ -15883,7 +15902,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </button>
                     </div>
 
-                    <div className="space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
+                    <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 text-sm leading-relaxed text-slate-700">
                       <section className="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
                         <h5 className="font-extrabold">Decisão em 5 perguntas</h5>
                         <ol className="mt-2 list-decimal space-y-1 pl-5">

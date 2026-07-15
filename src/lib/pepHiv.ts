@@ -32,6 +32,7 @@ export const PEP_HIV_FOLLOW_UP_ORIENTATIONS = [
   'A PEP deve ser iniciada até 72 horas após a exposição, com maior benefício quanto mais precoce.',
   'Repetir testagem para HIV 30 dias após a exposição, mesmo com PEP completa.',
   'Considerar risco de outras ISTs e hepatites virais; encaminhar para acompanhamento sorológico conforme protocolo local.',
+  'Procurar infectologista para seguimento, especialmente em caso de dúvidas, eventos adversos, necessidade de ajuste ou continuidade do cuidado.',
   'Orientar retorno imediato se sinais de toxicidade grave, intolerância importante, icterícia, rash extenso ou vômitos persistentes.',
   'A PEP pode ser continuada/acompanhada em unidades de Atenção Primária do SUS; garantir sigilo e referência adequada quando necessário.'
 ]

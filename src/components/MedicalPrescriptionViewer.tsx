@@ -966,6 +966,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
                         <li>• Retorno imediato em piora clínica, dor torácica, dispneia, síncope ou sangramento.</li>
                         <li>• Reavaliação ambulatorial em 1–2 semanas e em 3 meses.</li>
                         <li>• Monitorar adesão, função renal/hepática e interações medicamentosas.</li>
+                        {isPepHiv && <li>• Procurar infectologista para seguimento da PEP e continuidade do cuidado.</li>}
                       </ul>
                     </div>
                   </div>
