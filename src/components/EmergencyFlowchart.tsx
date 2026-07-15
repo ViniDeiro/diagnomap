@@ -3363,6 +3363,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const toggleSection = (key: string) => setSectionOpen(prev => ({ ...prev, [key]: !(prev[key] ?? true) }))
   const isGasometryFlow = flowchart.id === 'gasometria'
   const isAsthmaFlow = flowchart.id === 'asthma'
+  const isGecaPlanBStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_plano_b'
+  const isGecaPlanCStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_plano_c'
+  const gecaWeight = typeof patient.weight === 'number' && patient.weight > 0 ? patient.weight : null
+  const gecaPlanBVolume = gecaWeight
+    ? { minimum: Math.round(gecaWeight * 50), target: Math.round(gecaWeight * 75), maximum: Math.round(gecaWeight * 100) }
+    : null
+  const gecaPlanCVolume = gecaWeight
+    ? { first: Math.round(gecaWeight * 30), second: Math.round(gecaWeight * 70), cautious: Math.round(gecaWeight * 10) }
+    : null
+  const gecaOndansetronDose = patient.age < 0.5
+    ? 'Não há dose de rotina prevista neste protocolo para menores de 6 meses; individualizar e priorizar avaliação médica.'
+    : patient.age <= 2
+      ? '2 mg em dose única, se vômitos persistentes impedirem a TRO.'
+      : patient.age <= 10 && (gecaWeight == null || gecaWeight <= 30)
+        ? '4 mg em dose única, se vômitos persistentes impedirem a TRO.'
+        : '8 mg em dose única, se vômitos persistentes impedirem a TRO.'
   const isAsthmaStartStep = flowchart.id === 'asthma' && currentStepData?.id === 'asma_tipo'
   const isInfluenzaSeverityStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_sinais_gravidade'
   const isInfluenzaRiskStep = flowchart.id === 'influenza' && currentStepData?.id === 'influenza_fatores_risco'
@@ -7912,6 +7928,44 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
+                  {(isGecaPlanBStep || isGecaPlanCStep) && (
+                    <div className={clsx(
+                      'mt-5 rounded-2xl border p-5 text-sm shadow-sm',
+                      isGecaPlanCStep
+                        ? 'border-red-300 bg-red-50 text-red-950'
+                        : 'border-amber-300 bg-amber-50 text-amber-950'
+                    )}>
+                      <p className="text-xs font-extrabold uppercase tracking-wide">Cálculo para este paciente</p>
+                      {gecaWeight ? (
+                        <div className="mt-3 space-y-2">
+                          <p><strong>Peso registrado:</strong> {gecaWeight.toLocaleString('pt-BR')} kg.</p>
+                          {isGecaPlanBStep && gecaPlanBVolume && (
+                            <>
+                              <p>
+                                <strong>SRO em 4–6 horas:</strong> {gecaPlanBVolume.minimum.toLocaleString('pt-BR')}–{gecaPlanBVolume.maximum.toLocaleString('pt-BR')} mL
+                                {' '}(alvo inicial aproximado de {gecaPlanBVolume.target.toLocaleString('pt-BR')} mL), ajustado à sede, perdas e resposta clínica.
+                              </p>
+                              <p><strong>Ondansetrona, somente se vômito persistente impedir TRO:</strong> {gecaOndansetronDose}</p>
+                            </>
+                          )}
+                          {isGecaPlanCStep && gecaPlanCVolume && (
+                            <>
+                              <p><strong>1ª etapa:</strong> {gecaPlanCVolume.first.toLocaleString('pt-BR')} mL de SF 0,9% ou Ringer Lactato.</p>
+                              <p><strong>2ª etapa:</strong> {gecaPlanCVolume.second.toLocaleString('pt-BR')} mL, com tempo definido pela faixa etária e reavaliação contínua.</p>
+                              {patient.age < 5 && (
+                                <p><strong>Se RN ou cardiopatia grave:</strong> considerar início cauteloso com {gecaPlanCVolume.cautious.toLocaleString('pt-BR')} mL e reavaliar sobrecarga.</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="mt-2 font-semibold">Registre o peso para liberar o cálculo individualizado de reposição.</p>
+                      )}
+                      <p className="mt-3 border-t border-current/15 pt-3 text-xs leading-relaxed opacity-80">
+                        O cálculo é apoio à decisão e deve ser confirmado com idade, comorbidades, perfusão, perdas contínuas e resposta ao tratamento.
+                      </p>
+                    </div>
+                  )}
                   {isAnsiedadeOrganicExclusionStep && (
                     <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
                       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">

@@ -1186,6 +1186,161 @@ const buildTEPClinicalSummary = (
   return { chiefComplaint, historyLines, examinationLines, scoreLines, finalTitle, finalDescription, finalNarrative, doctorSignature, conductLines: [conduct], continuousText, text }
 }
 
+const buildGecaClinicalSummary = (
+  patient: Patient,
+  flowchart: EmergencyFlowchart,
+  currentStep: string,
+  history: string[],
+  answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+): ClinicalSummaryData => {
+  const currentStepData = flowchart.steps[currentStep]
+  const path = new Set([...history, currentStep])
+  const decisionLines = history.reduce<string[]>((lines, stepId) => {
+    const step = flowchart.steps[stepId]
+    if (!step) return lines
+    const answer = getAnswerDecision(flowchart, stepId, answers[stepId])
+    if (answer) lines.push(`${step.title}: ${answer}`)
+    return lines
+  }, [])
+
+  const profileLabels: Record<string, string> = {
+    aguda_aquosa: 'diarreia aguda aquosa, sem sangue ou muco',
+    aguda_inflamatoria_disenteria: 'diarreia aguda inflamatória/disentérica, com sangue e/ou muco',
+    persistente_14_dias: 'diarreia persistente, com duração igual ou superior a 14 dias'
+  }
+  const hydrationLabels: Record<string, string> = {
+    plano_a_sem_desidratacao: 'sem sinais de desidratação (Plano A)',
+    plano_b_com_desidratacao: 'com desidratação, sem critérios de gravidade (Plano B)',
+    plano_c_desidratacao_grave: 'com desidratação grave (Plano C)'
+  }
+  const profile = profileLabels[answers.geca_perfil_diarreia] || 'padrão das fezes ainda não classificado'
+  const hydration = hydrationLabels[answers.geca_classificacao_hidratacao]
+    || (answers.geca_sinais_alarme === 'com_sinal_alarme' ? 'com sinal de alarme, conduzido pelo Plano C' : 'estado de hidratação ainda não classificado')
+  const symptoms = uniqueTextItems([
+    patient.admission?.chiefComplaint,
+    ...(patient.admission?.symptoms || [])
+  ])
+  const chiefComplaint = symptoms.length > 0
+    ? formatClinicalListText(symptoms)
+    : profile
+
+  const vitalSigns = patient.admission?.vitalSigns
+  const vitalLines = uniqueTextItems([
+    vitalSigns?.temperature != null ? `temperatura ${String(vitalSigns.temperature).replace('.', ',')} °C` : null,
+    vitalSigns?.heartRate != null ? `frequência cardíaca ${vitalSigns.heartRate} bpm` : null,
+    vitalSigns?.respiratoryRate != null ? `frequência respiratória ${vitalSigns.respiratoryRate} irpm` : null,
+    vitalSigns?.bloodPressure ? `pressão arterial ${vitalSigns.bloodPressure} mmHg` : null,
+    vitalSigns?.oxygenSaturation != null ? `saturação de oxigênio ${vitalSigns.oxygenSaturation}%` : null,
+    vitalSigns?.glucose != null ? `glicemia capilar ${vitalSigns.glucose} mg/dL` : null
+  ])
+
+  const examinationLines = uniqueTextItems([
+    vitalLines.length > 0 ? `Sinais vitais: ${vitalLines.join(', ')}` : null,
+    `Avaliação do estado de hidratação: ${hydration}.`,
+    answers.geca_sinais_alarme === 'com_sinal_alarme'
+      ? 'Foram identificados sinais de alarme que exigiram estabilização imediata.'
+      : answers.geca_sinais_alarme === 'sem_sinal_alarme'
+        ? 'Não foram selecionados sinais de alarme imediato na triagem.'
+        : null
+  ])
+
+  const scoreLines = uniqueTextItems([
+    `Padrão clínico: ${profile}.`,
+    `Classificação hídrica: ${hydration}.`,
+    answers.geca_indicacao_exames === 'exames_indicados' ? 'Houve indicação de investigação complementar dirigida.' : null,
+    answers.geca_diarreia_persistente === 'persistente' ? 'Duração igual ou superior a 14 dias, direcionando investigação de diarreia persistente.' : null,
+    answers.geca_indicacao_antibiotico === 'antibiotico_indicado' ? 'Foram reconhecidos critérios clínicos para considerar antibioticoterapia.' : null,
+    answers.geca_indicacao_antibiotico === 'antibiotico_nao_indicado' ? 'Não foram reconhecidos critérios para antibiótico empírico.' : null,
+    answers.geca_triagem_stec === 'suspeita_stec_shu' ? 'Suspeita de STEC/SHU: antibiótico empírico e antiperistáltico contraindicados até esclarecimento.' : null
+  ])
+
+  const conductLines = uniqueTextItems([
+    path.has('geca_plano_a') || path.has('geca_alta_plano_a')
+      ? 'Foi instituído o Plano A, com SRO/líquidos após as perdas, manutenção da alimentação e orientações de retorno.'
+      : null,
+    path.has('geca_plano_b')
+      ? 'Foi instituído o Plano B no serviço de saúde, com SRO em pequenos volumes e reavaliação seriada.'
+      : null,
+    answers.geca_reavaliacao_plano_b === 'reidratado_plano_a'
+      ? 'Após a terapia de reidratação oral, desapareceram os sinais de desidratação e o cuidado foi convertido para o Plano A.'
+      : null,
+    answers.geca_reavaliacao_plano_b === 'falha_plano_b' || path.has('geca_falha_plano_b')
+      ? 'Houve persistência da desidratação ou falha da terapia de reidratação oral, indicando gastróclise e/ou encaminhamento hospitalar.'
+      : null,
+    path.has('geca_plano_c')
+      ? 'Foi iniciado o Plano C, com cristaloide isotônico por via endovenosa, monitorização contínua e reavaliação da perfusão e das perdas.'
+      : null,
+    path.has('geca_exames_dirigidos')
+      ? 'A investigação complementar foi orientada pela gravidade, padrão das fezes, imunidade e contexto epidemiológico.'
+      : null,
+    path.has('geca_antibioticos')
+      ? 'Foi selecionada antibioticoterapia para cenário específico, após triagem de contraindicações e de suspeita de STEC.'
+      : null,
+    path.has('geca_suspeita_stec_shu')
+      ? 'Diante da suspeita de STEC/SHU, foi indicada investigação de toxina Shiga, hemólise, plaquetas e função renal, sem antibiótico empírico ou antiperistáltico.'
+      : null,
+    path.has('geca_investigacao_persistente')
+      ? 'O quadro foi direcionado para investigação de diarreia persistente e tratamento etiológico, mantendo hidratação e suporte nutricional.'
+      : null,
+    path.has('geca_internacao_observacao')
+      ? 'Foi indicada observação/internação para reposição, monitorização, investigação e progressão para via oral conforme resposta.'
+      : null,
+    path.has('geca_transferencia_emergencia')
+      ? 'Foi indicada transferência imediata para serviço de maior complexidade, mantendo estabilização e reavaliações até a passagem formal do cuidado.'
+      : null
+  ])
+
+  const finalTitle = currentStepData?.title || flowchart.name
+  const finalDescription = currentStepData?.description || flowchart.description
+  const finalNarrative = conductLines.length > 0
+    ? conductLines.join(' ')
+    : `A avaliação encontra-se na etapa ${finalTitle}. ${finalDescription}`
+  const doctorSignature = formatDoctorSignature(doctor)
+  const historyLines = decisionLines.slice(-12)
+  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`
+  const continuousText = [
+    'RELATÓRIO MÉDICO - GASTROENTERITE AGUDA',
+    '',
+    `${identification} Apresentou ${chiefComplaint}, com classificação clínica compatível com ${profile}.`,
+    '',
+    examinationLines.length > 0
+      ? `Na avaliação inicial, registrou-se ${examinationLines.join(' ')}`
+      : 'Sinais vitais e achados objetivos do exame físico não foram registrados no fluxo.',
+    '',
+    scoreLines.length > 0 ? `A estratificação demonstrou: ${scoreLines.join(' ')}` : null,
+    '',
+    finalNarrative,
+    '',
+    'Orientou-se reavaliação imediata diante de piora das perdas, vômitos repetidos, sangue nas fezes, febre alta persistente, muita sede, redução da diurese, prostração, síncope, dor abdominal intensa ou incapacidade de ingerir líquidos.',
+    '',
+    doctorSignature
+  ].filter((item): item is string => item != null).join('\n')
+  const text = [
+    'RESUMO CLÍNICO SEMIOLÓGICO - GECA', '', 'Identificação e contexto', identification,
+    '', 'Queixa principal / HMA', chiefComplaint,
+    '', 'Padrão clínico e hidratação', scoreLines.map((item) => `- ${item}`).join('\n'),
+    '', 'Caminho percorrido', historyLines.length > 0 ? historyLines.map((item) => `- ${item}`).join('\n') : '- Avaliação inicial.',
+    '', 'Exame e dados objetivos', examinationLines.length > 0 ? examinationLines.map((item) => `- ${item}`).join('\n') : '- Não registrados.',
+    '', 'Síntese final e conduta', finalNarrative,
+    '', 'Médico responsável', doctorSignature
+  ].join('\n')
+
+  return {
+    chiefComplaint,
+    historyLines,
+    examinationLines,
+    scoreLines,
+    finalTitle,
+    finalDescription,
+    finalNarrative,
+    doctorSignature,
+    conductLines,
+    continuousText,
+    text
+  }
+}
+
 export function buildClinicalSummary(
   patient: Patient,
   options?: {
@@ -1241,6 +1396,10 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'crise_ansiedade') {
     return buildAnsiedadeClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'geca') {
+    return buildGecaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
   }
 
   const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {
