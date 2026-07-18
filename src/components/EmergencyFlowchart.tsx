@@ -1770,6 +1770,145 @@ const GECA_IMMEDIATE_ALARM_SIGNS = [
   { id: 'oliguria_injuria_renal_ou_desidratacao_grave', label: 'Oligúria/anúria, suspeita de injúria renal, distúrbio eletrolítico ou desidratação grave.' }
 ] as const
 
+const GECA_DIRECTED_EXAM_GROUPS = [
+  {
+    key: 'sistemicos',
+    title: 'Sistêmicos',
+    description: 'Selecione conforme gravidade, perfusão e suspeita de complicação sistêmica.',
+    tone: 'border-blue-200 bg-blue-50 text-blue-950',
+    checkboxClass: 'text-blue-700 focus:ring-blue-600',
+    items: [
+      { id: 'hemograma', label: 'Hemograma' },
+      { id: 'ureia_creatinina', label: 'Ureia e creatinina' },
+      { id: 'eletrolitos', label: 'Eletrólitos: sódio, potássio e magnésio' },
+      { id: 'glicemia', label: 'Glicemia' },
+      { id: 'pcr', label: 'Proteína C reativa (PCR), conforme contexto' },
+      { id: 'gasometria_lactato', label: 'Gasometria e lactato, se doença grave ou choque' },
+      { id: 'hemoculturas', label: 'Hemoculturas, se sepse, febre entérica, bacteremia ou imunossupressão' }
+    ]
+  },
+  {
+    key: 'fezes',
+    title: 'Fezes',
+    description: 'Direcione pelo padrão clínico, duração e risco epidemiológico.',
+    tone: 'border-violet-200 bg-violet-50 text-violet-950',
+    checkboxClass: 'text-violet-700 focus:ring-violet-600',
+    items: [
+      { id: 'coprocultura_painel_molecular', label: 'Coprocultura ou painel molecular' },
+      { id: 'toxina_shiga_stec', label: 'Pesquisa de toxina Shiga/STEC' },
+      { id: 'clostridioides_difficile', label: 'Pesquisa de C. difficile' },
+      { id: 'parasitologico', label: 'Parasitológico de fezes ou testes específicos' },
+      { id: 'vibrio', label: 'Pesquisa de Vibrio' }
+    ]
+  },
+  {
+    key: 'imagem',
+    title: 'Imagem abdominal',
+    description: 'Não é rotina; reservar para dor focal intensa, sinais peritoneais, distensão/megacólon, perfuração, isquemia ou diagnóstico alternativo.',
+    tone: 'border-red-200 bg-red-50 text-red-950',
+    checkboxClass: 'text-red-700 focus:ring-red-600',
+    items: [
+      { id: 'imagem_abdominal', label: 'Imagem abdominal dirigida conforme a suspeita clínica' }
+    ]
+  }
+] as const
+
+const GECA_ANTIBIOTIC_CRITERIA = [
+  { id: 'disenteria_comprometimento_geral', label: 'Disenteria com comprometimento do estado geral' },
+  { id: 'febre_alta_persistente', label: 'Febre alta persistente' },
+  { id: 'dor_tenesmo_comprometimento_sistemico', label: 'Dor intensa, tenesmo ou comprometimento sistêmico' },
+  { id: 'colera_desidratacao_grave', label: 'Suspeita de cólera com desidratação grave' },
+  { id: 'sepse_febre_enterica', label: 'Suspeita de sepse ou febre entérica' },
+  { id: 'imunossupressao_relevante', label: 'Imunossupressão relevante com quadro de risco' }
+] as const
+
+const GECA_STEC_CRITERIA = [
+  { id: 'diarreia_sanguinolenta_dor_febre_baixa', label: 'Diarreia sanguinolenta com dor abdominal intensa e febre ausente ou baixa' },
+  { id: 'surto_exposicao_alimentar_ambiental', label: 'Surto ou exposição a carne malpassada, leite não pasteurizado, vegetais ou água contaminados' },
+  { id: 'sinais_clinicos_shu', label: 'Palidez, petéquias, fadiga, oligúria, edema, hipertensão ou alteração neurológica' },
+  { id: 'sinais_laboratoriais_shu', label: 'Anemia/fragmentação, plaquetopenia ou injúria renal' }
+] as const
+
+const GECA_ANTIBIOTIC_SCHEMES = [
+  {
+    id: 'azitromicina_pediatrica',
+    title: 'Azitromicina — esquema pediátrico preferencial',
+    indication: '3 meses a 10 anos, peso até 30 kg e sem imunodeficiência.',
+    regimen: '10 mg/kg VO no dia 1; depois 5 mg/kg VO uma vez ao dia por 4 dias.',
+    tone: 'border-cyan-200 bg-cyan-50 text-cyan-950'
+  },
+  {
+    id: 'ceftriaxona_pediatrica',
+    title: 'Ceftriaxona — alternativa pediátrica',
+    indication: 'Alternativa quando a via oral não for adequada ou conforme gravidade/protocolo.',
+    regimen: '50 mg/kg IM uma vez ao dia por 3–5 dias.',
+    tone: 'border-violet-200 bg-violet-50 text-violet-950'
+  },
+  {
+    id: 'ciprofloxacino_adulto',
+    title: 'Ciprofloxacino — adolescentes/adultos',
+    indication: 'Acima de 10 anos ou acima de 30 kg; evitar na gestação.',
+    regimen: '500 mg VO a cada 12 horas por 3 dias.',
+    tone: 'border-blue-200 bg-blue-50 text-blue-950'
+  },
+  {
+    id: 'ceftriaxona_alto_risco_hospitalar',
+    title: 'Ceftriaxona — alto risco/hospitalar',
+    indication: 'Menor de 3 meses, imunodeficiência, desnutrição grave ou quadro sistêmico.',
+    regimen: '50–100 mg/kg/dia conforme protocolo, com referência ou hospitalização.',
+    tone: 'border-red-200 bg-red-50 text-red-950'
+  }
+] as const
+
+const GECA_ANTIBIOTIC_SAFETY_CHECKS = [
+  { id: 'alergias', label: 'Alergias medicamentosas conferidas' },
+  { id: 'funcao_renal_hepatica', label: 'Função renal e hepática avaliadas' },
+  { id: 'gestacao_qt_interacoes', label: 'Gestação, intervalo QT e interações avaliados' },
+  { id: 'cultura_resistencia', label: 'Cultura e resistência local consideradas quando aplicável' }
+] as const
+
+const GECA_SUPPORT_ACTIONS = [
+  { id: 'sro_reposicao_perdas', label: 'SRO e reposição das perdas conforme Plano A/B' },
+  { id: 'dieta_aleitamento', label: 'Dieta habitual e aleitamento mantidos; refeições fracionadas' },
+  { id: 'antitermico_analgesico', label: 'Antitérmico/analgésico indicado após avaliar contraindicações' },
+  { id: 'ondansetrona_se_necessaria', label: 'Ondansetrona indicada somente se vômito persistente impedir TRO' },
+  { id: 'higiene_agua_alimentos', label: 'Orientações sobre mãos, água segura e cuidado com alimentos' }
+] as const
+
+const GECA_SUPPORT_SAFETY_CHECKS = [
+  { id: 'sem_antimicrobiano_sem_indicacao', label: 'Não usar antibiótico ou antiparasitário sem indicação' },
+  { id: 'sem_antidiarreico_risco', label: 'Não usar antidiarreico se sangue/muco, febre, colite ou suspeita de STEC' },
+  { id: 'sem_bebidas_hiperosmolares', label: 'Evitar refrigerantes, soluções hiperosmolares e energéticos' },
+  { id: 'sem_jejum_ou_suspensao_aleitamento', label: 'Evitar jejum prolongado ou suspensão desnecessária do aleitamento' }
+] as const
+
+const GECA_DISCHARGE_CRITERIA = [
+  { id: 'hidratado', label: 'Hidratação adequada após reavaliação' },
+  { id: 'estavel', label: 'Estabilidade clínica e hemodinâmica' },
+  { id: 'tolera_via_oral', label: 'Tolera SRO, líquidos e alimentação por via oral' },
+  { id: 'sem_abdome_agudo', label: 'Sem sinais de abdome agudo ou dor importante' },
+  { id: 'sem_disfuncao_organica', label: 'Sem disfunção orgânica ou alteração laboratorial relevante' },
+  { id: 'retorno_seguro', label: 'Cuidador, orientações e possibilidade de retorno seguros' }
+] as const
+
+const GECA_ADMISSION_CRITERIA = [
+  { id: 'falha_tro', label: 'Falha da terapia de reidratação oral' },
+  { id: 'necessidade_ev', label: 'Necessidade de hidratação ou medicação endovenosa' },
+  { id: 'perdas_intensas', label: 'Perdas intensas ou incapacidade de compensação oral' },
+  { id: 'disturbio_eletrolitico_renal', label: 'Distúrbio eletrolítico, renal ou metabólico' },
+  { id: 'dor_abdome_agudo', label: 'Dor importante ou suspeita de abdome agudo' },
+  { id: 'sepse_instabilidade', label: 'Sepse, instabilidade ou comprometimento sistêmico' },
+  { id: 'alto_risco', label: 'Imunossupressão, fragilidade ou outra condição de alto risco' },
+  { id: 'seguimento_inseguro', label: 'Seguimento, cuidador ou retorno considerados inseguros' }
+] as const
+
+const GECA_ENTRY_RED_FLAGS = [
+  { id: 'abdome_agudo', alarmId: 'abdome_agudo', label: 'Dor abdominal localizada intensa, defesa, rigidez ou distensão importante' },
+  { id: 'hematemese_sangramento', alarmId: 'febre_sepse_ou_sangramento', label: 'Hematêmese ou outro sangramento digestivo importante' },
+  { id: 'choque_perfusao', alarmId: 'instabilidade_hemodinamica', label: 'Choque, hipotensão ou sinais de perfusão ruim' },
+  { id: 'alteracao_neurologica', alarmId: 'alteracao_neurologica_ou_incapacidade_beber', label: 'Alteração neurológica, síncope, rebaixamento ou incapacidade de beber' }
+] as const
+
 const GECA_PLAN_C_ABCDE = [
   { id: 'airway', letter: 'A', title: 'Via aérea', description: 'Confirmar permeabilidade e proteger a via aérea se houver rebaixamento.' },
   { id: 'breathing', letter: 'B', title: 'Respiração', description: 'Avaliar frequência respiratória, SpO₂ e necessidade de oxigênio.' },
@@ -1951,6 +2090,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [progress, setProgress] = useState(patient.emergencyState.progress || 0)
   const [selectedGecaDiarrheaProfile, setSelectedGecaDiarrheaProfile] = useState('')
   const [selectedGecaAlarmSigns, setSelectedGecaAlarmSigns] = useState<string[]>([])
+  const [selectedGecaHydrationPlan, setSelectedGecaHydrationPlan] = useState('')
+  const [selectedGecaExamIndication, setSelectedGecaExamIndication] = useState('')
+  const [selectedGecaDirectedExams, setSelectedGecaDirectedExams] = useState<string[]>([])
+  const [gecaDiarrheaDurationDays, setGecaDiarrheaDurationDays] = useState('')
+  const [selectedGecaDurationRoute, setSelectedGecaDurationRoute] = useState('')
+  const [selectedGecaAntibioticCriteria, setSelectedGecaAntibioticCriteria] = useState<string[]>([])
+  const [gecaNoAntibioticCriteriaConfirmed, setGecaNoAntibioticCriteriaConfirmed] = useState(false)
+  const [selectedGecaStecCriteria, setSelectedGecaStecCriteria] = useState<string[]>([])
+  const [gecaNoStecCriteriaConfirmed, setGecaNoStecCriteriaConfirmed] = useState(false)
+  const [selectedGecaAntibioticScheme, setSelectedGecaAntibioticScheme] = useState('')
+  const [gecaAntibioticSafetyChecks, setGecaAntibioticSafetyChecks] = useState<string[]>([])
+  const [selectedGecaSupportActions, setSelectedGecaSupportActions] = useState<string[]>([])
+  const [gecaSupportSafetyChecks, setGecaSupportSafetyChecks] = useState<string[]>([])
+  const [gecaDischargeCriteria, setGecaDischargeCriteria] = useState<string[]>([])
+  const [gecaAdmissionCriteria, setGecaAdmissionCriteria] = useState<string[]>([])
+  const [gecaEntryEvacuations, setGecaEntryEvacuations] = useState('')
+  const [gecaEntryDurationDays, setGecaEntryDurationDays] = useState('')
+  const [gecaEntryStoolConsistency, setGecaEntryStoolConsistency] = useState('')
+  const [gecaEntryRelevantIncrease, setGecaEntryRelevantIncrease] = useState(false)
+  const [selectedGecaEntryRedFlags, setSelectedGecaEntryRedFlags] = useState<string[]>([])
   const [gecaPlanCAbcde, setGecaPlanCAbcde] = useState<string[]>([])
   const [gecaPlanCInitialActions, setGecaPlanCInitialActions] = useState<string[]>([])
   const [gecaPlanCExams, setGecaPlanCExams] = useState<string[]>([])
@@ -2469,6 +2628,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isCholecystitisSeverityStep = flowchart.id === 'cholecystitis' && currentStep === 'cole_tokyo_gravidade'
     const isAppendicitisAlvaradoStep = flowchart.id === 'appendicitis' && currentStep === 'apend_alvarado'
     const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStep === 'lomb_red_flags'
+    const isGecaDirectedExamsStep = flowchart.id === 'geca' && currentStep === 'geca_exames_dirigidos'
+    const isGecaDiarrheaDurationStep = flowchart.id === 'geca' && currentStep === 'geca_diarreia_persistente'
+    const isGecaAntibioticIndicationStep = flowchart.id === 'geca' && currentStep === 'geca_indicacao_antibiotico'
+    const isGecaStecScreeningStep = flowchart.id === 'geca' && currentStep === 'geca_triagem_stec'
+    const isGecaAntibioticSelectionStep = flowchart.id === 'geca' && currentStep === 'geca_antibioticos'
+    const isGecaSupportStep = flowchart.id === 'geca' && currentStep === 'geca_suporte_sintomatico'
+    const isGecaDispositionStep = flowchart.id === 'geca' && currentStep === 'geca_destino'
+    const isGecaEntryStep = flowchart.id === 'geca' && currentStep === 'geca_inicio'
     const isBellPhysicalExamStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_exame_fisico'
     const isBellCriteriaStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_criterios_obrigatorios'
     const isBellSupportStep = flowchart.id === 'paralisia_bell' && currentStep === 'bell_suporte_diagnostico'
@@ -2712,6 +2879,91 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         .map((item) => item.label),
       possuiSinalAlarme: selectedGecaAlarmSigns.length > 0
     })
+    const gecaDirectedExamsAnswer = JSON.stringify({
+      decision: value || nextStep,
+      examesSelecionados: selectedGecaDirectedExams,
+      examesSelecionadosLabels: GECA_DIRECTED_EXAM_GROUPS
+        .flatMap((group) => group.items)
+        .filter((item) => selectedGecaDirectedExams.includes(item.id))
+        .map((item) => item.label),
+      grupos: Object.fromEntries(
+        GECA_DIRECTED_EXAM_GROUPS.map((group) => [
+          group.key,
+          group.items
+            .filter((item) => selectedGecaDirectedExams.includes(item.id))
+            .map((item) => item.id)
+        ])
+      )
+    })
+    const gecaDiarrheaDurationAnswer = JSON.stringify({
+      decision: value || nextStep,
+      duracaoDias: gecaDiarrheaDurationDays ? Number(gecaDiarrheaDurationDays) : null,
+      classificacao: (value || nextStep) === 'persistente' ? 'persistente_14_dias_ou_mais' : 'aguda_menos_14_dias'
+    })
+    const gecaAntibioticIndicationAnswer = JSON.stringify({
+      decision: value || nextStep,
+      criteriosSelecionados: selectedGecaAntibioticCriteria,
+      criteriosSelecionadosLabels: GECA_ANTIBIOTIC_CRITERIA
+        .filter((criterion) => selectedGecaAntibioticCriteria.includes(criterion.id))
+        .map((criterion) => criterion.label),
+      possuiCriterioClinico: selectedGecaAntibioticCriteria.length > 0,
+      ausenciaDeCriteriosConfirmada: gecaNoAntibioticCriteriaConfirmed
+    })
+    const gecaStecScreeningAnswer = JSON.stringify({
+      decision: value || nextStep,
+      criteriosSelecionados: selectedGecaStecCriteria,
+      criteriosSelecionadosLabels: GECA_STEC_CRITERIA
+        .filter((criterion) => selectedGecaStecCriteria.includes(criterion.id))
+        .map((criterion) => criterion.label),
+      suspeitaStecShu: selectedGecaStecCriteria.length > 0,
+      ausenciaDeCriteriosConfirmada: gecaNoStecCriteriaConfirmed
+    })
+    const selectedGecaAntibioticSchemeData = GECA_ANTIBIOTIC_SCHEMES.find((scheme) => scheme.id === selectedGecaAntibioticScheme)
+    const gecaAntibioticSelectionAnswer = JSON.stringify({
+      decision: value || nextStep,
+      esquemaSelecionado: selectedGecaAntibioticScheme,
+      esquemaSelecionadoLabel: selectedGecaAntibioticSchemeData?.title || '',
+      indicacao: selectedGecaAntibioticSchemeData?.indication || '',
+      posologia: selectedGecaAntibioticSchemeData?.regimen || '',
+      verificacoesSeguranca: gecaAntibioticSafetyChecks,
+      alergiasRegistradas: patient.allergies || [],
+      pesoKg: patient.weight ?? null,
+      idadeAnos: patient.age
+    })
+    const gecaSupportAnswer = JSON.stringify({
+      decision: value || nextStep,
+      condutasSelecionadas: selectedGecaSupportActions,
+      condutasSelecionadasLabels: GECA_SUPPORT_ACTIONS
+        .filter((action) => selectedGecaSupportActions.includes(action.id))
+        .map((action) => action.label),
+      orientacoesSegurancaConfirmadas: gecaSupportSafetyChecks,
+      orientacoesSegurancaLabels: GECA_SUPPORT_SAFETY_CHECKS
+        .filter((check) => gecaSupportSafetyChecks.includes(check.id))
+        .map((check) => check.label)
+    })
+    const gecaDispositionAnswer = JSON.stringify({
+      decision: value || nextStep,
+      criteriosAltaConfirmados: gecaDischargeCriteria,
+      criteriosAltaLabels: GECA_DISCHARGE_CRITERIA
+        .filter((criterion) => gecaDischargeCriteria.includes(criterion.id))
+        .map((criterion) => criterion.label),
+      criteriosInternacaoSelecionados: gecaAdmissionCriteria,
+      criteriosInternacaoLabels: GECA_ADMISSION_CRITERIA
+        .filter((criterion) => gecaAdmissionCriteria.includes(criterion.id))
+        .map((criterion) => criterion.label),
+      seguroParaAlta: gecaAdmissionCriteria.length === 0 && gecaDischargeCriteria.length === GECA_DISCHARGE_CRITERIA.length
+    })
+    const gecaEntryAnswer = JSON.stringify({
+      decision: value || nextStep,
+      evacuacoesUltimas24h: gecaEntryEvacuations ? Number(gecaEntryEvacuations) : null,
+      duracaoDias: gecaEntryDurationDays ? Number(gecaEntryDurationDays) : null,
+      consistencia: gecaEntryStoolConsistency,
+      aumentoRelevanteEmRelacaoAoHabito: gecaEntryRelevantIncrease,
+      sinaisCriticosSelecionados: selectedGecaEntryRedFlags,
+      sinaisCriticosLabels: GECA_ENTRY_RED_FLAGS
+        .filter((flag) => selectedGecaEntryRedFlags.includes(flag.id))
+        .map((flag) => flag.label)
+    })
     const gecaPlanCInputTotal = ['saline', 'otherIv', 'oral', 'otherInput']
       .reduce((total, key) => total + parseGecaBalanceValue(gecaPlanCBalance[key as keyof GecaPlanCBalance]), 0)
     const gecaPlanCOutputTotal = ['urine', 'vomiting', 'diarrhea', 'otherOutput']
@@ -2842,6 +3094,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                         ? ansiedadeOrganicAnswer
                                       : isGecaImmediateAlarmStep
                                         ? gecaImmediateAlarmAnswer
+                                      : isGecaDirectedExamsStep
+                                        ? gecaDirectedExamsAnswer
+                                      : isGecaDiarrheaDurationStep
+                                        ? gecaDiarrheaDurationAnswer
+                                      : isGecaAntibioticIndicationStep
+                                        ? gecaAntibioticIndicationAnswer
+                                      : isGecaStecScreeningStep
+                                        ? gecaStecScreeningAnswer
+                                      : isGecaAntibioticSelectionStep
+                                        ? gecaAntibioticSelectionAnswer
+                                      : isGecaSupportStep
+                                        ? gecaSupportAnswer
+                                      : isGecaDispositionStep
+                                        ? gecaDispositionAnswer
+                                      : isGecaEntryStep
+                                        ? gecaEntryAnswer
                                       : isGecaPlanCStep
                                         ? gecaPlanCAnswer
                                       : isGecaPlanCReassessmentStep
@@ -3688,11 +3956,83 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isGecaPlanCReassessmentStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_reavaliacao_plano_c'
   const isGecaDiarrheaProfileStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_perfil_diarreia'
   const isGecaImmediateAlarmStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_sinais_alarme'
+  const isGecaHydrationClassificationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_classificacao_hidratacao'
+  const isGecaExamIndicationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_indicacao_exames'
+  const isGecaDirectedExamsStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_exames_dirigidos'
+  const isGecaDiarrheaDurationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_diarreia_persistente'
+  const isGecaAntibioticIndicationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_indicacao_antibiotico'
+  const isGecaStecScreeningStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_triagem_stec'
+  const isGecaAntibioticSelectionStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_antibioticos'
+  const isGecaSupportStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_suporte_sintomatico'
+  const isGecaDispositionStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_destino'
+  const isGecaEntryStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_inicio'
+  const gecaEntryEvacuationsNumber = Number(gecaEntryEvacuations)
+  const gecaEntryDurationNumber = Number(gecaEntryDurationDays)
+  const gecaEntryHasRequiredData = Boolean(
+    gecaEntryEvacuations
+    && gecaEntryDurationDays
+    && gecaEntryDurationNumber >= 1
+    && gecaEntryStoolConsistency
+  )
+  const gecaEntryMeetsDiarrheaDefinition = gecaEntryHasRequiredData && (
+    (gecaEntryEvacuationsNumber >= 3 && gecaEntryStoolConsistency === 'amolecidas_liquidas')
+    || gecaEntryRelevantIncrease
+  )
+  const gecaEntryClassification = !gecaEntryHasRequiredData
+    ? 'pending'
+    : gecaEntryMeetsDiarrheaDefinition
+      ? gecaEntryDurationNumber < 14 ? 'acute' : 'persistent'
+      : 'not_compatible'
+  const selectedGecaEntryOption = isGecaEntryStep && selectedGecaEntryRedFlags.length === 0
+    ? currentStepData.options?.find((option) => option.value === (
+        gecaEntryClassification === 'acute' || gecaEntryClassification === 'persistent'
+          ? 'quadro_compativel'
+          : gecaEntryClassification === 'not_compatible'
+            ? 'nao_compativel'
+            : ''
+      ))
+    : undefined
+  const selectedGecaDispositionOption = isGecaDispositionStep
+    ? currentStepData.options?.find((option) => option.value === (
+        gecaAdmissionCriteria.length > 0
+          ? 'internacao_observacao'
+          : gecaDischargeCriteria.length === GECA_DISCHARGE_CRITERIA.length
+            ? 'alta_segura'
+            : ''
+      ))
+    : undefined
   const selectedGecaDiarrheaOption = isGecaDiarrheaProfileStep
     ? currentStepData.options?.find((option) => option.value === selectedGecaDiarrheaProfile)
     : undefined
   const selectedGecaAlarmOption = isGecaImmediateAlarmStep
     ? currentStepData.options?.find((option) => option.value === (selectedGecaAlarmSigns.length > 0 ? 'com_sinal_alarme' : 'sem_sinal_alarme'))
+    : undefined
+  const selectedGecaHydrationOption = isGecaHydrationClassificationStep
+    ? currentStepData.options?.find((option) => option.value === selectedGecaHydrationPlan)
+    : undefined
+  const selectedGecaExamIndicationOption = isGecaExamIndicationStep
+    ? currentStepData.options?.find((option) => option.value === selectedGecaExamIndication)
+    : undefined
+  const selectedGecaDurationOption = isGecaDiarrheaDurationStep
+    ? currentStepData.options?.find((option) => option.value === selectedGecaDurationRoute)
+    : undefined
+  const selectedGecaAntibioticOption = isGecaAntibioticIndicationStep
+    ? currentStepData.options?.find((option) => option.value === (
+        selectedGecaAntibioticCriteria.length > 0
+          ? 'antibiotico_indicado'
+          : gecaNoAntibioticCriteriaConfirmed
+            ? 'antibiotico_nao_indicado'
+            : ''
+      ))
+    : undefined
+  const selectedGecaStecOption = isGecaStecScreeningStep
+    ? currentStepData.options?.find((option) => option.value === (
+        selectedGecaStecCriteria.length > 0
+          ? 'suspeita_stec_shu'
+          : gecaNoStecCriteriaConfirmed
+            ? 'sem_suspeita_stec'
+            : ''
+      ))
     : undefined
   const gecaPlanCImprovementOption = isGecaPlanCReassessmentStep
     ? currentStepData.options?.find((option) => option.value === 'melhora_apos_plano_c')
@@ -8237,6 +8577,233 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
+              {isGecaEntryStep && (
+                <div className="mb-6 space-y-4">
+                  <section className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-4 sm:p-6">
+                    <div className="mb-5">
+                      <h4 className="font-extrabold text-slate-950">Confirmar definição operacional</h4>
+                      <p className="mt-1 text-sm text-slate-600">
+                        Registre os dados objetivos do episódio para classificar a porta de entrada.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label htmlFor="geca-entry-evacuations" className="mb-2 block text-sm font-bold text-slate-800">
+                          Evacuações nas últimas 24 horas
+                        </label>
+                        <input
+                          id="geca-entry-evacuations"
+                          type="text"
+                          inputMode="numeric"
+                          value={gecaEntryEvacuations}
+                          onChange={(event) => setGecaEntryEvacuations(event.target.value.replace(/\D/g, '').slice(0, 3))}
+                          className="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 text-lg font-extrabold text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          placeholder="Ex: 5"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="geca-entry-duration" className="mb-2 block text-sm font-bold text-slate-800">
+                          Duração do quadro
+                        </label>
+                        <div className="relative">
+                          <input
+                            id="geca-entry-duration"
+                            type="text"
+                            inputMode="numeric"
+                            value={gecaEntryDurationDays}
+                            onChange={(event) => setGecaEntryDurationDays(event.target.value.replace(/\D/g, '').slice(0, 4))}
+                            className="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 pr-16 text-lg font-extrabold text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                            placeholder="Ex: 2"
+                          />
+                          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">dias</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4">
+                      <p className="mb-2 text-sm font-bold text-slate-800">Consistência predominante</p>
+                      <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Consistência predominante das fezes">
+                        {[
+                          { value: 'amolecidas_liquidas', label: 'Amolecidas ou líquidas' },
+                          { value: 'sem_alteracao_relevante', label: 'Sem alteração relevante da consistência' }
+                        ].map((option) => {
+                          const selected = gecaEntryStoolConsistency === option.value
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              onClick={() => setGecaEntryStoolConsistency(option.value)}
+                              className={clsx(
+                                'flex items-center gap-3 rounded-xl border-2 p-3 text-left text-sm font-semibold transition-all',
+                                selected
+                                  ? 'border-blue-500 bg-white text-blue-950 shadow-sm ring-4 ring-blue-100'
+                                  : 'border-blue-100 bg-white/65 text-slate-700 hover:border-blue-300 hover:bg-white'
+                              )}
+                            >
+                              <span className={clsx(
+                                'flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
+                                selected ? 'border-blue-600 bg-blue-600 text-white' : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              </span>
+                              {option.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={gecaEntryRelevantIncrease}
+                      onClick={() => setGecaEntryRelevantIncrease((current) => !current)}
+                      className={clsx(
+                        'mt-4 flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left text-sm font-semibold leading-relaxed transition-all',
+                        gecaEntryRelevantIncrease
+                          ? 'border-cyan-500 bg-white text-cyan-950 shadow-sm'
+                          : 'border-cyan-200 bg-white/60 text-slate-700 hover:bg-white'
+                      )}
+                    >
+                      <span className={clsx(
+                        'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                        gecaEntryRelevantIncrease
+                          ? 'border-cyan-600 bg-cyan-600 text-white'
+                          : 'border-slate-300 bg-white text-transparent'
+                      )}>
+                        <CheckCircle className="h-3.5 w-3.5" />
+                      </span>
+                      Houve aumento relevante da frequência ou fluidez em relação ao hábito intestinal do paciente
+                    </button>
+                  </section>
+
+                  <section className="rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5">
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-extrabold text-red-950">Sinais críticos antes do fluxo</h4>
+                        <p className="mt-1 text-sm text-red-800">Qualquer item presente prioriza avaliação imediata.</p>
+                      </div>
+                      <span className={clsx(
+                        'shrink-0 rounded-full px-2.5 py-1 text-xs font-black',
+                        selectedGecaEntryRedFlags.length > 0 ? 'bg-red-700 text-white' : 'bg-white text-red-800'
+                      )}>
+                        {selectedGecaEntryRedFlags.length} presente(s)
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2" role="group" aria-label="Sinais críticos antes do fluxo de GECA">
+                      {GECA_ENTRY_RED_FLAGS.map((flag) => {
+                        const selected = selectedGecaEntryRedFlags.includes(flag.id)
+                        return (
+                          <motion.button
+                            key={flag.id}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={selected}
+                            onClick={() => toggleSelection(setSelectedGecaEntryRedFlags, flag.id)}
+                            className={clsx(
+                              'flex items-start gap-3 rounded-xl border-2 p-4 text-left text-sm font-semibold leading-relaxed transition-all',
+                              selected
+                                ? 'border-red-500 bg-white text-red-950 shadow-sm ring-4 ring-red-100'
+                                : 'border-red-200 bg-white/60 text-slate-700 hover:border-red-400 hover:bg-white'
+                            )}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className={clsx(
+                              'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                              selected ? 'border-red-600 bg-red-600 text-white' : 'border-slate-300 bg-white text-transparent'
+                            )}>
+                              <AlertTriangle className="h-3.5 w-3.5" />
+                            </span>
+                            <span>{flag.label}</span>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <div className={clsx(
+                    'rounded-2xl border-2 p-4 sm:p-5',
+                    selectedGecaEntryRedFlags.length > 0
+                      ? 'border-red-400 bg-red-100 text-red-950'
+                      : gecaEntryClassification === 'acute'
+                        ? 'border-emerald-400 bg-emerald-100 text-emerald-950'
+                        : gecaEntryClassification === 'persistent'
+                          ? 'border-violet-400 bg-violet-100 text-violet-950'
+                          : gecaEntryClassification === 'not_compatible'
+                            ? 'border-slate-300 bg-slate-100 text-slate-800'
+                            : 'border-amber-300 bg-amber-50 text-amber-950'
+                  )}>
+                    <p className="font-extrabold">
+                      {selectedGecaEntryRedFlags.length > 0
+                        ? 'Prioridade: avaliação imediata dos sinais de alarme'
+                        : gecaEntryClassification === 'acute'
+                          ? 'Definição compatível com diarreia aguda'
+                          : gecaEntryClassification === 'persistent'
+                            ? 'Quadro diarreico confirmado, com duração persistente'
+                            : gecaEntryClassification === 'not_compatible'
+                              ? 'Definição operacional de diarreia não preenchida'
+                              : 'Preencha os dados para classificar o quadro'}
+                    </p>
+                    {gecaEntryClassification === 'persistent' && selectedGecaEntryRedFlags.length === 0 && (
+                      <p className="mt-1 text-sm">O fluxo continuará avaliando hidratação e direcionará posteriormente a investigação etiológica.</p>
+                    )}
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600">
+                    Base clínica: Ministério da Saúde — manejo do paciente com diarreia (Planos A, B e C), com critérios complementares de investigação e segurança antimicrobiana.
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {(selectedGecaEntryRedFlags.length > 0 || selectedGecaEntryOption) && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => {
+                            if (selectedGecaEntryRedFlags.length > 0) {
+                              setSelectedGecaAlarmSigns(
+                                GECA_ENTRY_RED_FLAGS
+                                  .filter((flag) => selectedGecaEntryRedFlags.includes(flag.id))
+                                  .map((flag) => flag.alarmId)
+                              )
+                              handleAnswer('geca_sinais_alarme', 'alerta_inicial')
+                              return
+                            }
+                            if (selectedGecaEntryOption) handleOptionSelect(selectedGecaEntryOption)
+                          }}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            selectedGecaEntryRedFlags.length > 0
+                              ? 'bg-red-700 hover:bg-red-800'
+                              : gecaEntryClassification === 'not_compatible'
+                                ? 'bg-slate-700 hover:bg-slate-800'
+                                : 'bg-blue-700 hover:bg-blue-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {selectedGecaEntryRedFlags.length > 0
+                            ? 'Priorizar avaliação dos sinais de alarme'
+                            : gecaEntryClassification === 'not_compatible'
+                              ? 'Registrar quadro não compatível'
+                              : 'Confirmar quadro e iniciar avaliação'}
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {isGecaDiarrheaProfileStep && (
                 <div className="mb-6 space-y-4" role="radiogroup" aria-label="Padrão da diarreia">
                   {[
@@ -8322,6 +8889,1204 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           whileTap={{ scale: 0.98 }}
                         >
                           Seguir
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaHydrationClassificationStep && (
+                <div className="mb-6 space-y-4" role="radiogroup" aria-label="Classificação do estado de hidratação">
+                  {[
+                    {
+                      value: 'plano_a_sem_desidratacao',
+                      title: 'Plano A — sem desidratação',
+                      description: 'Ativo/alerta, olhos normais, sem sede, mucosa úmida, prega desaparece imediatamente e pulso cheio.',
+                      selectedClass: 'border-emerald-500 bg-emerald-50 ring-emerald-200',
+                      idleClass: 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50',
+                      textClass: 'text-emerald-950',
+                      markerClass: 'bg-emerald-600'
+                    },
+                    {
+                      value: 'plano_b_com_desidratacao',
+                      title: 'Plano B — com desidratação',
+                      description: 'Dois ou mais sinais como irritação/inquietude, olhos fundos, sede intensa, lágrimas ausentes, boca seca, prega lenta ou perda ponderal de até 10%.',
+                      selectedClass: 'border-amber-500 bg-amber-50 ring-amber-200',
+                      idleClass: 'border-amber-200 bg-amber-50/50 hover:border-amber-400 hover:bg-amber-50',
+                      textClass: 'text-amber-950',
+                      markerClass: 'bg-amber-600'
+                    },
+                    {
+                      value: 'plano_c_desidratacao_grave',
+                      title: 'Plano C — desidratação grave',
+                      description: 'Dois ou mais sinais, com ao menos um grave: letargia/coma/hipotonia, incapacidade de beber ou pulso fraco/ausente; também prega muito lenta (>2 s), boca muito seca ou perda ponderal >10%.',
+                      selectedClass: 'border-red-500 bg-red-50 ring-red-200',
+                      idleClass: 'border-red-200 bg-red-50/50 hover:border-red-400 hover:bg-red-50',
+                      textClass: 'text-red-950',
+                      markerClass: 'bg-red-600'
+                    }
+                  ].map((plan) => {
+                    const isSelected = selectedGecaHydrationPlan === plan.value
+                    return (
+                      <motion.button
+                        key={plan.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        onClick={() => setSelectedGecaHydrationPlan(plan.value)}
+                        className={clsx(
+                          'w-full rounded-2xl border-2 p-5 text-left transition-all sm:p-6',
+                          isSelected
+                            ? `${plan.selectedClass} shadow-md ring-4`
+                            : plan.idleClass
+                        )}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                      >
+                        <span className="flex items-start gap-4">
+                          <span
+                            className={clsx(
+                              'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                              isSelected
+                                ? `${plan.markerClass} border-transparent text-white`
+                                : 'border-slate-300 bg-white text-transparent'
+                            )}
+                            aria-hidden="true"
+                          >
+                            <CheckCircle className="h-5 w-5" />
+                          </span>
+                          <span className={clsx('text-sm leading-relaxed sm:text-base', plan.textClass)}>
+                            <strong className="font-extrabold">{plan.title}:</strong>{' '}
+                            {plan.description}
+                          </span>
+                        </span>
+                      </motion.button>
+                    )
+                  })}
+
+                  <p className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm font-semibold text-slate-700">
+                    Na dúvida, adote o plano correspondente ao pior cenário.
+                  </p>
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaHydrationOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaHydrationOption)}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            selectedGecaHydrationPlan === 'plano_c_desidratacao_grave'
+                              ? 'bg-red-700 hover:bg-red-800'
+                              : 'bg-blue-700 hover:bg-blue-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          Seguir com o plano selecionado
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaExamIndicationStep && (
+                <div className="mb-6 space-y-4" role="radiogroup" aria-label="Indicação de exames complementares">
+                  <motion.button
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedGecaExamIndication === 'sem_exames'}
+                    onClick={() => setSelectedGecaExamIndication('sem_exames')}
+                    className={clsx(
+                      'w-full rounded-2xl border-2 p-5 text-left transition-all sm:p-6',
+                      selectedGecaExamIndication === 'sem_exames'
+                        ? 'border-emerald-500 bg-emerald-50 shadow-md ring-4 ring-emerald-200'
+                        : 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50'
+                    )}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <span className="flex items-start gap-4">
+                      <span
+                        className={clsx(
+                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                          selectedGecaExamIndication === 'sem_exames'
+                            ? 'border-transparent bg-emerald-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        )}
+                        aria-hidden="true"
+                      >
+                        <CheckCircle className="h-5 w-5" />
+                      </span>
+                      <span className="text-sm leading-relaxed text-emerald-950 sm:text-base">
+                        <strong className="font-extrabold">Não — sem indicação rotineira:</strong>{' '}
+                        diarreia aquosa aguda, sem gravidade, em paciente hidratado e imunocompetente.
+                      </span>
+                    </span>
+                  </motion.button>
+
+                  <motion.button
+                    type="button"
+                    role="radio"
+                    aria-checked={selectedGecaExamIndication === 'exames_indicados'}
+                    onClick={() => setSelectedGecaExamIndication('exames_indicados')}
+                    className={clsx(
+                      'w-full rounded-2xl border-2 p-5 text-left transition-all sm:p-6',
+                      selectedGecaExamIndication === 'exames_indicados'
+                        ? 'border-amber-500 bg-amber-50 shadow-md ring-4 ring-amber-200'
+                        : 'border-amber-200 bg-amber-50/50 hover:border-amber-400 hover:bg-amber-50'
+                    )}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <span className="flex items-start gap-4">
+                      <span
+                        className={clsx(
+                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                          selectedGecaExamIndication === 'exames_indicados'
+                            ? 'border-transparent bg-amber-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        )}
+                        aria-hidden="true"
+                      >
+                        <CheckCircle className="h-5 w-5" />
+                      </span>
+                      <span className="min-w-0 text-sm leading-relaxed text-amber-950 sm:text-base">
+                        <strong className="block font-extrabold">Sim — considerar exames se houver:</strong>
+                        <span className="mt-2 block space-y-1">
+                          <span className="block">• Febre persistente, sangue/muco, dor intensa, sepse ou desidratação grave.</span>
+                          <span className="block">• Imunossupressão, HIV avançado, transplante, oncologia ou outra condição de alto risco.</span>
+                          <span className="block">• Idade ≥70 anos com fragilidade/comorbidades relevantes.</span>
+                          <span className="block">• Diarreia ≥14 dias, perda ponderal, falha terapêutica ou surto.</span>
+                          <span className="block">• Antibiótico/internação recente, suspeita de C. difficile, cólera ou STEC.</span>
+                        </span>
+                      </span>
+                    </span>
+                  </motion.button>
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaExamIndicationOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaExamIndicationOption)}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            selectedGecaExamIndication === 'exames_indicados'
+                              ? 'bg-amber-600 hover:bg-amber-700'
+                              : 'bg-blue-700 hover:bg-blue-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {selectedGecaExamIndication === 'exames_indicados'
+                            ? 'Selecionar investigação dirigida'
+                            : 'Seguir avaliação terapêutica'}
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaDirectedExamsStep && (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <div className="bg-gradient-to-r from-slate-900 via-blue-900 to-violet-800 p-5 text-white">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h4 className="font-extrabold uppercase tracking-wide">Seleção de exames</h4>
+                        <p className="mt-1 text-sm text-blue-100">
+                          Marque somente os exames indicados pelo quadro clínico e pelo risco epidemiológico.
+                        </p>
+                      </div>
+                      <div className="shrink-0 rounded-xl bg-white/15 px-4 py-2.5 text-center text-sm font-bold">
+                        {selectedGecaDirectedExams.length}
+                        <span className="ml-1">selecionado(s)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 p-5">
+                    <div className="grid gap-4 lg:grid-cols-2">
+                      {GECA_DIRECTED_EXAM_GROUPS.map((group) => {
+                        const selectedCount = group.items.filter((item) => selectedGecaDirectedExams.includes(item.id)).length
+                        return (
+                          <section
+                            key={group.key}
+                            className={clsx(
+                              'rounded-2xl border p-4',
+                              group.tone,
+                              group.key === 'imagem' && 'lg:col-span-2'
+                            )}
+                            aria-labelledby={`geca-exam-group-${group.key}`}
+                          >
+                            <div className="mb-3 flex items-start justify-between gap-3">
+                              <div>
+                                <h5 id={`geca-exam-group-${group.key}`} className="font-extrabold">{group.title}</h5>
+                                <p className="mt-1 text-xs leading-relaxed opacity-80">{group.description}</p>
+                              </div>
+                              <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-black text-slate-700">
+                                {selectedCount}/{group.items.length}
+                              </span>
+                            </div>
+
+                            <div className="space-y-2">
+                              {group.items.map((exam) => {
+                                const checked = selectedGecaDirectedExams.includes(exam.id)
+                                return (
+                                  <label
+                                    key={exam.id}
+                                    className={clsx(
+                                      'flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm transition-all',
+                                      checked
+                                        ? 'border-white bg-white shadow-sm'
+                                        : 'border-transparent hover:border-white/80 hover:bg-white/60'
+                                    )}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => toggleSelection(setSelectedGecaDirectedExams, exam.id)}
+                                      className={clsx(
+                                        'mt-0.5 h-5 w-5 shrink-0 rounded border-slate-300 bg-white',
+                                        group.checkboxClass
+                                      )}
+                                    />
+                                    <span className="font-semibold leading-relaxed">{exam.label}</span>
+                                  </label>
+                                )
+                              })}
+                            </div>
+                          </section>
+                        )
+                      })}
+                    </div>
+
+                    <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGecaDirectedExams([])}
+                        disabled={selectedGecaDirectedExams.length === 0}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Limpar seleção
+                      </button>
+                      <motion.button
+                        type="button"
+                        disabled={selectedGecaDirectedExams.length === 0 || !currentStepData.options?.[0]}
+                        onClick={() => {
+                          const option = currentStepData.options?.[0]
+                          if (option) handleOptionSelect(option)
+                        }}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-3 font-bold text-white shadow-md transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
+                        whileHover={selectedGecaDirectedExams.length > 0 ? { scale: 1.02 } : undefined}
+                        whileTap={selectedGecaDirectedExams.length > 0 ? { scale: 0.98 } : undefined}
+                      >
+                        Prosseguir com {selectedGecaDirectedExams.length} exame(s)
+                        <ChevronRight className="h-5 w-5" />
+                      </motion.button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {isGecaDiarrheaDurationStep && (
+                <div className="mb-6 space-y-4">
+                  <section className="rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-5 sm:p-6">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <label htmlFor="geca-duration-days" className="block font-extrabold text-slate-950">
+                          Há quantos dias começou a diarreia?
+                        </label>
+                        <p className="mt-1 text-sm text-slate-600">
+                          Informe a duração para classificar automaticamente o quadro.
+                        </p>
+                      </div>
+                      <div className="relative w-full sm:w-44">
+                        <input
+                          id="geca-duration-days"
+                          type="text"
+                          inputMode="numeric"
+                          value={gecaDiarrheaDurationDays}
+                          onChange={(event) => {
+                            const sanitized = event.target.value.replace(/\D/g, '').slice(0, 4)
+                            setGecaDiarrheaDurationDays(sanitized)
+                            const days = Number(sanitized)
+                            setSelectedGecaDurationRoute(
+                              sanitized && days >= 1
+                                ? days >= 14 ? 'persistente' : 'aguda'
+                                : ''
+                            )
+                          }}
+                          className="w-full rounded-xl border-2 border-blue-200 bg-white px-4 py-3 pr-14 text-lg font-extrabold text-slate-900 outline-none transition-colors focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                          placeholder="Ex: 5"
+                          aria-describedby="geca-duration-unit"
+                        />
+                        <span id="geca-duration-unit" className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-500">
+                          dias
+                        </span>
+                      </div>
+                    </div>
+
+                    {gecaDiarrheaDurationDays && Number(gecaDiarrheaDurationDays) >= 1 && (
+                      <div className={clsx(
+                        'mt-4 rounded-xl border p-3 text-sm font-bold',
+                        Number(gecaDiarrheaDurationDays) >= 14
+                          ? 'border-violet-200 bg-violet-100 text-violet-950'
+                          : 'border-emerald-200 bg-emerald-100 text-emerald-950'
+                      )}>
+                        {Number(gecaDiarrheaDurationDays) >= 14
+                          ? 'Classificação automática: diarreia persistente (14 dias ou mais).'
+                          : 'Classificação automática: diarreia aguda (menos de 14 dias).'}
+                      </div>
+                    )}
+                  </section>
+
+                  <div className="grid gap-4 lg:grid-cols-2" role="radiogroup" aria-label="Classificação da duração da diarreia">
+                    <motion.button
+                      type="button"
+                      role="radio"
+                      aria-checked={selectedGecaDurationRoute === 'aguda'}
+                      onClick={() => {
+                        if (gecaDiarrheaDurationDays && Number(gecaDiarrheaDurationDays) >= 14) {
+                          setGecaDiarrheaDurationDays('')
+                        }
+                        setSelectedGecaDurationRoute('aguda')
+                      }}
+                      className={clsx(
+                        'rounded-2xl border-2 p-5 text-left transition-all sm:p-6',
+                        selectedGecaDurationRoute === 'aguda'
+                          ? 'border-emerald-500 bg-emerald-50 shadow-md ring-4 ring-emerald-200'
+                          : 'border-emerald-200 bg-emerald-50/50 hover:border-emerald-400 hover:bg-emerald-50'
+                      )}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <span className="flex items-start gap-4">
+                        <span className={clsx(
+                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                          selectedGecaDurationRoute === 'aguda'
+                            ? 'border-transparent bg-emerald-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        )}>
+                          <CheckCircle className="h-5 w-5" />
+                        </span>
+                        <span>
+                          <strong className="block text-base font-extrabold text-emerald-950">Até 13 dias — diarreia aguda</strong>
+                          <span className="mt-2 block text-sm leading-relaxed text-emerald-900">
+                            Mantém o raciocínio de GECA aguda. A próxima etapa avalia indicação de antibiótico.
+                          </span>
+                        </span>
+                      </span>
+                    </motion.button>
+
+                    <motion.button
+                      type="button"
+                      role="radio"
+                      aria-checked={selectedGecaDurationRoute === 'persistente'}
+                      onClick={() => {
+                        if (gecaDiarrheaDurationDays && Number(gecaDiarrheaDurationDays) < 14) {
+                          setGecaDiarrheaDurationDays('')
+                        }
+                        setSelectedGecaDurationRoute('persistente')
+                      }}
+                      className={clsx(
+                        'rounded-2xl border-2 p-5 text-left transition-all sm:p-6',
+                        selectedGecaDurationRoute === 'persistente'
+                          ? 'border-violet-500 bg-violet-50 shadow-md ring-4 ring-violet-200'
+                          : 'border-violet-200 bg-violet-50/50 hover:border-violet-400 hover:bg-violet-50'
+                      )}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                    >
+                      <span className="flex items-start gap-4">
+                        <span className={clsx(
+                          'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                          selectedGecaDurationRoute === 'persistente'
+                            ? 'border-transparent bg-violet-600 text-white'
+                            : 'border-slate-300 bg-white text-transparent'
+                        )}>
+                          <CheckCircle className="h-5 w-5" />
+                        </span>
+                        <span>
+                          <strong className="block text-base font-extrabold text-violet-950">14 dias ou mais — diarreia persistente</strong>
+                          <span className="mt-2 block text-sm leading-relaxed text-violet-900">
+                            Direciona para investigação etiológica: parasitoses, C. difficile, doença inflamatória intestinal, doença celíaca, medicamentos e outras causas não infecciosas.
+                          </span>
+                        </span>
+                      </span>
+                    </motion.button>
+                  </div>
+
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950">
+                    <strong>Atenção:</strong> em menores de 6 meses ou diante de qualquer desidratação, priorize reidratação e avaliação hospitalar, independentemente da duração.
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaDurationOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaDurationOption)}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            selectedGecaDurationRoute === 'persistente'
+                              ? 'bg-violet-700 hover:bg-violet-800'
+                              : 'bg-blue-700 hover:bg-blue-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {selectedGecaDurationRoute === 'persistente'
+                            ? 'Iniciar investigação da diarreia persistente'
+                            : 'Continuar avaliação da GECA aguda'}
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaAntibioticIndicationStep && (
+                <div className="mb-6 space-y-4">
+                  <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950 sm:p-5">
+                    <p className="font-extrabold">Antibiótico não é tratamento de rotina na GECA.</p>
+                    <p className="mt-1">
+                      Marque os critérios presentes. Uma seleção positiva apenas direciona para a triagem obrigatória de STEC/SHU antes da escolha do esquema.
+                    </p>
+                  </div>
+
+                  <section className="rounded-2xl border border-red-200 bg-red-50/60 p-4 sm:p-5">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h4 className="font-extrabold text-red-950">Critérios para considerar antibioticoterapia</h4>
+                        <p className="mt-1 text-sm text-red-800">É possível marcar mais de um critério.</p>
+                      </div>
+                      <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-black text-red-800 shadow-sm">
+                        {selectedGecaAntibioticCriteria.length} selecionado(s)
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2" role="group" aria-label="Critérios clínicos para antibiótico empírico">
+                      {GECA_ANTIBIOTIC_CRITERIA.map((criterion) => {
+                        const selected = selectedGecaAntibioticCriteria.includes(criterion.id)
+                        return (
+                          <motion.button
+                            key={criterion.id}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={selected}
+                            onClick={() => {
+                              setGecaNoAntibioticCriteriaConfirmed(false)
+                              toggleSelection(setSelectedGecaAntibioticCriteria, criterion.id)
+                            }}
+                            className={clsx(
+                              'flex items-start gap-3 rounded-xl border-2 p-4 text-left text-sm font-semibold leading-relaxed transition-all',
+                              selected
+                                ? 'border-red-500 bg-white text-red-950 shadow-sm ring-4 ring-red-100'
+                                : 'border-red-100 bg-white/70 text-slate-800 hover:border-red-300 hover:bg-white'
+                            )}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className={clsx(
+                              'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
+                              selected
+                                ? 'border-red-600 bg-red-600 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            )}>
+                              <CheckCircle className="h-4 w-4" />
+                            </span>
+                            <span>{criterion.label}</span>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <motion.button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={gecaNoAntibioticCriteriaConfirmed}
+                    onClick={() => {
+                      const nextValue = !gecaNoAntibioticCriteriaConfirmed
+                      setGecaNoAntibioticCriteriaConfirmed(nextValue)
+                      if (nextValue) setSelectedGecaAntibioticCriteria([])
+                    }}
+                    className={clsx(
+                      'flex w-full items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all',
+                      gecaNoAntibioticCriteriaConfirmed
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-md ring-4 ring-emerald-200'
+                        : 'border-emerald-200 bg-emerald-50/50 text-emerald-950 hover:border-emerald-400 hover:bg-emerald-50'
+                    )}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <span className={clsx(
+                      'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                      gecaNoAntibioticCriteriaConfirmed
+                        ? 'border-transparent bg-emerald-600 text-white'
+                        : 'border-slate-300 bg-white text-transparent'
+                    )}>
+                      <CheckCircle className="h-5 w-5" />
+                    </span>
+                    <span>
+                      <strong className="block font-extrabold">Nenhum critério clínico presente</strong>
+                      <span className="mt-1 block text-sm leading-relaxed">
+                        Diarreia aquosa aguda não complicada, sem comprometimento sistêmico: manter tratamento de suporte.
+                      </span>
+                    </span>
+                  </motion.button>
+
+                  {selectedGecaAntibioticCriteria.length > 0 && (
+                    <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-950">
+                      Há critério clínico para considerar antibiótico. Antes de prescrever em diarreia sanguinolenta, a próxima etapa deve excluir suspeita de STEC/SHU.
+                    </div>
+                  )}
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaAntibioticOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaAntibioticOption)}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            selectedGecaAntibioticCriteria.length > 0
+                              ? 'bg-red-700 hover:bg-red-800'
+                              : 'bg-blue-700 hover:bg-blue-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {selectedGecaAntibioticCriteria.length > 0
+                            ? 'Prosseguir para triagem de STEC/SHU'
+                            : 'Seguir com tratamento de suporte'}
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaStecScreeningStep && (
+                <div className="mb-6 space-y-4">
+                  <div className="rounded-2xl border-2 border-red-300 bg-red-50 p-4 text-red-950 shadow-sm sm:p-5">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="mt-0.5 h-6 w-6 shrink-0 text-red-700" />
+                      <div>
+                        <p className="font-extrabold">Triagem obrigatória antes do antibiótico</p>
+                        <p className="mt-1 text-sm leading-relaxed">
+                          Na suspeita de STEC/SHU, não iniciar antibiótico empírico nem antiperistáltico até esclarecimento diagnóstico.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <section className="rounded-2xl border border-red-200 bg-white p-4 shadow-sm sm:p-5">
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h4 className="font-extrabold text-slate-950">Marque os achados presentes</h4>
+                        <p className="mt-1 text-sm text-slate-600">Qualquer achado selecionado mantém a suspeita e interrompe a prescrição empírica.</p>
+                      </div>
+                      <span className={clsx(
+                        'w-fit rounded-full px-3 py-1 text-xs font-black',
+                        selectedGecaStecCriteria.length > 0
+                          ? 'bg-red-100 text-red-800'
+                          : 'bg-slate-100 text-slate-600'
+                      )}>
+                        {selectedGecaStecCriteria.length} achado(s)
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 md:grid-cols-2" role="group" aria-label="Critérios de suspeita de STEC ou SHU">
+                      {GECA_STEC_CRITERIA.map((criterion) => {
+                        const selected = selectedGecaStecCriteria.includes(criterion.id)
+                        return (
+                          <motion.button
+                            key={criterion.id}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={selected}
+                            onClick={() => {
+                              setGecaNoStecCriteriaConfirmed(false)
+                              toggleSelection(setSelectedGecaStecCriteria, criterion.id)
+                            }}
+                            className={clsx(
+                              'flex items-start gap-3 rounded-xl border-2 p-4 text-left text-sm font-semibold leading-relaxed transition-all',
+                              selected
+                                ? 'border-red-500 bg-red-50 text-red-950 shadow-sm ring-4 ring-red-100'
+                                : 'border-slate-200 bg-white text-slate-800 hover:border-red-300 hover:bg-red-50/50'
+                            )}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className={clsx(
+                              'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md border-2 transition-colors',
+                              selected
+                                ? 'border-red-600 bg-red-600 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            )}>
+                              <CheckCircle className="h-4 w-4" />
+                            </span>
+                            <span>{criterion.label}</span>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <motion.button
+                    type="button"
+                    role="checkbox"
+                    aria-checked={gecaNoStecCriteriaConfirmed}
+                    onClick={() => {
+                      const nextValue = !gecaNoStecCriteriaConfirmed
+                      setGecaNoStecCriteriaConfirmed(nextValue)
+                      if (nextValue) setSelectedGecaStecCriteria([])
+                    }}
+                    className={clsx(
+                      'flex w-full items-start gap-4 rounded-2xl border-2 p-5 text-left transition-all',
+                      gecaNoStecCriteriaConfirmed
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-950 shadow-md ring-4 ring-emerald-200'
+                        : 'border-emerald-200 bg-emerald-50/50 text-emerald-950 hover:border-emerald-400 hover:bg-emerald-50'
+                    )}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                  >
+                    <span className={clsx(
+                      'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                      gecaNoStecCriteriaConfirmed
+                        ? 'border-transparent bg-emerald-600 text-white'
+                        : 'border-slate-300 bg-white text-transparent'
+                    )}>
+                      <CheckCircle className="h-5 w-5" />
+                    </span>
+                    <span>
+                      <strong className="block font-extrabold">Nenhum achado sugestivo de STEC/SHU</strong>
+                      <span className="mt-1 block text-sm leading-relaxed">
+                        Confirmar ausência dos critérios acima para prosseguir à escolha de esquema dirigido.
+                      </span>
+                    </span>
+                  </motion.button>
+
+                  {selectedGecaStecCriteria.length > 0 && (
+                    <div className="rounded-xl border-2 border-red-400 bg-red-100 p-4 text-sm font-bold leading-relaxed text-red-950">
+                      Suspeita de STEC/SHU mantida: não iniciar antibiótico empírico ou antiperistáltico. Prosseguir com investigação de toxina Shiga, hemólise, plaquetas e função renal.
+                    </div>
+                  )}
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaStecOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaStecOption)}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            selectedGecaStecCriteria.length > 0
+                              ? 'bg-red-700 hover:bg-red-800'
+                              : 'bg-blue-700 hover:bg-blue-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {selectedGecaStecCriteria.length > 0
+                            ? 'Registrar suspeita e não iniciar antibiótico'
+                            : 'Prosseguir para esquema dirigido'}
+                          <ChevronRight className="h-5 w-5" />
+                        </motion.button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
+              {isGecaAntibioticSelectionStep && (
+                <div className="mb-6 space-y-4">
+                  <section className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Idade</p>
+                        <p className="mt-1 font-extrabold text-slate-950">{patient.age} ano(s)</p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 bg-white p-3">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Peso</p>
+                        <p className="mt-1 font-extrabold text-slate-950">
+                          {patient.weight ? `${patient.weight.toLocaleString('pt-BR')} kg` : 'Não informado'}
+                        </p>
+                      </div>
+                      <div className={clsx(
+                        'rounded-xl border p-3',
+                        patient.allergies?.length > 0
+                          ? 'border-amber-300 bg-amber-50'
+                          : 'border-slate-200 bg-white'
+                      )}>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Alergias registradas</p>
+                        <p className="mt-1 font-extrabold text-slate-950">
+                          {patient.allergies?.length > 0 ? patient.allergies.join(', ') : 'Nenhuma informada'}
+                        </p>
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <div className="mb-3">
+                      <h4 className="font-extrabold text-slate-950">Selecione um esquema</h4>
+                      <p className="mt-1 text-sm text-slate-600">
+                        As opções abaixo são referência para disenteria com comprometimento clínico e devem ser ajustadas ao protocolo local.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-2" role="radiogroup" aria-label="Esquema de antibioticoterapia">
+                      {GECA_ANTIBIOTIC_SCHEMES.map((scheme) => {
+                        const selected = selectedGecaAntibioticScheme === scheme.id
+                        const isPediatricStandard = patient.age >= 0.25 && patient.age <= 10 && Boolean(patient.weight && patient.weight <= 30)
+                        const isOlderOrHigherWeight = patient.age > 10 || Boolean(patient.weight && patient.weight > 30)
+                        const recommendation = scheme.id === 'azitromicina_pediatrica' && isPediatricStandard
+                          ? 'Compatível com idade/peso'
+                          : scheme.id === 'ceftriaxona_pediatrica' && isPediatricStandard
+                            ? 'Alternativa pediátrica'
+                            : scheme.id === 'ciprofloxacino_adulto' && isOlderOrHigherWeight
+                              ? 'Compatível com idade/peso'
+                              : scheme.id === 'ceftriaxona_alto_risco_hospitalar' && patient.age < 0.25
+                                ? 'Faixa etária de alto risco'
+                                : ''
+                        const calculatedDose = patient.weight
+                          ? scheme.id === 'azitromicina_pediatrica'
+                            ? `Estimativa pelo peso: ${Math.round(patient.weight * 10)} mg no dia 1; ${Math.round(patient.weight * 5)} mg/dia nos dias 2–5.`
+                            : scheme.id === 'ceftriaxona_pediatrica'
+                              ? `Estimativa pelo peso: ${Math.round(patient.weight * 50)} mg por dose.`
+                              : scheme.id === 'ceftriaxona_alto_risco_hospitalar'
+                                ? `Faixa pelo peso: ${Math.round(patient.weight * 50)}–${Math.round(patient.weight * 100)} mg/dia.`
+                                : ''
+                          : ''
+                        return (
+                          <motion.button
+                            key={scheme.id}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            onClick={() => setSelectedGecaAntibioticScheme(scheme.id)}
+                            className={clsx(
+                              'rounded-2xl border-2 p-5 text-left transition-all',
+                              scheme.tone,
+                              selected
+                                ? 'shadow-md ring-4 ring-blue-200 border-blue-500'
+                                : 'hover:border-blue-400 hover:shadow-sm'
+                            )}
+                            whileHover={{ scale: 1.01 }}
+                            whileTap={{ scale: 0.99 }}
+                          >
+                            <span className="flex items-start gap-3">
+                              <span className={clsx(
+                                'mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-colors',
+                                selected
+                                  ? 'border-transparent bg-blue-700 text-white'
+                                  : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                <CheckCircle className="h-5 w-5" />
+                              </span>
+                              <span className="min-w-0">
+                                <span className="flex flex-wrap items-center gap-2">
+                                  <strong className="font-extrabold">{scheme.title}</strong>
+                                  {recommendation && (
+                                    <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-black text-blue-800 shadow-sm">
+                                      {recommendation}
+                                    </span>
+                                  )}
+                                </span>
+                                <span className="mt-2 block text-sm leading-relaxed"><strong>Indicação:</strong> {scheme.indication}</span>
+                                <span className="mt-2 block rounded-lg bg-white/75 p-3 text-sm font-bold leading-relaxed">{scheme.regimen}</span>
+                                {calculatedDose && (
+                                  <span className="mt-2 block text-xs font-semibold leading-relaxed opacity-80">{calculatedDose}</span>
+                                )}
+                              </span>
+                            </span>
+                          </motion.button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5">
+                    <h4 className="font-extrabold text-amber-950">Confirmações de segurança</h4>
+                    <p className="mt-1 text-sm text-amber-900">Confirme todos os itens antes de registrar o tratamento.</p>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2" role="group" aria-label="Confirmações de segurança da antibioticoterapia">
+                      {GECA_ANTIBIOTIC_SAFETY_CHECKS.map((check) => {
+                        const selected = gecaAntibioticSafetyChecks.includes(check.id)
+                        return (
+                          <button
+                            key={check.id}
+                            type="button"
+                            role="checkbox"
+                            aria-checked={selected}
+                            onClick={() => toggleSelection(setGecaAntibioticSafetyChecks, check.id)}
+                            className={clsx(
+                              'flex items-start gap-3 rounded-xl border p-3 text-left text-sm font-semibold transition-all',
+                              selected
+                                ? 'border-amber-500 bg-white text-amber-950 shadow-sm'
+                                : 'border-amber-200 bg-white/60 text-slate-700 hover:bg-white'
+                            )}
+                          >
+                            <span className={clsx(
+                              'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                              selected
+                                ? 'border-amber-600 bg-amber-600 text-white'
+                                : 'border-slate-300 bg-white text-transparent'
+                            )}>
+                              <CheckCircle className="h-3.5 w-3.5" />
+                            </span>
+                            <span>{check.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+
+                  <div className="rounded-xl border border-slate-300 bg-slate-50 p-4 text-sm leading-relaxed text-slate-700">
+                    Cólera, febre entérica, C. difficile e parasitoses exigem esquemas próprios. Não use estas opções como tratamento de GECA inespecífica nesses cenários.
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <motion.button
+                      type="button"
+                      disabled={
+                        !selectedGecaAntibioticScheme
+                        || gecaAntibioticSafetyChecks.length !== GECA_ANTIBIOTIC_SAFETY_CHECKS.length
+                        || !currentStepData.options?.[0]
+                      }
+                      onClick={() => {
+                        const option = currentStepData.options?.[0]
+                        if (option) handleOptionSelect(option)
+                      }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-bold text-white shadow-md transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none sm:w-auto"
+                      whileHover={selectedGecaAntibioticScheme && gecaAntibioticSafetyChecks.length === GECA_ANTIBIOTIC_SAFETY_CHECKS.length ? { scale: 1.02 } : undefined}
+                      whileTap={selectedGecaAntibioticScheme && gecaAntibioticSafetyChecks.length === GECA_ANTIBIOTIC_SAFETY_CHECKS.length ? { scale: 0.98 } : undefined}
+                    >
+                      Registrar esquema e seguir suporte
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isGecaSupportStep && (
+                <div className="mb-6 space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-extrabold text-emerald-950">Condutas realizadas ou orientadas</h4>
+                          <p className="mt-1 text-sm text-emerald-800">Marque apenas o que faz parte do plano deste paciente.</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-black text-emerald-800">
+                          {selectedGecaSupportActions.length}/{GECA_SUPPORT_ACTIONS.length}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2" role="group" aria-label="Condutas de suporte na GECA">
+                        {GECA_SUPPORT_ACTIONS.map((action) => {
+                          const selected = selectedGecaSupportActions.includes(action.id)
+                          return (
+                            <motion.button
+                              key={action.id}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={selected}
+                              onClick={() => toggleSelection(setSelectedGecaSupportActions, action.id)}
+                              className={clsx(
+                                'flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm font-semibold leading-relaxed transition-all',
+                                selected
+                                  ? 'border-emerald-500 bg-white text-emerald-950 shadow-sm'
+                                  : 'border-emerald-200 bg-white/55 text-slate-700 hover:bg-white'
+                              )}
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              <span className={clsx(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                                selected
+                                  ? 'border-emerald-600 bg-emerald-600 text-white'
+                                  : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              </span>
+                              <span>{action.label}</span>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5">
+                      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <h4 className="font-extrabold text-red-950">Orientações de segurança</h4>
+                          <p className="mt-1 text-sm text-red-800">Confirme os quatro cuidados antes de avaliar a alta.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setGecaSupportSafetyChecks(
+                            gecaSupportSafetyChecks.length === GECA_SUPPORT_SAFETY_CHECKS.length
+                              ? []
+                              : GECA_SUPPORT_SAFETY_CHECKS.map((check) => check.id)
+                          )}
+                          className="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-red-800 shadow-sm transition-colors hover:bg-red-100"
+                        >
+                          {gecaSupportSafetyChecks.length === GECA_SUPPORT_SAFETY_CHECKS.length ? 'Desmarcar todas' : 'Confirmar todas'}
+                        </button>
+                      </div>
+
+                      <div className="space-y-2" role="group" aria-label="Orientações de segurança da GECA">
+                        {GECA_SUPPORT_SAFETY_CHECKS.map((check) => {
+                          const selected = gecaSupportSafetyChecks.includes(check.id)
+                          return (
+                            <motion.button
+                              key={check.id}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={selected}
+                              onClick={() => toggleSelection(setGecaSupportSafetyChecks, check.id)}
+                              className={clsx(
+                                'flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm font-semibold leading-relaxed transition-all',
+                                selected
+                                  ? 'border-red-400 bg-white text-red-950 shadow-sm'
+                                  : 'border-red-200 bg-white/55 text-slate-700 hover:bg-white'
+                              )}
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              <span className={clsx(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                                selected
+                                  ? 'border-red-600 bg-red-600 text-white'
+                                  : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              </span>
+                              <span>{check.label}</span>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className={clsx(
+                    'rounded-xl border p-4 text-sm font-semibold leading-relaxed',
+                    selectedGecaSupportActions.length > 0 && gecaSupportSafetyChecks.length === GECA_SUPPORT_SAFETY_CHECKS.length
+                      ? 'border-blue-200 bg-blue-50 text-blue-950'
+                      : 'border-amber-200 bg-amber-50 text-amber-950'
+                  )}>
+                    {selectedGecaSupportActions.length === 0
+                      ? 'Selecione ao menos uma conduta de suporte para registrar o plano.'
+                      : gecaSupportSafetyChecks.length !== GECA_SUPPORT_SAFETY_CHECKS.length
+                        ? `Confirme as orientações de segurança restantes (${gecaSupportSafetyChecks.length}/${GECA_SUPPORT_SAFETY_CHECKS.length}).`
+                        : 'Plano de suporte registrado e orientações de segurança confirmadas.'}
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <motion.button
+                      type="button"
+                      disabled={
+                        selectedGecaSupportActions.length === 0
+                        || gecaSupportSafetyChecks.length !== GECA_SUPPORT_SAFETY_CHECKS.length
+                        || !currentStepData.options?.[0]
+                      }
+                      onClick={() => {
+                        const option = currentStepData.options?.[0]
+                        if (option) handleOptionSelect(option)
+                      }}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-6 py-3 font-bold text-white shadow-md transition-colors hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none sm:w-auto"
+                      whileHover={selectedGecaSupportActions.length > 0 && gecaSupportSafetyChecks.length === GECA_SUPPORT_SAFETY_CHECKS.length ? { scale: 1.02 } : undefined}
+                      whileTap={selectedGecaSupportActions.length > 0 && gecaSupportSafetyChecks.length === GECA_SUPPORT_SAFETY_CHECKS.length ? { scale: 0.98 } : undefined}
+                    >
+                      Avaliar destino e segurança da alta
+                      <ChevronRight className="h-5 w-5" />
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isGecaDispositionStep && (
+                <div className="mb-6 space-y-4">
+                  <div className="grid gap-4 lg:grid-cols-2">
+                    <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 sm:p-5">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-extrabold text-emerald-950">Critérios obrigatórios para alta</h4>
+                          <p className="mt-1 text-sm text-emerald-800">Todos precisam estar confirmados.</p>
+                        </div>
+                        <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-xs font-black text-emerald-800 shadow-sm">
+                          {gecaDischargeCriteria.length}/{GECA_DISCHARGE_CRITERIA.length}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2" role="group" aria-label="Critérios obrigatórios para alta na GECA">
+                        {GECA_DISCHARGE_CRITERIA.map((criterion) => {
+                          const selected = gecaDischargeCriteria.includes(criterion.id)
+                          return (
+                            <motion.button
+                              key={criterion.id}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={selected}
+                              onClick={() => toggleSelection(setGecaDischargeCriteria, criterion.id)}
+                              className={clsx(
+                                'flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm font-semibold leading-relaxed transition-all',
+                                selected
+                                  ? 'border-emerald-500 bg-white text-emerald-950 shadow-sm'
+                                  : 'border-emerald-200 bg-white/55 text-slate-700 hover:bg-white'
+                              )}
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              <span className={clsx(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                                selected
+                                  ? 'border-emerald-600 bg-emerald-600 text-white'
+                                  : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                <CheckCircle className="h-3.5 w-3.5" />
+                              </span>
+                              <span>{criterion.label}</span>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+                    </section>
+
+                    <section className="rounded-2xl border border-red-200 bg-red-50 p-4 sm:p-5">
+                      <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="font-extrabold text-red-950">Critérios de observação/internação</h4>
+                          <p className="mt-1 text-sm text-red-800">Qualquer item presente impede a alta.</p>
+                        </div>
+                        <span className={clsx(
+                          'shrink-0 rounded-full px-2.5 py-1 text-xs font-black shadow-sm',
+                          gecaAdmissionCriteria.length > 0
+                            ? 'bg-red-700 text-white'
+                            : 'bg-white text-red-800'
+                        )}>
+                          {gecaAdmissionCriteria.length} presente(s)
+                        </span>
+                      </div>
+
+                      <div className="space-y-2" role="group" aria-label="Critérios para observação ou internação na GECA">
+                        {GECA_ADMISSION_CRITERIA.map((criterion) => {
+                          const selected = gecaAdmissionCriteria.includes(criterion.id)
+                          return (
+                            <motion.button
+                              key={criterion.id}
+                              type="button"
+                              role="checkbox"
+                              aria-checked={selected}
+                              onClick={() => toggleSelection(setGecaAdmissionCriteria, criterion.id)}
+                              className={clsx(
+                                'flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm font-semibold leading-relaxed transition-all',
+                                selected
+                                  ? 'border-red-500 bg-white text-red-950 shadow-sm ring-2 ring-red-100'
+                                  : 'border-red-200 bg-white/55 text-slate-700 hover:bg-white'
+                              )}
+                              whileHover={{ scale: 1.01 }}
+                              whileTap={{ scale: 0.99 }}
+                            >
+                              <span className={clsx(
+                                'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2',
+                                selected
+                                  ? 'border-red-600 bg-red-600 text-white'
+                                  : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                <AlertTriangle className="h-3.5 w-3.5" />
+                              </span>
+                              <span>{criterion.label}</span>
+                            </motion.button>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className={clsx(
+                    'rounded-2xl border-2 p-4 sm:p-5',
+                    gecaAdmissionCriteria.length > 0
+                      ? 'border-red-400 bg-red-100 text-red-950'
+                      : gecaDischargeCriteria.length === GECA_DISCHARGE_CRITERIA.length
+                        ? 'border-emerald-400 bg-emerald-100 text-emerald-950'
+                        : 'border-amber-300 bg-amber-50 text-amber-950'
+                  )}>
+                    <p className="font-extrabold">
+                      {gecaAdmissionCriteria.length > 0
+                        ? 'Destino indicado: observação ou internação'
+                        : gecaDischargeCriteria.length === GECA_DISCHARGE_CRITERIA.length
+                          ? 'Critérios completos: paciente elegível para alta — Plano A'
+                          : 'Decisão de destino ainda pendente'}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed">
+                      {gecaAdmissionCriteria.length > 0
+                        ? `${gecaAdmissionCriteria.length} critério(s) hospitalar(es) selecionado(s); a alta está bloqueada.`
+                        : gecaDischargeCriteria.length === GECA_DISCHARGE_CRITERIA.length
+                          ? 'Todos os critérios de alta foram confirmados e nenhum critério hospitalar foi selecionado.'
+                          : `Confirme os critérios de alta restantes (${gecaDischargeCriteria.length}/${GECA_DISCHARGE_CRITERIA.length}) ou marque um critério de observação/internação.`}
+                    </p>
+                  </div>
+
+                  <AnimatePresence initial={false}>
+                    {selectedGecaDispositionOption && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -8 }}
+                        className="flex justify-end pt-2"
+                      >
+                        <motion.button
+                          type="button"
+                          onClick={() => handleOptionSelect(selectedGecaDispositionOption)}
+                          className={clsx(
+                            'inline-flex w-full items-center justify-center gap-2 rounded-xl px-6 py-3 font-bold text-white shadow-md transition-colors sm:w-auto',
+                            gecaAdmissionCriteria.length > 0
+                              ? 'bg-red-700 hover:bg-red-800'
+                              : 'bg-emerald-700 hover:bg-emerald-800'
+                          )}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                        >
+                          {gecaAdmissionCriteria.length > 0
+                            ? 'Encaminhar para observação/internação'
+                            : 'Confirmar alta segura — Plano A'}
                           <ChevronRight className="h-5 w-5" />
                         </motion.button>
                       </motion.div>
@@ -9058,7 +10823,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {isTVPWaitingForVascularStep && (
                     <div className={clsx(
@@ -15290,7 +17055,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

@@ -1250,7 +1250,64 @@ const buildGecaClinicalSummary = (
   const selectedAlarmLabels = Array.isArray(alarmAnswer?.sinaisSelecionadosLabels)
     ? alarmAnswer.sinaisSelecionadosLabels.filter((item): item is string => typeof item === 'string')
     : []
+  const entryAnswer = parseFlowAnswerForSummary(answers.geca_inicio)
+  const entryEvacuations = typeof entryAnswer?.evacuacoesUltimas24h === 'number' ? entryAnswer.evacuacoesUltimas24h : null
+  const entryDurationDays = typeof entryAnswer?.duracaoDias === 'number' ? entryAnswer.duracaoDias : null
+  const entryConsistency = typeof entryAnswer?.consistencia === 'string' ? entryAnswer.consistencia : ''
+  const entryRelevantIncrease = entryAnswer?.aumentoRelevanteEmRelacaoAoHabito === true
+  const entryCriticalLabels = Array.isArray(entryAnswer?.sinaisCriticosLabels)
+    ? entryAnswer.sinaisCriticosLabels.filter((item): item is string => typeof item === 'string')
+    : []
   const planCAnswer = parseFlowAnswerForSummary(answers.geca_plano_c)
+  const directedExamAnswer = parseFlowAnswerForSummary(answers.geca_exames_dirigidos)
+  const selectedDirectedExamLabels = Array.isArray(directedExamAnswer?.examesSelecionadosLabels)
+    ? directedExamAnswer.examesSelecionadosLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const diarrheaDurationAnswer = parseFlowAnswerForSummary(answers.geca_diarreia_persistente)
+  const diarrheaDurationDecision = typeof diarrheaDurationAnswer?.decision === 'string'
+    ? diarrheaDurationAnswer.decision
+    : answers.geca_diarreia_persistente
+  const diarrheaDurationDays = typeof diarrheaDurationAnswer?.duracaoDias === 'number'
+    ? diarrheaDurationAnswer.duracaoDias
+    : null
+  const antibioticIndicationAnswer = parseFlowAnswerForSummary(answers.geca_indicacao_antibiotico)
+  const antibioticIndicationDecision = typeof antibioticIndicationAnswer?.decision === 'string'
+    ? antibioticIndicationAnswer.decision
+    : answers.geca_indicacao_antibiotico
+  const selectedAntibioticCriteriaLabels = Array.isArray(antibioticIndicationAnswer?.criteriosSelecionadosLabels)
+    ? antibioticIndicationAnswer.criteriosSelecionadosLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const stecScreeningAnswer = parseFlowAnswerForSummary(answers.geca_triagem_stec)
+  const stecScreeningDecision = typeof stecScreeningAnswer?.decision === 'string'
+    ? stecScreeningAnswer.decision
+    : answers.geca_triagem_stec
+  const selectedStecCriteriaLabels = Array.isArray(stecScreeningAnswer?.criteriosSelecionadosLabels)
+    ? stecScreeningAnswer.criteriosSelecionadosLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const antibioticSelectionAnswer = parseFlowAnswerForSummary(answers.geca_antibioticos)
+  const antibioticSchemeLabel = typeof antibioticSelectionAnswer?.esquemaSelecionadoLabel === 'string'
+    ? antibioticSelectionAnswer.esquemaSelecionadoLabel
+    : ''
+  const antibioticRegimen = typeof antibioticSelectionAnswer?.posologia === 'string'
+    ? antibioticSelectionAnswer.posologia
+    : ''
+  const supportAnswer = parseFlowAnswerForSummary(answers.geca_suporte_sintomatico)
+  const selectedSupportActionLabels = Array.isArray(supportAnswer?.condutasSelecionadasLabels)
+    ? supportAnswer.condutasSelecionadasLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const supportSafetyLabels = Array.isArray(supportAnswer?.orientacoesSegurancaLabels)
+    ? supportAnswer.orientacoesSegurancaLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const dispositionAnswer = parseFlowAnswerForSummary(answers.geca_destino)
+  const dispositionDecision = typeof dispositionAnswer?.decision === 'string'
+    ? dispositionAnswer.decision
+    : answers.geca_destino
+  const dischargeCriteriaLabels = Array.isArray(dispositionAnswer?.criteriosAltaLabels)
+    ? dispositionAnswer.criteriosAltaLabels.filter((item): item is string => typeof item === 'string')
+    : []
+  const admissionCriteriaLabels = Array.isArray(dispositionAnswer?.criteriosInternacaoLabels)
+    ? dispositionAnswer.criteriosInternacaoLabels.filter((item): item is string => typeof item === 'string')
+    : []
   const planCMonitoring = planCAnswer?.monitorizacaoInicial && typeof planCAnswer.monitorizacaoInicial === 'object'
     ? planCAnswer.monitorizacaoInicial as Record<string, unknown>
     : null
@@ -1334,6 +1391,10 @@ const buildGecaClinicalSummary = (
   ])
 
   const scoreLines = uniqueTextItems([
+    entryEvacuations != null || entryDurationDays != null
+      ? `Porta de entrada: ${entryEvacuations != null ? `${entryEvacuations} evacuação(ões) em 24 horas` : 'frequência não informada'}; ${entryDurationDays != null ? `${entryDurationDays} dia(s) de duração` : 'duração não informada'}; ${entryConsistency === 'amolecidas_liquidas' ? 'fezes amolecidas/líquidas' : 'sem alteração relevante da consistência'}${entryRelevantIncrease ? '; aumento relevante em relação ao hábito' : ''}.`
+      : null,
+    entryCriticalLabels.length > 0 ? `Sinais críticos identificados na porta de entrada: ${entryCriticalLabels.join('; ')}.` : null,
     `Padrão clínico: ${profile}.`,
     `Classificação hídrica: ${hydration}.`,
     typeof planCAnswer?.cristaloideLabel === 'string' && planCAnswer.cristaloideLabel
@@ -1348,10 +1409,34 @@ const buildGecaClinicalSummary = (
     improvementLabels.length > 0 ? `Critérios de melhora registrados: ${improvementLabels.join('; ')}.` : null,
     instabilityLabels.length > 0 ? `Critérios de instabilidade registrados: ${instabilityLabels.join('; ')}.` : null,
     answers.geca_indicacao_exames === 'exames_indicados' ? 'Houve indicação de investigação complementar dirigida.' : null,
-    answers.geca_diarreia_persistente === 'persistente' ? 'Duração igual ou superior a 14 dias, direcionando investigação de diarreia persistente.' : null,
-    answers.geca_indicacao_antibiotico === 'antibiotico_indicado' ? 'Foram reconhecidos critérios clínicos para considerar antibioticoterapia.' : null,
-    answers.geca_indicacao_antibiotico === 'antibiotico_nao_indicado' ? 'Não foram reconhecidos critérios para antibiótico empírico.' : null,
-    answers.geca_triagem_stec === 'suspeita_stec_shu' ? 'Suspeita de STEC/SHU: antibiótico empírico e antiperistáltico contraindicados até esclarecimento.' : null
+    selectedDirectedExamLabels.length > 0
+      ? `Exames complementares selecionados: ${selectedDirectedExamLabels.join('; ')}.`
+      : null,
+    diarrheaDurationDecision === 'persistente'
+      ? `Duração igual ou superior a 14 dias${diarrheaDurationDays != null ? ` (${diarrheaDurationDays} dias)` : ''}, direcionando investigação de diarreia persistente.`
+      : diarrheaDurationDecision === 'aguda'
+        ? `Diarreia aguda com menos de 14 dias${diarrheaDurationDays != null ? ` (${diarrheaDurationDays} dias)` : ''}.`
+        : null,
+    antibioticIndicationDecision === 'antibiotico_indicado'
+      ? `Foram reconhecidos critérios clínicos para considerar antibioticoterapia${selectedAntibioticCriteriaLabels.length > 0 ? `: ${selectedAntibioticCriteriaLabels.join('; ')}` : ''}.`
+      : null,
+    antibioticIndicationDecision === 'antibiotico_nao_indicado' ? 'Não foram reconhecidos critérios para antibiótico empírico.' : null,
+    stecScreeningDecision === 'suspeita_stec_shu'
+      ? `Suspeita de STEC/SHU: antibiótico empírico e antiperistáltico contraindicados até esclarecimento${selectedStecCriteriaLabels.length > 0 ? `; achados: ${selectedStecCriteriaLabels.join('; ')}` : ''}.`
+      : stecScreeningDecision === 'sem_suspeita_stec'
+        ? 'Não foram selecionados achados sugestivos de STEC/SHU na triagem.'
+        : null,
+    antibioticSchemeLabel
+      ? `Esquema antimicrobiano selecionado: ${antibioticSchemeLabel}${antibioticRegimen ? ` — ${antibioticRegimen}` : ''}.`
+      : null,
+    selectedSupportActionLabels.length > 0
+      ? `Condutas de suporte registradas: ${selectedSupportActionLabels.join('; ')}.`
+      : null,
+    dispositionDecision === 'alta_segura'
+      ? `Critérios de alta segura confirmados${dischargeCriteriaLabels.length > 0 ? `: ${dischargeCriteriaLabels.join('; ')}` : ''}.`
+      : dispositionDecision === 'internacao_observacao'
+        ? `Critérios para observação/internação identificados${admissionCriteriaLabels.length > 0 ? `: ${admissionCriteriaLabels.join('; ')}` : ''}.`
+        : null
   ])
 
   const conductLines = uniqueTextItems([
@@ -1377,10 +1462,13 @@ const buildGecaClinicalSummary = (
       ? 'Na reavaliação, persistiram choque ou instabilidade; foi indicada transferência imediata com estabilização e suporte avançado durante a passagem do cuidado.'
       : null,
     path.has('geca_exames_dirigidos')
-      ? 'A investigação complementar foi orientada pela gravidade, padrão das fezes, imunidade e contexto epidemiológico.'
+      ? `A investigação complementar foi orientada pela gravidade, padrão das fezes, imunidade e contexto epidemiológico${selectedDirectedExamLabels.length > 0 ? `, com seleção de: ${selectedDirectedExamLabels.join('; ')}` : ''}.`
       : null,
     path.has('geca_antibioticos')
-      ? 'Foi selecionada antibioticoterapia para cenário específico, após triagem de contraindicações e de suspeita de STEC.'
+      ? `Foi selecionada antibioticoterapia para cenário específico, após triagem de contraindicações e de suspeita de STEC${antibioticSchemeLabel ? `: ${antibioticSchemeLabel}${antibioticRegimen ? ` (${antibioticRegimen})` : ''}` : ''}.`
+      : null,
+    path.has('geca_suporte_sintomatico')
+      ? `Foi definido plano de suporte com hidratação, alimentação e sintomáticos individualizados${selectedSupportActionLabels.length > 0 ? `: ${selectedSupportActionLabels.join('; ')}` : ''}${supportSafetyLabels.length > 0 ? `; orientações de segurança confirmadas: ${supportSafetyLabels.join('; ')}` : ''}.`
       : null,
     path.has('geca_suspeita_stec_shu')
       ? 'Diante da suspeita de STEC/SHU, foi indicada investigação de toxina Shiga, hemólise, plaquetas e função renal, sem antibiótico empírico ou antiperistáltico.'
