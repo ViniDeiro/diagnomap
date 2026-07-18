@@ -114,7 +114,11 @@ import {
 } from '@/lib/pepHiv'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
+  ANAPHYLAXIS_CIRCULATORY_SIGNS,
+  ANAPHYLAXIS_GI_SIGNS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
+  ANAPHYLAXIS_RESPIRATORY_SIGNS,
+  ANAPHYLAXIS_SKIN_MUCOSA_SIGNS,
   AnaphylaxisAdjunctKey,
   buildAnaphylaxisDischargePrescriptionItems,
   calculateAnaphylaxisAdrenalineDose,
@@ -256,7 +260,11 @@ type AnaphylaxisAdjunctPrescriptionPreview = {
   content: string[]
 }
 
-type AnaphylaxisCriteriaKey = 'skin_plus_system' | 'two_systems_after_exposure' | 'known_allergen_hypotension'
+type AnaphylaxisCriteriaKey = 'skin_plus_abc_or_gi' | 'known_allergen_abc'
+
+type AnaphylaxisSystemKey = 'skin' | 'respiratory' | 'circulatory' | 'gastrointestinal'
+
+type AnaphylaxisPreparationKey = 'call_help' | 'remove_trigger' | 'safe_position' | 'monitoring' | 'oxygen' | 'vascular_access'
 
 type AnaphylaxisCriteriaInfo = {
   title: string
@@ -485,26 +493,12 @@ const ANAPHYLAXIS_DIAGNOSTIC_CRITERIA: Array<{
   info: AnaphylaxisCriteriaInfo
 }> = [
   {
-    key: 'skin_plus_system',
-    label: 'Pele/mucosa + comprometimento respiratório ou cardiovascular',
-    detail: 'Início agudo, em minutos ou poucas horas, com prurido, urticária ou angioedema e pelo menos um sinal respiratório ou de má perfusão.',
+    key: 'skin_plus_abc_or_gi',
+    label: 'Pele ou mucosa + alteração respiratória, circulatória ou gastrointestinal grave',
+    detail: 'Início rápido com urticária, rubor, prurido ou angioedema associado a broncoespasmo/hipoxemia, hipotensão/disfunção de órgão-alvo ou cólica intensa e vômitos repetidos.',
     info: {
-      title: 'Pele/mucosa associada a outro sistema',
-      description: 'Use este critério quando houver acometimento de pele ou mucosas junto de sinais respiratórios ou circulatórios.',
-      images: [
-        ANAPHYLAXIS_REFERENCE_IMAGES.skin,
-        ANAPHYLAXIS_REFERENCE_IMAGES.respiratory,
-        ANAPHYLAXIS_REFERENCE_IMAGES.hypotension
-      ]
-    }
-  },
-  {
-    key: 'two_systems_after_exposure',
-    label: 'Dois ou mais sistemas após provável exposição a alérgeno',
-    detail: 'Após exposição provável, marcar quando houver combinação de pele/mucosas, respiratório, redução da PA/má perfusão ou sintomas gastrointestinais persistentes.',
-    info: {
-      title: 'Dois ou mais sistemas envolvidos',
-      description: 'Este critério cobre a combinação rápida de manifestações em sistemas diferentes após contato com provável alérgeno.',
+      title: 'Manifestação cutânea associada a outro sistema',
+      description: 'Este padrão reúne início agudo de pele/mucosa com comprometimento respiratório, circulatório ou gastrointestinal grave — este último sobretudo após agente não alimentar.',
       images: [
         ANAPHYLAXIS_REFERENCE_IMAGES.skin,
         ANAPHYLAXIS_REFERENCE_IMAGES.respiratory,
@@ -514,17 +508,74 @@ const ANAPHYLAXIS_DIAGNOSTIC_CRITERIA: Array<{
     }
   },
   {
-    key: 'known_allergen_hypotension',
-    label: 'Hipotensão após exposição a alérgeno sabidamente conhecido',
-    detail: 'Após exposição conhecida para o paciente, considerar em adultos PAS < 90 mmHg ou queda > 30% da pressão habitual; em crianças, usar ponto de corte por idade.',
+    key: 'known_allergen_abc',
+    label: 'Hipotensão, broncoespasmo ou acometimento laríngeo após desencadeante conhecido/provável',
+    detail: 'O início agudo de qualquer uma dessas três manifestações após exposição altamente provável pode caracterizar anafilaxia mesmo sem alteração de pele.',
     info: {
-      title: 'Hipotensão após alérgeno conhecido',
-      description: 'Mesmo sem manifestação cutânea, hipotensão após contato com alérgeno conhecido já fecha critério diagnóstico.',
+      title: 'Comprometimento de A/B/C sem manifestação cutânea',
+      description: 'Após um desencadeante conhecido ou altamente provável, queda de pressão, broncoespasmo ou edema laríngeo de início agudo podem ser suficientes.',
       images: [
+        ANAPHYLAXIS_REFERENCE_IMAGES.respiratory,
         ANAPHYLAXIS_REFERENCE_IMAGES.hypotension
       ]
     }
   }
+]
+
+const ANAPHYLAXIS_SYSTEM_GROUPS: Array<{
+  key: AnaphylaxisSystemKey
+  title: string
+  eyebrow: string
+  signs: string[]
+  tone: string
+  selectedTone: string
+}> = [
+  {
+    key: 'skin',
+    title: 'Pele e mucosas',
+    eyebrow: 'Sinais visíveis',
+    signs: ANAPHYLAXIS_SKIN_MUCOSA_SIGNS,
+    tone: 'border-fuchsia-200 bg-fuchsia-50/60 text-fuchsia-950',
+    selectedTone: 'border-fuchsia-400 bg-fuchsia-100/80 ring-fuchsia-200'
+  },
+  {
+    key: 'respiratory',
+    title: 'Respiratório e laringe',
+    eyebrow: 'Via aérea e ventilação',
+    signs: ANAPHYLAXIS_RESPIRATORY_SIGNS,
+    tone: 'border-sky-200 bg-sky-50/60 text-sky-950',
+    selectedTone: 'border-sky-400 bg-sky-100/80 ring-sky-200'
+  },
+  {
+    key: 'circulatory',
+    title: 'Circulação e consciência',
+    eyebrow: 'Perfusão e choque',
+    signs: ANAPHYLAXIS_CIRCULATORY_SIGNS,
+    tone: 'border-red-200 bg-red-50/60 text-red-950',
+    selectedTone: 'border-red-400 bg-red-100/80 ring-red-200'
+  },
+  {
+    key: 'gastrointestinal',
+    title: 'Gastrointestinal',
+    eyebrow: 'Sintomas intensos',
+    signs: ANAPHYLAXIS_GI_SIGNS,
+    tone: 'border-amber-200 bg-amber-50/60 text-amber-950',
+    selectedTone: 'border-amber-400 bg-amber-100/80 ring-amber-200'
+  }
+]
+
+const ANAPHYLAXIS_PREPARATION_ITEMS: Array<{
+  key: AnaphylaxisPreparationKey
+  title: string
+  description: string
+  priority: 'essential' | 'conditional'
+}> = [
+  { key: 'call_help', title: 'Acionar ajuda', description: 'Mobilizar equipe e informar que há suspeita de anafilaxia.', priority: 'essential' },
+  { key: 'remove_trigger', title: 'Interromper exposição', description: 'Suspender infusão ou afastar o desencadeante quando isso for seguro.', priority: 'essential' },
+  { key: 'safe_position', title: 'Posicionar com segurança', description: 'Deitar e elevar as pernas; permitir semissentado se houver piora respiratória ao deitar.', priority: 'essential' },
+  { key: 'monitoring', title: 'Monitorizar e repetir ABCDE', description: 'Pressão seriada, oximetria, ECG e reavaliação contínua de A/B/C/D/E.', priority: 'essential' },
+  { key: 'oxygen', title: 'Ofertar oxigênio quando indicado', description: 'Usar em hipoxemia, desconforto importante ou comprometimento sistêmico grave.', priority: 'conditional' },
+  { key: 'vascular_access', title: 'Obter acesso IV/IO', description: 'Preparar cristalóide no choque sem atrasar a adrenalina para conseguir acesso.', priority: 'conditional' }
 ]
 
 type PancreatitisPrescriptionPreview = {
@@ -2221,6 +2272,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [pepHivPrescriptionCopied, setPepHivPrescriptionCopied] = useState(false)
   const [pepHivPrescriptionGenerated, setPepHivPrescriptionGenerated] = useState(false)
   const [selectedPepHivScheme, setSelectedPepHivScheme] = useState<PepHivScheme>('preferencial')
+  const [selectedAnaphylaxisFindings, setSelectedAnaphylaxisFindings] = useState<string[]>([])
+  const [selectedAnaphylaxisPreparation, setSelectedAnaphylaxisPreparation] = useState<AnaphylaxisPreparationKey[]>([])
   const [selectedAnaphylaxisAdjuncts, setSelectedAnaphylaxisAdjuncts] = useState<AnaphylaxisAdjunctKey[]>([])
   const [selectedAnaphylaxisCriteria, setSelectedAnaphylaxisCriteria] = useState<AnaphylaxisCriteriaKey[]>([])
   const [anaphylaxisCriteriaInfo, setAnaphylaxisCriteriaInfo] = useState<AnaphylaxisCriteriaInfo | null>(null)
@@ -2619,6 +2672,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const isPneumoniaSmartCopProtocolStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStep)
     const isPneumoniaPsiStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_psi'
     const isPneumoniaCurbStep = flowchart.id === 'pneumonia' && currentStep === 'pac_calcular_curb65'
+    const isAnaphylaxisRecognitionStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_inicio'
+    const isAnaphylaxisPreparationStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_preparo_imediato'
     const isAnaphylaxisCriteriaStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_criterios_wao'
     const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStep === 'ana_tratamento_adjunto'
     const isPancreatitisBisapStep = flowchart.id === 'pancreatitis' && currentStep === 'pan_bisap'
@@ -2789,6 +2844,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       decision: value || nextStep,
       criteriosSelecionados: selectedAnaphylaxisCriteria,
       diagnosticoProvavel: selectedAnaphylaxisCriteria.length > 0
+    })
+    const anaphylaxisRecognitionAnswer = JSON.stringify({
+      decision: value || nextStep,
+      achadosSelecionados: selectedAnaphylaxisFindings,
+      sistemasAcometidos: ANAPHYLAXIS_SYSTEM_GROUPS
+        .filter((group) => group.signs.some((sign) => selectedAnaphylaxisFindings.includes(sign)))
+        .map((group) => group.key)
+    })
+    const anaphylaxisPreparationAnswer = JSON.stringify({
+      decision: value || nextStep,
+      medidasSelecionadas: selectedAnaphylaxisPreparation,
+      medidasEssenciaisConcluidas: ANAPHYLAXIS_PREPARATION_ITEMS
+        .filter((item) => item.priority === 'essential')
+        .every((item) => selectedAnaphylaxisPreparation.includes(item.key)),
+      percentualConcluido: Math.round((selectedAnaphylaxisPreparation.length / ANAPHYLAXIS_PREPARATION_ITEMS.length) * 100)
     })
     const anaphylaxisAdjunctAnswer = JSON.stringify({
       decision: value || nextStep,
@@ -3062,8 +3132,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                     ? pneumoniaPsiAnswer
                                     : isPneumoniaCurbStep
                                       ? pneumoniaCurbAnswer
-                                    : isAnaphylaxisCriteriaStep
-                                      ? anaphylaxisCriteriaAnswer
+                                    : isAnaphylaxisRecognitionStep
+                                      ? anaphylaxisRecognitionAnswer
+                                      : isAnaphylaxisPreparationStep
+                                        ? anaphylaxisPreparationAnswer
+                                      : isAnaphylaxisCriteriaStep
+                                        ? anaphylaxisCriteriaAnswer
                                       : isAnaphylaxisAdjunctStep
                                         ? anaphylaxisAdjunctAnswer
                                         : isPancreatitisBisapStep
@@ -4116,6 +4190,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isCefaleiaPrescriptionFinalStep = flowchart.id === 'cefaleia' && ['cefaleia_tensional', 'cefaleia_migranea', 'cefaleia_salvas'].includes(currentStepData?.id || '')
   const isAgitacaoPrescriptionFinalStep = flowchart.id === 'agitacao_psicomotora' && ['agitacao_moderada_medicacao_oral', 'agitacao_grave_contencao_quimica'].includes(currentStepData?.id || '')
   const isPepHivPrescriptionFinalStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_iniciar'
+  const isAnaphylaxisRecognitionStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_inicio'
+  const isAnaphylaxisPreparationStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_preparo_imediato'
   const isAnaphylaxisCriteriaStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_criterios_wao'
   const isAnaphylaxisAdrenalineStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_adrenalina_im'
   const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_tratamento_adjunto'
@@ -4133,6 +4209,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isAppendicitisTreatmentFinalStep = flowchart.id === 'appendicitis' && ['apend_cirurgia_emergencia', 'apend_baixo_risco', 'apend_moderado_risco', 'apend_alto_risco'].includes(currentStepData?.id || '')
   const isLombalgiaRiskStep = flowchart.id === 'lombalgia' && currentStepData?.id === 'lomb_red_flags'
   const isLombalgiaConservativeFinalStep = flowchart.id === 'lombalgia' && currentStepData?.id === 'lomb_conservador'
+  const selectedAnaphylaxisSystems = ANAPHYLAXIS_SYSTEM_GROUPS.filter((group) =>
+    group.signs.some((sign) => selectedAnaphylaxisFindings.includes(sign))
+  )
+  const anaphylaxisPreparationPercent = Math.round(
+    (selectedAnaphylaxisPreparation.length / ANAPHYLAXIS_PREPARATION_ITEMS.length) * 100
+  )
+  const completedAnaphylaxisEssentialPreparation = ANAPHYLAXIS_PREPARATION_ITEMS
+    .filter((item) => item.priority === 'essential')
+    .every((item) => selectedAnaphylaxisPreparation.includes(item.key))
   const sinusitisCurrentEtiology: SinusitisEtiology = currentStepData?.id === 'rino_bacteriana'
     ? 'bacterial'
     : currentStepData?.id === 'rino_alergica'
@@ -5222,8 +5307,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           'ESTRIDOR / ENVOLVIMENTO LARÍNGEO',
           '- Oxigênio em alto fluxo.',
           '- Adrenalina nebulizada 1 mg/mL: 3-5 mL pura, conforme protocolo local.',
-          '- Hidrocortisona 100-200 mg IV/IM/IO ou metilprednisolona 40-80 mg IV/IM/IO.',
           '- Acionar suporte avançado de via aérea; considerar IOT precoce ou cricotireoidostomia se piora.',
+          '- Corticoide não é tratamento rotineiro da anafilaxia e nunca deve atrasar adrenalina ou manejo da via aérea.',
           ''
         )
       }
@@ -5242,10 +5327,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       if (key === 'urticaria') {
         content.push(
           'URTICÁRIA / SINTOMAS CUTÂNEOS',
-          '- Fexofenadina 180 mg VO: 1 comprimido/dose; repetir em 20 minutos se necessário.',
-          '- Difenidramina 25-50 mg IM/IV/IO a cada 4-6 horas, máximo 50 mg/dose.',
-          '- Prometazina 25-50 mg IM a cada 4-6 horas, máximo 50 mg/dose.',
-          '- Prednisolona 40 mg VO ou hidrocortisona 100-200 mg IV/IM/IO ou metilprednisolona 40-80 mg IV/IM/IO.',
+          '- Após estabilização de A/B/C, considerar anti-histamínico não sedativo por via oral para prurido ou urticária persistente.',
+          '- Fexofenadina 180 mg VO em adultos; ajustar por idade/peso em crianças.',
+          '- Anti-histamínicos não tratam choque, broncoespasmo ou edema de via aérea e não previnem reação bifásica.',
           ''
         )
       }
@@ -5296,7 +5380,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const content = [
       'ORIENTAÇÕES E PRESCRIÇÃO DOMICILIAR APÓS ANAFILAXIA',
       '',
-      'RECEITA MÉDICA',
+      'OPÇÃO PARA SINTOMAS CUTÂNEOS RESIDUAIS',
       '',
       ...items.flatMap((item, index) => [
         `${index + 1}) ${item.medication} ${item.dosage}`,
@@ -6818,6 +6902,41 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     window.addEventListener('keydown', handleEscape)
     return () => window.removeEventListener('keydown', handleEscape)
   }, [pepHivImageOpen])
+
+  useEffect(() => {
+    if (!isAnaphylaxisRecognitionStep) return
+    const saved = answers[currentStep]
+    if (!saved) {
+      setSelectedAnaphylaxisFindings([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      setSelectedAnaphylaxisFindings(Array.isArray(parsed?.achadosSelecionados) ? parsed.achadosSelecionados : [])
+    } catch {
+      setSelectedAnaphylaxisFindings([])
+    }
+  }, [answers, currentStep, isAnaphylaxisRecognitionStep])
+
+  useEffect(() => {
+    if (!isAnaphylaxisPreparationStep) return
+    const saved = answers[currentStep]
+    if (!saved) {
+      setSelectedAnaphylaxisPreparation([])
+      return
+    }
+    try {
+      const parsed = JSON.parse(saved)
+      const validKeys = ANAPHYLAXIS_PREPARATION_ITEMS.map((item) => item.key)
+      setSelectedAnaphylaxisPreparation(
+        Array.isArray(parsed?.medidasSelecionadas)
+          ? parsed.medidasSelecionadas.filter((item: string) => validKeys.includes(item as AnaphylaxisPreparationKey))
+          : []
+      )
+    } catch {
+      setSelectedAnaphylaxisPreparation([])
+    }
+  }, [answers, currentStep, isAnaphylaxisPreparationStep])
 
   useEffect(() => {
     if (!isAnaphylaxisCriteriaStep) {
@@ -12825,13 +12944,234 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
+              {isAnaphylaxisRecognitionStep && (
+                <div className="mb-6 overflow-hidden rounded-3xl border border-rose-200 bg-gradient-to-br from-white via-rose-50/40 to-red-50 shadow-sm">
+                  <div className="border-b border-rose-100 bg-white/80 px-5 py-4 backdrop-blur-sm">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-rose-600">Mapa de manifestações</p>
+                        <h4 className="mt-1 text-lg font-extrabold text-slate-950">Quais achados estão presentes agora?</h4>
+                        <p className="mt-1 text-sm text-slate-600">Selecione tudo o que foi observado. Os sistemas envolvidos serão resumidos automaticamente.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-800">
+                          {selectedAnaphylaxisFindings.length} achado(s)
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">
+                          {selectedAnaphylaxisSystems.length} sistema(s)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-4 p-5 lg:grid-cols-2">
+                    {ANAPHYLAXIS_SYSTEM_GROUPS.map((group) => {
+                      const selectedCount = group.signs.filter((sign) => selectedAnaphylaxisFindings.includes(sign)).length
+                      return (
+                        <section
+                          key={group.key}
+                          className={clsx(
+                            'rounded-2xl border p-4 transition-all duration-200',
+                            group.tone,
+                            selectedCount > 0 && `ring-2 ${group.selectedTone}`
+                          )}
+                        >
+                          <div className="mb-3 flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] opacity-70">{group.eyebrow}</p>
+                              <h5 className="mt-1 text-base font-extrabold">{group.title}</h5>
+                            </div>
+                            <span className={clsx(
+                              'flex h-8 min-w-8 items-center justify-center rounded-full border bg-white/80 px-2 text-xs font-black',
+                              selectedCount > 0 ? 'border-current' : 'border-white text-slate-500'
+                            )}>
+                              {selectedCount}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {group.signs.map((sign) => {
+                              const checked = selectedAnaphylaxisFindings.includes(sign)
+                              return (
+                                <label
+                                  key={sign}
+                                  className={clsx(
+                                    'flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-2.5 text-sm transition-all',
+                                    checked
+                                      ? 'border-white bg-white font-semibold shadow-sm'
+                                      : 'border-transparent bg-white/45 hover:border-white hover:bg-white/75'
+                                  )}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={checked}
+                                    onChange={() => setSelectedAnaphylaxisFindings((prev) =>
+                                      prev.includes(sign) ? prev.filter((item) => item !== sign) : [...prev, sign]
+                                    )}
+                                    className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                                  />
+                                  <span>{sign}</span>
+                                </label>
+                              )
+                            })}
+                          </div>
+                        </section>
+                      )
+                    })}
+                  </div>
+
+                  <div className="border-t border-rose-100 bg-white/85 p-5">
+                    <div className={clsx(
+                      'mb-4 rounded-2xl border px-4 py-3 text-sm',
+                      selectedAnaphylaxisSystems.some((group) => ['respiratory', 'circulatory'].includes(group.key))
+                        ? 'border-red-200 bg-red-50 text-red-950'
+                        : selectedAnaphylaxisFindings.length > 0
+                          ? 'border-amber-200 bg-amber-50 text-amber-950'
+                          : 'border-slate-200 bg-slate-50 text-slate-600'
+                    )}>
+                      {selectedAnaphylaxisSystems.some((group) => ['respiratory', 'circulatory'].includes(group.key))
+                        ? 'Há achado respiratório ou circulatório selecionado: avance sem retardar as medidas de emergência.'
+                        : selectedAnaphylaxisFindings.length > 0
+                          ? `Sistemas registrados: ${selectedAnaphylaxisSystems.map((group) => group.title).join(', ')}.`
+                          : 'Nenhum achado selecionado. Ainda é possível avançar para revisar exposição e critérios clínicos.'}
+                    </div>
+                    <motion.button
+                      type="button"
+                      onClick={() => handleAnswer('ana_preparo_imediato', 'avaliar')}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      className="flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-rose-600 to-red-700 px-5 py-4 text-left font-bold text-white shadow-lg shadow-rose-200 transition-shadow hover:shadow-xl"
+                    >
+                      <span>
+                        <span className="block text-base">Registrar manifestações e preparar atendimento</span>
+                        <span className="mt-0.5 block text-xs font-medium text-rose-100">A seleção será incorporada ao resumo clínico.</span>
+                      </span>
+                      <ChevronRight className="h-6 w-6" />
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isAnaphylaxisPreparationStep && (
+                <div className="mb-6 overflow-hidden rounded-3xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/40 to-cyan-50 shadow-sm">
+                  <div className="border-b border-blue-100 bg-white/85 px-5 py-4">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-blue-600">Preparação simultânea</p>
+                        <h4 className="mt-1 text-lg font-extrabold text-slate-950">Checklist de segurança e ABCDE</h4>
+                        <p className="mt-1 text-sm text-slate-600">Marque as medidas iniciadas. Nenhuma delas deve atrasar adrenalina quando o diagnóstico for provável.</p>
+                      </div>
+                      <div className="min-w-[190px] rounded-2xl border border-blue-200 bg-blue-50 p-3">
+                        <div className="mb-2 flex items-center justify-between text-xs font-bold text-blue-900">
+                          <span>Preparação registrada</span>
+                          <span>{anaphylaxisPreparationPercent}%</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                          <motion.div
+                            className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                            initial={false}
+                            animate={{ width: `${anaphylaxisPreparationPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 p-5 md:grid-cols-2">
+                    {ANAPHYLAXIS_PREPARATION_ITEMS.map((item, index) => {
+                      const checked = selectedAnaphylaxisPreparation.includes(item.key)
+                      return (
+                        <motion.label
+                          key={item.key}
+                          layout
+                          className={clsx(
+                            'group cursor-pointer rounded-2xl border p-4 transition-all',
+                            checked
+                              ? 'border-blue-300 bg-blue-50 shadow-sm ring-2 ring-blue-100'
+                              : 'border-slate-200 bg-white hover:border-blue-200 hover:shadow-sm'
+                          )}
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className={clsx(
+                              'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-black transition-colors',
+                              checked ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-700'
+                            )}>
+                              {checked ? <CheckCircle className="h-5 w-5" /> : index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h5 className="text-sm font-extrabold text-slate-950">{item.title}</h5>
+                                <span className={clsx(
+                                  'rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide',
+                                  item.priority === 'essential' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'
+                                )}>
+                                  {item.priority === 'essential' ? 'Essencial' : 'Se indicado'}
+                                </span>
+                              </div>
+                              <p className="mt-1 text-sm leading-relaxed text-slate-600">{item.description}</p>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => setSelectedAnaphylaxisPreparation((prev) =>
+                                prev.includes(item.key) ? prev.filter((key) => key !== item.key) : [...prev, item.key]
+                              )}
+                              className="mt-1 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            />
+                          </div>
+                        </motion.label>
+                      )
+                    })}
+                  </div>
+
+                  <div className="border-t border-blue-100 bg-white/85 p-5">
+                    <div className={clsx(
+                      'mb-4 flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm',
+                      completedAnaphylaxisEssentialPreparation
+                        ? 'border-emerald-200 bg-emerald-50 text-emerald-950'
+                        : 'border-amber-200 bg-amber-50 text-amber-950'
+                    )}>
+                      {completedAnaphylaxisEssentialPreparation
+                        ? <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                        : <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />}
+                      <span>
+                        {completedAnaphylaxisEssentialPreparation
+                          ? 'Medidas essenciais registradas. Prossiga para confirmar os critérios clínicos.'
+                          : 'Ainda há medidas essenciais sem registro. Em emergência real, prossiga sem atraso se a anafilaxia for provável.'}
+                      </span>
+                    </div>
+                    <motion.button
+                      type="button"
+                      onClick={() => handleAnswer('ana_criterios_wao', 'preparo_iniciado')}
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      className="flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-4 text-left font-bold text-white shadow-lg shadow-blue-200 transition-shadow hover:shadow-xl"
+                    >
+                      <span>
+                        <span className="block text-base">Registrar preparação e classificar critérios</span>
+                        <span className="mt-0.5 block text-xs font-medium text-blue-100">O checklist ficará disponível no relatório clínico.</span>
+                      </span>
+                      <ChevronRight className="h-6 w-6" />
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+
               {isAnaphylaxisCriteriaStep && (
                 <div className="mb-6 rounded-2xl border border-red-200 bg-white p-5 shadow-sm">
                   <div className="mb-4 space-y-2">
                     <h4 className="text-base font-extrabold text-red-950">Marque os critérios presentes</h4>
                     <p className="text-sm leading-relaxed text-slate-700">
-                      A presença de <strong>qualquer um dos três critérios</strong> abaixo já define anafilaxia provável e deve levar à adrenalina IM imediata.
+                      A presença de <strong>qualquer um dos dois padrões clínicos</strong> abaixo torna a anafilaxia provável e deve levar à adrenalina IM imediata.
                     </p>
+                    {selectedAnaphylaxisSystems.length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-1">
+                        {selectedAnaphylaxisSystems.map((group) => (
+                          <span key={group.key} className="rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-bold text-red-800">
+                            {group.title}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">
@@ -12962,7 +13302,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-950">
                       <h5 className="mb-2 font-extrabold uppercase tracking-wide">Regra utilizada</h5>
                       <p>{anaphylaxisAdrenalineDose.rule}</p>
-                      <p className="mt-2">Repetir até 3 doses a cada 5-15 minutos se resposta insuficiente.</p>
+                      <p className="mt-2">Se A/B/C continuarem alterados, repetir após 5 minutos e reavaliar novamente.</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
                       <h5 className="mb-2 font-extrabold uppercase tracking-wide">ABCDE primário</h5>
@@ -17055,7 +17395,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
@@ -17744,10 +18084,10 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h4 className="text-sm font-bold uppercase tracking-wide text-red-900">
-                        Orientações pós-anafilaxia
+                        Plano de alta pós-anafilaxia
                       </h4>
                       <p className="mt-1 text-sm text-red-900">
-                        Gerar prescrição de alta apenas após estabilização e observação mínima.
+                        As orientações, o plano de ação, o autoinjetor quando indicado e o encaminhamento são essenciais. A opção abaixo serve apenas se persistirem sintomas cutâneos.
                       </p>
                     </div>
                     <button
@@ -17760,7 +18100,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           : 'bg-red-600 text-white hover:bg-red-700'
                       )}
                     >
-                      {anaphylaxisPrescriptionGenerated || hasAnaphylaxisDischargePrescriptionSet(getPersistedAnaphylaxisPrescriptions()) ? 'Prescrição' : 'Gerar prescrição'}
+                      {anaphylaxisPrescriptionGenerated || hasAnaphylaxisDischargePrescriptionSet(getPersistedAnaphylaxisPrescriptions()) ? 'Opção cutânea' : 'Gerar opção cutânea'}
                     </button>
                   </div>
                 </div>

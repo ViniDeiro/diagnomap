@@ -114,15 +114,35 @@ const TVP_DURATION_PLAN_LABELS: Record<string, string> = {
 }
 
 const ANAPHYLAXIS_DIAGNOSTIC_CRITERIA_LABELS: Record<string, string> = {
+  skin_plus_abc_or_gi: 'Pele/mucosa associada a comprometimento respiratório, circulatório ou gastrointestinal grave',
+  known_allergen_abc: 'Hipotensão, broncoespasmo ou envolvimento laríngeo após desencadeante conhecido ou altamente provável',
   skin_plus_system: 'Pele/mucosa associada a comprometimento respiratório ou cardiovascular',
   two_systems_after_exposure: 'Dois ou mais sistemas acometidos após provável exposição a alérgeno',
-  known_allergen_hypotension: 'Hipotensão após exposição a alérgeno sabidamente conhecido'
+  known_allergen_hypotension: 'Hipotensão após exposição a alérgeno conhecido'
 }
 
 const ANAPHYLAXIS_RESPONSE_LABELS: Record<string, string> = {
   resposta: 'resposta clínica adequada',
   sem_resposta: 'ausência de melhora / piora clínica',
-  critico: 'via aérea/choque crítico'
+  critico: 'via aérea/choque crítico',
+  resposta_segunda_dose: 'resposta clínica após a segunda dose',
+  anafilaxia_refrataria: 'persistência de comprometimento respiratório ou circulatório após duas doses IM'
+}
+
+const ANAPHYLAXIS_SYSTEM_LABELS: Record<string, string> = {
+  skin: 'pele e mucosas',
+  respiratory: 'respiratório e laringe',
+  circulatory: 'circulação e consciência',
+  gastrointestinal: 'gastrointestinal'
+}
+
+const ANAPHYLAXIS_PREPARATION_LABELS: Record<string, string> = {
+  call_help: 'Ajuda/equipe de emergência acionada',
+  remove_trigger: 'Exposição ao possível desencadeante interrompida quando possível',
+  safe_position: 'Paciente mantido em posição segura, sem ortostatismo súbito',
+  monitoring: 'Monitorização e reavaliação ABCDE iniciadas',
+  oxygen: 'Oxigênio suplementar iniciado conforme indicação',
+  vascular_access: 'Acesso IV/IO e preparo de cristalóide realizados conforme indicação'
 }
 
 const DENGUE_ALARM_SIGN_LABELS: Record<string, string> = {
@@ -973,6 +993,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     }
 
     if (flowId === 'anafilaxia') {
+      const recognitionData = safeParse(answers.ana_inicio) as {
+        achadosSelecionados?: string[]
+        sistemasAcometidos?: string[]
+      } | null
+      const preparationData = safeParse(answers.ana_preparo_imediato) as {
+        medidasSelecionadas?: string[]
+        medidasEssenciaisConcluidas?: boolean
+        percentualConcluido?: number
+      } | null
       const criteriaData = safeParse(answers.ana_criterios_wao) as {
         criteriosSelecionados?: string[]
         diagnosticoProvavel?: boolean
@@ -981,16 +1010,36 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         tratamentosAdjuntosSelecionados?: string[]
       } | null
 
+      const rawCriteria = criteriaData?.criteriosSelecionados ?? []
+      const rawAdjuncts = adjunctData?.tratamentosAdjuntosSelecionados ?? []
+      const rawFindings = recognitionData?.achadosSelecionados ?? []
+      const rawSystems = recognitionData?.sistemasAcometidos ?? []
+      const rawPreparation = preparationData?.medidasSelecionadas ?? []
       const selectedCriteria = uniqueItems(
-        (Array.isArray(criteriaData?.criteriosSelecionados) ? criteriaData.criteriosSelecionados : [])
-          .map((item) => ANAPHYLAXIS_DIAGNOSTIC_CRITERIA_LABELS[item] || item)
+        rawCriteria.map((item) => ANAPHYLAXIS_DIAGNOSTIC_CRITERIA_LABELS[item] || item)
       )
       const selectedAdjuncts = uniqueItems(
-        (Array.isArray(adjunctData?.tratamentosAdjuntosSelecionados) ? adjunctData.tratamentosAdjuntosSelecionados : [])
-          .map((item) => ANAPHYLAXIS_ADJUNCT_CARDS[item as keyof typeof ANAPHYLAXIS_ADJUNCT_CARDS]?.title || item)
+        rawAdjuncts.map((item) => ANAPHYLAXIS_ADJUNCT_CARDS[item as keyof typeof ANAPHYLAXIS_ADJUNCT_CARDS]?.title || item)
       )
-      const responseValue = answers.ana_reavaliacao_5_10 || ''
+      const selectedAnaphylaxisFindings = uniqueItems(rawFindings)
+      const selectedAnaphylaxisSystems = uniqueItems(
+        rawSystems.map((item) => ANAPHYLAXIS_SYSTEM_LABELS[item] || item)
+      )
+      const selectedPreparationMeasures = uniqueItems(
+        rawPreparation.map((item) => ANAPHYLAXIS_PREPARATION_LABELS[item] || item)
+      )
+      const firstResponseValue = answers.ana_reavaliacao_5_10 || ''
+      const secondResponseValue = answers.ana_reavaliacao_segunda_dose || ''
+      const responseValue = secondResponseValue || firstResponseValue
       const responseText = ANAPHYLAXIS_RESPONSE_LABELS[responseValue] || 'resposta clínica ainda não registrada no fluxo'
+      const observationValue = answers.ana_estratificar_observacao || ''
+      const observationText = observationValue === 'observacao_2h'
+        ? 'faixa de baixo risco, com observação mínima de 2 horas após resolução completa'
+        : observationValue === 'observacao_6h'
+          ? 'faixa de risco intermediário, com observação mínima de 6 horas após resolução completa'
+          : observationValue === 'observacao_12h'
+            ? 'faixa de alto risco, com observação por 12 horas ou mais e avaliação de internação'
+            : 'tempo de observação ainda não estratificado'
       const adrenalineDose = calculateAnaphylaxisAdrenalineDose(patient)
       const doseMg = String(adrenalineDose.doseMg).replace('.', ',')
       const anaphylaxisPrescriptions = uniqueItems(
@@ -1000,13 +1049,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       )
 
       const confirmedAnaphylaxis = Boolean(criteriaData?.diagnosticoProvavel || selectedCriteria.length > 0)
-      const criticalOutcome = currentStep === 'ana_repetir_adrenalina_internacao' || currentStep === 'ana_internacao_via_aerea_choque'
-      const adequateResponse = currentStep === 'ana_observacao_alta' || responseValue === 'resposta'
+      const criticalOutcome = ['ana_repetir_adrenalina_internacao', 'ana_reavaliacao_segunda_dose', 'ana_internacao_via_aerea_choque'].includes(currentStep)
+      const adequateResponse = currentStep === 'ana_observacao_alta' || ['resposta', 'resposta_segunda_dose'].includes(responseValue)
       const noCriteria = currentStep === 'ana_sem_criterios_observar'
 
       const historyText = [
         `Paciente admitido em ${formatDate(patient.admission.date)} com quadro clínico suspeito de anafilaxia.`,
         symptoms.length > 0 ? `Sintomas registrados na admissão: ${symptoms.join('; ')}.` : null,
+        selectedAnaphylaxisFindings.length > 0 ? `Manifestações selecionadas no fluxo: ${selectedAnaphylaxisFindings.join('; ')}.` : null,
+        selectedAnaphylaxisSystems.length > 0 ? `Sistemas envolvidos: ${selectedAnaphylaxisSystems.join(', ')}.` : null,
         observations.length > 0 ? `Observações clínicas adicionais: ${observations.join('; ')}.` : null
       ].filter(Boolean).join(' ')
 
@@ -1017,12 +1068,16 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           : 'Critérios diagnósticos de anafilaxia ainda não foram registrados de forma estruturada no fluxo.'
 
       const initialManagementItems = noCriteria
-        ? ['Mantida observação clínica, revisão da exposição e orientação de retorno imediato se surgirem sintomas respiratórios, circulatórios, laríngeos ou gastrointestinais graves.']
+        ? uniqueItems([
+          'Mantida observação clínica, revisão da exposição e orientação de retorno imediato se surgirem sintomas respiratórios, circulatórios, laríngeos ou gastrointestinais graves.',
+          ...selectedPreparationMeasures
+        ])
         : uniqueItems([
           'Paciente encaminhado imediatamente para a Sala de Emergência.',
           `Aplicada a medicação adrenalina (1:1000 = 1 mg/mL) ${doseMg} mg IM, conforme protocolo institucional.`,
-          'Realizado o ABCDE primário e colocado o paciente em posição de Trendelenburg quando indicado.',
-          'Solicitada monitorização contínua (cardíaca + oximetria) e acesso venoso periférico imediato.'
+          ...selectedPreparationMeasures,
+          selectedPreparationMeasures.length === 0 ? 'Preparação ABCDE ainda não registrada no checklist interativo.' : null,
+          preparationData?.medidasEssenciaisConcluidas === false ? 'Checklist registrou medidas essenciais ainda pendentes no momento do avanço.' : null
         ])
 
       const adjunctItems = noCriteria
@@ -1040,9 +1095,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         ? ['Paciente mantido em observação clínica, com orientação de reavaliação se houver progressão de sintomas.']
         : uniqueItems([
           `Paciente reavaliado e apresentava: ${responseText}.`,
-          adequateResponse ? 'Realizada observação por 4 horas após estabilização clínica.' : null,
-          responseValue === 'sem_resposta' ? 'Devido à ausência de melhora, indicada repetição de adrenalina IM e preparo para internação/suporte avançado.' : null,
+          adequateResponse ? `Estratificação de observação: ${observationText}.` : null,
+          firstResponseValue === 'sem_resposta' ? 'Devido à ausência de melhora após a primeira dose, indicada repetição de adrenalina IM e nova reavaliação em 5 minutos.' : null,
           responseValue === 'critico' ? 'Devido a via aérea/choque crítico, indicado manejo avançado imediato e internação.' : null,
+          responseValue === 'anafilaxia_refrataria' ? 'Persistência de alterações de A/B/C após duas doses adequadas: indicado manejo de anafilaxia refratária em ambiente crítico.' : null,
           criticalOutcome ? 'Paciente não deve ser considerado para liberação ambulatorial nesta etapa do fluxo.' : null
         ])
 
