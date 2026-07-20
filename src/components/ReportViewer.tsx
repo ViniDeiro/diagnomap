@@ -14,6 +14,8 @@ import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import type { PhysicalExamData } from './PhysicalExamForm'
+import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
+import { AVC_CASE_ANSWER_KEY, parseAVCCase } from './AVCFlowchartInteractive'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
@@ -389,8 +391,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
     const formatGender = (gender?: string) => gender?.trim() || 'não informado'
 
-    const buildVitalsList = () => {
-      const vs = patientForReport.admission.vitalSigns || {}
+    const buildVitalsList = (universalRaw?: string) => {
+      const universal = parseUniversalClinicalAssessment(universalRaw)
+      const vs = { ...(patientForReport.admission.vitalSigns || {}), ...(universal?.sinaisVitais || {}) }
       return uniqueItems([
         vs.temperature != null ? `Temperatura: ${vs.temperature} °C` : null,
         vs.heartRate != null ? `Frequência cardíaca: ${vs.heartRate} bpm` : null,
@@ -398,7 +401,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         vs.bloodPressure ? `Pressão arterial: ${vs.bloodPressure} mmHg` : null,
         vs.oxygenSaturation != null ? `Saturação de oxigênio: ${vs.oxygenSaturation}%` : null,
         vs.glucose != null ? `Glicemia capilar: ${vs.glucose} mg/dL` : null,
-        vs.painLevel != null ? `Escala de dor referida: ${vs.painLevel}/10` : null
+        vs.painLevel != null ? `Escala de dor referida: ${vs.painLevel}/10` : null,
+        vs.glasgow != null ? `Escala de Glasgow: ${vs.glasgow}` : null,
+        vs.capillaryRefill != null ? `Enchimento capilar: ${vs.capillaryRefill} s` : null
       ])
     }
 
@@ -430,7 +435,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     const history = selectedState?.history || []
     const currentGroup = selectedState?.group || patientForReport.flowchartState?.group
     const symptoms = uniqueItems(patientForReport.admission.symptoms)
-    const vitalItems = buildVitalsList()
+    const universalAssessment = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+    const vitalItems = buildVitalsList(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+    const universalPhysicalExamItems = summarizeUniversalPhysicalExam(universalAssessment?.exameFisico)
+    const objectiveAssessmentItems = uniqueItems([...vitalItems, ...universalPhysicalExamItems])
     const labItems = buildLabItems()
     const prescriptions = uniqueItems(
       patientForReport.treatment.prescriptions.map((item) => {
@@ -461,7 +469,102 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       ]
     }
 
-    const usesSemiologicReport = !['dengue', 'atendimento_antirrabico', 'itu', 'tvp', 'anafilaxia', 'influenza'].includes(flowId)
+    const usesSemiologicReport = !['dengue', 'atendimento_antirrabico', 'itu', 'tvp', 'anafilaxia', 'influenza', 'avc'].includes(flowId)
+
+    if (flowId === 'avc') {
+      const avc = parseAVCCase(answers[AVC_CASE_ANSWER_KEY])
+      const symptomLabels: Record<string, string> = {
+        face: 'assimetria facial súbita', motor: 'déficit motor ou de coordenação unilateral', sensitivo: 'alteração sensitiva unilateral',
+        fala: 'alteração de fala ou compreensão', visual: 'déficit visual', equilibrio: 'ataxia ou incapacidade de marcha',
+        posterior: 'sinais de circulação posterior', consciencia: 'alteração do nível de consciência'
+      }
+      const vesselLabels: Record<string, string> = {
+        grande_anterior: 'grande vaso da circulação anterior', m2_dominante: 'ramo M2 dominante',
+        medio_distal: 'vaso médio distal ou não dominante', basilar: 'artéria basilar', sem_ogv: 'sem oclusão de grande vaso tratável'
+      }
+      const windowLabels: Record<string, string> = {
+        ate_45h: 'até 4 horas e 30 minutos', '45_6h': 'entre 4 horas e 30 minutos e 6 horas', '6_9h': 'entre 6 e 9 horas',
+        '9_24h': 'entre 9 e 24 horas', mais_24h: 'acima de 24 horas', desconhecida: 'horário desconhecido ou déficit percebido ao acordar'
+      }
+      const recommendationLabels: Record<string, string> = {
+        forte: 'indicação sustentada pelo caminho do protocolo', considerar: 'procedimento a considerar com equipe especializada',
+        sem_beneficio: 'sem benefício demonstrado no cenário registrado', dados_insuficientes: 'dados insuficientes para indicação pelo fluxograma'
+      }
+      const contraindicationLabels: Record<string, string> = {
+        abs_hemorragia: 'hemorragia intracraniana ou sangramento ativo', abs_extensao: 'infarto extenso já definido na imagem',
+        abs_avc_cirurgia: 'AVC recente ou cirurgia intracraniana/medular recente', abs_trauma: 'traumatismo craniano grave recente',
+        abs_coagulacao: 'plaquetopenia ou coagulação fora do limite de segurança', abs_anticoagulante: 'exposição recente a anticoagulante com risco relevante',
+        abs_pa: 'pressão acima do limite apesar de tratamento', abs_sangramento_gi: 'sangramento ou neoplasia gastrointestinal de alto risco',
+        abs_disccao: 'suspeita de dissecção de aorta', abs_endocardite: 'suspeita de endocardite infecciosa',
+        abs_intracraniano: 'antecedente hemorrágico ou tumor intracraniano de alto risco', rel_idade: 'idade avançada na faixa tardia da janela',
+        rel_avc_dm: 'AVC prévio associado a diabetes', rel_nihss: 'NIHSS em extremo de gravidade', rel_melhora: 'melhora precoce com déficit residual',
+        rel_crise: 'crise convulsiva no início', rel_glicemia: 'glicemia extrema corrigida ou em correção', rel_varfarina: 'uso de varfarina dentro do limite laboratorial',
+        rel_procedimento: 'cirurgia de grande porte ou punção não compressível recente', rel_aneurisma: 'aneurisma intracraniano não roto sem tratamento'
+      }
+      const postLysisAlertLabels: Record<string, string> = {
+        nihss: 'aumento do NIHSS em quatro pontos ou mais', glasgow: 'queda do Glasgow em dois pontos ou mais',
+        cefaleia: 'cefaleia intensa, náuseas ou vômitos novos', convulsao: 'crise convulsiva',
+        pa: 'hipertensão refratária', angioedema: 'edema orolingual ou ameaça à via aérea'
+      }
+      const supportiveCareLabels: Record<string, string> = {
+        disfagia: 'jejum até avaliação segura da deglutição', temperatura: 'controle de temperatura',
+        glicemia: 'controle glicêmico', volume: 'correção de hipovolemia ou hipotensão', pressao: 'meta pressórica individualizada',
+        antiagregante: 'antiagregação após exclusão de hemorragia e respeito ao intervalo pós-trombólise',
+        tevc: 'prevenção de tromboembolismo venoso e lesão por pressão', etiologia: 'investigação etiológica e prevenção secundária'
+      }
+      const selectedSymptoms = uniqueItems((avc.symptoms || []).map(item => symptomLabels[item] || item))
+      const selectedContraindications = uniqueItems((avc.thrombolysisContraindications || []).map(item => contraindicationLabels[item] || item))
+      const vesselTerritory = avc.vesselTerritory
+      const thrombectomyRecommendation = avc.thrombectomyRecommendation
+      const timeWindow = avc.timeWindow
+      const labelFor = (labels: Record<string, string>, value?: string) => value ? labels[value] || value : ''
+      const timeDescription = avc.onsetUnknown
+        ? 'O horário exato do início não pôde ser determinado.'
+        : avc.onsetDate || avc.onsetTime
+          ? `O último momento conhecido sem déficit foi registrado como ${[avc.onsetDate, avc.onsetTime].filter(Boolean).join(' às ')}.`
+          : 'O último momento sem déficit não foi documentado.'
+      const reperfusionItems = uniqueItems([
+        avc.receivedThrombolysis ? `Trombólise IV registrada${avc.thrombolytic ? ` com ${avc.thrombolytic === 'tenecteplase' ? 'tenecteplase' : 'alteplase'}` : ''}.` : 'Não consta trombólise IV realizada.',
+        avc.thrombolyticDose,
+        vesselTerritory ? `Angioimagem: ${labelFor(vesselLabels, vesselTerritory)}.` : null,
+        thrombectomyRecommendation ? `Trombectomia: ${labelFor(recommendationLabels, thrombectomyRecommendation)}.` : null,
+        avc.aspects != null ? `ASPECTS: ${avc.aspects}.` : null,
+        avc.pcAspects != null ? `PC-ASPECTS: ${avc.pcAspects}.` : null
+      ])
+      return {
+        title: 'RELATÓRIO CLÍNICO - PROTOCOLO DE AVC AGUDO',
+        sections: [
+          {
+            title: 'Identificação e motivo do atendimento',
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(avc.weight || patientForReport.weight)}. Protocolo ativado por déficit neurológico focal de instalação aguda.`
+          },
+          { title: 'Cronologia e apresentação neurológica', text: `${timeDescription} ${selectedSymptoms.length ? `Foram registrados ${selectedSymptoms.join(', ')}.` : 'Os déficits focais não foram discriminados no registro estruturado.'}` },
+          { title: 'Sinais vitais e exame físico', items: objectiveAssessmentItems.length ? objectiveAssessmentItems : ['Avaliação objetiva inicial não registrada.'] },
+          {
+            title: 'Estratificação neurológica',
+            items: uniqueItems([
+              avc.nihss != null ? `NIHSS: ${avc.nihss}.` : null,
+              avc.disablingDeficit != null ? `Déficit clinicamente incapacitante: ${avc.disablingDeficit ? 'sim' : 'não'}.` : null,
+              avc.premorbidRankin != null ? `Rankin prévio: ${avc.premorbidRankin}.` : null,
+              avc.glucose != null ? `Glicemia inicial: ${avc.glucose} mg/dL${avc.glucoseCorrected ? ', corrigida e reavaliada' : ''}.` : null
+            ])
+          },
+          {
+            title: 'Imagem e janela terapêutica',
+            items: uniqueItems([
+              avc.imagingResult ? `Imagem inicial: ${avc.imagingResult === 'hemorragia' ? 'hemorragia intracraniana' : avc.imagingResult === 'sem_hemorragia' ? 'sem hemorragia demonstrada' : 'resultado inicial inconclusivo'}.` : null,
+              timeWindow ? `Janela classificada como ${labelFor(windowLabels, timeWindow)}.` : null,
+              avc.advancedImaging ? `Imagem avançada: ${avc.advancedImaging === 'mismatch' ? 'padrão favorável de tecido viável' : avc.advancedImaging === 'sem_mismatch' ? 'sem padrão favorável' : 'indisponível'}.` : null
+            ])
+          },
+          { title: 'Segurança da trombólise', items: selectedContraindications.length ? selectedContraindications : ['Nenhuma contraindicação foi selecionada na revisão estruturada.'] },
+          { title: 'Reperfusão e destino', items: reperfusionItems.length ? reperfusionItems : ['Não há reperfusão registrada.'], text: avc.outcome || 'Conduta ainda em andamento.' },
+          ...((avc.postThrombolysisAlerts || []).length ? [{ title: 'Alertas após trombólise', items: (avc.postThrombolysisAlerts || []).map(item => postLysisAlertLabels[item] || item) }] : []),
+          ...((avc.supportiveCare || []).length ? [{ title: 'Cuidados de suporte registrados', items: (avc.supportiveCare || []).map(item => supportiveCareLabels[item] || item) }] : []),
+          { title: 'Médico responsável', text: doctorSignatureText.replace('\n', ' - ') }
+        ]
+      }
+    }
 
     if (usesSemiologicReport) {
       const clinicalSummary = buildClinicalSummary(patientForReport, {
@@ -1033,10 +1136,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const responseValue = secondResponseValue || firstResponseValue
       const responseText = ANAPHYLAXIS_RESPONSE_LABELS[responseValue] || 'resposta clínica ainda não registrada no fluxo'
       const observationValue = answers.ana_estratificar_observacao || ''
-      const observationText = observationValue === 'observacao_2h'
-        ? 'faixa de baixo risco, com observação mínima de 2 horas após resolução completa'
-        : observationValue === 'observacao_6h'
-          ? 'faixa de risco intermediário, com observação mínima de 6 horas após resolução completa'
+      const observationText = observationValue === 'observacao_4h'
+        ? 'faixa de baixo risco, com observação mínima de 4 horas após resolução completa'
+        : observationValue === 'observacao_8h'
+          ? 'faixa de risco intermediário, com observação mínima de 8 horas após resolução completa'
           : observationValue === 'observacao_12h'
             ? 'faixa de alto risco, com observação por 12 horas ou mais e avaliação de internação'
             : 'tempo de observação ainda não estratificado'
@@ -1148,7 +1251,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           {
             title: 'Sinais Vitais / Exame Físico',
-            items: vitalItems.length > 0 ? vitalItems : ['Sem sinais vitais estruturados registrados no sistema.']
+            items: objectiveAssessmentItems.length > 0 ? objectiveAssessmentItems : ['Sem sinais vitais ou exame físico estruturados registrados no sistema.']
           }
         ]
       }
@@ -1299,6 +1402,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
               ].filter(Boolean).join('\n\n')
             },
             {
+              title: 'Avaliação objetiva inicial',
+              items: objectiveAssessmentItems.length > 0 ? objectiveAssessmentItems : ['Sem registro estruturado da avaliação inicial.']
+            },
+            {
               title: 'Tratamento realizado',
               text: [
                 'Durante a permanência na UTI recebeu tratamento de suporte intensivo, monitorização hemodinâmica contínua, reposição volêmica guiada por parâmetros clínicos e laboratoriais, acompanhamento multiprofissional e realização de exames seriados para avaliação evolutiva.',
@@ -1413,6 +1520,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                 : 'Hemograma e demais exames complementares conforme descrito em prontuário, sem dados laboratoriais estruturados disponíveis no sistema.'
             },
             {
+              title: 'Avaliação objetiva inicial',
+              items: objectiveAssessmentItems.length > 0 ? objectiveAssessmentItems : ['Sem registro estruturado da avaliação inicial.']
+            },
+            {
               title: 'Tratamento realizado',
               text: [
                 'Paciente submetido a hidratação venosa conforme protocolo institucional para dengue com sinais de alarme, monitorização clínica seriada, controle de sinais vitais, acompanhamento laboratorial com hemogramas seriados e tratamento sintomático conforme necessidade.',
@@ -1515,6 +1626,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'História Clínica e Evolução',
             text: historyNarrative
+          },
+          {
+            title: 'Sinais Vitais e Exame Físico',
+            items: objectiveAssessmentItems.length > 0 ? objectiveAssessmentItems : ['Sem registro estruturado da avaliação inicial.']
           },
           {
             title: 'Exames Relevantes',

@@ -132,9 +132,96 @@ export const avcFlowchart: EmergencyFlowchart = {
   priority: 'high',
   icon: 'brain',
   color: 'from-purple-600 to-purple-800',
-  initialStep: 'avaliacao_multiprofissional_sala_vermelha',
-  finalSteps: ['tratamento_conservador_antiregante', 'trombolise_iv_alteplase', 'trombectomia'],
+  initialStep: 'avc_ativacao',
+  finalSteps: ['avc_complicacao_trombolise', 'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino'],
   steps: {
+    avc_ativacao: {
+      id: 'avc_ativacao', title: 'Ativação do protocolo de AVC', description: 'Registrar déficits, último momento bem e medidas paralelas.', type: 'question', critical: true, timeSensitive: true,
+      options: [{ text: 'Verificar glicemia', nextStep: 'avc_glicemia', value: 'ativado', critical: true }]
+    },
+    avc_glicemia: {
+      id: 'avc_glicemia', title: 'Verificação glicêmica', description: 'Identificar e corrigir hipoglicemia antes de reinterpretar o déficit.', type: 'question', critical: true,
+      options: [{ text: 'Aplicar triagem neurológica', nextStep: 'avc_triagem', value: 'glicemia_revisada' }]
+    },
+    avc_triagem: {
+      id: 'avc_triagem', title: 'Triagem neurológica rápida', description: 'Registrar face, braço e fala sem excluir apresentações atípicas.', type: 'question', critical: true,
+      options: [{ text: 'Quantificar gravidade', nextStep: 'avc_nihss', value: 'triagem_registrada' }]
+    },
+    avc_nihss: {
+      id: 'avc_nihss', title: 'NIHSS, funcionalidade e peso', description: 'Definir gravidade, caráter incapacitante e condição funcional prévia.', type: 'question', critical: true,
+      options: [{ text: 'Organizar exames', nextStep: 'avc_exames', value: 'gravidade_registrada' }]
+    },
+    avc_exames: {
+      id: 'avc_exames', title: 'Exames iniciais', description: 'Executar imagem e exames paralelos sem atrasar reperfusão.', type: 'question', critical: true,
+      options: [{ text: 'Interpretar imagem', nextStep: 'avc_imagem', value: 'exames_registrados' }]
+    },
+    avc_imagem: {
+      id: 'avc_imagem', title: 'Imagem cerebral inicial', description: 'Separar hemorragia de provável isquemia.', type: 'question', critical: true,
+      options: [
+        { text: 'Hemorragia presente', nextStep: 'avc_hemorragico_destino', value: 'hemorragia', critical: true },
+        { text: 'Sem hemorragia', nextStep: 'avc_janela', value: 'sem_hemorragia' }
+      ]
+    },
+    avc_janela: {
+      id: 'avc_janela', title: 'Janela terapêutica', description: 'Classificar pelo último momento conhecido sem déficit.', type: 'question', critical: true, timeSensitive: true,
+      options: [
+        { text: 'Até 4,5 horas', nextStep: 'avc_trombolise_seguranca', value: 'ate_45h', critical: true },
+        { text: '4,5 a 9 horas ou horário desconhecido', nextStep: 'avc_imagem_avancada', value: 'janela_estendida' },
+        { text: '9 a 24 horas', nextStep: 'avc_vaso', value: '9_24h' },
+        { text: 'Mais de 24 horas', nextStep: 'avc_cuidados_sem_reperfusao', value: 'mais_24h' }
+      ]
+    },
+    avc_imagem_avancada: {
+      id: 'avc_imagem_avancada', title: 'Imagem avançada', description: 'Avaliar tecido viável em janela estendida ou wake-up stroke.', type: 'question', critical: true,
+      options: [
+        { text: 'Padrão favorável', nextStep: 'avc_trombolise_seguranca', value: 'mismatch', critical: true },
+        { text: 'Sem seleção para trombólise IV', nextStep: 'avc_vaso', value: 'sem_mismatch' }
+      ]
+    },
+    avc_trombolise_seguranca: {
+      id: 'avc_trombolise_seguranca', title: 'Segurança da trombólise', description: 'Revisar contraindicações, pressão e incapacidade funcional.', type: 'question', critical: true,
+      options: [
+        { text: 'Elegível para trombólise IV', nextStep: 'avc_trombolitico', value: 'elegivel', critical: true },
+        { text: 'Não elegível para trombólise IV', nextStep: 'avc_vaso', value: 'contraindicada' }
+      ]
+    },
+    avc_trombolitico: {
+      id: 'avc_trombolitico', title: 'Trombólise intravenosa', description: 'Selecionar medicamento e calcular dose por peso.', type: 'medication', critical: true, timeSensitive: true,
+      options: [{ text: 'Iniciar vigilância', nextStep: 'avc_pos_trombolise', value: 'trombolise_realizada', critical: true }]
+    },
+    avc_pos_trombolise: {
+      id: 'avc_pos_trombolise', title: 'Vigilância pós-trombólise', description: 'Monitorar neurologia, pressão e intercorrências.', type: 'question', critical: true,
+      options: [
+        { text: 'Possível complicação', nextStep: 'avc_complicacao_trombolise', value: 'complicacao', critical: true },
+        { text: 'Sem complicação', nextStep: 'avc_vaso', value: 'estavel' }
+      ]
+    },
+    avc_complicacao_trombolise: {
+      id: 'avc_complicacao_trombolise', title: 'Complicação após trombólise', description: 'Interromper infusão quando aplicável e investigar hemorragia ou via aérea.', type: 'result', critical: true, options: []
+    },
+    avc_vaso: {
+      id: 'avc_vaso', title: 'Território vascular', description: 'Identificar oclusão e território na angioimagem.', type: 'question', critical: true,
+      options: [
+        { text: 'Oclusão potencialmente tratável', nextStep: 'avc_trombectomia_criterios', value: 'oclusao_tratavel', critical: true },
+        { text: 'Sem oclusão tratável', nextStep: 'avc_cuidados_sem_reperfusao', value: 'sem_ogv' }
+      ]
+    },
+    avc_trombectomia_criterios: {
+      id: 'avc_trombectomia_criterios', title: 'Critérios de trombectomia', description: 'Integrar território, tempo, ASPECTS, Rankin e NIHSS.', type: 'question', critical: true, requiresSpecialist: true,
+      options: [
+        { text: 'Indicação sustentada', nextStep: 'avc_desfecho_trombectomia', value: 'indicada', critical: true },
+        { text: 'Sem indicação pelo caminho atual', nextStep: 'avc_cuidados_sem_reperfusao', value: 'nao_indicada' }
+      ]
+    },
+    avc_desfecho_trombectomia: {
+      id: 'avc_desfecho_trombectomia', title: 'Trombectomia indicada', description: 'Acionar neurointervenção ou transferência imediata.', type: 'result', critical: true, requiresSpecialist: true, timeSensitive: true, options: []
+    },
+    avc_cuidados_sem_reperfusao: {
+      id: 'avc_cuidados_sem_reperfusao', title: 'Cuidados clínicos e prevenção secundária', description: 'Aplicar suporte e prevenção de complicações conforme reperfusão realizada.', type: 'result', options: []
+    },
+    avc_hemorragico_destino: {
+      id: 'avc_hemorragico_destino', title: 'Hemorragia intracraniana', description: 'Migrar imediatamente para protocolo neurocrítico específico.', type: 'result', critical: true, requiresSpecialist: true, options: []
+    },
     avaliacao_multiprofissional_sala_vermelha: {
       id: 'avaliacao_multiprofissional_sala_vermelha',
       title: 'AVALIAÇÃO MULTIPROFISSIONAL NA SALA VERMELHA',
@@ -1510,13 +1597,13 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p><strong>Leve:</strong> fala frases, FR &lt; 20, FC &lt; 100, PFE &gt; 80%, SatO2 &gt; 95%.</p>
+            <p><strong>Leve:</strong> conversa sem pausas relevantes, permanece confortável em repouso, SatO2 ≥ 94% e PFE/VEF1 acima de 70% do previsto ou melhor pessoal.</p>
           </div>
           <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-            <p><strong>Moderada:</strong> fala frases curtas, FR 20-30, FC 100-120, PFE 50-80%, SatO2 90-95%.</p>
+            <p><strong>Moderada:</strong> fala entrecortada, prefere ficar sentado, maior esforço ventilatório, SatO2 entre 92% e 94% ou PFE/VEF1 entre 50% e 70%.</p>
           </div>
           <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
-            <p><strong>Grave:</strong> fala palavras, FR &gt; 30, FC &gt; 120, PFE &lt; 50%, SatO2 &lt; 90%.</p>
+            <p><strong>Grave:</strong> qualquer um entre incapacidade de falar ou deitar, FR &gt; 30, uso marcante de musculatura acessória, SatO2 &lt; 92%, tórax pouco ventilado ou PFE/VEF1 &lt; 50%.</p>
           </div>
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
             <p><strong>Risco de vida:</strong> exaustão, confusão/sonolência, hipotensão, bradipneia, cianose, tórax silencioso.</p>
@@ -1524,24 +1611,41 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Leve', nextStep: 'asma_tratamento_1h_leve_moderada', value: 'leve' },
+        { text: 'Leve', nextStep: 'asma_tratamento_1h_leve', value: 'leve' },
         { text: 'Moderada', nextStep: 'asma_tratamento_1h_leve_moderada', value: 'moderada' },
         { text: 'Grave', nextStep: 'asma_tratamento_1h_grave_vida', value: 'grave', critical: true },
         { text: 'Risco de vida', nextStep: 'asma_tratamento_1h_grave_vida', value: 'risco_vida', critical: true }
       ]
     },
-    asma_tratamento_1h_leve_moderada: {
-      id: 'asma_tratamento_1h_leve_moderada',
-      title: 'Tratamento 1h Leve/Moderada',
-      description: 'Conduta inicial para exacerbação leve ou moderada.',
+    asma_tratamento_1h_leve: {
+      id: 'asma_tratamento_1h_leve',
+      title: 'Tratamento Inicial da Crise Leve',
+      description: 'Broncodilatação inalatória e reavaliação em curto intervalo.',
       type: 'question',
       content: `
-        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p>Iniciar SABA imediatamente como base do tratamento da exacerbação aguda.</p>
+        <div class="space-y-2 text-sm">
+          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
+            <p>Iniciar broncodilatador inalatório. Quando o serviço utiliza estratégia com formoterol associado a corticoide inalatório, ela pode ser aplicada conforme o plano terapêutico vigente.</p>
+          </div>
+          <p>Reavaliar sintomas, oximetria e medida de fluxo após a sequência inicial, sem esperar uma hora se houver piora.</p>
         </div>
       `,
       options: [
-        { text: 'Broncodilatar com SABA', nextStep: 'asma_saba_leve_moderada', value: 'saba_lm' }
+        { text: 'Iniciar broncodilatação inalatória', nextStep: 'asma_saba_leve_moderada', value: 'leve_broncodilatador' }
+      ]
+    },
+    asma_tratamento_1h_leve_moderada: {
+      id: 'asma_tratamento_1h_leve_moderada',
+      title: 'Tratamento Inicial da Crise Moderada',
+      description: 'Broncodilatador de curta duração, anticolinérgico e corticoide sistêmico precoce.',
+      type: 'question',
+      content: `
+        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
+          <p>Associar broncodilatador de curta duração ao ipratrópio e iniciar corticoide sistêmico, com reavaliações durante a primeira hora.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Iniciar tratamento combinado', nextStep: 'asma_nebulizacao_grave_vida', value: 'moderada_combinada' }
       ]
     },
     asma_saba_leve_moderada: {
@@ -1566,7 +1670,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-blue-50 p-3 rounded border border-blue-200">
-            <p><strong>O2 se SatO2 &lt; 94%.</strong> Alvo 93-95%.</p>
+            <p><strong>Ofertar O2 quando SatO2 estiver abaixo de 92%.</strong> Titular para 93-95% no adulto.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p>Oxigenoterapia suplementar: cateter 1-5 L/min, máscara simples 5-10 L/min ou reservatório 10-15 L/min, com monitorização contínua.</p>
@@ -1607,7 +1711,39 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Oxigenar imediatamente', nextStep: 'asma_o2_grave_vida', value: 'grave_o2', critical: true }
+        { text: 'Checar anafilaxia e iniciar suporte', nextStep: 'asma_checar_anafilaxia', value: 'grave_suporte', critical: true }
+      ]
+    },
+    asma_checar_anafilaxia: {
+      id: 'asma_checar_anafilaxia',
+      title: 'Há Sinais de Anafilaxia Associada?',
+      description: 'Broncoespasmo após exposição pode fazer parte de reação sistêmica e muda a prioridade do tratamento.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="rounded border-l-4 border-red-600 bg-red-50 p-3 text-sm">
+          <p>Procure início abrupto após possível desencadeante, edema de língua/laringe, urticária difusa, hipotensão, síncope ou sintomas intensos em mais de um sistema.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim, anafilaxia provável', nextStep: 'asma_adrenalina_anafilaxia', value: 'anafilaxia_associada', critical: true, requiresImmediateAction: true },
+        { text: 'Não há padrão de anafilaxia', nextStep: 'asma_o2_grave_vida', value: 'sem_anafilaxia' }
+      ]
+    },
+    asma_adrenalina_anafilaxia: {
+      id: 'asma_adrenalina_anafilaxia',
+      title: 'Priorizar Adrenalina IM',
+      description: 'Tratar a anafilaxia sem abandonar o suporte respiratório da crise asmática.',
+      type: 'medication',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="rounded border-l-4 border-red-700 bg-red-50 p-3 text-sm">
+          <p>Aplicar adrenalina intramuscular na coxa conforme idade/peso e protocolo de anafilaxia. Acionar ajuda, monitorizar e seguir simultaneamente com oxigênio e broncodilatação.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Continuar suporte da crise asmática', nextStep: 'asma_o2_grave_vida', value: 'adrenalina_iniciada', critical: true }
       ]
     },
     asma_o2_grave_vida: {
@@ -1665,7 +1801,22 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'cort_grave_ok', critical: true }
+        { text: 'Avaliar indicação de magnésio', nextStep: 'asma_considerar_magnesio', value: 'cort_grave_ok', critical: true }
+      ]
+    },
+    asma_considerar_magnesio: {
+      id: 'asma_considerar_magnesio',
+      title: 'Magnésio EV é Necessário?',
+      description: 'Reservar o adjuvante para crise grave com resposta insuficiente ao tratamento inalatório inicial.',
+      type: 'question',
+      content: `
+        <div class="rounded border border-amber-200 bg-amber-50 p-3 text-sm">
+          <p>Considere magnésio quando persistirem obstrução intensa, hipoxemia ou sinais de gravidade após broncodilatação combinada. Não use de rotina em crises leves.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Sim, administrar magnésio EV', nextStep: 'asma_magnesio_grave_vida', value: 'magnesio_indicado', critical: true },
+        { text: 'Não, seguir para reavaliação', nextStep: 'asma_reavaliacao_1h', value: 'magnesio_nao_indicado' }
       ]
     },
     asma_magnesio_grave_vida: {
@@ -1679,21 +1830,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Considerar beta-agonista SC', nextStep: 'asma_considerar_sc_grave_vida', value: 'mg_grave_ok', critical: true }
-      ]
-    },
-    asma_considerar_sc_grave_vida: {
-      id: 'asma_considerar_sc_grave_vida',
-      title: 'Considerar Beta-Agonista SC',
-      description: 'Resgate adicional se nebulização for insuficiente.',
-      type: 'question',
-      content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p>Considerar Terbutalina SC 0,25-0,5 mg em casos selecionados.</p>
-        </div>
-      `,
-      options: [
-        { text: 'Reavaliar após 1 hora', nextStep: 'asma_reavaliacao_1h', value: 'grave_1h', critical: true }
+        { text: 'Reavaliar resposta clínica', nextStep: 'asma_reavaliacao_1h', value: 'mg_grave_ok', critical: true }
       ]
     },
     asma_reavaliacao_1h: {
@@ -1706,9 +1843,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
           <p><strong>Reavaliar:</strong> sintomas, fala, SatO2, FR, FC, PFE (%) e impressao clinica global.</p>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p><strong>Classificacao apos broncodilatador inicial:</strong></p>
-            <p><strong>Boa:</strong> SatO2 &gt; 95%, FR &lt; 25, FC &lt; 110, fala em frases, PFE &gt; 70%.</p>
-            <p><strong>Incompleta:</strong> SatO2 90-95%, FR 25-30, FC 110-125, fala em frases/palavras, PFE 40-69%.</p>
-            <p><strong>Ma resposta/deterioracao:</strong> PFE &lt; 50%, piora clinica.</p>
+            <p><strong>Resposta marcada:</strong> pouco ou nenhum sintoma, sem broncodilatador na última hora, SatO2 acima de 92% e PFE/VEF1 acima de 70%.</p>
+            <p><strong>Resposta parcial:</strong> ainda há dispneia, necessidade frequente de broncodilatador, SatO2 abaixo de 92% ou PFE/VEF1 entre 50% e 70%.</p>
+            <p><strong>Piora:</strong> intensificação do esforço respiratório, queda da oximetria, alteração de consciência ou PFE/VEF1 abaixo de 50%.</p>
             <p><strong>Ameaca a vida:</strong> SatO2 &lt; 90% com O2, bradicardia, hipotensao, confusao, torax silencioso, cianose.</p>
           </div>
         </div>
@@ -1723,7 +1860,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Definir melhora, resposta parcial ou falha.',
       type: 'question',
       options: [
-        { text: 'Boa resposta (PFE > 70% e melhora clínica)', nextStep: 'asma_resposta_boa', value: 'melhora' },
+        { text: 'Resposta marcada (PFE > 70% e estabilidade)', nextStep: 'asma_resposta_boa', value: 'melhora' },
         { text: 'Resposta incompleta (PFE 50-70% / sintomas persistentes)', nextStep: 'asma_resposta_incompleta', value: 'parcial' },
         { text: 'Má resposta ou deterioração (PFE < 50%)', nextStep: 'asma_resposta_ma', value: 'sem_resposta', critical: true, requiresImmediateAction: true }
       ]
@@ -1782,14 +1919,13 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA/ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p><strong>Adjuvantes intensivos no fluxo:</strong> magnésio IV, salbutamol IV, aminofilina, heliox (se disponível) e VNI/BIPAP em selecionados.</p>
-            <p>Reavaliar frequentemente para necessidade de UTI e intubação.</p>
-            <p><em>Referências:</em> ERS 2013, SBPT 2012, ATS, OpenEvidence.</p>
+            <p><strong>Prioridades:</strong> manter SABA em dose intensiva, ipratrópio, corticoide sistêmico, oxigênio titulado e magnésio EV quando indicado.</p>
+            <p>Aminofilina, heliox e ventilação não invasiva não compõem uma sequência automática de resgate. O foco é reconhecer rapidamente a necessidade de UTI e de via aérea avançada.</p>
           </div>
         </div>
       `,
       options: [
-        { text: 'Iniciar terapias adjuvantes de 2ª linha', nextStep: 'asma_resgate_magnesio', value: 'resgate' },
+        { text: 'Otimizar terapia e avaliar UTI', nextStep: 'asma_resgate_magnesio', value: 'resgate' },
         { text: 'Fadiga, hipercapnia, alteração de consciência ou piora rápida', nextStep: 'asma_falencia_respiratoria', value: 'falencia', critical: true, requiresImmediateAction: true }
       ]
     },
@@ -1805,66 +1941,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Seguir para próxima terapia de resgate', nextStep: 'asma_resgate_beta_iv', value: 'magnesio_ok' }
-      ]
-    },
-    asma_resgate_beta_iv: {
-      id: 'asma_resgate_beta_iv',
-      title: 'Salbutamol IV',
-      description: 'Considerar quando broncodilatação inalatória é insuficiente.',
-      type: 'question',
-      content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Salbutamol IV:</strong> bolus 0,1-0,2 mcg/kg + infusão 0,1-0,2 mcg/kg/min (conforme protocolo institucional).</p>
-          <p>Requer monitorizacao cardiaca continua e vigilancia de lactato/potassio.</p>
-        </div>
-      `,
-      options: [
-        { text: 'Seguir para próxima terapia de resgate', nextStep: 'asma_resgate_aminofilina', value: 'beta_iv_ok' }
-      ]
-    },
-    asma_resgate_aminofilina: {
-      id: 'asma_resgate_aminofilina',
-      title: 'Aminofilina',
-      description: 'Opção de resgate em centros com experiência e monitorização.',
-      type: 'question',
-      content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Aminofilina:</strong> ataque 5-6 mg/kg IV em 20-30 min, seguido de manutenção 0,5-0,7 mg/kg/h.</p>
-          <p>Evitar em arritmias e monitorar níveis séricos/efeitos adversos.</p>
-        </div>
-      `,
-      options: [
-        { text: 'Seguir para próxima terapia de resgate', nextStep: 'asma_resgate_heliox', value: 'aminofilina_ok' }
-      ]
-    },
-    asma_resgate_heliox: {
-      id: 'asma_resgate_heliox',
-      title: 'Heliox se disponível',
-      description: 'Adjuvante para reduzir trabalho respiratório em refratários.',
-      type: 'question',
-      content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p>Considerar <strong>heliox</strong> em pacientes com broncoespasmo grave refratário, conforme disponibilidade local.</p>
-        </div>
-      `,
-      options: [
-        { text: 'Seguir para suporte ventilatório não invasivo', nextStep: 'asma_resgate_vni', value: 'heliox_ok' }
-      ]
-    },
-    asma_resgate_vni: {
-      id: 'asma_resgate_vni',
-      title: 'Considerar VNI',
-      description: 'Tentativa criteriosa em pacientes selecionados.',
-      type: 'question',
-      content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p>VNI/BIPAP pode ser tentativa temporária em paciente cooperativo, hemodinamicamente estável e sem contraindicação.</p>
-          <p>Não atrasar intubação se houver piora clínica.</p>
-        </div>
-      `,
-      options: [
-        { text: 'Reavaliar necessidade de UTI', nextStep: 'asma_decisao_uti', value: 'vni_reavaliar' }
+        { text: 'Reavaliar necessidade de UTI', nextStep: 'asma_decisao_uti', value: 'magnesio_ok' }
       ]
     },
     asma_decisao_uti: {
@@ -2037,7 +2114,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-green-50 p-3 rounded border border-green-200">
-            <p><strong>Critérios de alta:</strong> PFE &gt; 70%, SatO2 &gt; 94% em ar ambiente, sintomas mínimos, intervalo do beta-2 &lt; 4/4h e prescrição adequada.</p>
+            <p><strong>Critérios de alta:</strong> sintomas mínimos, sem necessidade de resgate na última hora, SatO2 &gt; 92% em ar ambiente, PFE/VEF1 &gt; 70%, medicação disponível, técnica revisada e retorno seguro.</p>
           </div>
         </div>
       `,
@@ -7170,8 +7247,8 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Baixo risco — considerar alta após pelo menos 2 h', nextStep: 'ana_observacao_alta', value: 'observacao_2h' },
-        { text: 'Risco intermediário — observar por pelo menos 6 h', nextStep: 'ana_observacao_alta', value: 'observacao_6h' },
+        { text: 'Baixo risco — observar por pelo menos 4 h', nextStep: 'ana_observacao_alta', value: 'observacao_4h' },
+        { text: 'Risco intermediário — observar por pelo menos 8 h', nextStep: 'ana_observacao_alta', value: 'observacao_8h' },
         { text: 'Alto risco — observar 12 h ou mais / internar', nextStep: 'ana_observacao_prolongada', value: 'observacao_12h', critical: true }
       ]
     },

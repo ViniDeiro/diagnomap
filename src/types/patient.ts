@@ -102,6 +102,11 @@ export interface PatientFormData {
         glucose?: string
         [key: string]: unknown
     }
+    initialClinicalAssessment?: {
+        savedAt: string
+        sinaisVitais: Record<string, unknown>
+        exameFisico: unknown
+    }
 }
 
 export interface DashboardStats {

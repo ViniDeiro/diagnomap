@@ -35,6 +35,8 @@ import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, Em
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
+import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
+import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import TEPAssessment from './TEPAssessment'
 import {
   INFLUENZA_SEVERITY_SIGNS,
@@ -574,8 +576,8 @@ const ANAPHYLAXIS_PREPARATION_ITEMS: Array<{
   { key: 'remove_trigger', title: 'Interromper exposição', description: 'Suspender infusão ou afastar o desencadeante quando isso for seguro.', priority: 'essential' },
   { key: 'safe_position', title: 'Posicionar com segurança', description: 'Deitar e elevar as pernas; permitir semissentado se houver piora respiratória ao deitar.', priority: 'essential' },
   { key: 'monitoring', title: 'Monitorizar e repetir ABCDE', description: 'Pressão seriada, oximetria, ECG e reavaliação contínua de A/B/C/D/E.', priority: 'essential' },
-  { key: 'oxygen', title: 'Ofertar oxigênio quando indicado', description: 'Usar em hipoxemia, desconforto importante ou comprometimento sistêmico grave.', priority: 'conditional' },
-  { key: 'vascular_access', title: 'Obter acesso IV/IO', description: 'Preparar cristalóide no choque sem atrasar a adrenalina para conseguir acesso.', priority: 'conditional' }
+  { key: 'oxygen', title: 'Ofertar oxigênio quando indicado', description: 'Usar quando SatO2 estiver abaixo de 92%, houver desconforto importante ou comprometimento sistêmico grave.', priority: 'conditional' },
+  { key: 'vascular_access', title: 'Obter acessos IV/IO', description: 'Se possível, obter dois acessos e preparar cristalóide no choque, sem atrasar adrenalina para conseguir acesso.', priority: 'conditional' }
 ]
 
 type PancreatitisPrescriptionPreview = {
@@ -2132,6 +2134,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
 }) => {
   const resolveCurrentStep = useCallback((step?: string) => {
     if (step && flowchart.steps[step]) return step
+    if (flowchart.id === 'asthma' && step) {
+      const legacyAsthmaStep: Record<string, string> = {
+        asma_considerar_sc_grave_vida: 'asma_reavaliacao_1h',
+        asma_resgate_beta_iv: 'asma_decisao_uti',
+        asma_resgate_aminofilina: 'asma_decisao_uti',
+        asma_resgate_heliox: 'asma_decisao_uti',
+        asma_resgate_vni: 'asma_decisao_uti'
+      }
+      const migratedStep = legacyAsthmaStep[step]
+      if (migratedStep && flowchart.steps[migratedStep]) return migratedStep
+    }
     if (flowchart.steps[flowchart.initialStep]) return flowchart.initialStep
     return Object.keys(flowchart.steps)[0]
   }, [flowchart.initialStep, flowchart.steps])
@@ -6055,8 +6068,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (value === null) return { tone: 'slate', text: 'Aguardando preenchimento' }
 
     if (key === 'sato2' || key === 'sato2Re') {
-      if (value < 90) return { tone: 'red', text: 'Hipoxemia grave' }
-      if (value <= 95) return { tone: 'amber', text: 'Hipoxemia / resposta incompleta' }
+      if (value < 92) return { tone: 'red', text: 'Hipoxemia com critério de gravidade' }
+      if (value < 94) return { tone: 'amber', text: 'Oxigenação limítrofe' }
       return { tone: 'emerald', text: 'Saturação adequada' }
     }
 
@@ -6073,8 +6086,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
 
     if (key === 'pfe' || key === 'pfeRe') {
-      if (value < 40) return { tone: 'red', text: 'PFE grave (<40%)' }
-      if (value <= 69) return { tone: 'amber', text: 'PFE moderado (40–69%)' }
+      if (value < 50) return { tone: 'red', text: 'PFE grave (<50%)' }
+      if (value <= 70) return { tone: 'amber', text: 'PFE intermediário (50–70%)' }
       return { tone: 'emerald', text: 'PFE favorável (≥70%)' }
     }
 
@@ -6194,16 +6207,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null && pfe !== null) {
       const ameacaVida = flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)
       if (ameacaVida) return [pick('asma_tratamento_1h_grave_vida')].filter(Boolean) as EmergencyOption[]
-      const grave = fr > 30 || fc > 120 || sat < 90 || pfe < 40 || flags.falaPalavras
+      const grave = fr > 30 || fc > 120 || sat < 92 || pfe < 50 || flags.falaPalavras || flags.incapazFrases || flags.usoMusculatura
       if (grave) return [pick('asma_tratamento_1h_grave_vida')].filter(Boolean) as EmergencyOption[]
-      const moderada = (fr >= 25 && fr <= 30) || (sat >= 90 && sat < 95) || (pfe >= 40 && pfe <= 69) || flags.incapazFrases || flags.usoMusculatura
-      return [pick(moderada ? 'asma_tratamento_1h_leve_moderada' : 'asma_tratamento_1h_leve_moderada')].filter(Boolean) as EmergencyOption[]
+      const moderada = (fr >= 25 && fr <= 30) || (sat >= 92 && sat < 94) || (pfe >= 50 && pfe <= 70)
+      return [pick(moderada ? 'asma_tratamento_1h_leve_moderada' : 'asma_tratamento_1h_leve')].filter(Boolean) as EmergencyOption[]
     }
 
     if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
-      const melhora = pfeRe > 70 && satRe >= 94 && frRe < 25 && reFlags.melhoraClinica
+      const melhora = pfeRe > 70 && satRe > 92 && frRe < 25 && reFlags.melhoraClinica && !reFlags.necessidadeBroncoRepetido
       if (melhora) return [pick('asma_resposta_boa')].filter(Boolean) as EmergencyOption[]
-      const parcial = (pfeRe >= 40 && pfeRe <= 69) || (satRe >= 90 && satRe < 94) || reFlags.necessidadeBroncoRepetido
+      const parcial = (pfeRe >= 50 && pfeRe <= 70) || satRe <= 92 || reFlags.necessidadeBroncoRepetido
       if (parcial) return [pick('asma_resposta_incompleta')].filter(Boolean) as EmergencyOption[]
       return [pick('asma_resposta_ma')].filter(Boolean) as EmergencyOption[]
     }
@@ -6346,10 +6359,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       if (flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)) {
         return `Ameaça à vida: sinais críticos e/ou PaCO2 ${paco2 ?? '--'} indicam risco de falência respiratória.`
       }
-      if (fr > 30 || fc > 120 || sat < 90 || pfe < 40 || flags.falaPalavras) {
+      if (fr > 30 || fc > 120 || sat < 92 || pfe < 50 || flags.falaPalavras || flags.incapazFrases || flags.usoMusculatura) {
         return `Crise grave: FR ${fr}, FC ${fc}, SatO2 ${sat}% e PFE ${pfe}% sugerem necessidade de manejo agressivo.`
       }
-      if ((fr >= 25 && fr <= 30) || (sat >= 90 && sat < 95) || (pfe >= 40 && pfe <= 69) || flags.incapazFrases || flags.usoMusculatura) {
+      if ((fr >= 25 && fr <= 30) || (sat >= 92 && sat < 94) || (pfe >= 50 && pfe <= 70)) {
         return `Crise moderada: parâmetros intermediários com necessidade de tratamento intensivo no PS.`
       }
       return `Crise leve: parâmetros sem critérios de gravidade imediata.`
@@ -7361,6 +7374,39 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           <p className="text-gray-600">Step não encontrado: {currentStep}</p>
         </div>
       </div>
+    )
+  }
+
+  if (!answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]) {
+    return (
+      <UniversalClinicalAssessment
+        patient={patient}
+        flowchartName={flowchart.name}
+        savedValue={answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]}
+        onBack={onBack}
+        onSave={(assessment: UniversalClinicalAssessmentData) => {
+          const updatedAnswers = {
+            ...answers,
+            [UNIVERSAL_ASSESSMENT_ANSWER_KEY]: JSON.stringify(assessment)
+          }
+          setAnswers(updatedAnswers)
+          onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+        }}
+      />
+    )
+  }
+
+  if (flowchart.id === 'avc') {
+    return (
+      <AVCFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+      />
     )
   }
 

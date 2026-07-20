@@ -100,7 +100,9 @@ class PatientService {
       flowchartState: {
         currentStep: 'start',
         history: [],
-        answers: {},
+        answers: formData.initialClinicalAssessment
+          ? { __avaliacao_clinica_inicial: JSON.stringify(formData.initialClinicalAssessment) }
+          : {},
         progress: 0,
         lastUpdate: now
       },

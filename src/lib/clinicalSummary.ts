@@ -3,6 +3,7 @@ import type { Patient } from '@/types/patient'
 import type { EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
 import { getOseltamivirDoseText } from '@/lib/influenza'
 import { getPneumoniaSmartCopRisk } from '@/lib/pneumonia'
+import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from '@/components/UniversalClinicalAssessment'
 
 export type ClinicalSummaryData = {
   chiefComplaint: string
@@ -1617,7 +1618,16 @@ export function buildClinicalSummary(
     .map((entry) => `${entry.step.title}: ${entry.answerLabel}`)
     .slice(-8)
 
-  const examinationLines = answerEntries.flatMap((entry) => {
+  const universalAssessment = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+  const universalVitals = universalAssessment?.sinaisVitais
+  const universalExaminationLines = [
+    universalVitals ? formatClinicalValue(universalVitals) : '',
+    ...summarizeUniversalPhysicalExam(universalAssessment?.exameFisico)
+  ].filter(Boolean).map((line, index) => index === 0 ? `Sinais vitais: ${line}` : `Exame físico: ${line}`)
+
+  const examinationLines = [
+    ...universalExaminationLines,
+    ...answerEntries.flatMap((entry) => {
     const lines: string[] = []
     const vitalSigns = formatClinicalValue(entry.parsed?.sinaisVitais)
     const physicalExam = formatClinicalValue(entry.parsed?.exameFisico)
@@ -1628,7 +1638,8 @@ export function buildClinicalSummary(
     if (findings) lines.push(`Achados semiológicos: ${findings}`)
     if (notes) lines.push(`Observações clínicas: ${notes}`)
     return lines
-  })
+    })
+  ]
 
   const scoreLines = answerEntries.flatMap((entry) => {
     const lines: string[] = []

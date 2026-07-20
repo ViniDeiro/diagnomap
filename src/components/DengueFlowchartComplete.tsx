@@ -26,6 +26,7 @@ import { clsx } from 'clsx'
 import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
 import { enableLocalStorageReplication, hydrateLocalStorageFromDB } from '@/services/patientStorageBridge'
+import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
 
 interface FlowchartStep {
   id: string
@@ -3138,7 +3139,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
                         {volumeReposicao}ml SF 0,9%
                       </p>
                       <p className="text-amber-600 text-xs">
-                        ({peso}kg × 10ml/kg) em 10 minutos
+                        ({peso}kg × 10 mL/kg) ao longo de 1 hora
                       </p>
                     </div>
                     {/* Seções de manutenção 24h e botão de protocolo completo removidos */}
@@ -3159,7 +3160,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     treatment_c: {
       id: 'treatment_c',
       title: 'Reposição Volêmica - Grupo C',
-      description: '10ml/kg soro fisiológico em 10 minutos',
+      description: 'Reposição inicial com 10 mL/kg de cristalóide ao longo de 1 hora',
       type: 'action',
       icon: <Activity className="w-6 h-6" />,
       color: 'bg-yellow-500',
@@ -3167,8 +3168,8 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       content: (
         <div className="bg-yellow-50 p-4 rounded-lg">
           <h4 className="font-semibold text-yellow-800 mb-2">Tratamento iniciado:</h4>
-          <p className="text-yellow-700">• Soro fisiológico 0,9% - 10ml/kg</p>
-          <p className="text-yellow-700">• Administração em 10 minutos</p>
+          <p className="text-yellow-700">• Cristalóide isotônico - 10 mL/kg</p>
+          <p className="text-yellow-700">• Infundir ao longo de 1 hora</p>
           <p className="text-yellow-700">• Reavaliação obrigatória em 1 hora</p>
           <p className="text-yellow-700">• Exames complementares solicitados</p>
         </div>
@@ -5609,6 +5610,25 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     setAnswers({})
     setProgress(0)
     return null
+  }
+
+  if (!answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]) {
+    return (
+      <UniversalClinicalAssessment
+        patient={patient}
+        flowchartName="Dengue"
+        savedValue={answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]}
+        onBack={onBack}
+        onSave={(assessment: UniversalClinicalAssessmentData) => {
+          const updatedAnswers = {
+            ...answers,
+            [UNIVERSAL_ASSESSMENT_ANSWER_KEY]: JSON.stringify(assessment)
+          }
+          setAnswers(updatedAnswers)
+          onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.flowchartState.group)
+        }}
+      />
+    )
   }
 
   return (

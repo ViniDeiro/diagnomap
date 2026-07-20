@@ -628,6 +628,11 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
       if (isDengueFlow) {
         const phys = summarizePhysicalExam(physicalExam)
         dataToSubmit.generalObservations = [formData.generalObservations || '', phys].filter(Boolean).join('\n\n')
+        dataToSubmit.initialClinicalAssessment = {
+          savedAt: new Date().toISOString(),
+          sinaisVitais: { ...(formData.vitalSigns || {}) },
+          exameFisico: physicalExam
+        }
       }
       const sev = isDengueFlow ? detectSeverityFromVitals() : null
       if (sev && onSeverityRedirect) {
