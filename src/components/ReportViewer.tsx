@@ -149,6 +149,14 @@ const ANAPHYLAXIS_PREPARATION_LABELS: Record<string, string> = {
   vascular_access: 'Acesso IV/IO e preparo de cristalóide realizados conforme indicação'
 }
 
+const ANAPHYLAXIS_ABCDE_LABELS: Record<string, string> = {
+  airway: 'A — via aérea avaliada e conduzida',
+  breathing: 'B — respiração e oxigenação avaliadas e conduzidas',
+  circulation: 'C — circulação e perfusão avaliadas e conduzidas',
+  disability: 'D — estado neurológico avaliado',
+  exposure: 'E — exposição, pele e mucosas examinadas'
+}
+
 const DENGUE_ALARM_SIGN_LABELS: Record<string, string> = {
   dor_abdominal: 'Dor abdominal intensa',
   vomitos_persistentes: 'Vômitos persistentes',
@@ -599,6 +607,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         antiagregante: 'antiagregação após exclusão de hemorragia e respeito ao intervalo pós-trombólise',
         tevc: 'prevenção de tromboembolismo venoso e lesão por pressão', etiologia: 'investigação etiológica e prevenção secundária'
       }
+      const abcdeLabels: Record<string, string> = {
+        airway: 'A — via aérea', breathing: 'B — respiração', circulation: 'C — circulação',
+        disability: 'D — estado neurológico', exposure: 'E — exposição e exame completo'
+      }
       const selectedSymptoms = uniqueItems((avc.symptoms || []).map(item => symptomLabels[item] || item))
       const selectedContraindications = uniqueItems((avc.thrombolysisContraindications || []).map(item => contraindicationLabels[item] || item))
       const vesselTerritory = avc.vesselTerritory
@@ -627,6 +639,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           { title: 'Cronologia e apresentação neurológica', text: `${timeDescription} ${selectedSymptoms.length ? `Foram registrados ${selectedSymptoms.join(', ')}.` : 'Os déficits focais não foram discriminados no registro estruturado.'}` },
           { title: 'Sinais vitais e exame físico', items: objectiveAssessmentItems.length ? objectiveAssessmentItems : ['Avaliação objetiva inicial não registrada.'] },
+          ...((avc.abcdeDomains || []).length ? [{ title: 'Estabilização ABCDE registrada', items: (avc.abcdeDomains || []).map(item => abcdeLabels[item] || item) }] : []),
           {
             title: 'Estratificação neurológica',
             items: uniqueItems([
@@ -1189,6 +1202,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       } | null
       const preparationData = safeParse(answers.ana_preparo_imediato) as {
         medidasSelecionadas?: string[]
+        abcdeSelecionado?: string[]
+        abcdeConcluido?: boolean
         medidasEssenciaisConcluidas?: boolean
         percentualConcluido?: number
       } | null
@@ -1205,6 +1220,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const rawFindings = recognitionData?.achadosSelecionados ?? []
       const rawSystems = recognitionData?.sistemasAcometidos ?? []
       const rawPreparation = preparationData?.medidasSelecionadas ?? []
+      const rawAbcde = preparationData?.abcdeSelecionado ?? []
       const selectedCriteria = uniqueItems(
         rawCriteria.map((item) => ANAPHYLAXIS_DIAGNOSTIC_CRITERIA_LABELS[item] || item)
       )
@@ -1217,6 +1233,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       )
       const selectedPreparationMeasures = uniqueItems(
         rawPreparation.map((item) => ANAPHYLAXIS_PREPARATION_LABELS[item] || item)
+      )
+      const selectedAbcdeDomains = uniqueItems(
+        rawAbcde.map((item) => ANAPHYLAXIS_ABCDE_LABELS[item] || item)
       )
       const firstResponseValue = answers.ana_reavaliacao_5_10 || ''
       const secondResponseValue = answers.ana_reavaliacao_segunda_dose || ''
@@ -1265,8 +1284,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         : uniqueItems([
           'Paciente encaminhado imediatamente para a Sala de Emergência.',
           `Aplicada a medicação adrenalina (1:1000 = 1 mg/mL) ${doseMg} mg IM, conforme protocolo institucional.`,
+          ...selectedAbcdeDomains,
           ...selectedPreparationMeasures,
-          selectedPreparationMeasures.length === 0 ? 'Preparação ABCDE ainda não registrada no checklist interativo.' : null,
+          selectedAbcdeDomains.length === 0 ? 'Avaliação ABCDE ainda não registrada no checklist interativo.' : null,
+          preparationData?.abcdeConcluido === false ? 'Registro ABCDE contém domínios ainda pendentes, sem bloqueio da conduta de emergência.' : null,
           preparationData?.medidasEssenciaisConcluidas === false ? 'Checklist registrou medidas essenciais ainda pendentes no momento do avanço.' : null
         ])
 

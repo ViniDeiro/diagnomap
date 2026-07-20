@@ -36,6 +36,7 @@ import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
 import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
+import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS, type ABCDEItem } from './ABCDEChecklist'
 import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
 import TEPAssessment from './TEPAssessment'
@@ -580,6 +581,67 @@ const ANAPHYLAXIS_PREPARATION_ITEMS: Array<{
   { key: 'oxygen', title: 'Ofertar oxigênio quando indicado', description: 'Usar quando SatO2 estiver abaixo de 92%, houver desconforto importante ou comprometimento sistêmico grave.', priority: 'conditional' },
   { key: 'vascular_access', title: 'Obter acessos IV/IO', description: 'Se possível, obter dois acessos e preparar cristalóide no choque, sem atrasar adrenalina para conseguir acesso.', priority: 'conditional' }
 ]
+
+const ANAPHYLAXIS_ABCDE_ITEMS: ReadonlyArray<ABCDEItem> = [
+  { id: 'airway', letter: 'A', title: 'Via aérea', description: 'Procurar mudança da voz, estridor, edema de língua ou laringe e antecipar proteção da via aérea.' },
+  { id: 'breathing', letter: 'B', title: 'Respiração', description: 'Avaliar esforço, frequência, sibilos e SpO₂; ofertar oxigênio de alto fluxo quando indicado.' },
+  { id: 'circulation', letter: 'C', title: 'Circulação', description: 'Checar pressão, pulsos e perfusão; posicionar com segurança e iniciar cristalóide se houver choque.' },
+  { id: 'disability', letter: 'D', title: 'Estado neurológico', description: 'Identificar agitação, confusão, síncope ou rebaixamento relacionados à hipoperfusão ou hipóxia.' },
+  { id: 'exposure', letter: 'E', title: 'Exposição e exame', description: 'Buscar urticária, rubor e angioedema, lembrando que manifestações cutâneas podem estar ausentes.' }
+]
+
+const ANAPHYLAXIS_OBSERVATION_RISK_CARDS = [
+  {
+    value: 'observacao_4h',
+    title: 'Baixo risco',
+    time: 'Pelo menos 4 horas',
+    destination: 'Observar e preparar alta segura',
+    criteria: [
+      'Melhora rápida após uma única dose de adrenalina',
+      'Sintomas completamente resolvidos e estabilidade mantida',
+      'Retorno seguro, orientação compreendida e plano de ação disponível'
+    ],
+    tone: 'emerald'
+  },
+  {
+    value: 'observacao_8h',
+    title: 'Risco intermediário',
+    time: 'Pelo menos 8 horas',
+    destination: 'Manter vigilância ampliada antes da alta',
+    criteria: [
+      'Necessidade de duas doses intramusculares',
+      'Antecedente conhecido de reação bifásica',
+      'Evolução que exige período maior para confirmar estabilidade'
+    ],
+    tone: 'amber'
+  },
+  {
+    value: 'observacao_12h',
+    title: 'Alto risco',
+    time: '12 horas ou mais',
+    destination: 'Observação prolongada ou internação',
+    criteria: [
+      'Mais de duas doses ou resposta clínica difícil',
+      'Asma importante ou comprometimento respiratório relevante',
+      'Exposição contínua ao agente ou acesso inseguro ao atendimento'
+    ],
+    tone: 'red'
+  }
+] as const
+
+const ABCDE_ANSWER_PREFIX = '__abcde__:'
+
+const getAbcdeAnswerKey = (stepId: string) => `${ABCDE_ANSWER_PREFIX}${stepId}`
+
+const parseAbcdeAnswer = (value?: string) => {
+  if (!value) return [] as string[]
+  try {
+    const parsed = JSON.parse(value)
+    return Array.isArray(parsed?.dominiosSelecionados) ? parsed.dominiosSelecionados.filter((item: unknown) => typeof item === 'string') : []
+  } catch {
+    return [] as string[]
+  }
+}
 
 type PancreatitisPrescriptionPreview = {
   title: string
@@ -2288,6 +2350,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [selectedPepHivScheme, setSelectedPepHivScheme] = useState<PepHivScheme>('preferencial')
   const [selectedAnaphylaxisFindings, setSelectedAnaphylaxisFindings] = useState<string[]>([])
   const [selectedAnaphylaxisPreparation, setSelectedAnaphylaxisPreparation] = useState<AnaphylaxisPreparationKey[]>([])
+  const [selectedAnaphylaxisAbcde, setSelectedAnaphylaxisAbcde] = useState<string[]>([])
   const [selectedAnaphylaxisAdjuncts, setSelectedAnaphylaxisAdjuncts] = useState<AnaphylaxisAdjunctKey[]>([])
   const [selectedAnaphylaxisCriteria, setSelectedAnaphylaxisCriteria] = useState<AnaphylaxisCriteriaKey[]>([])
   const [anaphylaxisCriteriaInfo, setAnaphylaxisCriteriaInfo] = useState<AnaphylaxisCriteriaInfo | null>(null)
@@ -2869,6 +2932,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const anaphylaxisPreparationAnswer = JSON.stringify({
       decision: value || nextStep,
       medidasSelecionadas: selectedAnaphylaxisPreparation,
+      abcdeSelecionado: selectedAnaphylaxisAbcde,
+      abcdeConcluido: selectedAnaphylaxisAbcde.length === ANAPHYLAXIS_ABCDE_ITEMS.length,
       medidasEssenciaisConcluidas: ANAPHYLAXIS_PREPARATION_ITEMS
         .filter((item) => item.priority === 'essential')
         .every((item) => selectedAnaphylaxisPreparation.includes(item.key)),
@@ -3456,9 +3521,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (history.length > 0) {
       const previousStep = history[history.length - 1]
       const newHistory = history.slice(0, -1)
-      const validAnsweredSteps = new Set(newHistory)
+      const validAnsweredSteps = new Set([...newHistory, previousStep])
       const newAnswers = Object.fromEntries(
-        Object.entries(answers).filter(([stepId]) => validAnsweredSteps.has(stepId))
+        Object.entries(answers).filter(([stepId]) => (
+          stepId === UNIVERSAL_ASSESSMENT_ANSWER_KEY
+          || validAnsweredSteps.has(stepId)
+          || (stepId.startsWith(ABCDE_ANSWER_PREFIX) && validAnsweredSteps.has(stepId.slice(ABCDE_ANSWER_PREFIX.length)))
+        ))
       )
       const newProgress = calculateProgress(previousStep, newHistory)
 
@@ -3522,6 +3591,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setTEPVitalSigns(defaultFlowVitalSigns(patient))
     setPepHivGuideOpen(false)
     setPepHivImageOpen(false)
+    setSelectedAnaphylaxisFindings([])
+    setSelectedAnaphylaxisPreparation([])
+    setSelectedAnaphylaxisAbcde([])
+    setSelectedAnaphylaxisCriteria([])
+    setSelectedAnaphylaxisAdjuncts([])
     setAnsiedadeGuideOpen(false)
     setAnsiedadeRouteAlerts([])
     setPneumoniaPhysicalExam(defaultPneumoniaPhysicalExam())
@@ -4209,6 +4283,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isAnaphylaxisCriteriaStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_criterios_wao'
   const isAnaphylaxisAdrenalineStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_adrenalina_im'
   const isAnaphylaxisAdjunctStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_tratamento_adjunto'
+  const isAnaphylaxisObservationStratificationStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_estratificar_observacao'
   const isAnaphylaxisDischargeStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_observacao_alta'
   const isAnaphylaxisRepeatAdrenalineFinalStep = flowchart.id === 'anafilaxia' && currentStepData?.id === 'ana_repetir_adrenalina_internacao'
   const isPancreatitisBisapStep = flowchart.id === 'pancreatitis' && currentStepData?.id === 'pan_bisap'
@@ -4232,6 +4307,50 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const completedAnaphylaxisEssentialPreparation = ANAPHYLAXIS_PREPARATION_ITEMS
     .filter((item) => item.priority === 'essential')
     .every((item) => selectedAnaphylaxisPreparation.includes(item.key))
+  const genericAbcdeAnswerKey = getAbcdeAnswerKey(currentStep)
+  const genericAbcdeSelection = parseAbcdeAnswer(answers[genericAbcdeAnswerKey])
+  const stepMentionsAbcde = /\babcde\b/i.test([
+    currentStepData?.title,
+    currentStepData?.description,
+    currentStepData?.content
+  ].filter(Boolean).join(' '))
+  const showGenericAbcde = stepMentionsAbcde
+    && !isGecaPlanCStep
+    && !isAnaphylaxisPreparationStep
+    && !isAnaphylaxisAdrenalineStep
+
+  const persistCurrentAbcde = (nextSelection: string[]) => {
+    const updatedAnswers = {
+      ...answers,
+      [genericAbcdeAnswerKey]: JSON.stringify({
+        dominiosSelecionados: nextSelection,
+        avaliacaoCompleta: nextSelection.length === DEFAULT_ABCDE_ITEMS.length
+      })
+    }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }
+
+  const persistAnaphylaxisAbcde = (nextSelection: string[]) => {
+    setSelectedAnaphylaxisAbcde(nextSelection)
+    let savedPreparation: Record<string, unknown> = {}
+    try {
+      savedPreparation = answers.ana_preparo_imediato ? JSON.parse(answers.ana_preparo_imediato) : {}
+    } catch {
+      savedPreparation = {}
+    }
+    const updatedAnswers = {
+      ...answers,
+      ana_preparo_imediato: JSON.stringify({
+        ...savedPreparation,
+        medidasSelecionadas: selectedAnaphylaxisPreparation,
+        abcdeSelecionado: nextSelection,
+        abcdeConcluido: nextSelection.length === ANAPHYLAXIS_ABCDE_ITEMS.length
+      })
+    }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }
   const sinusitisCurrentEtiology: SinusitisEtiology = currentStepData?.id === 'rino_bacteriana'
     ? 'bacterial'
     : currentStepData?.id === 'rino_alergica'
@@ -6937,18 +7056,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const saved = answers[currentStep]
     if (!saved) {
       setSelectedAnaphylaxisPreparation([])
+      setSelectedAnaphylaxisAbcde([])
       return
     }
     try {
       const parsed = JSON.parse(saved)
       const validKeys = ANAPHYLAXIS_PREPARATION_ITEMS.map((item) => item.key)
+      const validAbcdeIds = ANAPHYLAXIS_ABCDE_ITEMS.map((item) => item.id)
       setSelectedAnaphylaxisPreparation(
         Array.isArray(parsed?.medidasSelecionadas)
           ? parsed.medidasSelecionadas.filter((item: string) => validKeys.includes(item as AnaphylaxisPreparationKey))
           : []
       )
+      setSelectedAnaphylaxisAbcde(
+        Array.isArray(parsed?.abcdeSelecionado)
+          ? parsed.abcdeSelecionado.filter((item: string) => validAbcdeIds.includes(item))
+          : []
+      )
     } catch {
       setSelectedAnaphylaxisPreparation([])
+      setSelectedAnaphylaxisAbcde([])
     }
   }, [answers, currentStep, isAnaphylaxisPreparationStep])
 
@@ -10364,42 +10491,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                   </section>
 
-                  <section className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
-                    <div className="border-b border-red-100 bg-red-50 px-5 py-4">
-                      <h3 className="font-extrabold text-red-950">1. Avaliação e manejo inicial — ABCDE</h3>
-                      <p className="mt-1 text-sm text-red-800">Marque cada domínio assim que for avaliado e conduzido.</p>
-                    </div>
-                    <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-5">
-                      {GECA_PLAN_C_ABCDE.map((item) => {
-                        const isSelected = gecaPlanCAbcde.includes(item.id)
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            aria-pressed={isSelected}
-                            onClick={() => setGecaPlanCAbcde((current) =>
-                              current.includes(item.id)
-                                ? current.filter((value) => value !== item.id)
-                                : [...current, item.id]
-                            )}
-                            className={clsx(
-                              'rounded-xl border-2 p-4 text-left transition-all',
-                              isSelected
-                                ? 'border-red-500 bg-red-50 shadow-sm ring-2 ring-red-100'
-                                : 'border-slate-200 bg-white hover:border-red-300 hover:bg-red-50/40'
-                            )}
-                          >
-                            <span className="flex items-center justify-between gap-2">
-                              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-xl font-black text-white">{item.letter}</span>
-                              <CheckCircle className={clsx('h-5 w-5', isSelected ? 'text-red-600' : 'text-slate-300')} />
-                            </span>
-                            <strong className="mt-3 block text-sm text-slate-950">{item.title}</strong>
-                            <span className="mt-1 block text-xs leading-relaxed text-slate-600">{item.description}</span>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </section>
+                  <ABCDEChecklist
+                    value={gecaPlanCAbcde}
+                    onChange={setGecaPlanCAbcde}
+                    items={GECA_PLAN_C_ABCDE}
+                    title="1. Avaliação e manejo inicial — ABCDE"
+                    subtitle="Marque cada domínio assim que for avaliado e conduzido."
+                    tone="red"
+                  />
 
                   <section className="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
                     <div className="flex flex-col gap-3 border-b border-blue-100 bg-blue-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -11003,7 +11102,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && (
+              {showGenericAbcde && (
+                <div className="mb-6">
+                  <ABCDEChecklist
+                    value={genericAbcdeSelection}
+                    onChange={persistCurrentAbcde}
+                    title="Avaliação estruturada — ABCDE"
+                    subtitle="Esta etapa cita estabilização primária. Marque os domínios avaliados para manter o registro clínico do atendimento."
+                  />
+                </div>
+              )}
+
+              {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
                   {isTVPWaitingForVascularStep && (
                     <div className={clsx(
@@ -13118,15 +13228,43 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                       <div>
                         <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-blue-600">Preparação simultânea</p>
-                        <h4 className="mt-1 text-lg font-extrabold text-slate-950">Checklist de segurança e ABCDE</h4>
-                        <p className="mt-1 text-sm text-slate-600">Marque as medidas iniciadas. Nenhuma delas deve atrasar adrenalina quando o diagnóstico for provável.</p>
+                        <h4 className="mt-1 text-lg font-extrabold text-slate-950">Organizar avaliação e medidas imediatas</h4>
+                        <p className="mt-1 text-sm text-slate-600">Primeiro registre o ABCDE; em seguida, complete o checklist de segurança logo abaixo. Nenhuma etapa deve atrasar a adrenalina indicada.</p>
                       </div>
-                      <div className="min-w-[190px] rounded-2xl border border-blue-200 bg-blue-50 p-3">
-                        <div className="mb-2 flex items-center justify-between text-xs font-bold text-blue-900">
-                          <span>Preparação registrada</span>
+                      <div className="flex min-w-[190px] items-center gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-3 text-xs font-extrabold text-blue-900">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white">1</span>
+                        <span>ABCDE</span>
+                        <ChevronRight className="h-4 w-4 text-blue-400" />
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-white">2</span>
+                        <span>Segurança</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="px-5 pt-5">
+                    <ABCDEChecklist
+                      value={selectedAnaphylaxisAbcde}
+                      onChange={persistAnaphylaxisAbcde}
+                      items={ANAPHYLAXIS_ABCDE_ITEMS}
+                      title="Etapa 1 — Avaliação primária ABCDE"
+                      subtitle="Registre cada domínio em paralelo, sem aguardar o checklist completo para administrar adrenalina quando ela estiver indicada."
+                      tone="red"
+                    />
+                  </div>
+
+                  <section className="mx-5 mt-5 overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+                    <div className="flex flex-col gap-4 border-b border-blue-100 bg-blue-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600">Etapa 2</p>
+                        <h5 className="mt-1 font-extrabold text-blue-950">Checklist de segurança</h5>
+                        <p className="mt-1 text-sm text-slate-600">Selecione as medidas já iniciadas enquanto o ABCDE é reavaliado continuamente.</p>
+                      </div>
+                      <div className="min-w-[180px] rounded-xl border border-blue-200 bg-white px-3 py-2 shadow-sm">
+                        <div className="flex items-center justify-between text-xs font-extrabold text-blue-900">
+                          <span>{selectedAnaphylaxisPreparation.length} de {ANAPHYLAXIS_PREPARATION_ITEMS.length}</span>
                           <span>{anaphylaxisPreparationPercent}%</span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-blue-100">
+                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
                           <motion.div
                             className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500"
                             initial={false}
@@ -13135,9 +13273,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="grid gap-3 p-5 md:grid-cols-2">
+                    <div className="grid gap-3 p-4 md:grid-cols-2">
                     {ANAPHYLAXIS_PREPARATION_ITEMS.map((item, index) => {
                       const checked = selectedAnaphylaxisPreparation.includes(item.key)
                       return (
@@ -13182,7 +13319,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         </motion.label>
                       )
                     })}
-                  </div>
+                    </div>
+                  </section>
 
                   <div className="border-t border-blue-100 bg-white/85 p-5">
                     <div className={clsx(
@@ -13366,15 +13504,21 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       <p className="mt-2">Se A/B/C continuarem alterados, repetir após 5 minutos e reavaliar novamente.</p>
                     </div>
                     <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-800">
-                      <h5 className="mb-2 font-extrabold uppercase tracking-wide">ABCDE primário</h5>
-                      <ul className="list-disc space-y-1 pl-5">
-                        <li>A: verificar obstrução de via aérea, estridor e edema laríngeo.</li>
-                        <li>B: checar SaO2; se &lt; 94%, ofertar oxigênio suplementar.</li>
-                        <li>C: monitorar pressão arterial, perfusão e necessidade de fluidos.</li>
-                        <li>D: avaliar consciência, agitação ou letargia.</li>
-                        <li>E: buscar urticária/angioedema, lembrando que pele pode estar ausente na hipotensão.</li>
-                      </ul>
+                      <h5 className="mb-2 font-extrabold uppercase tracking-wide">Registro do ABCDE</h5>
+                      <p>{selectedAnaphylaxisAbcde.length} de {ANAPHYLAXIS_ABCDE_ITEMS.length} domínios registrados.</p>
+                      <p className="mt-2 text-xs leading-relaxed text-slate-600">A avaliação permanece editável abaixo durante a administração e a reavaliação.</p>
                     </div>
+                  </div>
+                  <div className="mt-4">
+                    <ABCDEChecklist
+                      value={selectedAnaphylaxisAbcde}
+                      onChange={persistAnaphylaxisAbcde}
+                      items={ANAPHYLAXIS_ABCDE_ITEMS}
+                      title="ABCDE durante a adrenalina IM"
+                      subtitle="Atualize os domínios conforme a resposta clínica, sem atrasar a dose indicada."
+                      tone="red"
+                      compact
+                    />
                   </div>
                 </div>
               )}
@@ -13466,6 +13610,92 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     >
                       Reavaliar em 5-10 minutos
                     </motion.button>
+                  </div>
+                </div>
+              )}
+
+              {isAnaphylaxisObservationStratificationStep && (
+                <div className="mb-6 space-y-5">
+                  <div className="flex items-start gap-3 rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm leading-relaxed text-blue-950">
+                    <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                    <p>
+                      Selecione a faixa que melhor representa a evolução após a resolução dos sintomas. Em caso de dúvida entre duas categorias, escolha a de maior risco.
+                    </p>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-3">
+                    {ANAPHYLAXIS_OBSERVATION_RISK_CARDS.map((card) => {
+                      const option = currentStepData.options?.find((item) => item.value === card.value)
+                      const isHighRisk = card.tone === 'red'
+                      const toneClasses = card.tone === 'emerald'
+                        ? {
+                            shell: 'border-emerald-200 bg-gradient-to-br from-white to-emerald-50 hover:border-emerald-400 hover:shadow-emerald-100',
+                            badge: 'bg-emerald-100 text-emerald-800',
+                            time: 'text-emerald-800',
+                            icon: 'bg-emerald-600 text-white',
+                            footer: 'border-emerald-200 bg-emerald-50 text-emerald-900'
+                          }
+                        : card.tone === 'amber'
+                          ? {
+                              shell: 'border-amber-200 bg-gradient-to-br from-white to-amber-50 hover:border-amber-400 hover:shadow-amber-100',
+                              badge: 'bg-amber-100 text-amber-900',
+                              time: 'text-amber-800',
+                              icon: 'bg-amber-500 text-white',
+                              footer: 'border-amber-200 bg-amber-50 text-amber-950'
+                            }
+                          : {
+                              shell: 'border-red-300 bg-gradient-to-br from-white to-red-50 hover:border-red-500 hover:shadow-red-100',
+                              badge: 'bg-red-100 text-red-800',
+                              time: 'text-red-800',
+                              icon: 'bg-red-600 text-white',
+                              footer: 'border-red-200 bg-red-50 text-red-950'
+                            }
+
+                      return (
+                        <motion.button
+                          key={card.value}
+                          type="button"
+                          disabled={!option}
+                          onClick={() => option && handleOptionSelect(option)}
+                          whileHover={{ y: -3 }}
+                          whileTap={{ scale: 0.99 }}
+                          className={clsx(
+                            'group flex min-h-[340px] flex-col overflow-hidden rounded-3xl border-2 text-left shadow-sm transition-all hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-50',
+                            toneClasses.shell
+                          )}
+                        >
+                          <div className="flex flex-1 flex-col p-5">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className={clsx('rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-wide', toneClasses.badge)}>
+                                {card.title}
+                              </span>
+                              <span className={clsx('flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:translate-x-1', toneClasses.icon)}>
+                                {isHighRisk ? <AlertTriangle className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                              </span>
+                            </div>
+
+                            <div className="mt-5">
+                              <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-slate-500">Tempo recomendado</p>
+                              <h4 className={clsx('mt-1 text-2xl font-black', toneClasses.time)}>{card.time}</h4>
+                            </div>
+
+                            <ul className="mt-5 space-y-3">
+                              {card.criteria.map((criterion) => (
+                                <li key={criterion} className="flex items-start gap-2 text-sm leading-relaxed text-slate-700">
+                                  <CheckCircle className={clsx('mt-0.5 h-4 w-4 shrink-0', toneClasses.time)} />
+                                  <span>{criterion}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          <div className={clsx('flex items-center justify-between gap-3 border-t px-5 py-4 text-sm font-extrabold', toneClasses.footer)}>
+                            <span>{card.destination}</span>
+                            <ChevronRight className="h-5 w-5 shrink-0" />
+                          </div>
+                        </motion.button>
+                      )
+                    })}
                   </div>
                 </div>
               )}
@@ -17456,7 +17686,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

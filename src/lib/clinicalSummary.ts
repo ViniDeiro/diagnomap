@@ -96,6 +96,14 @@ const tvpTherapyLabels: Record<string, string> = {
   varfarina: 'varfarina'
 }
 
+const abcdeDomainLabels: Record<string, string> = {
+  airway: 'A — via aérea',
+  breathing: 'B — respiração',
+  circulation: 'C — circulação',
+  disability: 'D — estado neurológico',
+  exposure: 'E — exposição e exame completo'
+}
+
 export const formatClinicalDate = (dateLike?: Date | string) => {
   if (!dateLike) return 'data não informada'
   const date = new Date(dateLike)
@@ -1625,8 +1633,21 @@ export function buildClinicalSummary(
     ...summarizeUniversalPhysicalExam(universalAssessment?.exameFisico)
   ].filter(Boolean).map((line, index) => index === 0 ? `Sinais vitais: ${line}` : `Exame físico: ${line}`)
 
+  const pathSteps = new Set([...history, currentStep])
+  const abcdeExaminationLines = Object.entries(answers)
+    .filter(([key]) => key.startsWith('__abcde__:') && pathSteps.has(key.slice('__abcde__:'.length)))
+    .flatMap(([key, raw]) => {
+      const parsed = parseFlowAnswerForSummary(raw)
+      const selected = Array.isArray(parsed?.dominiosSelecionados) ? parsed.dominiosSelecionados.map(String) : []
+      if (selected.length === 0) return []
+      const stepId = key.slice('__abcde__:'.length)
+      const stepTitle = flowchart.steps[stepId]?.title || 'Etapa de estabilização'
+      return [`ABCDE em ${stepTitle}: ${selected.map((item) => abcdeDomainLabels[item] || item).join('; ')}`]
+    })
+
   const examinationLines = [
     ...universalExaminationLines,
+    ...abcdeExaminationLines,
     ...answerEntries.flatMap((entry) => {
     const lines: string[] = []
     const vitalSigns = formatClinicalValue(entry.parsed?.sinaisVitais)

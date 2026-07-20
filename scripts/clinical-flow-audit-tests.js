@@ -9,6 +9,7 @@ const root = path.resolve(__dirname, '..')
 const flowSource = fs.readFileSync(path.join(root, 'src/data/emergencyFlowcharts.ts'), 'utf8')
 const dengueSource = fs.readFileSync(path.join(root, 'src/components/DengueFlowchartComplete.tsx'), 'utf8')
 const emergencyComponentSource = fs.readFileSync(path.join(root, 'src/components/EmergencyFlowchart.tsx'), 'utf8')
+const abcdeComponentSource = fs.readFileSync(path.join(root, 'src/components/ABCDEChecklist.tsx'), 'utf8')
 const selectorSource = fs.readFileSync(path.join(root, 'src/components/EmergencySelector.tsx'), 'utf8')
 const avcComponentSource = fs.readFileSync(path.join(root, 'src/components/AVCFlowchartInteractive.tsx'), 'utf8')
 const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewer.tsx'), 'utf8')
@@ -120,7 +121,8 @@ for (const obsolete of ['avaliacao_multiprofissional_sala_vermelha', 'avaliar_tc
 for (const marker of [
   'abs_anticoagulante', 'pressureReadyForThrombolysis', 'tenecteplase', 'alteplase',
   'grande_anterior', 'm2_dominante', 'medio_distal', 'basilar', 'pcAspects', 'premorbidRankin',
-  'avc_complicacao_trombolise', 'AVC_CASE_ANSWER_KEY'
+  'avc_complicacao_trombolise', 'AVC_CASE_ANSWER_KEY', 'ABCDEChecklist', 'abcdeDomains',
+  'Dashboard', 'Reiniciar', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY'
 ]) assert.match(avcComponentSource, new RegExp(marker), `AVC: implementação interativa sem marcador obrigatório (${marker})`)
 
 assert.match(reportSource, /flowId === 'avc'/)
@@ -184,6 +186,14 @@ for (const source of [dengueSource, emergencyComponentSource]) {
   assert.match(source, /UNIVERSAL_ASSESSMENT_ANSWER_KEY/)
   assert.match(source, /UniversalClinicalAssessment/)
 }
+
+assert.match(emergencyComponentSource, /stepId === UNIVERSAL_ASSESSMENT_ANSWER_KEY/, 'Voltar deve preservar sinais vitais e exame físico universais')
+assert.match(emergencyComponentSource, /<ABCDEChecklist[\s\S]*items=\{GECA_PLAN_C_ABCDE\}/, 'GECA deve usar o ABCDE reutilizável')
+assert.match(emergencyComponentSource, /<ABCDEChecklist[\s\S]*items=\{ANAPHYLAXIS_ABCDE_ITEMS\}/, 'Anafilaxia deve usar o ABCDE reutilizável')
+assert.match(emergencyComponentSource, /abcdeSelecionado: selectedAnaphylaxisAbcde/, 'Anafilaxia deve persistir os domínios ABCDE')
+assert.match(abcdeComponentSource, /aria-pressed=\{selected\}/, 'ABCDE deve expor estado de seleção acessível')
+assert.match(abcdeComponentSource, /value\.length} de \{items\.length\}/, 'ABCDE deve mostrar progresso por domínio')
+assert.match(reportSource, /ANAPHYLAXIS_ABCDE_LABELS/, 'Relatório de anafilaxia deve traduzir o ABCDE selecionado')
 
 const inProgressIds = selectorSource.match(/const inProgressFlowchartIds = \[([^\]]*)\]/)?.[1] || ''
 const finishedIds = selectorSource.match(/const finishedFlowchartIds = \[([\s\S]*?)\n    \]/)?.[1] || ''

@@ -8,17 +8,23 @@ import {
   ArrowLeft,
   Brain,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock3,
   Droplets,
+  Heart,
   Hospital,
+  RotateCcw,
   ScanLine,
   ShieldAlert,
+  Stethoscope,
   Syringe,
   TestTube2
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { EmergencyPatient } from '@/types/emergency'
+import ABCDEChecklist from './ABCDEChecklist'
+import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import {
   calculateAVCThrombolyticDose,
   evaluateAVCThrombectomy,
@@ -60,6 +66,7 @@ export type AVCCaseData = {
   wakeUpStroke?: boolean
   symptoms?: string[]
   initialMeasures?: string[]
+  abcdeDomains?: string[]
   anticoagulantStatus?: 'nao' | 'sim' | 'incerto'
   anticoagulantDetails?: string
   glucose?: number
@@ -132,7 +139,6 @@ const symptomOptions = [
 
 const initialMeasureOptions = [
   ['equipe', 'Acionar equipe de AVC/neurologia'],
-  ['abcde', 'Estabilização ABCDE iniciada'],
   ['monitor', 'Monitor cardíaco, pressão seriada e oximetria'],
   ['acesso', 'Acesso venoso obtido'],
   ['hgt', 'Glicemia capilar medida'],
@@ -285,6 +291,20 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     setStage(previous as AVCStage)
     onUpdate(patient.id, previous, nextHistory, answers, Math.max(4, progress - 6), 'AVC')
   }
+  const restart = () => {
+    const preservedAnswers: Record<string, string> = {}
+    if (answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]) {
+      preservedAnswers[UNIVERSAL_ASSESSMENT_ANSWER_KEY] = answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]
+    }
+    const restartedData: AVCCaseData = { weight: patient.weight }
+    setStage('avc_ativacao')
+    setHistory([])
+    setAnswers(preservedAnswers)
+    setData(restartedData)
+    setNotice('')
+    onUpdate(patient.id, 'avc_ativacao', [], preservedAnswers, 4, 'AVC')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
   const finish = (outcome: string) => {
     const finalData = { ...data, outcome, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
     const nextAnswers = { ...answers, [AVC_CASE_ANSWER_KEY]: JSON.stringify(finalData) }
@@ -303,6 +323,14 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     update({ [key]: toggleValue(current, value) } as Partial<AVCCaseData>)
   }
 
+  const updateAbcde = (abcdeDomains: string[]) => {
+    const measuresWithoutLegacyAbcde = (data.initialMeasures || []).filter((item) => item !== 'abcde')
+    update({
+      abcdeDomains,
+      initialMeasures: abcdeDomains.length > 0 ? [...measuresWithoutLegacyAbcde, 'abcde'] : measuresWithoutLegacyAbcde
+    })
+  }
+
   const nextFromWindow = (windowValue: AVCCaseData['timeWindow']) => {
     if (!windowValue) return
     if (windowValue === 'ate_45h') persist('avc_trombolise_seguranca', { timeWindow: windowValue })
@@ -313,6 +341,66 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-violet-50 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="sticky top-0 z-50 -mx-4 -mt-5 mb-8 border-b border-white/60 bg-white/90 shadow-lg backdrop-blur-md sm:-mx-6 lg:-mx-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-700 to-violet-700 text-white shadow-lg shadow-indigo-200">
+              <Stethoscope className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-black text-slate-900 sm:text-2xl">{patient.name || 'Paciente sem nome'}</h1>
+              <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-600">
+                <Heart className="h-4 w-4 text-indigo-600" />
+                <span>{patient.age ? `${patient.age} anos` : 'Idade não informada'} • {patient.medicalRecord || 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            {onBack && (
+              <motion.button
+                type="button"
+                onClick={onBack}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-gradient-to-br from-slate-100 to-slate-200 px-4 py-2.5 font-bold text-slate-700 shadow-sm transition-all hover:from-slate-200 hover:to-slate-300 hover:shadow-md"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span>Dashboard</span>
+              </motion.button>
+            )}
+
+            <motion.button
+              type="button"
+              onClick={goBack}
+              disabled={history.length === 0}
+              whileHover={history.length > 0 ? { scale: 1.02 } : {}}
+              whileTap={history.length > 0 ? { scale: 0.98 } : {}}
+              className={clsx(
+                'inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 font-bold transition-all',
+                history.length > 0
+                  ? 'border-amber-300 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800 shadow-sm hover:from-amber-200 hover:to-amber-300 hover:shadow-md'
+                  : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
+              )}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Voltar</span>
+            </motion.button>
+
+            <motion.button
+              type="button"
+              onClick={restart}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center gap-2 rounded-xl border border-indigo-300 bg-gradient-to-br from-indigo-100 to-violet-100 px-4 py-2.5 font-bold text-indigo-800 shadow-sm transition-all hover:from-indigo-200 hover:to-violet-200 hover:shadow-md"
+            >
+              <RotateCcw className="h-4 w-4" />
+              <span>Reiniciar</span>
+            </motion.button>
+          </div>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] border border-indigo-100 bg-white shadow-2xl shadow-indigo-950/10">
         <header className="relative overflow-hidden bg-gradient-to-r from-indigo-800 via-violet-700 to-fuchsia-700 px-5 py-6 text-white sm:px-8">
           <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
@@ -344,6 +432,12 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <section><h2 className="text-lg font-black text-slate-950">Manifestações de início súbito</h2><p className="mt-1 text-sm text-slate-600">Marque todos os déficits presentes. Sinais posteriores também exigem ativação do protocolo.</p><div className="mt-4 grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <CardOption key={id} selected={(data.symptoms || []).includes(id)} title={label} onClick={() => selectMany('symptoms', id)} />)}</div></section>
               <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><h2 className="font-black text-slate-950">Último momento conhecido sem déficit</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-bold text-slate-700">Data<input type="date" value={data.onsetDate || ''} onChange={event => update({ onsetDate: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><label className="text-sm font-bold text-slate-700">Horário<input type="time" value={data.onsetTime || ''} onChange={event => update({ onsetTime: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><CardOption selected={Boolean(data.wakeUpStroke)} title="Déficit percebido ao acordar" onClick={() => update({ wakeUpStroke: !data.wakeUpStroke, onsetUnknown: true })} /><CardOption selected={Boolean(data.onsetUnknown)} title="Horário não determinado" onClick={() => update({ onsetUnknown: !data.onsetUnknown })} /></div></section>
+              <ABCDEChecklist
+                value={data.abcdeDomains || []}
+                onChange={updateAbcde}
+                title="Estabilização inicial — ABCDE"
+                subtitle="Registre os cinco domínios em paralelo à ativação do protocolo, sem atrasar glicemia ou imagem cerebral."
+              />
               <section><h2 className="text-lg font-black text-slate-950">Medidas simultâneas</h2><div className="mt-4 grid gap-3 md:grid-cols-2">{initialMeasureOptions.map(([id, label]) => <CardOption key={id} selected={(data.initialMeasures || []).includes(id)} title={label} onClick={() => selectMany('initialMeasures', id)} />)}</div></section>
               <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-black text-amber-950">Anticoagulantes</h2><div className="mt-3 grid gap-3 sm:grid-cols-3">{([['nao','Não usa'],['sim','Uso confirmado'],['incerto','Informação incerta']] as const).map(([id,label]) => <CardOption key={id} selected={data.anticoagulantStatus === id} title={label} danger={id !== 'nao'} onClick={() => update({ anticoagulantStatus: id })} />)}</div>{data.anticoagulantStatus !== 'nao' && <textarea value={data.anticoagulantDetails || ''} onChange={event => update({ anticoagulantDetails: event.target.value })} placeholder="Fármaco, dose e horário da última administração" className="mt-3 w-full rounded-xl border border-amber-300 bg-white p-3 text-sm" />}</section>
               <button type="button" disabled={(data.symptoms || []).length === 0 || (!data.onsetUnknown && (!data.onsetDate || !data.onsetTime))} onClick={() => persist('avc_glicemia')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Registrar ativação e verificar glicemia <ChevronRight /></button>
@@ -411,7 +505,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_hemorragico_destino' && (
-            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-500 bg-red-50 p-6 text-red-950"><h2 className="text-2xl font-black">Migrar imediatamente para manejo de hemorragia intracraniana</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Suspender trombolítico, antiagregante e anticoagulante até avaliação específica.</li><li>Acionar neurologia/neurocirurgia e controlar ABCDE, pressão e sinais de hipertensão intracraniana.</li><li>Diferenciar hemorragia intraparenquimatosa de hemorragia subaracnoide e outras causas.</li><li>Providenciar reversão de anticoagulação quando indicada.</li></ul></div><button type="button" onClick={() => finish('Hemorragia intracraniana - encaminhado para protocolo neurocrítico')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar destino crítico e finalizar</button></div>
+            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-500 bg-red-50 p-6 text-red-950"><h2 className="text-2xl font-black">Migrar imediatamente para manejo de hemorragia intracraniana</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Suspender trombolítico, antiagregante e anticoagulante até avaliação específica.</li><li>Acionar neurologia/neurocirurgia e controlar pressão e sinais de hipertensão intracraniana.</li><li>Diferenciar hemorragia intraparenquimatosa de hemorragia subaracnoide e outras causas.</li><li>Providenciar reversão de anticoagulação quando indicada.</li></ul></div><ABCDEChecklist value={data.abcdeDomains || []} onChange={updateAbcde} title="ABCDE no destino neurocrítico" subtitle="Atualize os domínios durante a estabilização e transferência para a equipe especializada." tone="red" /><button type="button" onClick={() => finish('Hemorragia intracraniana - encaminhado para protocolo neurocrítico')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar destino crítico e finalizar</button></div>
           )}
 
           {notice && <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">{notice}</p>}
