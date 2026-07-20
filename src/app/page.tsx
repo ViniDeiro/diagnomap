@@ -657,6 +657,7 @@ export default function Home() {
                     flowchart={genericFlowchart}
                     onComplete={handleFlowchartComplete}
                     onBack={() => setAppState('dashboard')}
+                    onOpenReport={() => handleViewReport(currentPatient)}
                     onSwitchFlowchart={handleSwitchFlowchart}
                     onUpdate={(pid, step, hist, ans, prog, risk) => {
                       // Usa o handler padrão que atualiza o Patient no storage

@@ -14,6 +14,7 @@ import {
   Droplets,
   Heart,
   Hospital,
+  FileText,
   RotateCcw,
   ScanLine,
   ShieldAlert,
@@ -109,7 +110,7 @@ export const parseAVCCase = (raw?: string | null): AVCCaseData => {
 const stageMeta: Record<AVCStage, { title: string; subtitle: string; icon: React.ReactNode }> = {
   avc_ativacao: { title: 'Ativar protocolo de AVC', subtitle: 'Organize tempo, equipe e estabilização em paralelo.', icon: <Brain /> },
   avc_glicemia: { title: 'Excluir alteração glicêmica', subtitle: 'Hipoglicemia pode simular déficit focal e deve ser corrigida imediatamente.', icon: <Droplets /> },
-  avc_triagem: { title: 'Triagem neurológica rápida', subtitle: 'Registre achados de face, braço e fala sem usar a escala para excluir AVC isoladamente.', icon: <Activity /> },
+  avc_triagem: { title: 'Teste AVEI (Escala de Cincinnati)', subtitle: 'Avalie face, braços e fala sem usar o resultado isolado para excluir AVC.', icon: <Activity /> },
   avc_nihss: { title: 'Gravidade e funcionalidade', subtitle: 'Quantifique o déficit e identifique sintomas incapacitantes, mesmo com NIHSS baixo.', icon: <Brain /> },
   avc_exames: { title: 'Exames sem atrasar reperfusão', subtitle: 'Imagem cerebral e glicemia são prioritárias; os demais exames seguem em paralelo.', icon: <TestTube2 /> },
   avc_imagem: { title: 'Resultado da imagem inicial', subtitle: 'Separe hemorragia de provável isquemia e não descarte AVC apenas por TC inicial normal.', icon: <ScanLine /> },
@@ -238,6 +239,7 @@ interface AVCFlowchartInteractiveProps {
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => void
   onComplete: () => void
   onBack?: () => void
+  onOpenReport?: () => void
 }
 
 const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
@@ -247,7 +249,8 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   initialAnswers,
   onUpdate,
   onComplete,
-  onBack
+  onBack,
+  onOpenReport
 }) => {
   const safeInitialStage = AVC_STAGES.includes(initialStep as AVCStage) ? initialStep as AVCStage : 'avc_ativacao'
   const [stage, setStage] = useState<AVCStage>(safeInitialStage)
@@ -255,6 +258,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers)
   const [data, setData] = useState<AVCCaseData>(() => ({ weight: patient.weight, ...parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]) }))
   const [notice, setNotice] = useState('')
+  const [showCompletion, setShowCompletion] = useState(() => Boolean(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).completedAt))
 
   const isFinalStage = ['avc_complicacao_trombolise', 'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino'].includes(stage)
   const progress = isFinalStage ? 100 : Math.max(4, Math.round(((AVC_STAGES.indexOf(stage) + 1) / AVC_STAGES.length) * 100))
@@ -302,6 +306,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     setAnswers(preservedAnswers)
     setData(restartedData)
     setNotice('')
+    setShowCompletion(false)
     onUpdate(patient.id, 'avc_ativacao', [], preservedAnswers, 4, 'AVC')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -311,7 +316,16 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     setData(finalData)
     setAnswers(nextAnswers)
     onUpdate(patient.id, stage, [...history, stage], nextAnswers, 100, 'AVC')
-    onComplete()
+    setShowCompletion(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBack = () => {
+    if (showCompletion) {
+      setShowCompletion(false)
+      return
+    }
+    goBack()
   }
 
   const lyticDose = useMemo(() => calculateAVCThrombolyticDose(data.weight, data.thrombolytic), [data.thrombolytic, data.weight])
@@ -372,13 +386,13 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
             <motion.button
               type="button"
-              onClick={goBack}
-              disabled={history.length === 0}
-              whileHover={history.length > 0 ? { scale: 1.02 } : {}}
-              whileTap={history.length > 0 ? { scale: 0.98 } : {}}
+              onClick={handleBack}
+              disabled={!showCompletion && history.length === 0}
+              whileHover={showCompletion || history.length > 0 ? { scale: 1.02 } : {}}
+              whileTap={showCompletion || history.length > 0 ? { scale: 0.98 } : {}}
               className={clsx(
                 'inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 font-bold transition-all',
-                history.length > 0
+                showCompletion || history.length > 0
                   ? 'border-amber-300 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-800 shadow-sm hover:from-amber-200 hover:to-amber-300 hover:shadow-md'
                   : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400'
               )}
@@ -427,6 +441,51 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
               {data.receivedThrombolysis && <span className="rounded-full bg-emerald-100 px-3 py-1.5 text-emerald-800">Trombólise registrada</span>}
             </div>
           </div>
+
+          {showCompletion && (
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+              <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl shadow-emerald-900/15 sm:p-8">
+                <div className="absolute -right-12 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+                <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-4">
+                    <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25"><CheckCircle2 className="h-8 w-8" /></span>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Protocolo registrado</p>
+                      <h2 className="mt-1 text-2xl font-black sm:text-3xl">Atendimento de AVC finalizado</h2>
+                      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50">As decisões, achados e condutas deste caminho foram preservados no prontuário clínico.</p>
+                    </div>
+                  </div>
+                  <span className="w-fit rounded-full bg-white/15 px-4 py-2 text-sm font-extrabold ring-1 ring-white/25">100% concluído</span>
+                </div>
+              </section>
+
+              <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">NIHSS</p><p className="mt-2 text-2xl font-black text-slate-950">{data.nihss ?? 'Não informado'}</p></div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Glicemia</p><p className="mt-2 text-2xl font-black text-slate-950">{data.glucose != null ? `${data.glucose} mg/dL` : 'Não informada'}</p></div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Imagem inicial</p><p className="mt-2 text-lg font-black text-slate-950">{data.imagingResult === 'hemorragia' ? 'Hemorragia identificada' : data.imagingResult === 'sem_hemorragia' ? 'Sem hemorragia' : data.imagingResult === 'inconclusiva' ? 'Inconclusiva' : 'Não informada'}</p></div>
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Reperfusão</p><p className="mt-2 text-lg font-black text-slate-950">{data.receivedThrombolysis ? 'Trombólise registrada' : data.thrombectomyRecommendation === 'forte' || data.thrombectomyRecommendation === 'considerar' ? 'Via endovascular avaliada' : 'Sem reperfusão registrada'}</p></div>
+              </section>
+
+              <section className="rounded-[1.75rem] border border-indigo-200 bg-gradient-to-br from-indigo-50 to-violet-50 p-6 sm:p-7">
+                <div className="flex items-start gap-4">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-700 text-white"><FileText className="h-5 w-5" /></span>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-600">Síntese do desfecho</p>
+                    <h3 className="mt-1 text-xl font-black text-indigo-950">{data.outcome || 'Conduta final registrada'}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-indigo-800">Finalizado em {data.completedAt ? new Date(data.completedAt).toLocaleString('pt-BR') : 'horário não informado'}. O relatório reúne cronologia, exame, ABCDE, estratificação, imagem e decisões terapêuticas.</p>
+                  </div>
+                </div>
+              </section>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <button type="button" onClick={() => setShowCompletion(false)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-4 font-extrabold text-slate-700 hover:bg-slate-50"><ChevronLeft className="h-5 w-5" /> Revisar última etapa</button>
+                {onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-4 font-extrabold text-indigo-900 hover:bg-indigo-100"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}
+                <button type="button" onClick={onComplete} className={clsx('inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-800', !onOpenReport && 'sm:col-span-2')}><CheckCircle2 className="h-5 w-5" /> Concluir e ir ao dashboard</button>
+              </div>
+            </motion.div>
+          )}
+
+          <div className={showCompletion ? 'hidden' : undefined}>
 
           {stage === 'avc_ativacao' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -510,6 +569,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {notice && <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">{notice}</p>}
           <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5"><button type="button" onClick={goBack} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-5 w-5" /> Voltar</button><span className="text-xs font-semibold text-slate-500">As escolhas ficam registradas no relatório clínico.</span></div>
+          </div>
         </main>
       </div>
     </div>

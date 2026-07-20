@@ -122,8 +122,14 @@ for (const marker of [
   'abs_anticoagulante', 'pressureReadyForThrombolysis', 'tenecteplase', 'alteplase',
   'grande_anterior', 'm2_dominante', 'medio_distal', 'basilar', 'pcAspects', 'premorbidRankin',
   'avc_complicacao_trombolise', 'AVC_CASE_ANSWER_KEY', 'ABCDEChecklist', 'abcdeDomains',
-  'Dashboard', 'Reiniciar', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY'
+  'Dashboard', 'Reiniciar', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY',
+  'Teste AVEI \\(Escala de Cincinnati\\)', 'Atendimento de AVC finalizado',
+  'Abrir relatório completo', 'Concluir e ir ao dashboard', 'showCompletion'
 ]) assert.match(avcComponentSource, new RegExp(marker), `AVC: implementação interativa sem marcador obrigatório (${marker})`)
+
+const avcFinishImplementation = avcComponentSource.match(/const finish = \(outcome: string\) => \{[\s\S]*?\n  \}/)?.[0] || ''
+assert.ok(avcFinishImplementation, 'AVC: função de finalização não localizada')
+assert.doesNotMatch(avcFinishImplementation, /onComplete\(\)/, 'AVC: finalização clínica ainda redireciona imediatamente ao dashboard')
 
 assert.match(reportSource, /flowId === 'avc'/)
 assert.match(reportSource, /parseAVCCase/)

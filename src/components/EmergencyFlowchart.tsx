@@ -2185,6 +2185,7 @@ interface EmergencyFlowchartProps {
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => void
   onBack?: () => void
   onSwitchFlowchart?: (targetFlowchart: EmergencyType) => void
+  onOpenReport?: () => void
 }
 
 const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({ 
@@ -2193,7 +2194,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   onComplete, 
   onUpdate,
   onBack,
-  onSwitchFlowchart
+  onSwitchFlowchart,
+  onOpenReport
 }) => {
   const resolveCurrentStep = useCallback((step?: string) => {
     if (step && flowchart.steps[step]) return step
@@ -7534,6 +7536,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         onUpdate={onUpdate}
         onComplete={onComplete}
         onBack={onBack}
+        onOpenReport={onOpenReport}
       />
     )
   }
