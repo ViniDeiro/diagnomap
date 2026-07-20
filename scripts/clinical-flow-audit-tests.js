@@ -13,6 +13,8 @@ const selectorSource = fs.readFileSync(path.join(root, 'src/components/Emergency
 const avcComponentSource = fs.readFileSync(path.join(root, 'src/components/AVCFlowchartInteractive.tsx'), 'utf8')
 const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewer.tsx'), 'utf8')
 const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8')
+const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
+const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 
 const compiled = ts.transpileModule(flowSource, {
   compilerOptions: {
@@ -30,7 +32,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -38,6 +40,13 @@ const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
 const avcLogicModule = { exports: {} }
 vm.runInNewContext(compiledAVCLogic, { module: avcLogicModule, exports: avcLogicModule.exports }, { filename: 'avc.compiled.js' })
 const { evaluateAVCThrombectomy, calculateAVCThrombolyticDose } = avcLogicModule.exports
+
+const compiledHypertensionLogic = ts.transpileModule(hypertensionLogicSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+}).outputText
+const hypertensionLogicModule = { exports: {} }
+vm.runInNewContext(compiledHypertensionLogic, { module: hypertensionLogicModule, exports: hypertensionLogicModule.exports }, { filename: 'hypertension.compiled.js' })
+const { classifyHypertensionRoute, HYPERTENSION_SCENARIO_TARGETS } = hypertensionLogicModule.exports
 
 const validateLinks = flow => {
   assert.ok(flow, 'Fluxograma precisa existir')
@@ -67,6 +76,7 @@ const reachable = flow => {
 validateLinks(anaphylaxisFlowchart)
 validateLinks(asthmaFlowchart)
 validateLinks(avcFlowchart)
+validateLinks(hypertensionFlowchart)
 
 const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [
@@ -135,6 +145,34 @@ assert.match(calculateAVCThrombolyticDose(72, 'tenecteplase'), /18,0 mg/)
 assert.match(calculateAVCThrombolyticDose(72, 'alteplase'), /64,8 mg/)
 assert.match(calculateAVCThrombolyticDose(120, 'alteplase'), /90,0 mg/)
 
+const hypertensionReachable = reachable(hypertensionFlowchart)
+for (const required of [
+  'hipertensao_confirmacao', 'hipertensao_lesao_orgao', 'hipertensao_observacao',
+  'hipertensao_classificacao_sem_loa', 'hipertensao_emergencia_preparo',
+  'hipertensao_emergencia_cenario', 'hipertensao_emergencia_plano',
+  'hipertensao_alta_sem_loa', 'hipertensao_cronica_alta'
+]) assert.ok(hypertensionReachable.has(required), `Hipertensão: caminho obrigatório não alcançável (${required})`)
+
+const hypertensionCases = [
+  [{ systolic: 180, diastolic: 100, hasSymptoms: true, hasAcuteOrganDamage: true, hasSituationalTrigger: false }, 'emergency'],
+  [{ systolic: 170, diastolic: 110, hasSymptoms: true, hasAcuteOrganDamage: true, hasSituationalTrigger: false }, 'emergency'],
+  [{ systolic: 180, diastolic: 110, hasSymptoms: true, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'important_elevation'],
+  [{ systolic: 180, diastolic: 110, hasSymptoms: true, hasAcuteOrganDamage: false, hasSituationalTrigger: true }, 'pseudocrisis'],
+  [{ systolic: 179, diastolic: 109, hasSymptoms: true, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'chronic'],
+  [{ systolic: 200, diastolic: 120, hasSymptoms: false, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'chronic']
+]
+for (const [input, expected] of hypertensionCases) {
+  assert.equal(classifyHypertensionRoute(input), expected, `Hipertensão: classificação divergente para ${JSON.stringify(input)}`)
+}
+for (const scenario of ['aortic_syndrome', 'encephalopathy', 'ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage', 'catecholamine_crisis', 'acute_coronary_syndrome', 'pulmonary_edema', 'pregnancy_emergency', 'other']) {
+  assert.ok(HYPERTENSION_SCENARIO_TARGETS[scenario]?.length, `Hipertensão: meta ausente para ${scenario}`)
+}
+for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS']) {
+  assert.match(hypertensionComponentSource, new RegExp(marker), `Hipertensão: implementação interativa sem marcador obrigatório (${marker})`)
+}
+assert.match(reportSource, /flowId === 'hipertensao'/)
+assert.match(reportSource, /parseHypertensionCase/)
+
 assert.match(dengueSource, /Grupo D:[\s\S]*Presença de qualquer sinal de gravidade/)
 assert.match(dengueSource, /Grupo C:[\s\S]*Presença apenas de sinais de alarme/)
 assert.match(dengueSource, /Infundir ao longo de 1 hora/)
@@ -149,9 +187,9 @@ for (const source of [dengueSource, emergencyComponentSource]) {
 
 const inProgressIds = selectorSource.match(/const inProgressFlowchartIds = \[([^\]]*)\]/)?.[1] || ''
 const finishedIds = selectorSource.match(/const finishedFlowchartIds = \[([\s\S]*?)\n    \]/)?.[1] || ''
-for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc']) {
+for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao']) {
   assert.doesNotMatch(inProgressIds, new RegExp(`['"]${completed}['"]`), `${completed}: ainda marcado como em andamento`)
   assert.match(finishedIds, new RegExp(`['"]${completed}['"]`), `${completed}: não marcado como finalizado`)
 }
 
-console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma and AVC routes.')
+console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma, AVC and hypertension routes.')

@@ -1,16 +1,17 @@
 import React from 'react'
 import { Bell, Search, Menu, User } from 'lucide-react'
 import { AnimatedLogo } from './AnimatedLogo'
-import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { isSupabaseConfigured, supabase } from '@/services/supabaseClient'
 import Sidebar from './Sidebar'
 
 interface HeaderProps {
   onProfileClick?: () => void
+  onNewPatientClick?: () => void
+  onFlowchartLibraryClick?: () => void
 }
 
-const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
+const Header: React.FC<HeaderProps> = ({ onProfileClick, onNewPatientClick, onFlowchartLibraryClick }) => {
   const [avatarUrl, setAvatarUrl] = useState<string>('')
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
@@ -24,7 +25,8 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
         const user = userRes?.user
         if (!user) return
 
-        const metaAvatar = (user.user_metadata as any)?.avatar_url || ''
+        const metadata = user.user_metadata as Record<string, unknown>
+        const metaAvatar = typeof metadata.avatar_url === 'string' ? metadata.avatar_url : ''
         const { data: doctor } = await supabase
           .from('doctors')
           .select('name, avatar_url')
@@ -35,7 +37,11 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
         setAvatarUrl(doctorAvatar || metaAvatar || '')
 
         const doctorName = (doctor as { name?: string } | null)?.name || ''
-        const metaName = (user.user_metadata as any)?.full_name || (user.user_metadata as any)?.name || ''
+        const metaName = typeof metadata.full_name === 'string'
+          ? metadata.full_name
+          : typeof metadata.name === 'string'
+            ? metadata.name
+            : ''
         setUserName(doctorName || metaName || 'Médico(a)')
 
         setUserEmail(user.email || '')
@@ -57,6 +63,8 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick }) => {
         userName={userName}
         userEmail={userEmail}
         onProfileClick={onProfileClick}
+        onNewPatientClick={onNewPatientClick}
+        onFlowchartLibraryClick={onFlowchartLibraryClick}
       />
       <header className="relative bg-white sticky top-0 z-50 border-b border-slate-100">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-32">

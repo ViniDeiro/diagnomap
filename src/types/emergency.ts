@@ -7,6 +7,7 @@ export type EmergencyType =
   | 'covid19'
   | 'iam' // Infarto Agudo do Miocárdio
   | 'avc' // Acidente Vascular Cerebral
+  | 'hipertensao' // Crise hipertensiva
   | 'sepsis'
   | 'gasometria'
   | 'trauma'

@@ -9225,9 +9225,33 @@ export const atendimentoAntirrabicoFlowchart: EmergencyFlowchart = {
   }
 }
 
+export const hypertensionFlowchart: EmergencyFlowchart = {
+  id: 'hipertensao',
+  name: 'Crise Hipertensiva',
+  description: 'Classificação de elevação pressórica, pesquisa de lesão aguda e metas individualizadas',
+  category: 'cardiovascular',
+  priority: 'high',
+  icon: 'heart',
+  color: 'from-red-700 to-blue-700',
+  initialStep: 'hipertensao_confirmacao',
+  finalSteps: ['hipertensao_emergencia_plano', 'hipertensao_alta_sem_loa', 'hipertensao_cronica_alta'],
+  steps: {
+    hipertensao_confirmacao: { id: 'hipertensao_confirmacao', title: 'Confirmar pressão e sintomas', description: 'Repetir a aferição com técnica correta e registrar sintomas.', type: 'question', options: [{ text: 'Preenche ponto de entrada', nextStep: 'hipertensao_lesao_orgao', value: 'crise' }, { text: 'Fora do ponto de entrada', nextStep: 'hipertensao_cronica_alta', value: 'cronica' }] },
+    hipertensao_lesao_orgao: { id: 'hipertensao_lesao_orgao', title: 'Pesquisar lesão aguda', description: 'Diferenciar emergência de elevação importante sem dano progressivo.', type: 'question', critical: true, options: [{ text: 'Lesão aguda presente', nextStep: 'hipertensao_emergencia_preparo', value: 'emergencia', critical: true }, { text: 'Sem lesão aguda', nextStep: 'hipertensao_observacao', value: 'sem_loa' }] },
+    hipertensao_observacao: { id: 'hipertensao_observacao', title: 'Repouso e reavaliação', description: 'Observar em ambiente calmo e repetir pressão e sintomas.', type: 'action', options: [{ text: 'Reavaliar classificação', nextStep: 'hipertensao_classificacao_sem_loa', value: 'reavaliado' }] },
+    hipertensao_classificacao_sem_loa: { id: 'hipertensao_classificacao_sem_loa', title: 'Elevação sem lesão ou pseudocrise', description: 'Identificar fator situacional e evitar redução brusca.', type: 'question', options: [{ text: 'Planejar alta segura', nextStep: 'hipertensao_alta_sem_loa', value: 'alta' }] },
+    hipertensao_emergencia_preparo: { id: 'hipertensao_emergencia_preparo', title: 'Preparação da emergência', description: 'Monitorização, acessos, exames e CTI.', type: 'action', critical: true, timeSensitive: true, options: [{ text: 'Definir cenário', nextStep: 'hipertensao_emergencia_cenario', value: 'preparado', critical: true }] },
+    hipertensao_emergencia_cenario: { id: 'hipertensao_emergencia_cenario', title: 'Lesão predominante', description: 'O órgão acometido determina meta e velocidade de redução.', type: 'question', critical: true, options: [{ text: 'Aplicar meta específica', nextStep: 'hipertensao_emergencia_plano', value: 'meta', critical: true }] },
+    hipertensao_emergencia_plano: { id: 'hipertensao_emergencia_plano', title: 'Tratamento intravenoso e CTI', description: 'Titular terapia conforme o órgão-alvo e monitorar continuamente.', type: 'result', critical: true, requiresSpecialist: true, options: [] },
+    hipertensao_alta_sem_loa: { id: 'hipertensao_alta_sem_loa', title: 'Alta sem lesão aguda', description: 'Ajuste gradual, tratamento da causa e reavaliação ambulatorial.', type: 'result', options: [] },
+    hipertensao_cronica_alta: { id: 'hipertensao_cronica_alta', title: 'Hipertensão crônica descompensada', description: 'Revisar adesão e organizar seguimento sem redução agressiva.', type: 'result', options: [] }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
+  hipertensao: hypertensionFlowchart,
   sepsis: sepsisFlowchart,
   dengue: dengueFlowchart,
   gasometria: gasometryFlowchart,
@@ -9360,7 +9384,7 @@ export const allFlowcharts = [
   { id: 'fibrilacao_atrial_estavel', name: 'Fibrilação atrial de alta resposta ventricular estável', category: 'cardiovascular', implemented: false },
   { id: 'fibrilacao_atrial_instavel', name: 'Fibrilação atrial de alta resposta ventricular instável', category: 'cardiovascular', implemented: false },
   { id: 'flutter_atrial', name: 'Flutter atrial', category: 'cardiovascular', implemented: false },
-  { id: 'hipertensao', name: 'Hipertensão (Urgência e Emergência Hipertensiva)', category: 'cardiovascular', implemented: false },
+  { id: 'hipertensao', name: 'Hipertensão (Crise e Emergência Hipertensiva)', category: 'cardiovascular', implemented: true },
   { id: 'iam', name: 'IAM', category: 'cardiovascular', implemented: true },
   { id: 'insuficiencia_cardiaca', name: 'Insuficiência Cardíaca descompensada', category: 'cardiovascular', implemented: false },
   { id: 'miocardite', name: 'Miocardite', category: 'cardiovascular', implemented: false },

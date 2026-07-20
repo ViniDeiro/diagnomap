@@ -16,6 +16,8 @@ import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import type { PhysicalExamData } from './PhysicalExamForm'
 import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import { AVC_CASE_ANSWER_KEY, parseAVCCase } from './AVCFlowchartInteractive'
+import { HYPERTENSION_CASE_ANSWER_KEY, HYPERTENSION_LABELS, parseHypertensionCase } from './HypertensionFlowchartInteractive'
+import { HYPERTENSION_SCENARIO_TARGETS } from '@/lib/hypertension'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
   ANAPHYLAXIS_HOME_ORIENTATIONS,
@@ -469,7 +471,92 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       ]
     }
 
-    const usesSemiologicReport = !['dengue', 'atendimento_antirrabico', 'itu', 'tvp', 'anafilaxia', 'influenza', 'avc'].includes(flowId)
+    const usesSemiologicReport = !['dengue', 'atendimento_antirrabico', 'itu', 'tvp', 'anafilaxia', 'influenza', 'avc', 'hipertensao'].includes(flowId)
+
+    if (flowId === 'hipertensao') {
+      const hypertension = parseHypertensionCase(answers[HYPERTENSION_CASE_ANSWER_KEY])
+      const routeLabels: Record<string, string> = {
+        chronic: 'hipertensão crônica descompensada, sem ponto de entrada completo para crise',
+        emergency: 'emergência hipertensiva com lesão aguda/progressiva de órgão-alvo',
+        important_elevation: 'elevação pressórica importante sem lesão aguda demonstrada',
+        pseudocrisis: 'pseudocrise hipertensiva associada a fator precipitante'
+      }
+      const scenarioLabels: Record<string, string> = {
+        aortic_syndrome: 'síndrome aórtica aguda', encephalopathy: 'encefalopatia hipertensiva',
+        ischemic_stroke_lysis: 'AVC isquêmico candidato à trombólise', ischemic_stroke_no_lysis: 'AVC isquêmico sem trombólise',
+        intracerebral_hemorrhage: 'hemorragia intracerebral', subarachnoid_hemorrhage: 'hemorragia subaracnoide',
+        catecholamine_crisis: 'crise catecolaminérgica', acute_coronary_syndrome: 'síndrome coronariana aguda',
+        pulmonary_edema: 'edema agudo de pulmão', pregnancy_emergency: 'emergência hipertensiva da gestação', other: 'outra lesão aguda de órgão-alvo'
+      }
+      const listLabels = (items?: string[]) => uniqueItems((items || []).map(item => HYPERTENSION_LABELS[item] || item))
+      const scenario = hypertension.scenario
+      const route = hypertension.route
+      const scenarioKey = scenario || ''
+      const routeKey = route || ''
+      const pressureText = hypertension.systolic != null || hypertension.diastolic != null
+        ? `${hypertension.systolic ?? '—'}/${hypertension.diastolic ?? '—'} mmHg`
+        : 'não registrada no formulário específico'
+      const selectedScenarioTarget = scenario ? (HYPERTENSION_SCENARIO_TARGETS as Record<string, string[]>)[scenarioKey] || [] : []
+      const clinicalStatus = route
+        ? routeLabels[routeKey] || route
+        : 'classificação ainda não concluída'
+
+      return {
+        title: 'RELATÓRIO CLÍNICO - CRISE HIPERTENSIVA',
+        sections: [
+          {
+            title: 'Identificação e motivo do atendimento',
+            text: `Paciente ${patientForReport.name || 'não identificado'}, ${patientForReport.age || 'idade não informada'} anos, sexo ${formatGender(patientForReport.gender)}, peso ${formatWeight(patientForReport.weight)}, avaliado por elevação pressórica. Pressão usada na triagem específica: ${pressureText}.`
+          },
+          { title: 'Sinais vitais e exame físico', items: objectiveAssessmentItems.length ? objectiveAssessmentItems : ['Avaliação objetiva inicial não registrada.'] },
+          { title: 'Apresentação associada', items: listLabels(hypertension.symptoms).length ? listLabels(hypertension.symptoms) : ['Sintomas associados não discriminados.'] },
+          {
+            title: 'Qualidade da aferição e reavaliação',
+            items: uniqueItems([
+              ...listLabels(hypertension.measurementChecks),
+              ...listLabels(hypertension.observationMeasures),
+              hypertension.pressureAfterRest ? `Pressão após repouso: ${hypertension.pressureAfterRest}.` : null,
+              hypertension.symptomsImproved != null ? `Após observação, houve redução pressórica ou melhora sintomática: ${hypertension.symptomsImproved ? 'sim' : 'não'}.` : null
+            ])
+          },
+          {
+            title: 'Classificação e raciocínio clínico',
+            text: `O caminho estruturado classificou o episódio como ${clinicalStatus}.`,
+            items: uniqueItems([
+              ...(listLabels(hypertension.organDamage).length ? [`Lesões agudas/progressivas selecionadas: ${listLabels(hypertension.organDamage).join('; ')}.`] : ['Nenhuma lesão aguda/progressiva de órgão-alvo foi selecionada.']),
+              ...(listLabels(hypertension.triggers).length ? [`Fatores precipitantes registrados: ${listLabels(hypertension.triggers).join('; ')}.`] : [])
+            ])
+          },
+          ...((hypertension.emergencyMeasures || []).length || (hypertension.exams || []).length ? [{
+            title: 'Preparação e investigação da emergência',
+            items: uniqueItems([
+              ...listLabels(hypertension.emergencyMeasures).map(item => `Medida: ${item}.`),
+              ...listLabels(hypertension.exams).map(item => `Exame: ${item}.`)
+            ])
+          }] : []),
+          ...(scenario ? [{
+            title: 'Cenário e alvo pressórico',
+            text: `Lesão predominante: ${scenarioLabels[scenarioKey] || scenario}.`,
+            items: selectedScenarioTarget
+          }] : []),
+          {
+            title: 'Tratamento e destino',
+            items: uniqueItems([
+              hypertension.selectedIVAgent ? `Estratégia intravenosa selecionada: ${HYPERTENSION_LABELS[hypertension.selectedIVAgent || ''] || hypertension.selectedIVAgent}.` : null,
+              hypertension.selectedOralPlan ? `Plano sem lesão aguda: ${HYPERTENSION_LABELS[hypertension.selectedOralPlan || ''] || hypertension.selectedOralPlan}.` : null,
+              hypertension.disposition || 'Conduta ainda em andamento.'
+            ])
+          },
+          {
+            title: 'Segurança clínica',
+            text: route === 'emergency'
+              ? 'A redução deve ser titulada conforme o órgão acometido, evitando queda excessiva e mantendo monitorização contínua em unidade de cuidado intensivo.'
+              : 'Na ausência de lesão aguda, não se recomenda normalização rápida da pressão; a prioridade é tratar fatores precipitantes, revisar o tratamento crônico e garantir acompanhamento precoce.'
+          },
+          { title: 'Médico responsável', text: doctorSignatureText.replace('\n', ' - ') }
+        ]
+      }
+    }
 
     if (flowId === 'avc') {
       const avc = parseAVCCase(answers[AVC_CASE_ANSWER_KEY])

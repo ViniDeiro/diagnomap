@@ -37,6 +37,7 @@ import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
 import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
 import AVCFlowchartInteractive from './AVCFlowchartInteractive'
+import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
 import TEPAssessment from './TEPAssessment'
 import {
   INFLUENZA_SEVERITY_SIGNS,
@@ -7399,6 +7400,20 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   if (flowchart.id === 'avc') {
     return (
       <AVCFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+      />
+    )
+  }
+
+  if (flowchart.id === 'hipertensao') {
+    return (
+      <HypertensionFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
         initialHistory={history}

@@ -16,7 +16,8 @@
     "test:usability": "node scripts/usability-tests.js",
     "test:gasometry-formulas": "node scripts/gasometry-formula-tests.js",
     "test:wells-usability": "node scripts/wells-usability-tests.js",
-    "test:clinical-flows": "node scripts/clinical-flow-audit-tests.js"
+    "test:clinical-flows": "node scripts/clinical-flow-audit-tests.js",
+    "test:clinical-routing": "node scripts/clinical-routing-tests.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",

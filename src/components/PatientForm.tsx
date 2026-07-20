@@ -22,7 +22,8 @@ import {
 } from 'lucide-react'
 import { PatientFormData } from '@/types/patient'
 import { clsx } from 'clsx'
-import EmergencySelector from './EmergencySelector'
+import ClinicalIntakeNavigator from './ClinicalIntakeNavigator'
+import { INTAKE_SYMPTOMS } from '@/lib/clinicalRouting'
 import PhysicalExamForm, { PhysicalExamData } from './PhysicalExamForm'
 import SeverityAlertModal from './SeverityAlertModal'
 
@@ -59,7 +60,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
       orange: 'bg-orange-100 text-orange-700 border-orange-200',
       red: 'bg-red-100 text-red-700 border-red-200',
       black: 'bg-black text-white border-black'
-    } as any
+    }
     // Alinha o chip com a borda esquerda da caixa de input
     return (
       <span className={clsx('mt-2 ml-0 inline-flex items-center px-2 py-1 border rounded-full text-xs font-semibold', tones[tone])}>
@@ -159,7 +160,6 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
 
   // Entrada livre de PA: não força formatação durante digitação.
   // Aceita parcial até 3 dígitos por segmento e 1 barra.
-  const isBPPartialAllowed = (val: string) => /^\d{0,3}(\/\d{0,3})?$/.test(val)
   const isBPCompleteValid = (val: string) => /^\d{2,3}\/\d{2,3}$/.test(val)
 
   const classifyGlucose = (g?: string) => {
@@ -281,7 +281,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
       // Garantir defaults para campos opcionais
       return {
         ...initialData,
-        selectedFlowchart: initialData.selectedFlowchart ?? (presetFlowchart ?? 'dengue'),
+        selectedFlowchart: initialData.selectedFlowchart ?? (presetFlowchart ?? ''),
         allergies: initialData.allergies ?? [],
         symptoms: initialData.symptoms ?? [],
         chiefComplaint: initialData.chiefComplaint ?? initialData.symptoms?.[0] ?? '',
@@ -300,7 +300,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
       name: '',
       birthDate: new Date('2000-01-01'), // Data padrão ao invés de data atual
       gender: 'masculino',
-      selectedFlowchart: presetFlowchart ?? 'dengue',
+      selectedFlowchart: presetFlowchart ?? '',
       generalObservations: '',
       weight: undefined,
       allergies: [],
@@ -378,19 +378,16 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
   const [currentStep, setCurrentStep] = useState<number>(initialStep && initialStep >= 1 && initialStep <= 5 ? initialStep : 1)
   // Controle explícito: usuário deve clicar para selecionar o fluxo
   const [hasSelectedFlow, setHasSelectedFlow] = useState<boolean>(!!skipFlowSelection)
+  const [intakeSymptomIds, setIntakeSymptomIds] = useState<string[]>(() =>
+    INTAKE_SYMPTOMS
+      .filter(item => formData.symptoms.includes(item.id) || formData.symptoms.includes(item.label))
+      .map(item => item.id)
+  )
 
   // Apenas dengue usa as etapas clínicas adicionais (sintomas, sinais vitais e exame físico)
   const isDengueFlow = (formData.selectedFlowchart || '') === 'dengue'
 
-  // Seleção de fluxograma é feita via EmergencySelector
-
-  const emergencyOption = {
-    value: 'emergency',
-    label: 'Emergência',
-    color: 'from-red-600 to-red-700',
-    icon: <Shield className="w-8 h-8" />,
-    description: 'Protocolos de emergência e urgência médica'
-  }
+  // A seleção do fluxograma parte da queixa e dos sintomas; a biblioteca direta permanece no menu lateral.
 
   const dengueSymptoms = [
     'Febre',
@@ -715,11 +712,11 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                 ? [{ step: 2, label: 'Dados Pessoais', icon: User }]
                 : !isDengueFlow
                   ? [
-                      { step: 1, label: 'Fluxograma', icon: Target },
+                      { step: 1, label: 'Queixa e direção', icon: Target },
                       { step: 2, label: 'Dados Pessoais', icon: User }
                     ]
                   : [
-                      { step: 1, label: 'Fluxograma', icon: Target },
+                      { step: 1, label: 'Queixa e direção', icon: Target },
                       { step: 2, label: 'Dados Pessoais', icon: User },
                       { step: 3, label: 'Sintomas Clínicos', icon: Heart },
                       { step: 4, label: 'Sinais Vitais', icon: Activity },
@@ -759,7 +756,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
 
           <form onSubmit={handleSubmit} className="p-8">
 
-            {/* Step 1: Seleção do Fluxograma */}
+            {/* Step 1: Queixa clínica e sugestão de fluxogramas */}
             {currentStep === 1 && (
               <motion.div
                 initial={{ opacity: 0, x: 20 }}
@@ -769,14 +766,26 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                 <div className="flex items-center space-x-4 mb-8">
                   <div className="w-3 h-12 bg-gradient-to-b from-blue-600 to-slate-700 rounded-full"></div>
                   <div>
-                    <h2 className="text-2xl font-bold text-slate-800">Seleção do Fluxograma</h2>
-                    <p className="text-slate-600">Escolha o protocolo de atendimento adequado</p>
+                    <h2 className="text-2xl font-bold text-slate-800">Queixa e direcionamento clínico</h2>
+                    <p className="text-slate-600">Registre o relato inicial para encontrar os protocolos mais compatíveis</p>
                   </div>
                 </div>
 
                 <div className="space-y-6">
-                  <EmergencySelector
-                    selectedFlowchart={formData.selectedFlowchart}
+                  <ClinicalIntakeNavigator
+                    chiefComplaint={formData.chiefComplaint || ''}
+                    complaintDuration={formData.complaintDuration || ''}
+                    selectedSymptoms={intakeSymptomIds}
+                    selectedFlowchart={hasSelectedFlow ? formData.selectedFlowchart : undefined}
+                    onComplaintChange={(value) => setFormData(prev => ({ ...prev, chiefComplaint: value }))}
+                    onDurationChange={(value) => setFormData(prev => ({ ...prev, complaintDuration: value }))}
+                    onSymptomsChange={(values) => {
+                      setIntakeSymptomIds(values)
+                      setFormData(prev => ({
+                        ...prev,
+                        symptoms: values.map(id => INTAKE_SYMPTOMS.find(item => item.id === id)?.label || id)
+                      }))
+                    }}
                     onSelectFlowchart={(flowchart) => {
                       setFormData(prev => ({ ...prev, selectedFlowchart: flowchart.id }))
                       setHasSelectedFlow(true)
@@ -784,7 +793,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                     }}
                   />
                   {!hasSelectedFlow && (
-                    <p className="text-sm text-red-600 mt-2">Selecione um fluxograma para continuar.</p>
+                    <p className="text-sm text-amber-700 mt-2">Descreva a queixa e escolha uma das sugestões para continuar.</p>
                   )}
                 </div>
 
@@ -917,7 +926,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                         onChange={(e) => {
                           const raw = e.target.value.replace(/\D/g, '')
                           const trimmed = raw.slice(0, 8)
-                          let masked = trimmed
+                          const masked = trimmed
                             .replace(/(\d{2})(\d)/, '$1/$2')
                             .replace(/(\d{2})(\d)/, '$1/$2')
                           setBirthDateText(masked)
@@ -1016,8 +1025,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                           value={formData.chiefComplaint || ''}
                           onChange={(e) => setFormData(prev => ({
                             ...prev,
-                            chiefComplaint: e.target.value,
-                            symptoms: e.target.value.trim() ? [e.target.value.trim()] : []
+                            chiefComplaint: e.target.value
                           }))}
                           className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-slate-800 font-medium"
                           placeholder="Ex.: dor e inchaço na perna direita"
@@ -1280,7 +1288,7 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
                         value={bpText}
                         onFocus={() => setEditingField('bloodPressure')}
                         onChange={(e) => {
-                          let raw = e.target.value.replace(/[^\d]/g, '')
+                          const raw = e.target.value.replace(/[^\d]/g, '')
                           let formatted = raw
 
                           if (raw.length >= 3) {

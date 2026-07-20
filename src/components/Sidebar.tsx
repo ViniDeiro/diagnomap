@@ -4,7 +4,6 @@ import {
   X, 
   Stethoscope, 
   Plus, 
-  Activity, 
   Clock, 
   Users, 
   Search, 
@@ -26,6 +25,8 @@ interface SidebarProps {
   userName?: string
   userEmail?: string
   onProfileClick?: () => void
+  onNewPatientClick?: () => void
+  onFlowchartLibraryClick?: () => void
 }
 
 type SidebarChild = {
@@ -37,6 +38,7 @@ type SidebarLinkItem = {
   icon: LucideIcon
   label: string
   href: string
+  action?: 'new-patient' | 'flowchart-library'
   submenuId?: never
   children?: never
 }
@@ -62,7 +64,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   userAvatar, 
   userName, 
   userEmail,
-  onProfileClick
+  onProfileClick,
+  onNewPatientClick,
+  onFlowchartLibraryClick
 }) => {
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     calculadoras: true
@@ -75,8 +79,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   const menuGroups: SidebarGroup[] = [
     {
       items: [
-        { icon: Plus, label: 'Novo atendimento', href: '/?view=new-patient' },
-        { icon: Activity, label: 'Fluxos clínicos', href: '#' },
+        { icon: Plus, label: 'Novo atendimento', href: '/?view=new-patient', action: 'new-patient' },
+        { icon: BookOpen, label: 'Biblioteca de fluxogramas', href: '/?view=emergency-selector', action: 'flowchart-library' },
         { icon: Clock, label: 'Histórico de atendimentos', href: '#' },
       ]
     },
@@ -194,7 +198,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <Link 
                             key={itemIndex} 
                             href={item.href}
-                            onClick={onClose}
+                            onClick={(event) => {
+                              if (item.action === 'new-patient' && onNewPatientClick) {
+                                event.preventDefault()
+                                onNewPatientClick()
+                              }
+                              if (item.action === 'flowchart-library' && onFlowchartLibraryClick) {
+                                event.preventDefault()
+                                onFlowchartLibraryClick()
+                              }
+                              onClose()
+                            }}
                             className="flex items-center gap-3 px-3 py-3 rounded-xl text-slate-600 hover:bg-slate-50 hover:text-blue-600 transition-colors group"
                           >
                             <div className="p-2 bg-slate-50 rounded-lg group-hover:bg-blue-50 transition-colors">

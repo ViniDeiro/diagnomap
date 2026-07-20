@@ -64,6 +64,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
         'dengue',
         'anafilaxia',
         'avc',
+        'hipertensao',
         'paralisia_bell',
         'tvp',
         'atendimento_antirrabico',

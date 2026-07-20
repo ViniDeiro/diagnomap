@@ -50,11 +50,20 @@ export default function Home() {
       const shouldOpenNewPatientDirectly =
         typeof window !== 'undefined' &&
         new URLSearchParams(window.location.search).get('view') === 'new-patient'
+      const shouldOpenFlowchartLibraryDirectly =
+        typeof window !== 'undefined' &&
+        new URLSearchParams(window.location.search).get('view') === 'emergency-selector'
+
+      const requestedInitialState: AppState = shouldOpenNewPatientDirectly
+        ? 'new-patient'
+        : shouldOpenFlowchartLibraryDirectly
+          ? 'emergency-selector'
+          : 'dashboard'
 
       if (!isSupabaseConfigured) {
-        if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly) {
+        if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly || shouldOpenFlowchartLibraryDirectly) {
           window.history.replaceState(null, '', '/')
-          setAppState(shouldOpenNewPatientDirectly ? 'new-patient' : 'dashboard')
+          setAppState(requestedInitialState)
           return
         }
         setTimeout(() => {
@@ -81,9 +90,9 @@ export default function Home() {
           }, 4000)
           return
         }
-        if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly) {
+        if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly || shouldOpenFlowchartLibraryDirectly) {
           window.history.replaceState(null, '', '/')
-          setAppState(shouldOpenNewPatientDirectly ? 'new-patient' : 'dashboard')
+          setAppState(requestedInitialState)
           return
         }
         setTimeout(() => {
@@ -100,7 +109,7 @@ export default function Home() {
           setIsFading(true)
           setTimeout(() => {
             if (!active) return
-            setAppState(shouldOpenNewPatientDirectly ? 'new-patient' : 'dashboard')
+            setAppState(requestedInitialState)
           }, 500)
         }, 1200)
       }
@@ -474,10 +483,17 @@ export default function Home() {
 
     if (appState === 'emergency-selector') {
       return (
-        <EmergencySelector
-          onSelectFlowchart={handleSelectEmergencyFlowchart}
-          selectedFlowchart={selectedFlowchart?.id}
-        />
+        <>
+          <Header
+            onProfileClick={() => setAppState('profile')}
+            onNewPatientClick={handleNewPatient}
+            onFlowchartLibraryClick={() => setAppState('emergency-selector')}
+          />
+          <EmergencySelector
+            onSelectFlowchart={handleSelectEmergencyFlowchart}
+            selectedFlowchart={selectedFlowchart?.id}
+          />
+        </>
       )
     }
 
@@ -567,7 +583,11 @@ export default function Home() {
       <>
         {/* Renderizar Header apenas se não estiver em loading, login ou em fluxogramas */}
         {appState !== 'flowchart' && 
-         <Header onProfileClick={() => setAppState('profile')} />
+         <Header
+           onProfileClick={() => setAppState('profile')}
+           onNewPatientClick={handleNewPatient}
+           onFlowchartLibraryClick={() => setAppState('emergency-selector')}
+         />
         }
 
         {(appState === 'dashboard' || (isDashboardActive && previousState !== 'flowchart')) && (
