@@ -447,9 +447,25 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     const currentGroup = selectedState?.group || patientForReport.flowchartState?.group
     const symptoms = uniqueItems(patientForReport.admission.symptoms)
     const universalAssessment = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+    const careTransitionItems = uniqueItems(Object.entries(answers)
+      .filter(([key]) => key.startsWith('__care_transition_'))
+      .map(([, raw]) => {
+        const transition = safeParse(raw) as {
+          destination?: 'observation' | 'ward' | 'transfer' | 'icu'
+          receivingUnit?: string
+          responsibleTeam?: string
+          notes?: string
+          checks?: string[]
+          transferConfirmed?: boolean
+          confirmedAt?: string
+        } | null
+        if (!transition?.destination) return null
+        const labels = { observation: 'observação', ward: 'enfermaria', transfer: 'transferência', icu: 'UTI' }
+        return `Transição assistencial para ${labels[transition.destination]}${transition.receivingUnit ? ` — destino: ${transition.receivingUnit}` : ''}${transition.responsibleTeam ? `; equipe receptora: ${transition.responsibleTeam}` : ''}. Checklist de segurança: ${(transition.checks || []).join('; ') || 'não registrado'}. Passagem do cuidado ${transition.transferConfirmed ? 'confirmada' : 'ainda pendente'}${transition.notes ? `. Pendências/observações: ${transition.notes}` : ''}.`
+      }))
     const vitalItems = buildVitalsList(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
     const universalPhysicalExamItems = summarizeUniversalPhysicalExam(universalAssessment?.exameFisico)
-    const objectiveAssessmentItems = uniqueItems([...vitalItems, ...universalPhysicalExamItems])
+    const objectiveAssessmentItems = uniqueItems([...vitalItems, ...universalPhysicalExamItems, ...careTransitionItems])
     const labItems = buildLabItems()
     const prescriptions = uniqueItems(
       patientForReport.treatment.prescriptions.map((item) => {
@@ -459,7 +475,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     )
     const observations = uniqueItems([
       patientForReport.generalObservations,
-      ...(patientForReport.treatment.observations || [])
+      ...(patientForReport.treatment.observations || []),
+      ...careTransitionItems
     ])
 
     const narrativeSummary = buildClinicalSummary(patientForReport, {

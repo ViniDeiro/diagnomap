@@ -27,6 +27,7 @@ import type { EmergencyPatient } from '@/types/emergency'
 import ABCDEChecklist from './ABCDEChecklist'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import { ModifiedRankinSelector, NIHSSCalculator, type NIHSSValues } from './ClinicalScaleCalculators'
+import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
 import {
   calculateAVCThrombolyticDose,
   evaluateAVCThrombectomy,
@@ -277,6 +278,9 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const [data, setData] = useState<AVCCaseData>(() => ({ weight: patient.weight, ...parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]) }))
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(() => Boolean(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).completedAt))
+  const [careTransition, setCareTransition] = useState<CareTransitionData | null>(() => {
+    try { return initialAnswers.__care_transition_avc_aguardo_uti ? JSON.parse(initialAnswers.__care_transition_avc_aguardo_uti) : null } catch { return null }
+  })
 
   const isFinalStage = stage === 'avc_aguardo_uti'
   const progress = isFinalStage ? 100 : Math.max(4, Math.round(((AVC_STAGES.indexOf(stage) + 1) / AVC_STAGES.length) * 100))
@@ -328,19 +332,31 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     onUpdate(patient.id, 'avc_ativacao', [], preservedAnswers, 4, 'AVC')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const finish = (outcome: string) => {
+  const finalizeCase = (outcome: string, confirmedTransition?: CareTransitionData) => {
     const finalData = { ...data, outcome, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-    const nextAnswers = { ...answers, [AVC_CASE_ANSWER_KEY]: JSON.stringify(finalData) }
+    const nextAnswers = { ...answers, ...(confirmedTransition ? { __care_transition_avc_aguardo_uti: JSON.stringify(confirmedTransition) } : {}), [AVC_CASE_ANSWER_KEY]: JSON.stringify(finalData) }
     setData(finalData)
     setAnswers(nextAnswers)
     onUpdate(patient.id, stage, [...history, stage], nextAnswers, 100, 'AVC')
     setShowCompletion(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  const finish = (outcome: string) => {
+    finalizeCase(outcome)
+  }
+  const finishWithTransition = (outcome: string, transition: CareTransitionData) => {
+    finalizeCase(outcome, transition)
+  }
   const proceedToIcu = (outcome: string) => persist('avc_aguardo_uti', {
     outcome,
     utiRequestedAt: data.utiRequestedAt || new Date().toISOString()
   })
+  const persistCareTransition = (transition: CareTransitionData) => {
+    const nextAnswers = { ...answers, __care_transition_avc_aguardo_uti: JSON.stringify(transition) }
+    setCareTransition(transition)
+    setAnswers(nextAnswers)
+    onUpdate(patient.id, stage, history, nextAnswers, progress, 'AVC')
+  }
 
   const handleBack = () => {
     if (showCompletion) {
@@ -595,6 +611,8 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_aguardo_uti' && (
             <div className="space-y-6">
+              <UniversalCareTransition destination="icu" value={careTransition} onChange={persistCareTransition} onConfirmed={(transition) => finishWithTransition(data.outcome || 'AVC confirmado - encaminhado para cuidado intensivo/neurocrítico', transition)} />
+              <div className="hidden" aria-hidden="true">
               <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-indigo-800 via-violet-800 to-slate-900 p-6 text-white shadow-xl sm:p-8">
                 <div className="absolute -right-16 -top-20 h-60 w-60 rounded-full bg-cyan-300/10 blur-3xl" />
                 <div className="relative flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20"><Hospital className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">Destino obrigatório</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Aguardando UTI / unidade neurocrítica</h2><p className="mt-2 max-w-3xl text-sm leading-relaxed text-indigo-100">O protocolo permanece ativo. Continue estabilização, vigilância neurológica e tratamento das complicações até a passagem formal do cuidado.</p></div></div>
@@ -604,6 +622,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
               <section className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 md:grid-cols-2"><label className="text-sm font-black text-slate-800">Destino ou equipe receptora<input value={data.utiDestination || ''} onChange={event => update({ utiDestination: event.target.value })} placeholder="Ex.: UTI neurológica, leito regulado, hospital de referência" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium" /></label><label className="text-sm font-black text-slate-800">Pendências e observações<textarea value={data.utiNotes || ''} onChange={event => update({ utiNotes: event.target.value })} placeholder="Registre pendências, intercorrências ou condições do transporte" rows={3} className="mt-2 w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium" /></label></section>
               <button type="button" disabled={!['leito','monitor','neurologico','handoff'].every(item => (data.utiChecklist || []).includes(item))} onClick={() => finish(data.outcome || 'AVC confirmado - encaminhado para cuidado intensivo/neurocrítico')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white shadow-lg shadow-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"><CheckCircle2 className="h-5 w-5" /> Confirmar destino e concluir protocolo</button>
               {!['leito','monitor','neurologico','handoff'].every(item => (data.utiChecklist || []).includes(item)) && <p className="text-center text-sm font-semibold text-slate-500">Para concluir, confirme solicitação do leito, monitorização, reavaliação neurológica e passagem de caso.</p>}
+              </div>
             </div>
           )}
 

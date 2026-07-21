@@ -27,6 +27,7 @@ import { Patient } from '@/types/patient'
 import { patientService } from '@/services/patientService'
 import { enableLocalStorageReplication, hydrateLocalStorageFromDB } from '@/services/patientStorageBridge'
 import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
+import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
 
 interface FlowchartStep {
   id: string
@@ -174,6 +175,17 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     if (typeof window === 'undefined') return []
     try { return JSON.parse(localStorage.getItem(`dengue_discharge_criteria_${patient.id}`) || '[]') } catch { return [] }
   })
+  const [criticalCareTransition, setCriticalCareTransition] = useState<CareTransitionData | null>(() => {
+    const raw = patient.flowchartState.answers?.__care_transition_dengue_uti
+    if (!raw) return null
+    try { return JSON.parse(raw) as CareTransitionData } catch { return null }
+  })
+  const persistCriticalCareTransition = (transition: CareTransitionData) => {
+    const updatedAnswers = { ...answers, __care_transition_dengue_uti: JSON.stringify(transition) }
+    setCriticalCareTransition(transition)
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, 'D')
+  }
   const toggleDischargeCriterion = (criterion: string) => {
     const next = dischargeCriteria.includes(criterion)
       ? dischargeCriteria.filter(item => item !== criterion)
@@ -3272,6 +3284,13 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
             </div>
           </div>
 
+          <UniversalCareTransition
+            destination="icu"
+            value={criticalCareTransition}
+            onChange={persistCriticalCareTransition}
+            onConfirmed={() => undefined}
+          />
+
           {/* Resumo do protocolo UTI */}
           <div className="bg-gradient-to-r from-red-100 to-red-200 p-6 rounded-2xl border border-red-300">
             <div className="flex items-center space-x-3 mb-4">
@@ -3305,7 +3324,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
         </div>
       ),
       options: [
-        { text: 'Manejo inicial até ingresso na UTI', nextStep: 'treatment_d', value: 'continue' }
+        { text: criticalCareTransition?.transferConfirmed ? 'Manejo inicial até ingresso na UTI' : 'Confirme a transição assistencial para avançar', nextStep: 'treatment_d', value: 'continue', disabled: !criticalCareTransition?.transferConfirmed }
       ]
     },
 
@@ -4993,10 +5012,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
       ),
       options: [
         {
-          text: !hasNotificationNumber ? 'Informe o número da notificação para finalizar' : dischargeCriteria.length < dischargeCriterionLabels.length ? 'Confirme todos os critérios de alta para finalizar' : 'Finalizar atendimento',
+          text: !criticalCareTransition?.transferConfirmed ? 'Confirme a passagem para UTI antes de finalizar' : !hasNotificationNumber ? 'Informe o número da notificação para finalizar' : dischargeCriteria.length < dischargeCriterionLabels.length ? 'Confirme todos os critérios de alta para finalizar' : 'Finalizar atendimento',
           nextStep: 'end',
           value: 'finish',
-          disabled: !hasNotificationNumber || dischargeCriteria.length < dischargeCriterionLabels.length
+          disabled: !criticalCareTransition?.transferConfirmed || !hasNotificationNumber || dischargeCriteria.length < dischargeCriterionLabels.length
         }
       ]
     },

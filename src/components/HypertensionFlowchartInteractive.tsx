@@ -10,13 +10,13 @@ import {
   ChevronRight,
   Clock3,
   HeartPulse,
-  Hospital,
   Pill,
   ShieldAlert,
   Stethoscope,
   TestTube2
 } from 'lucide-react'
 import { clsx } from 'clsx'
+import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
 import type { EmergencyPatient } from '@/types/emergency'
 import {
   classifyHypertensionRoute,
@@ -213,6 +213,9 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const [answers, setAnswers] = useState(initialAnswers)
   const [data, setData] = useState<HypertensionCaseData>(() => parseHypertensionCase(initialAnswers[HYPERTENSION_CASE_ANSWER_KEY]))
   const [notice, setNotice] = useState('')
+  const [criticalTransition, setCriticalTransition] = useState<CareTransitionData | null>(() => {
+    try { return initialAnswers.__care_transition_hipertensao_emergencia_plano ? JSON.parse(initialAnswers.__care_transition_hipertensao_emergencia_plano) : null } catch { return null }
+  })
   const [title, subtitle] = stageTitles[stage]
   const finalStage = ['hipertensao_emergencia_plano', 'hipertensao_alta_sem_loa', 'hipertensao_cronica_alta'].includes(stage)
   const progress = finalStage ? 100 : Math.max(8, Math.round(((HYPERTENSION_STAGES.indexOf(stage) + 1) / HYPERTENSION_STAGES.length) * 100))
@@ -234,12 +237,19 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
     onUpdate(patient.id, nextStage, nextHistory, nextAnswers, Math.max(progress, 10), nextData.route === 'emergency' ? 'Emergência hipertensiva' : 'Crise hipertensiva')
   }
 
-  const finish = (disposition: string) => {
+  const finish = (disposition: string, confirmedTransition?: CareTransitionData) => {
     const nextData = { ...data, disposition, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-    const nextAnswers = { ...answers, [HYPERTENSION_CASE_ANSWER_KEY]: JSON.stringify(nextData) }
+    const nextAnswers = { ...answers, ...(confirmedTransition ? { __care_transition_hipertensao_emergencia_plano: JSON.stringify(confirmedTransition) } : {}), [HYPERTENSION_CASE_ANSWER_KEY]: JSON.stringify(nextData) }
     setData(nextData); setAnswers(nextAnswers)
     onUpdate(patient.id, stage, [...history, stage], nextAnswers, 100, nextData.route === 'emergency' ? 'Emergência hipertensiva' : 'Sem lesão aguda')
     onComplete()
+  }
+
+  const persistCriticalTransition = (transition: CareTransitionData) => {
+    const nextAnswers = { ...answers, __care_transition_hipertensao_emergencia_plano: JSON.stringify(transition) }
+    setCriticalTransition(transition)
+    setAnswers(nextAnswers)
+    onUpdate(patient.id, stage, history, nextAnswers, progress, 'Emergência hipertensiva')
   }
 
   const goBack = () => {
@@ -288,7 +298,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
 
           {stage === 'hipertensao_emergencia_cenario' && <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{scenarioOptions.map(([id, label, description]) => <Option key={id} selected={data.scenario === id} title={label} description={description} danger onClick={() => update({ scenario: id })} />)}</div><button type="button" disabled={!data.scenario} onClick={() => persist('hipertensao_emergencia_plano')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar meta específica <ChevronRight /></button></div>}
 
-          {stage === 'hipertensao_emergencia_plano' && <div className="space-y-6"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Alvo pressórico do cenário</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{target.map(item => <li key={item}>{item}</li>)}</ul></div><section><h2 className="mb-3 font-black">Estratégia intravenosa registrada</h2><div className="grid gap-3 md:grid-cols-2">{ivAgentOptions.map(([id, label, description]) => <Option key={id} selected={data.selectedIVAgent === id} title={label} description={description} danger onClick={() => update({ selectedIVAgent: id })} />)}</div></section><div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Dupla checagem obrigatória:</strong> a escolha e a dose dependem do órgão acometido, perfusão, gestação, função renal, contraindicações e protocolo institucional.</div><button type="button" disabled={!data.selectedIVAgent} onClick={() => finish('Internação em CTI/unidade monitorizada com anti-hipertensivo intravenoso titulável')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300"><Hospital /> Registrar plano crítico e finalizar</button></div>}
+          {stage === 'hipertensao_emergencia_plano' && <div className="space-y-6"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Alvo pressórico do cenário</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{target.map(item => <li key={item}>{item}</li>)}</ul></div><section><h2 className="mb-3 font-black">Estratégia intravenosa registrada</h2><div className="grid gap-3 md:grid-cols-2">{ivAgentOptions.map(([id, label, description]) => <Option key={id} selected={data.selectedIVAgent === id} title={label} description={description} danger onClick={() => update({ selectedIVAgent: id })} />)}</div></section><div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Dupla checagem obrigatória:</strong> a escolha e a dose dependem do órgão acometido, perfusão, gestação, função renal, contraindicações e protocolo institucional.</div>{data.selectedIVAgent ? <UniversalCareTransition destination="icu" value={criticalTransition} onChange={persistCriticalTransition} onConfirmed={(transition) => finish('Internação em CTI/unidade monitorizada com anti-hipertensivo intravenoso titulável', transition)} /> : <p className="rounded-xl bg-slate-100 p-4 text-center text-sm font-bold text-slate-600">Selecione o anti-hipertensivo intravenoso para iniciar a transição à unidade crítica.</p>}</div>}
 
           {stage === 'hipertensao_alta_sem_loa' && <div className="space-y-6"><div className={clsx('rounded-2xl border p-5', data.route === 'pseudocrisis' ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-emerald-300 bg-emerald-50 text-emerald-950')}><h2 className="text-xl font-black">{data.route === 'pseudocrisis' ? 'Pseudocrise provável' : 'Elevação importante sem lesão aguda'}</h2><p className="mt-2 text-sm">{data.route === 'pseudocrisis' ? 'Direcione a conduta ao fator precipitante e repita a pressão. Evite tratamento agressivo apenas pelo número.' : 'Não há indicação de redução rápida ou medicação intravenosa. Planeje controle gradual e seguimento breve.'}</p></div><div className="grid gap-3 md:grid-cols-2">{oralOptions.map(([id, label]) => <Option key={id} selected={data.selectedOralPlan === id} title={label} onClick={() => update({ selectedOralPlan: id })} />)}</div><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Antes da alta:</strong> confirmar estabilidade, ausência de lesão aguda, orientação sobre sinais de alarme e retorno ambulatorial precoce. Fármacos de curta duração não devem ser usados para normalizar a pressão rapidamente.</div><button type="button" disabled={!data.selectedOralPlan} onClick={() => finish(data.route === 'pseudocrisis' ? 'Alta após tratamento do fator precipitante e reavaliação' : 'Alta com ajuste gradual e reavaliação ambulatorial precoce')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300"><Pill /> Registrar alta segura e finalizar</button></div>}
 

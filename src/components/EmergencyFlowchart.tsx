@@ -39,6 +39,7 @@ import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type Univ
 import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS, type ABCDEItem } from './ABCDEChecklist'
 import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
+import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
 import TEPAssessment from './TEPAssessment'
 import {
   INFLUENZA_SEVERITY_SIGNS,
@@ -3739,6 +3740,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  const careDestination = flowchart.finalSteps.includes(currentStep) ? inferCareDestination(currentStepData) : null
+  const careTransitionKey = `__care_transition_${currentStep}`
+  const careTransitionData = useMemo(() => {
+    const raw = answers[careTransitionKey]
+    if (!raw) return null
+    try { return JSON.parse(raw) as CareTransitionData } catch { return null }
+  }, [answers, careTransitionKey])
+  const persistCareTransition = useCallback((data: CareTransitionData) => {
+    const updatedAnswers = { ...answers, [careTransitionKey]: JSON.stringify(data) }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }, [answers, careTransitionKey, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
   useEffect(() => {
     let mounted = true
     getCurrentDoctor()
@@ -18923,7 +18936,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {/* Step Final */}
-              {flowchart.finalSteps.includes(currentStep) && (
+              {flowchart.finalSteps.includes(currentStep) && careDestination && !careTransitionData?.transferConfirmed && (
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
+                  <UniversalCareTransition
+                    destination={careDestination}
+                    value={careTransitionData}
+                    onChange={persistCareTransition}
+                    onConfirmed={() => undefined}
+                  />
+                </motion.div>
+              )}
+
+              {flowchart.finalSteps.includes(currentStep) && (!careDestination || careTransitionData?.transferConfirmed) && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
