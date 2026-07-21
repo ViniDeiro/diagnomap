@@ -147,6 +147,23 @@ const symptomOptions = [
   ['consciencia', 'Redução do nível de consciência']
 ] as const
 
+const formatISODateToBR = (value?: string) => {
+  if (!value) return ''
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : ''
+}
+
+const parseBRDateToISO = (value: string) => {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value)
+  if (!match) return undefined
+  const day = Number(match[1])
+  const month = Number(match[2])
+  const year = Number(match[3])
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return undefined
+  return `${match[3]}-${match[2]}-${match[1]}`
+}
+
 const initialMeasureOptions = [
   ['equipe', 'Acionar equipe de AVC/neurologia'],
   ['monitor', 'Monitor cardíaco, pressão seriada e oximetria'],
@@ -276,6 +293,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const [history, setHistory] = useState<string[]>(initialHistory.filter(item => AVC_STAGES.includes(item as AVCStage)))
   const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers)
   const [data, setData] = useState<AVCCaseData>(() => ({ weight: patient.weight, ...parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]) }))
+  const [onsetDateText, setOnsetDateText] = useState(() => formatISODateToBR(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).onsetDate))
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(() => Boolean(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).completedAt))
   const [careTransition, setCareTransition] = useState<CareTransitionData | null>(() => {
@@ -327,6 +345,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     setHistory([])
     setAnswers(preservedAnswers)
     setData(restartedData)
+    setOnsetDateText('')
     setNotice('')
     setShowCompletion(false)
     onUpdate(patient.id, 'avc_ativacao', [], preservedAnswers, 4, 'AVC')
@@ -532,7 +551,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           {stage === 'avc_ativacao' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <section><h2 className="text-lg font-black text-slate-950">Manifestações de início súbito</h2><p className="mt-1 text-sm text-slate-600">Marque todos os déficits presentes. Sinais posteriores também exigem ativação do protocolo.</p><div className="mt-4 grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <CardOption key={id} selected={(data.symptoms || []).includes(id)} title={label} onClick={() => selectMany('symptoms', id)} />)}</div></section>
-              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><h2 className="font-black text-slate-950">Último momento conhecido sem déficit</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-bold text-slate-700">Data<input type="date" value={data.onsetDate || ''} onChange={event => update({ onsetDate: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><label className="text-sm font-bold text-slate-700">Horário<input type="time" value={data.onsetTime || ''} onChange={event => update({ onsetTime: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><CardOption selected={Boolean(data.wakeUpStroke)} title="Déficit percebido ao acordar" onClick={() => update({ wakeUpStroke: !data.wakeUpStroke, onsetUnknown: true })} /><CardOption selected={Boolean(data.onsetUnknown)} title="Horário não determinado" onClick={() => update({ onsetUnknown: !data.onsetUnknown })} /></div></section>
+              <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><h2 className="font-black text-slate-950">Último momento conhecido sem déficit</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-bold text-slate-700">Data<input type="text" inputMode="numeric" lang="pt-BR" placeholder="DD/MM/AAAA" maxLength={10} value={onsetDateText} onChange={event => { const digits = event.target.value.replace(/\D/g, '').slice(0, 8); const masked = digits.replace(/^(\d{2})(\d)/, '$1/$2').replace(/^(\d{2}\/\d{2})(\d)/, '$1/$2'); const onsetDate = parseBRDateToISO(masked); setOnsetDateText(masked); update({ onsetDate, onsetUnknown: false }) }} aria-label="Data do último momento conhecido sem déficit no formato dia, mês e ano" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><label className="text-sm font-bold text-slate-700">Horário<input type="time" lang="pt-BR" value={data.onsetTime || ''} onChange={event => update({ onsetTime: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><CardOption selected={Boolean(data.wakeUpStroke)} title="Déficit percebido ao acordar" onClick={() => update({ wakeUpStroke: !data.wakeUpStroke, onsetUnknown: true })} /><CardOption selected={Boolean(data.onsetUnknown)} title="Horário não determinado" onClick={() => update({ onsetUnknown: !data.onsetUnknown })} /></div></section>
               <ABCDEChecklist
                 value={data.abcdeDomains || []}
                 onChange={updateAbcde}
