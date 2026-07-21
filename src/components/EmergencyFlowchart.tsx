@@ -2745,13 +2745,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         )
         if (hasSavedAlert) {
           if (currentStep === 'wells_score') {
-            nextStep = 'pocus_antes_d_dimero'
-            value = 'alerta_investigacao_obrigatoria'
-          } else if (currentStep === 'pocus_antes_d_dimero') {
-            nextStep = 'pocus_resultado_pre_d_dimero'
-          } else if (currentStep === 'pocus_resultado_pre_d_dimero') {
-            nextStep = 'tvp_d_dimero_alerta'
-            value = `${value || 'pocus_registrado'}_com_alerta`
+            nextStep = 'tvp_urgencia_vascular_imediata'
+            value = 'alerta_gravidade_confirmado'
           } else if (currentStep === 'tvp_d_dimero_alerta' || currentStep === 'baixa_probabilidade') {
             nextStep = 'tvp_urgencia_vascular_imediata'
             value = `${value || 'd_dimero_registrado'}_com_alerta`
@@ -4116,13 +4111,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     : answers.baixa_probabilidade === 'ddimer_negative'
       ? 'negativo'
       : 'não realizado ou não informado'
-  const tvpPocusResult = answers.pocus_resultado_pre_d_dimero || answers.us_compressiva
+  const tvpPocusResult = answers.us_compressiva || answers.pocus_resultado_pre_d_dimero
   const tvpReferralUltrasound = tvpPocusResult === 'us_positive' || answers.repetir_us === 'repeat_positive'
-    ? 'POCUS compressivo de 3 pontos positivo para TVP, com veia não compressível.'
+    ? 'Doppler venoso positivo para trombose venosa profunda.'
     : tvpPocusResult === 'us_negative' || answers.repetir_us === 'repeat_negative'
-      ? 'POCUS compressivo de 3 pontos negativo nas janelas avaliadas.'
+      ? 'Doppler venoso negativo no exame registrado.'
       : tvpPocusResult === 'us_inconclusive'
-        ? 'POCUS compressivo de 3 pontos inconclusivo ou tecnicamente limitado.'
+        ? 'Doppler venoso inconclusivo ou tecnicamente limitado.'
         : 'Resultado não informado no fluxo.'
   const persistedTVPClinicalFindings = useMemo(() => {
     try {
@@ -4163,10 +4158,10 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return acc + (criterion?.score || 0)
   }, 0)
   const wellsRisk = wellsScoreTotal <= 0 ? 'baixa' : wellsScoreTotal <= 2 ? 'moderada' : 'alta'
-  const wellsNextStep = wellsScoreTotal <= 0 ? 'pocus_antes_d_dimero' : 'moderada_probabilidade'
+  const wellsNextStep = wellsScoreTotal <= 0 ? 'baixa_probabilidade' : 'moderada_probabilidade'
   const wellsDecisionValue = wellsScoreTotal <= 0 ? 'low' : wellsScoreTotal <= 2 ? 'moderate' : 'high'
-  const tvpWellsDestination = hasTVPAlertSignSelected ? 'pocus_antes_d_dimero' : wellsNextStep
-  const tvpWellsDecisionValue = hasTVPAlertSignSelected ? 'alerta_investigacao_obrigatoria' : wellsDecisionValue
+  const tvpWellsDestination = hasTVPAlertSignSelected ? 'tvp_urgencia_vascular_imediata' : wellsNextStep
+  const tvpWellsDecisionValue = hasTVPAlertSignSelected ? 'alerta_gravidade_confirmado' : wellsDecisionValue
   const hasAbsoluteContraindication = selectedContraindications.some(item => item.startsWith('abs_'))
   const hasRelativeContraindication = selectedContraindications.some(item => item.startsWith('rel_'))
   const hasSelectedTherapy = availableSelectedTherapies.length > 0

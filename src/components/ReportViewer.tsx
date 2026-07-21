@@ -1058,10 +1058,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         (treatmentData?.opcoesTerapeuticasSelecionadas || []).map((item) => TVP_THERAPY_LABELS[item] || item)
       )
 
-      const pocusResult = answers.pocus_resultado_pre_d_dimero || answers.us_compressiva
-      const hasPositiveUS = pocusResult === 'us_positive' || answers.repetir_us === 'repeat_positive'
-      const hasNegativeUS = pocusResult === 'us_negative' || answers.repetir_us === 'repeat_negative'
-      const hasInconclusiveUS = pocusResult === 'us_inconclusive'
+      const dopplerResult = answers.us_compressiva || answers.pocus_resultado_pre_d_dimero
+      const hasPositiveUS = dopplerResult === 'us_positive' || answers.repetir_us === 'repeat_positive'
+      const hasNegativeUS = dopplerResult === 'us_negative' || answers.repetir_us === 'repeat_negative'
+      const hasInconclusiveUS = dopplerResult === 'us_inconclusive'
       const hasPositiveDdimer = answers.baixa_probabilidade === 'ddimer_positive'
       const hasNegativeDdimer = answers.baixa_probabilidade === 'ddimer_negative'
       const vascularEmergencyProtocolApplied = answers.tvp_urgencia_vascular_imediata === 'protocolo_flegmasia_aplicado'
@@ -1118,10 +1118,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         hasNegativeDdimer ? 'D-dímero: negativo.' : null,
         hasPositiveDdimer ? 'D-dímero: positivo.' : null,
         answers.moderada_probabilidade ? 'D-dímero não utilizado nesta etapa, devido à probabilidade clínica moderada/alta.' : null,
-        hasPositiveUS ? 'POCUS vascular compressivo de 3 pontos positivo, com ausência de colabamento venoso, achado compatível com trombose venosa profunda proximal.' : null,
-        hasNegativeUS ? 'POCUS vascular compressivo de 3 pontos negativo, com compressibilidade preservada nas janelas avaliadas.' : null,
-        hasInconclusiveUS ? 'POCUS vascular compressivo de 3 pontos inconclusivo ou tecnicamente limitado, sem condições para exclusão de TVP.' : null,
-        answers.us_negativa_conduta === 'high_suspicion' ? 'Mantida suspeita clínica após POCUS inicial negativo ou inconclusivo, com indicação de varredura venosa completa ou repetição da ultrassonografia em 5 a 7 dias.' : null,
+        hasPositiveUS ? 'Ultrassonografia Doppler venosa positiva, com trombose venosa profunda identificada.' : null,
+        hasNegativeUS ? 'Ultrassonografia Doppler venosa negativa no exame registrado.' : null,
+        hasInconclusiveUS ? 'Ultrassonografia Doppler venosa inconclusiva ou tecnicamente limitada, sem condições para exclusão da TVP.' : null,
+        answers.us_negativa_conduta === 'high_suspicion' ? 'Mantida suspeita clínica após Doppler inicial negativo ou inconclusivo, com indicação de repetição da ultrassonografia em 5 a 7 dias.' : null,
         ...labItems
       ])
 

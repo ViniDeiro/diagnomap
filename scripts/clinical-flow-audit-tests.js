@@ -36,7 +36,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -79,6 +79,7 @@ const reachable = flow => {
 
 validateLinks(anaphylaxisFlowchart)
 validateLinks(asthmaFlowchart)
+validateLinks(tvpFlowchart)
 validateLinks(avcFlowchart)
 validateLinks(hypertensionFlowchart)
 
@@ -225,6 +226,13 @@ assert.match(emergencyComponentSource, /ASTHMA_ADULT_DISCHARGE_PRESCRIPTION/)
 assert.match(emergencyComponentSource, /data-asthma-copy-discharge/)
 assert.match(anaphylaxisLogicSource, /age !== null && age > 12[\s\S]*doseMg: 0\.5/, 'Dose adulta de adrenalina deve prevalecer sobre peso inconsistente')
 
+const tvpReachable = reachable(tvpFlowchart)
+assert.equal(tvpFlowchart.steps.wells_score.options.find(option => option.value === 'low')?.nextStep, 'baixa_probabilidade', 'TVP: Wells baixo deve seguir diretamente ao D-dímero')
+assert.equal(tvpFlowchart.steps.baixa_probabilidade.options.find(option => option.value === 'ddimer_positive')?.nextStep, 'us_compressiva', 'TVP: D-dímero positivo deve seguir ao Doppler venoso')
+assert.equal(tvpFlowchart.steps.moderada_probabilidade.options[0]?.nextStep, 'us_compressiva', 'TVP: Wells moderado/alto deve seguir diretamente ao Doppler')
+assert.equal(tvpReachable.has('pocus_antes_d_dimero'), false, 'TVP: POCUS não pode anteceder D-dímero no ramo principal')
+assert.equal(tvpReachable.has('pocus_resultado_pre_d_dimero'), false, 'TVP: resultado de POCUS não pode ser etapa obrigatória antes do D-dímero')
+
 const inProgressIds = selectorSource.match(/const inProgressFlowchartIds = \[([^\]]*)\]/)?.[1] || ''
 const finishedIds = selectorSource.match(/const finishedFlowchartIds = \[([\s\S]*?)\n    \]/)?.[1] || ''
 for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao']) {
@@ -232,4 +240,4 @@ for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao']
   assert.match(finishedIds, new RegExp(`['"]${completed}['"]`), `${completed}: não marcado como finalizado`)
 }
 
-console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma, AVC and hypertension routes.')
+console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma, AVC, hypertension and TVP routes.')

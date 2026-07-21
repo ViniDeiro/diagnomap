@@ -2542,7 +2542,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Baixa probabilidade (menor ou igual a 0)', nextStep: 'pocus_antes_d_dimero', value: 'low' },
+        { text: 'Baixa probabilidade (menor ou igual a 0)', nextStep: 'baixa_probabilidade', value: 'low' },
         { text: 'Moderada/Alta probabilidade (maior ou igual a 1)', nextStep: 'moderada_probabilidade', value: 'moderate_high', critical: true }
       ]
     },
@@ -2598,12 +2598,12 @@ export const tvpFlowchart: EmergencyFlowchart = {
         <div class="bg-green-100 p-3 rounded border-l-4 border-green-700 text-sm text-green-950 leading-relaxed">
           <p><strong>Conduta:</strong> Solicitar D-dímero de alta sensibilidade.</p>
           <p>Se negativo, TVP pode ser excluída em paciente de baixa probabilidade.</p>
-          <p>Se positivo, correlacionar com o POCUS já registrado e seguir para reavaliação/varredura venosa conforme suspeita clínica.</p>
+          <p>Se positivo, solicitar ultrassonografia Doppler venosa do membro inferior.</p>
         </div>
       `,
       options: [
         { text: 'D-dímero negativo', nextStep: 'tvp_excluida', value: 'ddimer_negative' },
-        { text: 'D-dímero positivo', nextStep: 'us_negativa_conduta', value: 'ddimer_positive' }
+        { text: 'D-dímero positivo: solicitar Doppler venoso', nextStep: 'us_compressiva', value: 'ddimer_positive' }
       ]
     },
     tvp_d_dimero_alerta: {
@@ -2631,41 +2631,39 @@ export const tvpFlowchart: EmergencyFlowchart = {
     moderada_probabilidade: {
       id: 'moderada_probabilidade',
       title: 'Moderada/Alta Probabilidade',
-      description: 'Realizar POCUS vascular com compressão de 3 pontos.',
+      description: 'Solicitar ultrassonografia Doppler venosa sem etapa prévia de D-dímero.',
       type: 'action',
       critical: true,
       content: `
         <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Conduta direta:</strong> realizar POCUS vascular com compressão de 3 pontos sem etapa prévia de D-dímero. Se negativo, inconclusivo ou insuficiente diante de probabilidade moderada/alta, solicitar varredura venosa completa.</p>
+          <p><strong>Conduta direta:</strong> solicitar ultrassonografia Doppler venosa do membro inferior. Se o resultado for negativo e a suspeita clínica persistir, repetir a ultrassonografia em 5–7 dias.</p>
         </div>
       `,
       options: [
-        { text: 'Realizar POCUS compressivo de 3 pontos', nextStep: 'us_compressiva', value: 'direct_us', critical: true },
-        { text: 'POCUS não disponível: solicitar ultrassonografia vascular formal', nextStep: 'us_negativa_conduta', value: 'pocus_indisponivel', critical: true }
+        { text: 'Registrar resultado do Doppler venoso', nextStep: 'us_compressiva', value: 'direct_doppler', critical: true }
       ]
     },
     us_compressiva: {
       id: 'us_compressiva',
-      title: 'Resultado do POCUS vascular: compressão de 3 pontos',
-      description: 'Registrar o resultado após avaliar veia femoral comum/junção safeno-femoral, bifurcação femoral e veia poplítea até a trifurcação.',
+      title: 'Resultado do Doppler venoso de membro inferior',
+      description: 'Registrar o laudo da ultrassonografia vascular formal.',
       type: 'question',
       critical: true,
       options: [
-        { text: 'POCUS positivo: veia não compressível', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
-        { text: 'POCUS negativo: compressibilidade preservada', nextStep: 'us_negativa_conduta', value: 'us_negative' },
-        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'us_negativa_conduta', value: 'us_inconclusive' },
-        { text: 'POCUS não disponível', nextStep: 'us_negativa_conduta', value: 'us_unavailable' }
+        { text: 'Doppler positivo: trombose identificada', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
+        { text: 'Doppler negativo: sem trombose demonstrada', nextStep: 'us_negativa_conduta', value: 'us_negative' },
+        { text: 'Doppler inconclusivo ou tecnicamente limitado', nextStep: 'us_negativa_conduta', value: 'us_inconclusive' }
       ]
     },
     us_negativa_conduta: {
       id: 'us_negativa_conduta',
-      title: 'POCUS negativo ou inconclusivo - Reavaliação',
+      title: 'Doppler negativo ou inconclusivo — reavaliação',
       description: 'Decisão baseada na persistência da suspeita clínica.',
       type: 'question',
       content: `
         <div class="bg-slate-50 p-3 rounded border border-slate-200 text-sm">
-          <p>POCUS de 3 pontos negativo não exclui TVP distal, ilíaca ou trombose proximal fora das janelas avaliadas.</p>
-          <p>Se a probabilidade clínica permanecer moderada ou alta, solicitar varredura venosa completa ou repetir ultrassonografia em 5–7 dias conforme disponibilidade e protocolo.</p>
+          <p>Um Doppler inicial negativo pode não encerrar a investigação quando a suspeita clínica permanece relevante.</p>
+          <p>Se persistirem sinais ou dúvida diagnóstica, repetir a ultrassonografia em 5–7 dias conforme disponibilidade e protocolo.</p>
         </div>
       `,
       options: [

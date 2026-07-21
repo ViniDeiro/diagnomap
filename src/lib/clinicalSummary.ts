@@ -288,7 +288,7 @@ const buildTVPClinicalSummary = (
   const wellsCriteria = Array.isArray(wellsData?.criteriosSelecionados)
     ? uniqueTextItems(wellsData.criteriosSelecionados.map((item) => tvpWellsLabels[String(item)] || formatClinicalValue(item)))
     : []
-  // O exame mais recente deve prevalecer sobre o POCUS inicial.
+  // O exame vascular mais recente deve prevalecer no resumo.
   const pocusValue = answers.repetir_us || answers.us_compressiva || answers.pocus_resultado_pre_d_dimero
   const normalizedPocus = String(pocusValue || '').toLowerCase()
   const hasPositiveImaging = normalizedPocus.includes('us_positive') || normalizedPocus.includes('repeat_positive')
@@ -368,15 +368,15 @@ const buildTVPClinicalSummary = (
     ? `A probabilidade clínica pré-teste foi classificada como ${wellsClassificationLabel}, com escore de Wells igual a ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}.${wellsCriteria.length > 0 ? ` Contribuíram para o escore ${formatClinicalListText(wellsCriteria)}.` : ''}`
     : 'A probabilidade clínica pré-teste pelo escore de Wells não foi documentada durante esta avaliação.'
   const imagingAndLaboratorySentence = hasPositiveImaging
-    ? `${wellsScore != null && /baix/i.test(wellsClassificationLabel) ? 'Embora a probabilidade clínica inicial tenha sido baixa, a' : 'A'} avaliação ultrassonográfica vascular à beira do leito demonstrou veia não compressível, achado compatível com trombose venosa profunda proximal e de forte valor diagnóstico no contexto avaliado.${hasPositiveDDimer ? ' O D-dímero também foi positivo; embora inespecífico, o resultado é concordante com a investigação, sem substituir o achado de imagem.' : hasNegativeDDimer ? ' O D-dímero foi negativo, resultado que não afasta trombose diante da imagem vascular positiva.' : ''}`
+    ? `${wellsScore != null && /baix/i.test(wellsClassificationLabel) ? 'Embora a probabilidade clínica inicial tenha sido baixa, a' : 'A'} ultrassonografia Doppler venosa demonstrou trombose venosa profunda.${hasPositiveDDimer ? ' O D-dímero também foi positivo; embora inespecífico, o resultado é concordante com a investigação, sem substituir o achado de imagem.' : hasNegativeDDimer ? ' O D-dímero foi negativo, resultado que não afasta trombose diante da imagem vascular positiva.' : ''}`
     : hasNegativeImaging && hasPositiveDDimer
-      ? 'O POCUS vascular inicial mostrou compressibilidade preservada, porém o D-dímero foi positivo. Esse conjunto não confirma TVP e indica complementação com ultrassonografia vascular formal ou exame seriado conforme a probabilidade clínica.'
+      ? 'O Doppler venoso inicial foi negativo, porém o D-dímero foi positivo. Se a suspeita clínica persistir, permanece indicada repetição da ultrassonografia conforme o protocolo.'
       : hasNegativeImaging && hasNegativeDDimer
-        ? `O POCUS vascular não demonstrou veia não compressível e o D-dímero foi negativo${/baix/i.test(wellsClassificationLabel) ? ', combinação que reduz significativamente a probabilidade de TVP no cenário de baixa probabilidade clínica' : ''}.`
+        ? `O Doppler venoso não demonstrou trombose e o D-dímero foi negativo${/baix/i.test(wellsClassificationLabel) ? ', combinação que reduz significativamente a probabilidade de TVP no cenário de baixa probabilidade clínica' : ''}.`
         : hasInconclusiveImaging
           ? 'A avaliação ultrassonográfica vascular foi inconclusiva ou tecnicamente limitada, não permitindo excluir TVP; permanece indicada complementação diagnóstica.'
           : hasNegativeImaging
-            ? 'O POCUS vascular mostrou compressibilidade preservada, devendo o resultado ser interpretado com a probabilidade clínica e a necessidade de imagem formal ou seriada.'
+            ? 'O Doppler venoso não demonstrou trombose, devendo o resultado ser interpretado com a probabilidade clínica e a necessidade de exame seriado.'
             : 'Não foi documentado resultado conclusivo de imagem vascular nesta avaliação.'
   const diagnosticInterpretation = `${wellsSentence} ${imagingAndLaboratorySentence}`
 
