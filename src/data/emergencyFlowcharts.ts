@@ -2603,7 +2603,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
       `,
       options: [
         { text: 'D-dímero negativo', nextStep: 'tvp_excluida', value: 'ddimer_negative' },
-        { text: 'D-dímero positivo: solicitar Doppler venoso', nextStep: 'us_compressiva', value: 'ddimer_positive' }
+        { text: 'D-dímero positivo: solicitar Doppler venoso', nextStep: 'solicitar_doppler_venoso', value: 'ddimer_positive' }
       ]
     },
     tvp_d_dimero_alerta: {
@@ -2640,7 +2640,30 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Registrar resultado do Doppler venoso', nextStep: 'us_compressiva', value: 'direct_doppler', critical: true }
+        { text: 'Solicitar Doppler venoso', nextStep: 'solicitar_doppler_venoso', value: 'direct_doppler', critical: true }
+      ]
+    },
+    solicitar_doppler_venoso: {
+      id: 'solicitar_doppler_venoso',
+      title: 'Solicitar USG Doppler venoso do membro acometido',
+      description: 'Confirmar ou afastar TVP com ultrassonografia vascular formal.',
+      type: 'action',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border-l-4 border-l-blue-700 border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p><strong>Exame solicitado:</strong> ultrassonografia com Doppler venoso do membro inferior sintomático, com avaliação do sistema venoso profundo.</p>
+          </div>
+          <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-800">
+            <p><strong>Informar ao serviço de imagem:</strong> membro e segmento acometidos, início dos sintomas, escore de Wells, resultado do D-dímero quando realizado e presença de sinais de gravidade.</p>
+          </div>
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p>Se houver ameaça ao membro, suspeita de flegmasia ou instabilidade, não aguardar o fluxo ambulatorial: acionar avaliação vascular urgente.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Exame solicitado — registrar resultado', nextStep: 'us_compressiva', value: 'doppler_solicitado', critical: true }
       ]
     },
     us_compressiva: {

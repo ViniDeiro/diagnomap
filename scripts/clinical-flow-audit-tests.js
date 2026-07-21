@@ -228,8 +228,9 @@ assert.match(anaphylaxisLogicSource, /age !== null && age > 12[\s\S]*doseMg: 0\.
 
 const tvpReachable = reachable(tvpFlowchart)
 assert.equal(tvpFlowchart.steps.wells_score.options.find(option => option.value === 'low')?.nextStep, 'baixa_probabilidade', 'TVP: Wells baixo deve seguir diretamente ao D-dímero')
-assert.equal(tvpFlowchart.steps.baixa_probabilidade.options.find(option => option.value === 'ddimer_positive')?.nextStep, 'us_compressiva', 'TVP: D-dímero positivo deve seguir ao Doppler venoso')
-assert.equal(tvpFlowchart.steps.moderada_probabilidade.options[0]?.nextStep, 'us_compressiva', 'TVP: Wells moderado/alto deve seguir diretamente ao Doppler')
+assert.equal(tvpFlowchart.steps.baixa_probabilidade.options.find(option => option.value === 'ddimer_positive')?.nextStep, 'solicitar_doppler_venoso', 'TVP: D-dímero positivo deve abrir solicitação do Doppler venoso')
+assert.equal(tvpFlowchart.steps.moderada_probabilidade.options[0]?.nextStep, 'solicitar_doppler_venoso', 'TVP: Wells moderado/alto deve seguir diretamente à solicitação do Doppler')
+assert.equal(tvpFlowchart.steps.solicitar_doppler_venoso.options[0]?.nextStep, 'us_compressiva', 'TVP: após solicitar Doppler deve ser possível registrar o resultado')
 assert.equal(tvpReachable.has('pocus_antes_d_dimero'), false, 'TVP: POCUS não pode anteceder D-dímero no ramo principal')
 assert.equal(tvpReachable.has('pocus_resultado_pre_d_dimero'), false, 'TVP: resultado de POCUS não pode ser etapa obrigatória antes do D-dímero')
 

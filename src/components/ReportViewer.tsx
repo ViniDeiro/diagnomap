@@ -1118,6 +1118,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         hasNegativeDdimer ? 'D-dímero: negativo.' : null,
         hasPositiveDdimer ? 'D-dímero: positivo.' : null,
         answers.moderada_probabilidade ? 'D-dímero não utilizado nesta etapa, devido à probabilidade clínica moderada/alta.' : null,
+        answers.solicitar_doppler_venoso ? 'Ultrassonografia Doppler venosa do membro acometido solicitada.' : null,
         hasPositiveUS ? 'Ultrassonografia Doppler venosa positiva, com trombose venosa profunda identificada.' : null,
         hasNegativeUS ? 'Ultrassonografia Doppler venosa negativa no exame registrado.' : null,
         hasInconclusiveUS ? 'Ultrassonografia Doppler venosa inconclusiva ou tecnicamente limitada, sem condições para exclusão da TVP.' : null,
