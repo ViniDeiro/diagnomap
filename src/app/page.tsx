@@ -31,6 +31,7 @@ export default function Home() {
   const [currentPatient, setCurrentPatient] = useState<Patient | null>(null)
   const [currentEmergencyPatient, setCurrentEmergencyPatient] = useState<EmergencyPatient | null>(null)
   const [selectedFlowchart, setSelectedFlowchart] = useState<EmergencyFlowchartType | null>(null)
+  const [libraryFlowchart, setLibraryFlowchart] = useState<EmergencyFlowchartType | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [previousState, setPreviousState] = useState<AppState>('dashboard')
   const [isFading, setIsFading] = useState(false)
@@ -119,82 +120,21 @@ export default function Home() {
   }, [])
 
   const handleNewPatient = () => {
+    setLibraryFlowchart(null)
     setAppState('new-patient')
   }
 
   const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
-    // Caso especial: Dengue deve usar o fluxo completo dedicado
-    if (flowchart.id === 'dengue') {
-      const quickPatient = patientService.createPatient({
-        name: 'Paciente de Emergência',
-        birthDate: new Date('2000-01-01'),
-        gender: 'masculino',
-        medicalRecord: `EM-${Date.now()}`,
-        selectedFlowchart: 'dengue',
-        generalObservations: '',
-        symptoms: [],
-        vitalSigns: {}
-      })
-      setCurrentPatient(quickPatient)
-      setSafetyAlertRequired(true)
-      setSafetyAlertChecks({ read: false, aware: false, committed: false })
-      setAppState('flowchart')
-      return
-    }
-
-    // Demais protocolos usam o fluxograma genérico de emergência
+    // A Biblioteca escolhe o protocolo, mas o atendimento só começa após
+    // identificar o paciente e registrar sua avaliação clínica inicial.
     setSelectedFlowchart(flowchart)
-
-    const emergencyPatient: EmergencyPatient = {
-      id: `emergency-${Date.now()}`,
-      name: 'Paciente de Emergência',
-      birthDate: new Date(),
-      age: 0,
-      gender: 'masculino',
-      allergies: [],
-      medicalRecord: `EM-${Date.now()}`,
-      selectedFlowchart: flowchart.id,
-      generalObservations: '',
-      admission: {
-        date: new Date(),
-        time: new Date().toLocaleTimeString(),
-        symptoms: []
-      },
-      flowchartState: {
-        currentStep: flowchart.initialStep,
-        history: [],
-        answers: {},
-        progress: 0,
-        lastUpdate: new Date()
-      },
-      labResults: {
-        status: 'not_requested'
-      },
-      treatment: {
-        prescriptions: [],
-        observations: []
-      },
-      status: 'active',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      emergencyType: flowchart.id,
-      emergencyState: {
-        currentStep: flowchart.initialStep,
-        history: [],
-        answers: {},
-        progress: 0,
-        lastUpdate: new Date()
-      }
-    }
-    setCurrentEmergencyPatient(emergencyPatient)
-
-    setSafetyAlertRequired(true)
-    setSafetyAlertChecks({ read: false, aware: false, committed: false })
-    setAppState('emergency-flowchart')
+    setLibraryFlowchart(flowchart)
+    setAppState('new-patient')
   }
 
   const handlePatientFormSubmit = (formData: PatientFormData) => {
     const newPatient = patientService.createPatient(formData)
+    setLibraryFlowchart(null)
     setCurrentPatient(newPatient)
     setRefreshTrigger(prev => prev + 1)
     setSafetyAlertRequired(true)
@@ -205,6 +145,7 @@ export default function Home() {
   // Redirecionamento automático para grupos C/D vindo do PatientForm
   const handleSeverityRedirect = (formData: PatientFormData, group: 'C' | 'D') => {
     const newPatient = patientService.createPatient(formData)
+    setLibraryFlowchart(null)
     const targetStep = group === 'D' ? 'group_d' : 'group_c'
     try {
       // Inicializa o estado do fluxograma já no grupo detectado
@@ -223,6 +164,11 @@ export default function Home() {
   }
 
   const handlePatientFormCancel = () => {
+    if (libraryFlowchart) {
+      setLibraryFlowchart(null)
+      setAppState('emergency-selector')
+      return
+    }
     setAppState('dashboard')
   }
 
@@ -503,6 +449,9 @@ export default function Home() {
           onSubmit={handlePatientFormSubmit}
           onCancel={handlePatientFormCancel}
           onSeverityRedirect={handleSeverityRedirect}
+          initialStep={libraryFlowchart ? 2 : undefined}
+          presetFlowchart={libraryFlowchart?.id}
+          skipFlowSelection={Boolean(libraryFlowchart)}
         />
       )
     }

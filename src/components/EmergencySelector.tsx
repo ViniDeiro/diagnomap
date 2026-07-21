@@ -396,7 +396,8 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                 whileHover={{ y: -4 }}
                                 onClick={() => {
                                     if (flowchart.implemented) {
-                                        // Caso especial: Hiponatremia tem rota dedicada
+                                        // Hiponatremia possui uma tela clínica dedicada, que também
+                                        // começa pelo cadastro do paciente antes de abrir o protocolo.
                                         if (flowchart.id === 'dhel_hiponatremia') {
                                             router.push('/hyponatremia')
                                             return

@@ -32,7 +32,7 @@ interface PatientFormProps {
   onCancel: () => void
   // Opções para cenários específicos (ex.: Retorno)
   initialStep?: number // passo inicial do wizard (1–4)
-  presetFlowchart?: 'dengue' | 'zika' | 'chikungunya' // define o fluxograma inicialmente
+  presetFlowchart?: string // define o fluxograma inicialmente (inclusive quando escolhido pela Biblioteca)
   skipFlowSelection?: boolean // se true, não exige seleção do fluxograma
   // Dados iniciais (pré-preenchimento) e modo de uso
   initialData?: PatientFormData

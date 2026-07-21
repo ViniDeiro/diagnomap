@@ -16,6 +16,9 @@ const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewe
 const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8')
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
+const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
+const clinicalScalesSource = fs.readFileSync(path.join(root, 'src/components/ClinicalScaleCalculators.tsx'), 'utf8')
+const anaphylaxisLogicSource = fs.readFileSync(path.join(root, 'src/lib/anaphylaxis.ts'), 'utf8')
 
 const compiled = ts.transpileModule(flowSource, {
   compilerOptions: {
@@ -83,10 +86,19 @@ const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [
   'ana_adrenalina_im',
   'ana_repetir_adrenalina_internacao',
+  'ana_via_aerea_avancada',
   'ana_internacao_via_aerea_choque',
   'ana_observacao_alta',
   'ana_observacao_prolongada'
 ]) assert.ok(anaphylaxisReachable.has(required), `Anafilaxia: caminho obrigatório não alcançável (${required})`)
+
+for (const marker of [
+  'ANAPHYLAXIS_AIRWAY_THREATS', 'ANAPHYLAXIS_AIRWAY_ACTIONS', 'ANAPHYLAXIS_POCUS_ACTIONS',
+  'CICO ou obstrução completa', 'Capnografia contínua com onda', 'sinaisAmeacaSelecionados',
+  'medidasViaAereaSelecionadas', 'medidasPocusSelecionadas'
+]) assert.match(emergencyComponentSource, new RegExp(marker), `Anafilaxia: tela de via aérea sem marcador obrigatório (${marker})`)
+
+assert.match(reportSource, /Via Aérea Avançada e POCUS/)
 
 const asthmaReachable = reachable(asthmaFlowchart)
 for (const required of [
@@ -111,7 +123,7 @@ for (const required of [
   'avc_ativacao', 'avc_glicemia', 'avc_triagem', 'avc_nihss', 'avc_exames', 'avc_imagem',
   'avc_janela', 'avc_imagem_avancada', 'avc_trombolise_seguranca', 'avc_trombolitico',
   'avc_pos_trombolise', 'avc_complicacao_trombolise', 'avc_vaso', 'avc_trombectomia_criterios',
-  'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino'
+  'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino', 'avc_aguardo_uti'
 ]) assert.ok(avcReachable.has(required), `AVC: caminho obrigatório não alcançável (${required})`)
 
 for (const obsolete of ['avaliacao_multiprofissional_sala_vermelha', 'avaliar_tc_cranio_sem_contraste', 'tempo_sintomas_menor_8h']) {
@@ -124,7 +136,8 @@ for (const marker of [
   'avc_complicacao_trombolise', 'AVC_CASE_ANSWER_KEY', 'ABCDEChecklist', 'abcdeDomains',
   'Dashboard', 'Reiniciar', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY',
   'Teste AVEI \\(Escala de Cincinnati\\)', 'Atendimento de AVC finalizado',
-  'Abrir relatório completo', 'Concluir e ir ao dashboard', 'showCompletion'
+  'Abrir relatório completo', 'Concluir e ir ao dashboard', 'showCompletion',
+  'Aguardando UTI / unidade neurocrítica', 'utiChecklist', 'utiRequestedAt', 'proceedToIcu'
 ]) assert.match(avcComponentSource, new RegExp(marker), `AVC: implementação interativa sem marcador obrigatório (${marker})`)
 
 const avcFinishImplementation = avcComponentSource.match(/const finish = \(outcome: string\) => \{[\s\S]*?\n  \}/)?.[0] || ''
@@ -133,6 +146,7 @@ assert.doesNotMatch(avcFinishImplementation, /onComplete\(\)/, 'AVC: finalizaç�
 
 assert.match(reportSource, /flowId === 'avc'/)
 assert.match(reportSource, /parseAVCCase/)
+assert.match(reportSource, /Destino intensivo e segurança da transferência/)
 
 const thrombectomyCases = [
   [{ vesselTerritory: 'grande_anterior', timeWindow: 'ate_45h', aspects: 8, premorbidRankin: 1, nihss: 12 }, 'forte'],
@@ -200,6 +214,16 @@ assert.match(emergencyComponentSource, /abcdeSelecionado: selectedAnaphylaxisAbc
 assert.match(abcdeComponentSource, /aria-pressed=\{selected\}/, 'ABCDE deve expor estado de seleção acessível')
 assert.match(abcdeComponentSource, /value\.length} de \{items\.length\}/, 'ABCDE deve mostrar progresso por domínio')
 assert.match(reportSource, /ANAPHYLAXIS_ABCDE_LABELS/, 'Relatório de anafilaxia deve traduzir o ABCDE selecionado')
+assert.match(universalAssessmentSource, /GlasgowCalculator/, 'Avaliação universal deve calcular Glasgow dentro do exame neurológico')
+assert.match(clinicalScalesSource, /NIHSS guiado/)
+assert.match(clinicalScalesSource, /Rankin modificada prévia/)
+assert.match(avcComponentSource, /NIHSSCalculator/)
+assert.match(avcComponentSource, /ModifiedRankinSelector/)
+assert.match(flowSource, /POCUS não disponível: seguir para D-dímero/, 'TVP de baixa probabilidade deve prosseguir sem POCUS')
+assert.match(flowSource, /MgSO4 a 10% \(100 mg\/mL\)/, 'Asma deve detalhar diluição do magnésio a 10%')
+assert.match(emergencyComponentSource, /ASTHMA_ADULT_DISCHARGE_PRESCRIPTION/)
+assert.match(emergencyComponentSource, /data-asthma-copy-discharge/)
+assert.match(anaphylaxisLogicSource, /age !== null && age > 12[\s\S]*doseMg: 0\.5/, 'Dose adulta de adrenalina deve prevalecer sobre peso inconsistente')
 
 const inProgressIds = selectorSource.match(/const inProgressFlowchartIds = \[([^\]]*)\]/)?.[1] || ''
 const finishedIds = selectorSource.match(/const finishedFlowchartIds = \[([\s\S]*?)\n    \]/)?.[1] || ''

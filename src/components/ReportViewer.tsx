@@ -607,6 +607,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         antiagregante: 'antiagregação após exclusão de hemorragia e respeito ao intervalo pós-trombólise',
         tevc: 'prevenção de tromboembolismo venoso e lesão por pressão', etiologia: 'investigação etiológica e prevenção secundária'
       }
+      const utiChecklistLabels: Record<string, string> = {
+        leito: 'leito de UTI ou unidade neurocrítica solicitado', monitor: 'monitorização cardiorrespiratória e oximetria mantidas',
+        neurologico: 'reavaliação neurológica e sinais vitais seriados', metas: 'metas fisiológicas individualizadas mantidas',
+        complicacoes: 'vigilância ativa de complicações neurológicas e sistêmicas', handoff: 'passagem clínica estruturada preparada',
+        transporte: 'transporte monitorizado organizado'
+      }
       const abcdeLabels: Record<string, string> = {
         airway: 'A — via aérea', breathing: 'B — respiração', circulation: 'C — circulação',
         disability: 'D — estado neurológico', exposure: 'E — exposição e exame completo'
@@ -629,6 +635,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         thrombectomyRecommendation ? `Trombectomia: ${labelFor(recommendationLabels, thrombectomyRecommendation)}.` : null,
         avc.aspects != null ? `ASPECTS: ${avc.aspects}.` : null,
         avc.pcAspects != null ? `PC-ASPECTS: ${avc.pcAspects}.` : null
+      ])
+      const intensiveCareItems = uniqueItems([
+        ...(avc.utiChecklist || []).map(item => utiChecklistLabels[item] || item),
+        avc.utiDestination ? `Destino/equipe receptora: ${avc.utiDestination}.` : null,
+        avc.utiRequestedAt ? `Cuidado intensivo solicitado em ${formatDate(avc.utiRequestedAt)}.` : null,
+        avc.utiNotes ? `Observações da transferência: ${avc.utiNotes}` : null
       ])
       return {
         title: 'RELATÓRIO CLÍNICO - PROTOCOLO DE AVC AGUDO',
@@ -659,6 +671,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           { title: 'Segurança da trombólise', items: selectedContraindications.length ? selectedContraindications : ['Nenhuma contraindicação foi selecionada na revisão estruturada.'] },
           { title: 'Reperfusão e destino', items: reperfusionItems.length ? reperfusionItems : ['Não há reperfusão registrada.'], text: avc.outcome || 'Conduta ainda em andamento.' },
+          { title: 'Destino intensivo e segurança da transferência', items: intensiveCareItems.length ? intensiveCareItems : ['Solicitação de UTI/unidade neurocrítica ainda não registrada.'] },
           ...((avc.postThrombolysisAlerts || []).length ? [{ title: 'Alertas após trombólise', items: (avc.postThrombolysisAlerts || []).map(item => postLysisAlertLabels[item] || item) }] : []),
           ...((avc.supportiveCare || []).length ? [{ title: 'Cuidados de suporte registrados', items: (avc.supportiveCare || []).map(item => supportiveCareLabels[item] || item) }] : []),
           { title: 'Médico responsável', text: doctorSignatureText.replace('\n', ' - ') }
@@ -1214,6 +1227,13 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const adjunctData = safeParse(answers.ana_tratamento_adjunto) as {
         tratamentosAdjuntosSelecionados?: string[]
       } | null
+      const airwayData = safeParse(answers.ana_via_aerea_avancada) as {
+        decision?: string
+        sinaisAmeacaSelecionados?: string[]
+        medidasViaAereaSelecionadas?: string[]
+        medidasPocusSelecionadas?: string[]
+        cicoDeclarado?: boolean
+      } | null
 
       const rawCriteria = criteriaData?.criteriosSelecionados ?? []
       const rawAdjuncts = adjunctData?.tratamentosAdjuntosSelecionados ?? []
@@ -1237,6 +1257,33 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const selectedAbcdeDomains = uniqueItems(
         rawAbcde.map((item) => ANAPHYLAXIS_ABCDE_LABELS[item] || item)
       )
+      const airwayThreatLabels: Record<string, string> = {
+        stridor: 'Estridor ou ruído inspiratório progressivo',
+        voice_change: 'Rouquidão, disfonia ou mudança progressiva da voz',
+        saliva_difficulty: 'Sialorreia ou dificuldade para engolir saliva',
+        tongue_edema: 'Edema importante de língua ou orofaringe',
+        neck_edema: 'Edema cervical relevante',
+        limited_mouth: 'Abertura oral limitada',
+        rapid_progression: 'Edema em rápida progressão',
+        difficult_airway: 'Previsão de via aérea difícil'
+      }
+      const airwayActionLabels: Record<string, string> = {
+        expert_help: 'Operador experiente em via aérea acionado',
+        surgical_team: 'Equipe apta a acesso cervical avisada precocemente',
+        difficult_airway_cart: 'Material de via aérea difícil preparado',
+        oxygenation: 'Estratégia de oxigenação e pré-oxigenação organizada',
+        limited_attempts: 'Tentativas limitadas com mudança planejada de estratégia',
+        front_neck_ready: 'Acesso frontal de emergência deixado pronto'
+      }
+      const pocusActionLabels: Record<string, string> = {
+        mark_cricothyroid: 'POCUS usado para localizar/marcar membrana cricotireóidea',
+        confirm_tracheal: 'POCUS selecionado como complemento à confirmação traqueal',
+        bilateral_lung: 'Deslizamento pleural bilateral selecionado como verificação complementar',
+        focused_shock: 'Avaliação ultrassonográfica focal integrada ao choque'
+      }
+      const airwayThreats = uniqueItems((airwayData?.sinaisAmeacaSelecionados || []).map((item) => airwayThreatLabels[item] || item))
+      const airwayActions = uniqueItems((airwayData?.medidasViaAereaSelecionadas || []).map((item) => airwayActionLabels[item] || item))
+      const airwayPocusActions = uniqueItems((airwayData?.medidasPocusSelecionadas || []).map((item) => pocusActionLabels[item] || item))
       const firstResponseValue = answers.ana_reavaliacao_5_10 || ''
       const secondResponseValue = answers.ana_reavaliacao_segunda_dose || ''
       const responseValue = secondResponseValue || firstResponseValue
@@ -1258,7 +1305,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       )
 
       const confirmedAnaphylaxis = Boolean(criteriaData?.diagnosticoProvavel || selectedCriteria.length > 0)
-      const criticalOutcome = ['ana_repetir_adrenalina_internacao', 'ana_reavaliacao_segunda_dose', 'ana_internacao_via_aerea_choque'].includes(currentStep)
+      const criticalOutcome = ['ana_repetir_adrenalina_internacao', 'ana_reavaliacao_segunda_dose', 'ana_via_aerea_avancada', 'ana_internacao_via_aerea_choque'].includes(currentStep)
       const adequateResponse = currentStep === 'ana_observacao_alta' || ['resposta', 'resposta_segunda_dose'].includes(responseValue)
       const noCriteria = currentStep === 'ana_sem_criterios_observar'
 
@@ -1313,6 +1360,14 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           criticalOutcome ? 'Paciente não deve ser considerado para liberação ambulatorial nesta etapa do fluxo.' : null
         ])
 
+      const advancedAirwayItems = uniqueItems([
+        airwayThreats.length > 0 ? `Sinais de ameaça registrados: ${airwayThreats.join('; ')}.` : null,
+        ...airwayActions,
+        airwayData?.cicoDeclarado ? 'Cenário CICO/obstrução completa declarado, com indicação de acesso frontal de emergência conforme protocolo institucional.' : null,
+        ...airwayPocusActions,
+        airwayPocusActions.length > 0 ? 'POCUS registrado como ferramenta complementar, sem substituir capnografia nem atrasar tratamento definitivo.' : null
+      ])
+
       const dischargeItems = adequateResponse
         ? uniqueItems([
           'Prescritas orientações/prescrições pós-alta.',
@@ -1353,6 +1408,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             title: 'Reavaliação Clínica',
             items: reevaluationItems
           },
+          ...(advancedAirwayItems.length > 0 ? [{
+            title: 'Via Aérea Avançada e POCUS',
+            items: advancedAirwayItems
+          }] : []),
           {
             title: 'Observação e Orientações Pós-Alta',
             items: dischargeItems

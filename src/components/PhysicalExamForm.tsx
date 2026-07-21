@@ -22,6 +22,7 @@ export interface PhysicalExamData {
 interface PhysicalExamFormProps {
   value: PhysicalExamData
   onChange: (v: PhysicalExamData) => void
+  showGlasgowInput?: boolean
 }
 
 const grades: Array<1 | 2 | 3 | 4> = [1, 2, 3, 4]
@@ -119,7 +120,7 @@ const ExamSection: React.FC<{
   )
 }
 
-const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange }) => {
+const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, showGlasgowInput = true }) => {
   const update = <K extends keyof PhysicalExamData>(key: K, patch: Partial<PhysicalExamData[K]>) => {
     const current = value[key]
     // @ts-expect-error dynamic merge
@@ -425,7 +426,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange }) 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 lg:col-span-2">
         <SectionTitle icon={<Brain className="w-5 h-5" />} title="Neurológico" subtitle="Glasgow e achados" />
         <div className="grid md:grid-cols-3 gap-4">
-          <div>
+          {showGlasgowInput && <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Glasgow (3–15)</label>
             <input
               type="number"
@@ -436,8 +437,8 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange }) 
               max={15}
               placeholder="Ex: 15"
             />
-          </div>
-          <div className="md:col-span-2">
+          </div>}
+          <div className={showGlasgowInput ? 'md:col-span-2' : 'md:col-span-3'}>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Alterado</label>
             <textarea
               value={value.neuro.altered ?? ''}

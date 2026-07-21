@@ -26,6 +26,7 @@ import { clsx } from 'clsx'
 import type { EmergencyPatient } from '@/types/emergency'
 import ABCDEChecklist from './ABCDEChecklist'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
+import { ModifiedRankinSelector, NIHSSCalculator, type NIHSSValues } from './ClinicalScaleCalculators'
 import {
   calculateAVCThrombolyticDose,
   evaluateAVCThrombectomy,
@@ -54,7 +55,8 @@ export const AVC_STAGES = [
   'avc_trombectomia_criterios',
   'avc_desfecho_trombectomia',
   'avc_cuidados_sem_reperfusao',
-  'avc_hemorragico_destino'
+  'avc_hemorragico_destino',
+  'avc_aguardo_uti'
 ] as const
 
 export type AVCStage = typeof AVC_STAGES[number]
@@ -74,6 +76,7 @@ export type AVCCaseData = {
   glucoseCorrected?: boolean
   cincinnati?: string[]
   nihss?: number
+  nihssItems?: NIHSSValues
   disablingDeficit?: boolean
   weight?: number
   currentBloodPressure?: string
@@ -93,6 +96,10 @@ export type AVCCaseData = {
   pcAspects?: number
   thrombectomyRecommendation?: AVCThrombectomyRecommendation
   supportiveCare?: string[]
+  utiChecklist?: string[]
+  utiDestination?: string
+  utiNotes?: string
+  utiRequestedAt?: string
   outcome?: string
   completedAt?: string
 }
@@ -124,7 +131,8 @@ const stageMeta: Record<AVCStage, { title: string; subtitle: string; icon: React
   avc_trombectomia_criterios: { title: 'Elegibilidade para trombectomia', subtitle: 'Integre território, tempo, ASPECTS, Rankin prévio e NIHSS.', icon: <Brain /> },
   avc_desfecho_trombectomia: { title: 'Trombectomia indicada', subtitle: 'Acione transferência ou equipe neurointervencionista sem observar resposta à trombólise.', icon: <Hospital /> },
   avc_cuidados_sem_reperfusao: { title: 'Cuidados quando não há reperfusão imediata', subtitle: 'Mantenha suporte, prevenção de complicações e prevenção secundária individualizada.', icon: <CheckCircle2 /> },
-  avc_hemorragico_destino: { title: 'Hemorragia intracraniana identificada', subtitle: 'Interrompa o caminho de AVC isquêmico e acione protocolo neurocrítico.', icon: <AlertTriangle /> }
+  avc_hemorragico_destino: { title: 'Hemorragia intracraniana identificada', subtitle: 'Interrompa o caminho de AVC isquêmico e acione protocolo neurocrítico.', icon: <AlertTriangle /> },
+  avc_aguardo_uti: { title: 'Aguardar leito de UTI', subtitle: 'O AVC confirmado permanece sob vigilância contínua até a transferência para cuidado intensivo/neurocrítico.', icon: <Hospital /> }
 }
 
 const symptomOptions = [
@@ -205,6 +213,16 @@ const supportiveOptions = [
   ['etiologia', 'Planejar investigação etiológica e prevenção secundária']
 ] as const
 
+const utiSafetyOptions = [
+  ['leito', 'Solicitar e registrar o leito de UTI ou unidade neurocrítica'],
+  ['monitor', 'Manter monitorização cardiorrespiratória e oximetria contínuas'],
+  ['neurologico', 'Repetir avaliação neurológica e sinais vitais conforme gravidade'],
+  ['metas', 'Manter metas de pressão, glicemia, temperatura e oxigenação'],
+  ['complicacoes', 'Vigiar deterioração, sangramento, edema cerebral, convulsão e broncoaspiração'],
+  ['handoff', 'Preparar passagem de caso com horários, NIHSS, imagem e terapias realizadas'],
+  ['transporte', 'Organizar transporte monitorizado com equipe e recursos compatíveis']
+] as const
+
 const toggleValue = (values: string[] = [], value: string) => values.includes(value)
   ? values.filter(item => item !== value)
   : [...values, value]
@@ -260,7 +278,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(() => Boolean(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).completedAt))
 
-  const isFinalStage = ['avc_complicacao_trombolise', 'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino'].includes(stage)
+  const isFinalStage = stage === 'avc_aguardo_uti'
   const progress = isFinalStage ? 100 : Math.max(4, Math.round(((AVC_STAGES.indexOf(stage) + 1) / AVC_STAGES.length) * 100))
   const currentMeta = stageMeta[stage]
   const hasAbsoluteContraindication = (data.thrombolysisContraindications || []).some(value => value.startsWith('abs_'))
@@ -319,6 +337,10 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     setShowCompletion(true)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  const proceedToIcu = (outcome: string) => persist('avc_aguardo_uti', {
+    outcome,
+    utiRequestedAt: data.utiRequestedAt || new Date().toISOString()
+  })
 
   const handleBack = () => {
     if (showCompletion) {
@@ -477,6 +499,10 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
                 </div>
               </section>
 
+              <section className="rounded-[1.75rem] border border-cyan-200 bg-cyan-50 p-6 sm:p-7">
+                <div className="flex items-start gap-4"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-cyan-700 text-white"><Hospital className="h-5 w-5" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Destino assistencial</p><h3 className="mt-1 text-xl font-black text-cyan-950">UTI / unidade neurocrítica solicitada</h3><p className="mt-2 text-sm leading-relaxed text-cyan-900">{data.utiDestination || 'Destino específico não informado'} · {(data.utiChecklist || []).length} medidas de segurança registradas durante a espera.</p></div></div>
+              </section>
+
               <div className="grid gap-3 sm:grid-cols-3">
                 <button type="button" onClick={() => setShowCompletion(false)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-4 font-extrabold text-slate-700 hover:bg-slate-50"><ChevronLeft className="h-5 w-5" /> Revisar última etapa</button>
                 {onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-4 font-extrabold text-indigo-900 hover:bg-indigo-100"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}
@@ -512,7 +538,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_nihss' && (
-            <div className="space-y-5"><div className="grid gap-4 md:grid-cols-3"><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-900">NIHSS total (0-42)<input type="number" min="0" max="42" value={data.nihss ?? ''} onChange={event => update({ nihss: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-900">Rankin prévio (0-5)<input type="number" min="0" max="5" value={data.premorbidRankin ?? ''} onChange={event => update({ premorbidRankin: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-900">Peso para reperfusão (kg)<input type="number" min="3" max="300" step="0.1" value={data.weight ?? ''} onChange={event => update({ weight: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label></div><CardOption selected={Boolean(data.disablingDeficit)} title="Déficit clinicamente incapacitante" description="Ex.: afasia relevante, hemianopsia, perda funcional da mão dominante ou limitação que impeça atividades essenciais." onClick={() => update({ disablingDeficit: !data.disablingDeficit })} />{nonDisablingMinorStroke && data.nihss != null && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950">NIHSS baixo com déficit não incapacitante reduz o benefício esperado da trombólise IV; mantenha avaliação de imagem e prevenção secundária.</div>}<button type="button" disabled={data.nihss == null || data.premorbidRankin == null} onClick={() => persist('avc_exames')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar gravidade e organizar exames <ChevronRight /></button></div>
+            <div className="space-y-5"><NIHSSCalculator value={data.nihssItems || {}} onChange={(nihssItems, nihss) => update({ nihssItems, nihss })} /><ModifiedRankinSelector value={data.premorbidRankin} onChange={premorbidRankin => update({ premorbidRankin })} /><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-900">Peso para reperfusão (kg)<input type="number" min="3" max="300" step="0.1" value={data.weight ?? ''} onChange={event => update({ weight: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label><CardOption selected={Boolean(data.disablingDeficit)} title="Déficit clinicamente incapacitante" description="Ex.: afasia relevante, hemianopsia, perda funcional da mão dominante ou limitação que impeça atividades essenciais." onClick={() => update({ disablingDeficit: !data.disablingDeficit })} />{nonDisablingMinorStroke && data.nihss != null && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950">NIHSS baixo com déficit não incapacitante reduz o benefício esperado da trombólise IV; mantenha avaliação de imagem e prevenção secundária.</div>}<button type="button" disabled={data.nihss == null || data.premorbidRankin == null} onClick={() => persist('avc_exames')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar gravidade e organizar exames <ChevronRight /></button></div>
           )}
 
           {stage === 'avc_exames' && (
@@ -544,7 +570,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_complicacao_trombolise' && (
-            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Ação imediata</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Interromper a infusão do trombolítico, quando ainda estiver em curso.</li><li>Repetir TC de crânio e colher hemograma, coagulação e fibrinogênio.</li><li>Se houver transformação hemorrágica, discutir reversão com hemoterapia, neurologia e neurocirurgia.</li><li>No angioedema orolingual, priorizar avaliação e proteção da via aérea.</li></ul></div><button type="button" onClick={() => finish('Complicação após trombólise - manejo neurocrítico imediato')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar intercorrência e finalizar protocolo</button></div>
+            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Ação imediata</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Interromper a infusão do trombolítico, quando ainda estiver em curso.</li><li>Repetir TC de crânio e colher hemograma, coagulação e fibrinogênio.</li><li>Se houver transformação hemorrágica, discutir reversão com hemoterapia, neurologia e neurocirurgia.</li><li>No angioedema orolingual, priorizar avaliação e proteção da via aérea.</li></ul></div><button type="button" onClick={() => proceedToIcu('Complicação após trombólise - manejo neurocrítico imediato')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar intercorrência e solicitar UTI</button></div>
           )}
 
           {stage === 'avc_vaso' && (
@@ -556,15 +582,29 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_desfecho_trombectomia' && (
-            <div className="space-y-5"><div className="rounded-2xl border-2 border-emerald-400 bg-emerald-50 p-6 text-emerald-950"><h2 className="text-2xl font-black">Reperfusão endovascular indicada</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Acionar imediatamente centro com capacidade de trombectomia.</li><li>Não esperar melhora após trombólise antes de transferir.</li><li>Levar imagem, horários, NIHSS, Rankin, medicações e dados do trombolítico.</li><li>Manter monitorização e suporte durante a transferência.</li></ul></div><button type="button" onClick={() => finish('Trombectomia mecânica indicada/encaminhada')} className="w-full rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white">Registrar encaminhamento e finalizar</button></div>
+            <div className="space-y-5"><div className="rounded-2xl border border-emerald-400 bg-emerald-50 p-6 text-emerald-950"><h2 className="text-2xl font-black">Reperfusão endovascular indicada</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Acionar imediatamente centro com capacidade de trombectomia.</li><li>Não esperar melhora após trombólise antes de transferir.</li><li>Levar imagem, horários, NIHSS, Rankin, medicações e dados do trombolítico.</li><li>Manter monitorização e suporte durante a transferência.</li></ul></div><button type="button" onClick={() => proceedToIcu('Trombectomia mecânica indicada/encaminhada')} className="w-full rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white">Registrar encaminhamento e solicitar UTI</button></div>
           )}
 
           {stage === 'avc_cuidados_sem_reperfusao' && (
-            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{supportiveOptions.map(([id,label]) => <CardOption key={id} selected={(data.supportiveCare || []).includes(id)} title={label} onClick={() => selectMany('supportiveCare', id)} />)}</div>{data.receivedThrombolysis && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-950">Como houve trombólise, antiagregantes e anticoagulantes somente após 24 horas e imagem de controle sem sangramento.</div>}<button type="button" disabled={(data.supportiveCare || []).length < 4} onClick={() => finish(data.receivedThrombolysis ? 'Cuidados pós-trombólise sem trombectomia indicada' : 'Manejo clínico sem reperfusão imediata')} className="w-full rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar plano e finalizar protocolo</button></div>
+            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{supportiveOptions.map(([id,label]) => <CardOption key={id} selected={(data.supportiveCare || []).includes(id)} title={label} onClick={() => selectMany('supportiveCare', id)} />)}</div>{data.receivedThrombolysis && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-950">Como houve trombólise, antiagregantes e anticoagulantes somente após 24 horas e imagem de controle sem sangramento.</div>}<button type="button" disabled={(data.supportiveCare || []).length < 4} onClick={() => proceedToIcu(data.receivedThrombolysis ? 'Cuidados pós-trombólise sem trombectomia indicada' : 'Manejo clínico sem reperfusão imediata')} className="w-full rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar plano e solicitar UTI</button></div>
           )}
 
           {stage === 'avc_hemorragico_destino' && (
-            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-500 bg-red-50 p-6 text-red-950"><h2 className="text-2xl font-black">Migrar imediatamente para manejo de hemorragia intracraniana</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Suspender trombolítico, antiagregante e anticoagulante até avaliação específica.</li><li>Acionar neurologia/neurocirurgia e controlar pressão e sinais de hipertensão intracraniana.</li><li>Diferenciar hemorragia intraparenquimatosa de hemorragia subaracnoide e outras causas.</li><li>Providenciar reversão de anticoagulação quando indicada.</li></ul></div><ABCDEChecklist value={data.abcdeDomains || []} onChange={updateAbcde} title="ABCDE no destino neurocrítico" subtitle="Atualize os domínios durante a estabilização e transferência para a equipe especializada." tone="red" /><button type="button" onClick={() => finish('Hemorragia intracraniana - encaminhado para protocolo neurocrítico')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar destino crítico e finalizar</button></div>
+            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-500 bg-red-50 p-6 text-red-950"><h2 className="text-2xl font-black">Migrar imediatamente para manejo de hemorragia intracraniana</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Suspender trombolítico, antiagregante e anticoagulante até avaliação específica.</li><li>Acionar neurologia/neurocirurgia e controlar pressão e sinais de hipertensão intracraniana.</li><li>Diferenciar hemorragia intraparenquimatosa de hemorragia subaracnoide e outras causas.</li><li>Providenciar reversão de anticoagulação quando indicada.</li></ul></div><ABCDEChecklist value={data.abcdeDomains || []} onChange={updateAbcde} title="ABCDE no destino neurocrítico" subtitle="Atualize os domínios durante a estabilização e transferência para a equipe especializada." tone="red" /><button type="button" onClick={() => proceedToIcu('Hemorragia intracraniana - encaminhado para protocolo neurocrítico')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar destino crítico e solicitar UTI</button></div>
+          )}
+
+          {stage === 'avc_aguardo_uti' && (
+            <div className="space-y-6">
+              <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-indigo-800 via-violet-800 to-slate-900 p-6 text-white shadow-xl sm:p-8">
+                <div className="absolute -right-16 -top-20 h-60 w-60 rounded-full bg-cyan-300/10 blur-3xl" />
+                <div className="relative flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/20"><Hospital className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-indigo-200">Destino obrigatório</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Aguardando UTI / unidade neurocrítica</h2><p className="mt-2 max-w-3xl text-sm leading-relaxed text-indigo-100">O protocolo permanece ativo. Continue estabilização, vigilância neurológica e tratamento das complicações até a passagem formal do cuidado.</p></div></div>
+              </section>
+              <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-950"><strong>Não é uma tela de espera passiva:</strong> qualquer piora neurológica, respiratória ou hemodinâmica exige reavaliação imediata e acionamento da equipe responsável.</div>
+              <section><div className="mb-4"><h3 className="text-xl font-black text-slate-950">Checklist de segurança durante a espera</h3><p className="mt-1 text-sm text-slate-600">Registre as medidas já garantidas antes da transferência.</p></div><div className="grid gap-3 md:grid-cols-2">{utiSafetyOptions.map(([id,label]) => <CardOption key={id} selected={(data.utiChecklist || []).includes(id)} title={label} onClick={() => selectMany('utiChecklist', id)} />)}</div></section>
+              <section className="grid gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-5 md:grid-cols-2"><label className="text-sm font-black text-slate-800">Destino ou equipe receptora<input value={data.utiDestination || ''} onChange={event => update({ utiDestination: event.target.value })} placeholder="Ex.: UTI neurológica, leito regulado, hospital de referência" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium" /></label><label className="text-sm font-black text-slate-800">Pendências e observações<textarea value={data.utiNotes || ''} onChange={event => update({ utiNotes: event.target.value })} placeholder="Registre pendências, intercorrências ou condições do transporte" rows={3} className="mt-2 w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium" /></label></section>
+              <button type="button" disabled={!['leito','monitor','neurologico','handoff'].every(item => (data.utiChecklist || []).includes(item))} onClick={() => finish(data.outcome || 'AVC confirmado - encaminhado para cuidado intensivo/neurocrítico')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white shadow-lg shadow-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"><CheckCircle2 className="h-5 w-5" /> Confirmar destino e concluir protocolo</button>
+              {!['leito','monitor','neurologico','handoff'].every(item => (data.utiChecklist || []).includes(item)) && <p className="text-center text-sm font-semibold text-slate-500">Para concluir, confirme solicitação do leito, monitorização, reavaliação neurológica e passagem de caso.</p>}
+            </div>
           )}
 
           {notice && <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">{notice}</p>}

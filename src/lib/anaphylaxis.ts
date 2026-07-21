@@ -107,6 +107,17 @@ export const calculateAnaphylaxisAdrenalineDose = (patient: Pick<Patient, 'age' 
   const weight = typeof patient.weight === 'number' && patient.weight > 0 ? patient.weight : null
   const age = typeof patient.age === 'number' ? patient.age : null
 
+  // Em adulto/adolescente, a faixa etária prevalece sobre um peso ausente ou
+  // eventualmente inconsistente no cadastro: 0,5 mg IM da solução 1 mg/mL.
+  if (age !== null && age > 12) {
+    return {
+      label: 'Adolescente ou adulto',
+      doseMg: 0.5,
+      volumeMl: 0.5,
+      rule: 'Dose fixa: 0,5 mg = 0,5 mL da solução 1 mg/mL (1:1000)'
+    }
+  }
+
   if (weight !== null && weight < 10) {
     const dose = Math.max(0.01, Math.min(0.1, weight * 0.01))
     return {

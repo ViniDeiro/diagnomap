@@ -6,6 +6,7 @@ import { Activity, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, HeartP
 import { clsx } from 'clsx'
 import type { Patient } from '@/types/patient'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
+import { GlasgowCalculator, type GlasgowValues } from './ClinicalScaleCalculators'
 
 export const UNIVERSAL_ASSESSMENT_ANSWER_KEY = '__avaliacao_clinica_inicial'
 
@@ -25,6 +26,7 @@ export type UniversalClinicalAssessmentData = {
   savedAt: string
   sinaisVitais: UniversalVitalSigns
   exameFisico: PhysicalExamData
+  glasgowDetalhes?: GlasgowValues
 }
 
 const defaultPhysicalExam = (): PhysicalExamData => ({
@@ -111,7 +113,6 @@ const vitalFields: VitalField[] = [
   { key: 'oxygenSaturation', label: 'Saturação periférica', unit: '%', min: 50, max: 100, placeholder: '97' },
   { key: 'glucose', label: 'Glicemia capilar', unit: 'mg/dL', placeholder: '95 ou HI/LO', text: true },
   { key: 'painLevel', label: 'Escala de dor', unit: '0–10', min: 0, max: 10, placeholder: '0' },
-  { key: 'glasgow', label: 'Escala de Glasgow', unit: '3–15', min: 3, max: 15, placeholder: '15' },
   { key: 'capillaryRefill', label: 'Enchimento capilar', unit: 'segundos', min: 0, max: 20, placeholder: '2' }
 ]
 
@@ -134,6 +135,7 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
   const [stage, setStage] = useState<'vitals' | 'exam'>('vitals')
   const [vitals, setVitals] = useState<UniversalVitalSigns>(() => ({ ...fromPatient(patient), ...(saved?.sinaisVitais || {}) }))
   const [physicalExam, setPhysicalExam] = useState<PhysicalExamData>(() => saved?.exameFisico || defaultPhysicalExam())
+  const [glasgowValues, setGlasgowValues] = useState<GlasgowValues>(() => saved?.glasgowDetalhes || (physicalExam.neuro.glasgow === 15 ? { eyes: 4, verbal: 5, motor: 6 } : {}))
   const [reviewed, setReviewed] = useState(false)
 
   const measuredCount = Object.values(vitals).filter(value => value !== undefined && value !== '').length
@@ -228,7 +230,13 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                 </div>
               </div>
 
-              <PhysicalExamForm value={physicalExam} onChange={setPhysicalExam} />
+              <div className="mb-6">
+                <GlasgowCalculator value={glasgowValues} onChange={(next, total) => {
+                  setGlasgowValues(next)
+                  setPhysicalExam(previous => ({ ...previous, neuro: { ...previous.neuro, glasgow: total } }))
+                }} />
+              </div>
+              <PhysicalExamForm value={physicalExam} onChange={setPhysicalExam} showGlasgowInput={false} />
 
               <label className={clsx('mt-7 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all', reviewed ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-amber-300 bg-amber-50')}>
                 <input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
@@ -245,7 +253,7 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                 <button
                   type="button"
                   disabled={!reviewed}
-                  onClick={() => onSave({ savedAt: new Date().toISOString(), sinaisVitais: vitals, exameFisico: physicalExam })}
+                  onClick={() => onSave({ savedAt: new Date().toISOString(), sinaisVitais: vitals, exameFisico: physicalExam, glasgowDetalhes: glasgowValues })}
                   className={clsx('inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 font-extrabold transition-all', reviewed ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-lg shadow-emerald-200 hover:shadow-xl' : 'cursor-not-allowed bg-slate-100 text-slate-400')}
                 >
                   <CheckCircle2 className="h-5 w-5" /> Salvar e iniciar fluxograma

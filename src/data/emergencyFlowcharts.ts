@@ -133,7 +133,7 @@ export const avcFlowchart: EmergencyFlowchart = {
   icon: 'brain',
   color: 'from-purple-600 to-purple-800',
   initialStep: 'avc_ativacao',
-  finalSteps: ['avc_complicacao_trombolise', 'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino'],
+  finalSteps: ['avc_aguardo_uti'],
   steps: {
     avc_ativacao: {
       id: 'avc_ativacao', title: 'Ativação do protocolo de AVC', description: 'Registrar déficits, último momento bem e medidas paralelas.', type: 'question', critical: true, timeSensitive: true,
@@ -197,7 +197,8 @@ export const avcFlowchart: EmergencyFlowchart = {
       ]
     },
     avc_complicacao_trombolise: {
-      id: 'avc_complicacao_trombolise', title: 'Complicação após trombólise', description: 'Interromper infusão quando aplicável e investigar hemorragia ou via aérea.', type: 'result', critical: true, options: []
+      id: 'avc_complicacao_trombolise', title: 'Complicação após trombólise', description: 'Interromper infusão quando aplicável e investigar hemorragia ou via aérea.', type: 'result', critical: true,
+      options: [{ text: 'Solicitar cuidado intensivo', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }]
     },
     avc_vaso: {
       id: 'avc_vaso', title: 'Território vascular', description: 'Identificar oclusão e território na angioimagem.', type: 'question', critical: true,
@@ -214,13 +215,19 @@ export const avcFlowchart: EmergencyFlowchart = {
       ]
     },
     avc_desfecho_trombectomia: {
-      id: 'avc_desfecho_trombectomia', title: 'Trombectomia indicada', description: 'Acionar neurointervenção ou transferência imediata.', type: 'result', critical: true, requiresSpecialist: true, timeSensitive: true, options: []
+      id: 'avc_desfecho_trombectomia', title: 'Trombectomia indicada', description: 'Acionar neurointervenção ou transferência imediata.', type: 'result', critical: true, requiresSpecialist: true, timeSensitive: true,
+      options: [{ text: 'Solicitar cuidado intensivo', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }]
     },
     avc_cuidados_sem_reperfusao: {
-      id: 'avc_cuidados_sem_reperfusao', title: 'Cuidados clínicos e prevenção secundária', description: 'Aplicar suporte e prevenção de complicações conforme reperfusão realizada.', type: 'result', options: []
+      id: 'avc_cuidados_sem_reperfusao', title: 'Cuidados clínicos e prevenção secundária', description: 'Aplicar suporte e prevenção de complicações conforme reperfusão realizada.', type: 'result',
+      options: [{ text: 'Solicitar cuidado intensivo', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }]
     },
     avc_hemorragico_destino: {
-      id: 'avc_hemorragico_destino', title: 'Hemorragia intracraniana', description: 'Migrar imediatamente para protocolo neurocrítico específico.', type: 'result', critical: true, requiresSpecialist: true, options: []
+      id: 'avc_hemorragico_destino', title: 'Hemorragia intracraniana', description: 'Migrar imediatamente para protocolo neurocrítico específico.', type: 'result', critical: true, requiresSpecialist: true,
+      options: [{ text: 'Solicitar cuidado intensivo', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }]
+    },
+    avc_aguardo_uti: {
+      id: 'avc_aguardo_uti', title: 'Aguardando UTI ou unidade neurocrítica', description: 'Manter vigilância ativa e transferência monitorizada após confirmação do AVC.', type: 'result', critical: true, requiresSpecialist: true, options: []
     },
     avaliacao_multiprofissional_sala_vermelha: {
       id: 'avaliacao_multiprofissional_sala_vermelha',
@@ -1825,8 +1832,13 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Adjuvante na crise grave.',
       type: 'question',
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>Sulfato de Magnésio:</strong> 2 g IV em 20 min (dose única).</p>
+        <div class="space-y-3 bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+          <p><strong>Sulfato de magnésio:</strong> 2 g EV, dose única, infundidos em 20–30 minutos.</p>
+          <div class="rounded-lg border border-red-200 bg-white p-3">
+            <p><strong>Se MgSO4 a 10% (100 mg/mL):</strong> aspirar 20 mL (2 g) e adicionar 80 mL de SF 0,9%, obtendo volume final de 100 mL.</p>
+            <p class="mt-2"><strong>Se MgSO4 a 50% (500 mg/mL):</strong> aspirar 4 mL (2 g) e adicionar 96 mL de SF 0,9%, obtendo volume final de 100 mL.</p>
+          </div>
+          <p><strong>Segurança:</strong> confirmar apresentação da ampola, monitorizar pressão e frequência cardíaca e revisar função renal/risco de toxicidade.</p>
         </div>
       `,
       options: [
@@ -2099,7 +2111,8 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       content: `
         <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
-          <p><strong>Prescrever na alta:</strong> beta-2 inalatório, corticoide VO por 5-7 dias, orientações e retorno.</p>
+          <p><strong>Prescrição literal sugerida para adulto:</strong> Prednisona 40 mg VO pela manhã por 5–7 dias. Para resgate, preferir esquema contendo corticoide inalatório; quando for utilizado SABA, Salbutamol 100 mcg: inalar 1–2 jatos com espaçador a cada 4–6 horas se falta de ar, conforme plano individual.</p>
+          <p class="mt-2"><strong>Antes da alta:</strong> revisar alergias, contraindicações, tratamento de manutenção e técnica do dispositivo. Ajustar a receita para idade, gestação e comorbidades.</p>
         </div>
       `,
       options: [
@@ -2146,6 +2159,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p><strong>Acompanhamento:</strong> retorno em 24-48h e revisão seriada ambulatorial.</p>
             <p><em>Referências:</em> GINA 2024, SBPT 2012, ATS, O'Byrne 2018, Bateman 2018.</p>
           </div>
+          <button type="button" data-asthma-copy-discharge="true" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 font-bold text-white hover:bg-slate-800">Copiar prescrição de alta</button>
         </div>
       `,
       options: []
@@ -2462,7 +2476,7 @@ export const tvpFlowchart: EmergencyFlowchart = {
       description: 'Paciente com dor/edema unilateral de membro inferior.',
       type: 'question',
       options: [
-        { text: 'Avaliação inicial / Sinais Vitais / Exame Físico', nextStep: 'tvp_exame_fisico', value: 'iniciar_exame_fisico' }
+        { text: 'Iniciar avaliação específica da TVP', nextStep: 'avaliacao_clinica', value: 'avaliacao_especifica' }
       ]
     },
     tvp_exame_fisico: {
@@ -2558,7 +2572,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Prosseguir para resultado do POCUS', nextStep: 'pocus_resultado_pre_d_dimero', value: 'pocus_revisado' }
+        { text: 'POCUS disponível: registrar resultado', nextStep: 'pocus_resultado_pre_d_dimero', value: 'pocus_revisado' },
+        { text: 'POCUS não disponível: seguir para D-dímero', nextStep: 'baixa_probabilidade', value: 'pocus_indisponivel' }
       ]
     },
     pocus_resultado_pre_d_dimero: {
@@ -2570,7 +2585,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
       options: [
         { text: 'POCUS positivo: veia não compressível', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
         { text: 'POCUS negativo: compressibilidade preservada', nextStep: 'baixa_probabilidade', value: 'us_negative' },
-        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'baixa_probabilidade', value: 'us_inconclusive' }
+        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'baixa_probabilidade', value: 'us_inconclusive' },
+        { text: 'POCUS não disponível', nextStep: 'baixa_probabilidade', value: 'us_unavailable' }
       ]
     },
     baixa_probabilidade: {
@@ -2624,7 +2640,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Realizar POCUS compressivo de 3 pontos', nextStep: 'us_compressiva', value: 'direct_us', critical: true }
+        { text: 'Realizar POCUS compressivo de 3 pontos', nextStep: 'us_compressiva', value: 'direct_us', critical: true },
+        { text: 'POCUS não disponível: solicitar ultrassonografia vascular formal', nextStep: 'us_negativa_conduta', value: 'pocus_indisponivel', critical: true }
       ]
     },
     us_compressiva: {
@@ -2636,7 +2653,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
       options: [
         { text: 'POCUS positivo: veia não compressível', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
         { text: 'POCUS negativo: compressibilidade preservada', nextStep: 'us_negativa_conduta', value: 'us_negative' },
-        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'us_negativa_conduta', value: 'us_inconclusive' }
+        { text: 'POCUS inconclusivo ou tecnicamente limitado', nextStep: 'us_negativa_conduta', value: 'us_inconclusive' },
+        { text: 'POCUS não disponível', nextStep: 'us_negativa_conduta', value: 'us_unavailable' }
       ]
     },
     us_negativa_conduta: {
@@ -7216,7 +7234,7 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
       options: [
         { text: 'A/B/C normalizados e sintomas em regressão', nextStep: 'ana_estratificar_observacao', value: 'resposta' },
         { text: 'Sem resposta / piora', nextStep: 'ana_repetir_adrenalina_internacao', value: 'sem_resposta', critical: true, requiresImmediateAction: true },
-        { text: 'Via aérea/choque crítico', nextStep: 'ana_internacao_via_aerea_choque', value: 'critico', critical: true, requiresImmediateAction: true }
+        { text: 'Via aérea/choque crítico', nextStep: 'ana_via_aerea_avancada', value: 'critico', critical: true, requiresImmediateAction: true }
       ]
     },
     ana_sem_criterios_observar: {
@@ -7298,7 +7316,24 @@ export const anaphylaxisFlowchart: EmergencyFlowchart = {
       `,
       options: [
         { text: 'A/B/C normalizados e melhora sustentada', nextStep: 'ana_estratificar_observacao', value: 'resposta_segunda_dose' },
-        { text: 'Persistem sinais respiratórios ou circulatórios', nextStep: 'ana_internacao_via_aerea_choque', value: 'anafilaxia_refrataria', critical: true, requiresImmediateAction: true }
+        { text: 'Persistem sinais respiratórios ou circulatórios', nextStep: 'ana_via_aerea_avancada', value: 'anafilaxia_refrataria', critical: true, requiresImmediateAction: true }
+      ]
+    },
+    ana_via_aerea_avancada: {
+      id: 'ana_via_aerea_avancada',
+      title: 'Via Aérea Avançada na Anafilaxia',
+      description: 'Reconhecer edema progressivo, antecipar uma abordagem difícil e deixar o acesso frontal de emergência pronto antes da perda da oxigenação.',
+      type: 'question',
+      critical: true,
+      timeSensitive: true,
+      content: `
+        <div class="rounded border-l-4 border-red-600 bg-red-50 p-3 text-sm">
+          <p><strong>Prioridade:</strong> manter oxigenação e tratamento da anafilaxia enquanto a equipe mais experiente organiza o plano de via aérea. O POCUS é complementar e não deve atrasar adrenalina, ventilação ou acesso de emergência.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Plano avançado iniciado — seguir cuidado crítico', nextStep: 'ana_internacao_via_aerea_choque', value: 'plano_via_aerea', critical: true },
+        { text: 'CICO/obstrução completa — acesso frontal de emergência', nextStep: 'ana_internacao_via_aerea_choque', value: 'cico', critical: true, requiresImmediateAction: true }
       ]
     },
     ana_observacao_prolongada: {

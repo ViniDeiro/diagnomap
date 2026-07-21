@@ -104,6 +104,33 @@ const abcdeDomainLabels: Record<string, string> = {
   exposure: 'E — exposição e exame completo'
 }
 
+const anaphylaxisAirwayThreatLabels: Record<string, string> = {
+  stridor: 'estridor progressivo',
+  voice_change: 'mudança progressiva da voz',
+  saliva_difficulty: 'sialorreia ou dificuldade para deglutir saliva',
+  tongue_edema: 'edema importante de língua ou orofaringe',
+  neck_edema: 'edema cervical relevante',
+  limited_mouth: 'abertura oral limitada',
+  rapid_progression: 'edema em rápida progressão',
+  difficult_airway: 'previsão de via aérea difícil'
+}
+
+const anaphylaxisAirwayActionLabels: Record<string, string> = {
+  expert_help: 'operador experiente acionado',
+  surgical_team: 'equipe apta a acesso cervical avisada precocemente',
+  difficult_airway_cart: 'material de via aérea difícil preparado',
+  oxygenation: 'estratégia de oxigenação organizada',
+  limited_attempts: 'tentativas limitadas com mudança planejada de estratégia',
+  front_neck_ready: 'acesso frontal de emergência deixado pronto'
+}
+
+const anaphylaxisPocusActionLabels: Record<string, string> = {
+  mark_cricothyroid: 'membrana cricotireóidea localizada/marcada com POCUS',
+  confirm_tracheal: 'POCUS selecionado como complemento à confirmação traqueal',
+  bilateral_lung: 'deslizamento pleural bilateral selecionado como verificação complementar',
+  focused_shock: 'POCUS focal integrado à avaliação do choque'
+}
+
 export const formatClinicalDate = (dateLike?: Date | string) => {
   if (!dateLike) return 'data não informada'
   const date = new Date(dateLike)
@@ -1662,6 +1689,14 @@ export function buildClinicalSummary(
     })
   ]
 
+  const anaphylaxisAirwayLines = answerEntries.flatMap((entry) => {
+    if (entry.step.id !== 'ana_via_aerea_avancada') return []
+    const threats = Array.isArray(entry.parsed?.sinaisAmeacaSelecionados) ? entry.parsed.sinaisAmeacaSelecionados.map(String) : []
+    if (threats.length === 0) return []
+    return [`Ameaça à via aérea: ${threats.map((item) => anaphylaxisAirwayThreatLabels[item] || item).join('; ')}`]
+  })
+  examinationLines.push(...anaphylaxisAirwayLines)
+
   const scoreLines = answerEntries.flatMap((entry) => {
     const lines: string[] = []
     const score = formatClinicalValue(entry.parsed?.score || entry.parsed?.pontuacaoMaximaMarshall)
@@ -1689,10 +1724,21 @@ export function buildClinicalSummary(
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
   const finalAnswer = answerEntries.at(-1)?.answerLabel
+  const anaphylaxisAirwayConduct = answerEntries.flatMap((entry) => {
+    if (entry.step.id !== 'ana_via_aerea_avancada') return []
+    const actions = Array.isArray(entry.parsed?.medidasViaAereaSelecionadas) ? entry.parsed.medidasViaAereaSelecionadas.map(String) : []
+    const pocus = Array.isArray(entry.parsed?.medidasPocusSelecionadas) ? entry.parsed.medidasPocusSelecionadas.map(String) : []
+    return uniqueTextItems([
+      actions.length > 0 ? `Plano de via aérea registrado: ${actions.map((item) => anaphylaxisAirwayActionLabels[item] || item).join('; ')}.` : null,
+      entry.parsed?.cicoDeclarado === true ? 'Cenário CICO/obstrução completa declarado, com acesso frontal de emergência indicado conforme protocolo institucional.' : null,
+      pocus.length > 0 ? `POCUS complementar registrado: ${pocus.map((item) => anaphylaxisPocusActionLabels[item] || item).join('; ')}.` : null
+    ])
+  })
   const finalNarrative = [
     `Ao final do fluxograma, o caso foi direcionado para: ${finalTitle}.`,
     finalDescription,
     finalAnswer ? `A decisão clínica mais recente registrada foi: ${finalAnswer}.` : '',
+    ...anaphylaxisAirwayConduct,
     currentStepData?.critical ? 'Por se tratar de etapa crítica, recomenda-se manter monitorização clínica, reavaliação seriada e escalonamento de cuidado conforme gravidade.' : ''
   ].filter(Boolean).join(' ')
   const conductLines = [
