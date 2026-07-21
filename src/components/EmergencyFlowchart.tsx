@@ -2239,6 +2239,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   onOpenReport
 }) => {
   const resolveCurrentStep = useCallback((step?: string) => {
+    if (flowchart.id === 'tvp' && step === 'tvp_exame_fisico' && flowchart.steps.avaliacao_clinica) {
+      return 'avaliacao_clinica'
+    }
     if (step && flowchart.steps[step]) return step
     if (flowchart.id === 'asthma' && step) {
       const legacyAsthmaStep: Record<string, string> = {
@@ -2253,9 +2256,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     }
     if (flowchart.steps[flowchart.initialStep]) return flowchart.initialStep
     return Object.keys(flowchart.steps)[0]
-  }, [flowchart.initialStep, flowchart.steps])
+  }, [flowchart.id, flowchart.initialStep, flowchart.steps])
+  const resolveHistory = useCallback((savedHistory: string[] = []) => {
+    const migrated = savedHistory.map(step => flowchart.id === 'tvp' && step === 'tvp_exame_fisico' ? 'avaliacao_clinica' : step)
+    return migrated.filter((step, index) => index === 0 || step !== migrated[index - 1])
+  }, [flowchart.id])
   const [currentStep, setCurrentStep] = useState(resolveCurrentStep(patient.emergencyState.currentStep))
-  const [history, setHistory] = useState<string[]>(patient.emergencyState.history || [])
+  const [history, setHistory] = useState<string[]>(resolveHistory(patient.emergencyState.history || []))
   const [answers, setAnswers] = useState<Record<string, string>>(patient.emergencyState.answers || {})
   const [progress, setProgress] = useState(patient.emergencyState.progress || 0)
   const [selectedGecaDiarrheaProfile, setSelectedGecaDiarrheaProfile] = useState('')
@@ -2649,7 +2656,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (patient.id) {
       const safeStep = resolveCurrentStep(patient.emergencyState.currentStep)
       setCurrentStep(safeStep)
-      setHistory(patient.emergencyState.history || [])
+      setHistory(resolveHistory(patient.emergencyState.history || []))
       setAnswers(patient.emergencyState.answers || {})
       setProgress(patient.emergencyState.progress || 0)
       setSelectedGecaDiarrheaProfile('')
@@ -2680,7 +2687,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     patient.emergencyState.progress,
     patient,
     flowchart.id,
-    resolveCurrentStep
+    resolveCurrentStep,
+    resolveHistory
   ])
 
   // Função para calcular progresso baseado no fluxograma específico
@@ -15238,7 +15246,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         type="button"
                         onClick={() => {
                           if (!selectedTVPLeg) return
-                          handleAnswer('tvp_exame_fisico', selectedTVPLeg)
+                          handleAnswer('avaliacao_clinica', selectedTVPLeg)
                         }}
                         disabled={!selectedTVPLeg}
                         className={clsx(

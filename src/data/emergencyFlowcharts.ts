@@ -2479,16 +2479,6 @@ export const tvpFlowchart: EmergencyFlowchart = {
         { text: 'Iniciar avaliação específica da TVP', nextStep: 'avaliacao_clinica', value: 'avaliacao_especifica' }
       ]
     },
-    tvp_exame_fisico: {
-      id: 'tvp_exame_fisico',
-      title: 'Avaliação Inicial / Sinais Vitais / Exame Físico',
-      description: 'Registrar sinais vitais e exame físico completo antes do checklist clínico de TVP.',
-      type: 'action',
-      content: '',
-      options: [
-        { text: 'Salvar exame e seguir para checklist clínico', nextStep: 'avaliacao_clinica', value: 'exame_fisico_registrado' }
-      ]
-    },
     avaliacao_clinica: {
       id: 'avaliacao_clinica',
       title: 'Avaliação Clínica Inicial',
