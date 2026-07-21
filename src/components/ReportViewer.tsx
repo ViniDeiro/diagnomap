@@ -164,7 +164,8 @@ const DENGUE_ALARM_SIGN_LABELS: Record<string, string> = {
   hipotensao_postural: 'Hipotensão postural',
   hepatomegalia: 'Hepatomegalia maior que 2 cm',
   sangramento_mucosa: 'Sangramento de mucosa',
-  letargia_irritabilidade: 'Letargia e/ou irritabilidade'
+  letargia_irritabilidade: 'Letargia e/ou irritabilidade',
+  hematocrito_progressivo: 'Elevação progressiva do hematócrito'
 }
 
 const DENGUE_GRAVITY_SIGN_LABELS: Record<string, string> = {
@@ -1479,9 +1480,14 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const notificationAcknowledged = (answers.dengue_notification_ack || '') === 'true'
         || (typeof window !== 'undefined' && localStorage.getItem(`dengue_notification_ack_${patient.id}`) === 'true')
 
-      const hb = patient.labResults?.hemoglobin
-      const ht = patient.labResults?.hematocrit
-      const htHbRatio = hb != null && ht != null && hb > 0 ? ht / hb : undefined
+      const hematocritSeries = (() => {
+        const raw = answers.dengue_hematocrit_series
+          || (typeof window !== 'undefined' ? localStorage.getItem(`dengue_hematocrit_series_${patient.id}`) || '' : '')
+        if (!raw) return [] as Array<{ value: number; collectedAt?: string; context?: string }>
+        try { return JSON.parse(raw) as Array<{ value: number; collectedAt?: string; context?: string }> } catch { return [] }
+      })()
+      const hemoconcentrationAssessment = answers.dengue_hemoconcentration_assessment
+        || (typeof window !== 'undefined' ? localStorage.getItem(`dengue_hemoconcentration_assessment_${patient.id}`) || '' : '')
 
       const alarmSigns = uniqueItems((alarmData?.grupoC || []).map(item => DENGUE_ALARM_SIGN_LABELS[item] || item))
       const gravitySigns = uniqueItems((alarmData?.grupoD || []).map(item => DENGUE_GRAVITY_SIGN_LABELS[item] || item))
@@ -1656,7 +1662,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         ])
         const cAdmissionFindings = uniqueItems([
           hasLabDrivenGroupC
-            ? `aumento progressivo do hematócrito/hemoconcentração${htHbRatio != null ? ` (razão Ht/Hb ${htHbRatio.toFixed(2)}x)` : ''}`
+            ? `elevação progressiva do hematócrito em série, correlacionada ao contexto clínico${hematocritSeries.length > 0 ? ` (${hematocritSeries.map(item => `${item.value}%`).join(' → ')})` : ''}`
             : null,
           ...alarmSigns
         ])
@@ -1739,7 +1745,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           case 'A':
             return 'Classificado como Grupo A, compatível com dengue sem sinais de alarme, sem comorbidades ou condições especiais descompensadoras no fluxo atual.'
           case 'B':
-            return `Classificado como Grupo B, pela presença de fatores de risco/condições associadas${riskFactors.length > 0 ? `: ${riskFactors.join('; ')}` : ''}.${answers.evaluate_labs_b === 'hemoconcentracao_nao_confirmada' ? ' Relação Ht/Hb ou hematócrito elevados foram interpretados como achado isolado, sem confirmação clínica de hemoconcentração, mantendo-se acompanhamento seriado.' : ''}`
+            return `Classificado como Grupo B, pela presença de fatores de risco/condições associadas${riskFactors.length > 0 ? `: ${riskFactors.join('; ')}` : ''}.${answers.evaluate_labs_b === 'hemoconcentracao_nao_confirmada' ? ' A série do hematócrito não confirmou elevação progressiva clinicamente compatível, mantendo-se acompanhamento seriado.' : ''}${hemoconcentrationAssessment === 'fall_with_improvement' ? ' Houve queda do hematócrito acompanhada de melhora clínica após hidratação.' : ''}`
           default:
             return 'Caso em avaliação clínica dentro do protocolo institucional de dengue.'
         }
@@ -1760,6 +1766,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
 
       const examNarrativeParts = uniqueItems([
         ...labItems,
+        hematocritSeries.length > 0
+          ? `Série do hematócrito registrada: ${hematocritSeries.map(item => `${item.value}%`).join(' → ')}. Interpretação clínica: ${hemoconcentrationAssessment === 'progressive_rise_compatible' ? 'elevação progressiva compatível com hemoconcentração' : hemoconcentrationAssessment === 'fall_with_improvement' ? 'queda acompanhada de melhora após hidratação' : hemoconcentrationAssessment === 'fall_with_instability_or_bleeding' ? 'queda associada a instabilidade ou sangramento, exigindo investigação de hemorragia' : 'valor isolado ou série estável, sem confirmação de hemoconcentração'}.`
+          : null,
         dengueGroup === 'B' && suggestedExamTexts.length > 0
           ? `Exames complementares sugeridos/assinalados para o Grupo B: ${suggestedExamTexts.join('; ')}.`
           : null,
