@@ -2532,8 +2532,8 @@ export const tvpFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Baixa probabilidade (menor ou igual a 0)', nextStep: 'baixa_probabilidade', value: 'low' },
-        { text: 'Moderada/Alta probabilidade (maior ou igual a 1)', nextStep: 'moderada_probabilidade', value: 'moderate_high', critical: true }
+        { text: 'Wells até 2 pontos: avaliar uso do D-dímero', nextStep: 'd_dimero_elegibilidade', value: 'wells_up_to_2' },
+        { text: 'Wells acima de 2 pontos: solicitar Doppler', nextStep: 'moderada_probabilidade', value: 'wells_above_2', critical: true }
       ]
     },
     pocus_antes_d_dimero: {
@@ -2579,16 +2579,57 @@ export const tvpFlowchart: EmergencyFlowchart = {
         { text: 'POCUS não disponível', nextStep: 'baixa_probabilidade', value: 'us_unavailable' }
       ]
     },
-    baixa_probabilidade: {
-      id: 'baixa_probabilidade',
-      title: 'Probabilidade Baixa',
-      description: 'Estratégia inicial com D-dímero de alta sensibilidade.',
+    d_dimero_elegibilidade: {
+      id: 'd_dimero_elegibilidade',
+      title: 'O D-dímero é adequado para esta decisão?',
+      description: 'Antes de solicitar o exame, verificar situações que reduzem sua utilidade para excluir TVP.',
       type: 'question',
       content: `
-        <div class="bg-green-100 p-3 rounded border-l-4 border-green-700 text-sm text-green-950 leading-relaxed">
-          <p><strong>Conduta:</strong> Solicitar D-dímero de alta sensibilidade.</p>
-          <p>Se negativo, TVP pode ser excluída em paciente de baixa probabilidade.</p>
-          <p>Se positivo, solicitar ultrassonografia Doppler venosa do membro inferior.</p>
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p><strong>Use o D-dímero para exclusão</strong> quando a probabilidade clínica for baixa ou intermediária e não houver condição capaz de elevar o resultado de forma inespecífica.</p>
+          </div>
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
+            <p class="font-bold">Prefira Doppler venoso diretamente quando houver:</p>
+            <ul class="mt-2 grid list-disc gap-x-6 gap-y-1 pl-5 md:grid-cols-2">
+              <li>Neoplasia ativa.</li>
+              <li>Cirurgia ou ferida recente.</li>
+              <li>Trauma, hematoma ou queimadura extensa.</li>
+              <li>Gestação ou puerpério.</li>
+              <li>Doença renal ou hepática relevante.</li>
+              <li>Inflamação, infecção ou necrose tecidual importante.</li>
+              <li>Internação ou imobilização prolongada.</li>
+              <li>Outra condição conhecida por elevar o exame sem trombose.</li>
+            </ul>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'D-dímero aplicável: solicitar e registrar resultado', nextStep: 'baixa_probabilidade', value: 'ddimer_appropriate' },
+        { text: 'D-dímero pouco útil neste contexto: solicitar Doppler diretamente', nextStep: 'solicitar_doppler_venoso', value: 'ddimer_limited', critical: true }
+      ]
+    },
+    baixa_probabilidade: {
+      id: 'baixa_probabilidade',
+      title: 'Registrar resultado do D-dímero',
+      description: 'Aplicar o ponto de corte apropriado e decidir se a ultrassonografia é necessária.',
+      type: 'question',
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border-l-4 border-l-green-700 border border-green-200 bg-green-50 p-4 text-green-950">
+            <p><strong>Resultado abaixo do corte:</strong> permite afastar TVP neste ramo clínico.</p>
+            <p class="mt-1"><strong>Resultado igual ou acima do corte:</strong> solicitar ultrassonografia Doppler venosa do membro sintomático.</p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <p class="font-bold text-slate-900">Menor de 50 anos</p>
+              <p class="mt-1 text-slate-700">Utilizar o limite definido pelo método do laboratório, frequentemente 500 ng/mL em unidades FEU.</p>
+            </div>
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+              <p class="font-bold">A partir de 50 anos</p>
+              <p class="mt-1">Quando validado pelo método local, considerar corte ajustado pela idade: idade × 10 ng/mL FEU.</p>
+            </div>
+          </div>
         </div>
       `,
       options: [
@@ -2662,10 +2703,84 @@ export const tvpFlowchart: EmergencyFlowchart = {
       description: 'Registrar o laudo da ultrassonografia vascular formal.',
       type: 'question',
       critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p class="font-bold">Registre o laudo do Doppler venoso formal</p>
+            <p class="mt-1">Considere compressibilidade, presença de trombo, segmento acometido e limitações técnicas descritas pelo examinador.</p>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-3">
+            <div class="rounded-xl border border-rose-200 bg-rose-50 p-3 text-rose-950"><strong>Positivo</strong><p class="mt-1">A próxima tela solicitará a localização proximal ou distal.</p></div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-950"><strong>Negativo</strong><p class="mt-1">Programar repetição quando a estratégia utilizar ultrassonografia seriada.</p></div>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-amber-950"><strong>Limitado</strong><p class="mt-1">Não considerar a investigação encerrada.</p></div>
+          </div>
+        </div>
+      `,
       options: [
-        { text: 'Doppler positivo: trombose identificada', nextStep: 'checar_contra_anticoagulacao', value: 'us_positive', critical: true },
-        { text: 'Doppler negativo: sem trombose demonstrada', nextStep: 'us_negativa_conduta', value: 'us_negative' },
-        { text: 'Doppler inconclusivo ou tecnicamente limitado', nextStep: 'us_negativa_conduta', value: 'us_inconclusive' }
+        { text: 'Doppler positivo: trombose identificada', description: 'Registrar agora se o trombo é proximal ou distal.', nextStep: 'classificar_extensao_tvp', value: 'us_positive', critical: true },
+        { text: 'Doppler negativo: sem trombose demonstrada', description: 'Seguir para ultrassonografia seriada em aproximadamente uma semana.', nextStep: 'repetir_us', value: 'us_negative' },
+        { text: 'Doppler inconclusivo ou tecnicamente limitado', description: 'Manter investigação e repetir/complementar o exame.', nextStep: 'repetir_us', value: 'us_inconclusive' }
+      ]
+    },
+    classificar_extensao_tvp: {
+      id: 'classificar_extensao_tvp',
+      title: 'Onde está localizada a TVP confirmada?',
+      description: 'A localização define risco, necessidade de internação e segurança do manejo ambulatorial.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="grid gap-4 md:grid-cols-2 text-sm">
+          <div class="rounded-2xl border-2 border-red-200 bg-red-50 p-5 text-red-950">
+            <p class="text-base font-extrabold">TVP proximal</p>
+            <p class="mt-2">Envolve veia poplítea, femoral ou ilíaca. Apresenta maior risco embólico e deve seguir para anticoagulação com avaliação hospitalar.</p>
+          </div>
+          <div class="rounded-2xl border-2 border-blue-200 bg-blue-50 p-5 text-blue-950">
+            <p class="text-base font-extrabold">TVP distal</p>
+            <p class="mt-2">Restrita às veias abaixo da poplítea. O manejo ambulatorial depende de critérios objetivos de estabilidade e segurança.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'TVP proximal — poplítea, femoral ou ilíaca', nextStep: 'tvp_proximal_confirmada', value: 'proximal', critical: true },
+        { text: 'TVP distal — veias abaixo da poplítea', nextStep: 'criterios_ambulatoriais_tvp_distal', value: 'distal' }
+      ]
+    },
+    tvp_proximal_confirmada: {
+      id: 'tvp_proximal_confirmada',
+      title: 'TVP proximal: internação e anticoagulação',
+      description: 'Manter o paciente em ambiente hospitalar e avaliar segurança para anticoagular.',
+      type: 'action',
+      critical: true,
+      content: `
+        <div class="rounded-2xl border-l-4 border-l-red-700 border border-red-200 bg-red-50 p-5 text-sm text-red-950">
+          <p class="font-extrabold">Não encaminhar diretamente para alta por este ramo.</p>
+          <p class="mt-2">Documentar o segmento proximal acometido, iniciar anticoagulação quando não houver impedimento e manter avaliação hospitalar, com acionamento vascular conforme extensão e gravidade.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Checar contraindicações e preparar anticoagulação hospitalar', nextStep: 'checar_contra_anticoagulacao', value: 'proximal_inpatient', critical: true }
+      ]
+    },
+    criterios_ambulatoriais_tvp_distal: {
+      id: 'criterios_ambulatoriais_tvp_distal',
+      title: 'TVP distal: é seguro tratar fora do hospital?',
+      description: 'Confirmar todos os critérios antes de liberar o ramo ambulatorial.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <p class="font-semibold text-slate-900">O tratamento ambulatorial exige que todos os itens abaixo estejam presentes:</p>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Estabilidade clínica</strong><p class="mt-1">Sinais vitais estáveis e ausência de repercussão cardiopulmonar.</p></div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Baixo risco hemorrágico</strong><p class="mt-1">Sem sangramento ativo ou contraindicação relevante.</p></div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Função renal adequada</strong><p class="mt-1">Compatível com o anticoagulante e a dose escolhidos.</p></div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Uso seguro e retorno garantido</strong><p class="mt-1">Compreensão, acesso à medicação, suporte e possibilidade de reavaliação.</p></div>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Todos os critérios estão presentes', nextStep: 'checar_contra_anticoagulacao', value: 'outpatient_eligible' },
+        { text: 'Um ou mais critérios não estão presentes', nextStep: 'tvp_aguarda_avaliacao_vascular', value: 'outpatient_not_safe', critical: true }
       ]
     },
     us_negativa_conduta: {

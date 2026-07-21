@@ -1064,6 +1064,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const hasInconclusiveUS = dopplerResult === 'us_inconclusive'
       const hasPositiveDdimer = answers.baixa_probabilidade === 'ddimer_positive'
       const hasNegativeDdimer = answers.baixa_probabilidade === 'ddimer_negative'
+      const confirmedTVPLocation = answers.classificar_extensao_tvp === 'proximal'
+        ? 'proximal (poplítea, femoral ou ilíaca)'
+        : answers.classificar_extensao_tvp === 'distal'
+          ? 'distal (abaixo da veia poplítea)'
+          : ''
+      const distalOutpatientEligible = answers.criterios_ambulatoriais_tvp_distal === 'outpatient_eligible'
       const vascularEmergencyProtocolApplied = answers.tvp_urgencia_vascular_imediata === 'protocolo_flegmasia_aplicado'
         || history.includes('tvp_urgencia_vascular_imediata')
         || currentStep === 'tvp_urgencia_vascular_concluida'
@@ -1117,9 +1123,10 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const complementaryExamItems = uniqueItems([
         hasNegativeDdimer ? 'D-dímero: negativo.' : null,
         hasPositiveDdimer ? 'D-dímero: positivo.' : null,
-        answers.moderada_probabilidade ? 'D-dímero não utilizado nesta etapa, devido à probabilidade clínica moderada/alta.' : null,
+        answers.d_dimero_elegibilidade === 'ddimer_limited' ? 'D-dímero não utilizado por baixa utilidade clínica; optado por imagem vascular direta.' : null,
+        answers.moderada_probabilidade ? 'D-dímero não utilizado nesta etapa devido a Wells acima de 2 pontos.' : null,
         answers.solicitar_doppler_venoso ? 'Ultrassonografia Doppler venosa do membro acometido solicitada.' : null,
-        hasPositiveUS ? 'Ultrassonografia Doppler venosa positiva, com trombose venosa profunda identificada.' : null,
+        hasPositiveUS ? `Ultrassonografia Doppler venosa positiva, com trombose venosa profunda identificada${confirmedTVPLocation ? ` e classificada como ${confirmedTVPLocation}` : ''}.` : null,
         hasNegativeUS ? 'Ultrassonografia Doppler venosa negativa no exame registrado.' : null,
         hasInconclusiveUS ? 'Ultrassonografia Doppler venosa inconclusiva ou tecnicamente limitada, sem condições para exclusão da TVP.' : null,
         answers.us_negativa_conduta === 'high_suspicion' ? 'Mantida suspeita clínica após Doppler inicial negativo ou inconclusivo, com indicação de repetição da ultrassonografia em 5 a 7 dias.' : null,
@@ -1139,6 +1146,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         therapies.length === 1 ? `Optado por anticoagulação com ${therapies[0]}.` : null,
         therapies.length > 1 ? `Opções terapêuticas selecionadas: ${therapies.join('; ')}.` : null,
         currentStep === 'anticoagulacao_iniciada' ? 'Paciente anticoagulado.' : null,
+        confirmedTVPLocation ? `Localização registrada: TVP ${confirmedTVPLocation}.` : null,
+        answers.classificar_extensao_tvp === 'proximal' ? 'Indicado manejo hospitalar por acometimento venoso proximal.' : null,
+        answers.classificar_extensao_tvp === 'distal' && distalOutpatientEligible ? 'Critérios de estabilidade, baixo risco hemorrágico, função renal adequada e retorno seguro confirmados para manejo ambulatorial.' : null,
         currentStep === 'encaminhamento_urgente' ? 'Solicitada avaliação da Cirurgia Vascular.' : null,
         isWaitingVascular ? 'Paciente mantido internado ou em observação monitorizada enquanto aguarda transferência formal do caso para a Cirurgia Vascular.' : null,
         isWaitingVascular && contraData?.possuiContraindicacaoAbsoluta ? 'Anticoagulação não iniciada devido a contraindicação absoluta documentada; considerar filtro de veia cava ou intervenção vascular conforme avaliação especializada.' : null,

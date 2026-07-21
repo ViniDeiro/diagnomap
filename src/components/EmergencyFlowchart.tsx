@@ -4157,6 +4157,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => activeTVPClinicalFindings.some((item) => tvpRespiratoryTEPAlertSigns.includes(item)),
     [activeTVPClinicalFindings]
   )
+  const hasTVPImmediateAlertSelected = hasTVPVascularAlertSelected || hasTVPRespiratoryAlertSelected
   const shouldOfferTEPFlow = flowchart.id === 'tvp'
     && hasTVPRespiratoryAlertSelected
     && flowchart.finalSteps.includes(currentStep)
@@ -4166,10 +4167,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return acc + (criterion?.score || 0)
   }, 0)
   const wellsRisk = wellsScoreTotal <= 0 ? 'baixa' : wellsScoreTotal <= 2 ? 'moderada' : 'alta'
-  const wellsNextStep = wellsScoreTotal <= 0 ? 'baixa_probabilidade' : 'moderada_probabilidade'
-  const wellsDecisionValue = wellsScoreTotal <= 0 ? 'low' : wellsScoreTotal <= 2 ? 'moderate' : 'high'
-  const tvpWellsDestination = hasTVPAlertSignSelected ? 'tvp_urgencia_vascular_imediata' : wellsNextStep
-  const tvpWellsDecisionValue = hasTVPAlertSignSelected ? 'alerta_gravidade_confirmado' : wellsDecisionValue
+  const wellsNextStep = wellsScoreTotal <= 2 ? 'd_dimero_elegibilidade' : 'moderada_probabilidade'
+  const wellsDecisionValue = wellsScoreTotal <= 2 ? 'wells_up_to_2' : 'wells_above_2'
+  const tvpWellsDestination = hasTVPImmediateAlertSelected ? 'tvp_urgencia_vascular_imediata' : wellsNextStep
+  const tvpWellsDecisionValue = hasTVPImmediateAlertSelected ? 'alerta_gravidade_confirmado' : wellsDecisionValue
+  const tvpConfirmedLocation = answers.classificar_extensao_tvp
+  const tvpDistalOutpatientEligible = answers.criterios_ambulatoriais_tvp_distal === 'outpatient_eligible'
   const hasAbsoluteContraindication = selectedContraindications.some(item => item.startsWith('abs_'))
   const hasRelativeContraindication = selectedContraindications.some(item => item.startsWith('rel_'))
   const hasSelectedTherapy = availableSelectedTherapies.length > 0
@@ -15378,21 +15381,21 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         wellsRisk === 'baixa' ? 'bg-emerald-100 border-emerald-300' : 'bg-white border-slate-200'
                       )}>
                         <div className="font-bold text-slate-800">Baixa (≤0)</div>
-                        <div className="text-slate-600 mt-1">D-dímero de alta sensibilidade; se positivo, USG compressiva.</div>
+                        <div className="text-slate-600 mt-1">Avaliar se o D-dímero é aplicável; se positivo, solicitar Doppler.</div>
                       </div>
                       <div className={clsx(
                         'rounded-xl p-3 border text-sm',
                         wellsRisk === 'moderada' ? 'bg-amber-100 border-amber-300' : 'bg-white border-slate-200'
                       )}>
                         <div className="font-bold text-slate-800">Moderada (1–2)</div>
-                        <div className="text-slate-600 mt-1">USG direta ou D-dímero de alta sensibilidade seguido de USG se positivo.</div>
+                        <div className="text-slate-600 mt-1">Também pode seguir pelo D-dímero quando o exame for clinicamente útil.</div>
                       </div>
                       <div className={clsx(
                         'rounded-xl p-3 border text-sm',
                         wellsRisk === 'alta' ? 'bg-red-100 border-red-300' : 'bg-white border-slate-200'
                       )}>
                         <div className="font-bold text-slate-800">Alta (≥3)</div>
-                        <div className="text-slate-600 mt-1">USG compressiva urgente; se negativa e suspeita persistir, repetir em 5–7 dias.</div>
+                        <div className="text-slate-600 mt-1">Solicitar Doppler venoso diretamente; se negativo, programar exame seriado.</div>
                       </div>
                     </div>
 
@@ -15404,13 +15407,12 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </ul>
                     </div>
 
-                    {hasTVPAlertSignSelected && (
+                    {hasTVPImmediateAlertSelected && (
                       <div className="rounded-xl border-l-4 border-l-red-700 border border-red-200 bg-red-50 p-4 text-sm text-red-950">
                         <p className="font-extrabold uppercase tracking-wide">Ramo de alta bloqueado</p>
                         <p className="mt-1">
-                          Há sinal de alerta registrado no checklist. O Wells permanece documentado e a investigação
-                          seguirá obrigatoriamente por POCUS e D-dímero. Resultados que normalmente permitiriam alta
-                          ou exclusão de TVP não liberarão o ramo ambulatorial.
+                          Há sinal vascular grave ou manifestação respiratória registrada. O Wells permanece documentado,
+                          mas o ramo ambulatorial será interrompido para estabilização e investigação urgente.
                         </p>
                       </div>
                     )}
@@ -15429,9 +15431,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileTap={{ scale: 0.99 }}
                     >
                       <span className="font-semibold text-slate-800">
-                        {hasTVPAlertSignSelected
-                          ? 'Continuar para POCUS e D-dímero obrigatórios'
-                          : `Continuar conforme escore: ${wellsRisk === 'baixa' ? 'Probabilidade Baixa' : wellsRisk === 'moderada' ? 'Probabilidade Moderada' : 'Probabilidade Alta'}`}
+                        {hasTVPImmediateAlertSelected
+                          ? 'Continuar para avaliação urgente'
+                          : wellsScoreTotal <= 2
+                            ? `Wells ${wellsScoreTotal}: avaliar utilização do D-dímero`
+                            : `Wells ${wellsScoreTotal}: solicitar Doppler venoso diretamente`}
                       </span>
                       <ChevronRight className="w-5 h-5 text-slate-500" />
                     </motion.button>
@@ -17592,9 +17596,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
 
 
-                    <div className="grid md:grid-cols-2 gap-3">
+                    <div className="grid gap-3">
                       <motion.button
-                        onClick={() => handleAnswer('anticoagulacao_iniciada', 'anticoagulacao_iniciada')}
+                        onClick={() => handleAnswer(
+                          tvpConfirmedLocation === 'proximal' || !tvpDistalOutpatientEligible
+                            ? 'tvp_aguarda_avaliacao_vascular'
+                            : 'anticoagulacao_iniciada',
+                          tvpConfirmedLocation === 'proximal'
+                            ? 'proximal_anticoagulada_internada'
+                            : tvpDistalOutpatientEligible
+                              ? 'distal_anticoagulada_ambulatorial'
+                              : 'anticoagulada_avaliacao_hospitalar'
+                        )}
                         disabled={!hasSelectedTherapy}
                         className={clsx(
                           'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
@@ -17605,23 +17618,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
                         whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
                       >
-                        <span className="font-semibold text-slate-800">Paciente anticoagulado e fluxo finalizado</span>
-                        <ChevronRight className="w-5 h-5 text-slate-500" />
-                      </motion.button>
-
-                      <motion.button
-                        onClick={() => handleAnswer('tvp_aguarda_avaliacao_vascular', 'anticoagulado_encaminhado_vascular')}
-                        disabled={!hasSelectedTherapy}
-                        className={clsx(
-                          'w-full p-4 text-left rounded-2xl border-2 transition-all duration-300 flex items-center justify-between',
-                          !hasSelectedTherapy
-                            ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-amber-50 border-amber-300 hover:border-amber-500'
-                        )}
-                        whileHover={hasSelectedTherapy ? { scale: 1.01 } : {}}
-                        whileTap={hasSelectedTherapy ? { scale: 0.99 } : {}}
-                      >
-                        <span className="font-semibold text-slate-800">Paciente anticoagulado e encaminhado para avaliação da Cirurgia Vascular</span>
+                        <span className="font-semibold text-slate-800">
+                          {tvpConfirmedLocation === 'proximal'
+                            ? 'Registrar anticoagulação e manter internação/avaliação vascular'
+                            : tvpDistalOutpatientEligible
+                              ? 'Registrar anticoagulação e concluir plano ambulatorial'
+                              : 'Registrar anticoagulação e manter avaliação hospitalar'}
+                        </span>
                         <ChevronRight className="w-5 h-5 text-slate-500" />
                       </motion.button>
                     </div>

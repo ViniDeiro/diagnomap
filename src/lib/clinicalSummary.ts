@@ -298,6 +298,12 @@ const buildTVPClinicalSummary = (
   const normalizedDDimer = String(dDimerValue || '').toLowerCase()
   const hasNegativeDDimer = normalizedDDimer.includes('ddimer_negative')
   const hasPositiveDDimer = normalizedDDimer.includes('ddimer_positive')
+  const confirmedLocation = answers.classificar_extensao_tvp === 'proximal'
+    ? 'proximal'
+    : answers.classificar_extensao_tvp === 'distal'
+      ? 'distal'
+      : ''
+  const dDimerEligibility = answers.d_dimero_elegibilidade
   const contraindications = Array.isArray(contraData?.contraindicacoesSelecionadas)
     ? uniqueTextItems(contraData.contraindicacoesSelecionadas.map((item) => tvpContraindicationLabels[String(item)] || formatClinicalValue(item)))
     : []
@@ -368,7 +374,7 @@ const buildTVPClinicalSummary = (
     ? `A probabilidade clínica pré-teste foi classificada como ${wellsClassificationLabel}, com escore de Wells igual a ${wellsScore} ponto${wellsScore === 1 ? '' : 's'}.${wellsCriteria.length > 0 ? ` Contribuíram para o escore ${formatClinicalListText(wellsCriteria)}.` : ''}`
     : 'A probabilidade clínica pré-teste pelo escore de Wells não foi documentada durante esta avaliação.'
   const imagingAndLaboratorySentence = hasPositiveImaging
-    ? `${wellsScore != null && /baix/i.test(wellsClassificationLabel) ? 'Embora a probabilidade clínica inicial tenha sido baixa, a' : 'A'} ultrassonografia Doppler venosa demonstrou trombose venosa profunda.${hasPositiveDDimer ? ' O D-dímero também foi positivo; embora inespecífico, o resultado é concordante com a investigação, sem substituir o achado de imagem.' : hasNegativeDDimer ? ' O D-dímero foi negativo, resultado que não afasta trombose diante da imagem vascular positiva.' : ''}`
+    ? `${wellsScore != null && /baix/i.test(wellsClassificationLabel) ? 'Embora a probabilidade clínica inicial tenha sido baixa, a' : 'A'} ultrassonografia Doppler venosa demonstrou trombose venosa profunda${confirmedLocation ? ` de localização ${confirmedLocation}` : ''}.${hasPositiveDDimer ? ' O D-dímero também foi positivo; embora inespecífico, o resultado é concordante com a investigação, sem substituir o achado de imagem.' : hasNegativeDDimer ? ' O D-dímero foi negativo, resultado que não afasta trombose diante da imagem vascular positiva.' : dDimerEligibility === 'ddimer_limited' ? ' O D-dímero foi evitado por baixa utilidade clínica neste contexto.' : ''}`
     : hasNegativeImaging && hasPositiveDDimer
       ? 'O Doppler venoso inicial foi negativo, porém o D-dímero foi positivo. Se a suspeita clínica persistir, permanece indicada repetição da ultrassonografia conforme o protocolo.'
       : hasNegativeImaging && hasNegativeDDimer
@@ -381,7 +387,7 @@ const buildTVPClinicalSummary = (
   const diagnosticInterpretation = `${wellsSentence} ${imagingAndLaboratorySentence}`
 
   const diagnosticImpression = hasPositiveImaging
-    ? `Os achados obtidos são compatíveis com trombose venosa profunda proximal em ${selectedLegLabel}.`
+    ? `Os achados obtidos são compatíveis com trombose venosa profunda${confirmedLocation ? ` ${confirmedLocation}` : ''} em ${selectedLegLabel}.`
     : isExcluded
       ? 'A estratégia diagnóstica aplicada não sustentou trombose venosa profunda no desfecho atual.'
       : isConfirmed
