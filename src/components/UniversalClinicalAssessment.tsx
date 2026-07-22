@@ -230,13 +230,17 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                 </div>
               </div>
 
-              <div className="mb-6">
-                <GlasgowCalculator value={glasgowValues} onChange={(next, total) => {
-                  setGlasgowValues(next)
-                  setPhysicalExam(previous => ({ ...previous, neuro: { ...previous.neuro, glasgow: total } }))
-                }} />
-              </div>
-              <PhysicalExamForm value={physicalExam} onChange={setPhysicalExam} showGlasgowInput={false} />
+              <PhysicalExamForm
+                value={physicalExam}
+                onChange={setPhysicalExam}
+                showGlasgowInput={false}
+                neurologicalAssessment={
+                  <GlasgowCalculator value={glasgowValues} onChange={(next, total) => {
+                    setGlasgowValues(next)
+                    setPhysicalExam(previous => ({ ...previous, neuro: { ...previous.neuro, glasgow: total } }))
+                  }} />
+                }
+              />
 
               <label className={clsx('mt-7 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all', reviewed ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-amber-300 bg-amber-50')}>
                 <input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />

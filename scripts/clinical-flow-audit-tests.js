@@ -18,6 +18,7 @@ const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8'
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
+const physicalExamSource = fs.readFileSync(path.join(root, 'src/components/PhysicalExamForm.tsx'), 'utf8')
 const universalCareTransitionSource = fs.readFileSync(path.join(root, 'src/components/UniversalCareTransition.tsx'), 'utf8')
 const clinicalScalesSource = fs.readFileSync(path.join(root, 'src/components/ClinicalScaleCalculators.tsx'), 'utf8')
 const anaphylaxisLogicSource = fs.readFileSync(path.join(root, 'src/lib/anaphylaxis.ts'), 'utf8')
@@ -286,6 +287,8 @@ assert.match(abcdeComponentSource, /aria-pressed=\{selected\}/, 'ABCDE deve expo
 assert.match(abcdeComponentSource, /value\.length} de \{items\.length\}/, 'ABCDE deve mostrar progresso por domínio')
 assert.match(reportSource, /ANAPHYLAXIS_ABCDE_LABELS/, 'Relatório de anafilaxia deve traduzir o ABCDE selecionado')
 assert.match(universalAssessmentSource, /GlasgowCalculator/, 'Avaliação universal deve calcular Glasgow dentro do exame neurológico')
+assert.match(universalAssessmentSource, /neurologicalAssessment=\{[\s\S]*<GlasgowCalculator/, 'Glasgow universal deve ser entregue ao bloco neurológico, não ficar solto no início do exame')
+assert.match(physicalExamSource, /title="Neurológico"[\s\S]*\{neurologicalAssessment &&/, 'Bloco neurológico deve renderizar a calculadora antes da descrição dos achados')
 for (const marker of ['Plano assistencial durante a espera', 'O cuidado continua antes da transferência', 'Vigilância neurológica', 'Perfusão e balanço hídrico', 'Meta orientada pelo órgão acometido', 'Suporte respiratório escalonado']) {
   assert.ok(universalCareTransitionSource.includes(marker), `Transição universal perdeu orientação clínica: ${marker}`)
 }
