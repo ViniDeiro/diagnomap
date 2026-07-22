@@ -17,6 +17,7 @@ const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewe
 const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8')
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
 const rabiesComponentSource = fs.readFileSync(path.join(root, 'src/components/RabiesExposureFlowchartInteractive.tsx'), 'utf8')
+const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components/RabiesNotificationForm.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
 const physicalExamSource = fs.readFileSync(path.join(root, 'src/components/PhysicalExamForm.tsx'), 'utf8')
@@ -137,6 +138,14 @@ for (const marker of [
 ]) assert.ok(rabiesComponentSource.includes(marker), `Mordedura: experiência interativa ausente (${marker})`)
 assert.match(emergencyComponentSource, /flowchart\.id === 'atendimento_antirrabico'[\s\S]*RabiesExposureFlowchartInteractive/)
 assert.match(reportSource, /parseRabiesCase/)
+assert.match(rabiesComponentSource, /stage === 'raiva_vacina' \|\| stage === 'raiva_vacina_soro'[\s\S]*RabiesNotificationForm/)
+assert.match(rabiesComponentSource, /isRabiesNotificationCoreComplete\(data\.notification\)/)
+for (const marker of [
+  'Ficha de investigação SINAN', 'Notificação e atendimento', 'Identificação complementar',
+  'Residência e contato', 'Exposição e animal', 'Tratamento atual',
+  'Acompanhamento e encerramento', 'isRabiesNotificationCoreComplete'
+]) assert.ok(rabiesNotificationSource.includes(marker), `Mordedura: ficha SINAN sem bloco obrigatório (${marker})`)
+assert.match(reportSource, /Ficha de investigação antirrábica/)
 
 const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [
@@ -418,7 +427,7 @@ assert.equal(tvpReachable.has('pocus_resultado_pre_d_dimero'), false, 'TVP: resu
 
 const inProgressIds = selectorSource.match(/const inProgressFlowchartIds = \[([^\]]*)\]/)?.[1] || ''
 const finishedIds = selectorSource.match(/const finishedFlowchartIds = \[([\s\S]*?)\n    \]/)?.[1] || ''
-for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao']) {
+for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao', 'pep_hiv']) {
   assert.doesNotMatch(inProgressIds, new RegExp(`['"]${completed}['"]`), `${completed}: ainda marcado como em andamento`)
   assert.match(finishedIds, new RegExp(`['"]${completed}['"]`), `${completed}: não marcado como finalizado`)
 }

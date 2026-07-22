@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   CalendarDays,
   CheckCircle2,
+  ClipboardList,
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -19,6 +20,7 @@ import {
 import { clsx } from 'clsx'
 import type { EmergencyPatient } from '@/types/emergency'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
+import RabiesNotificationForm, { isRabiesNotificationCoreComplete, type RabiesNotificationData } from './RabiesNotificationForm'
 
 export const RABIES_CASE_ANSWER_KEY = 'raiva_caso_estruturado'
 
@@ -53,6 +55,7 @@ export type RabiesCaseData = {
   vaccineRoute?: 'id' | 'im'
   immunoglobulin?: 'sar' | 'ighar'
   passiveImmunizationChecks?: string[]
+  notification?: RabiesNotificationData
   outcome?: 'none' | 'vaccine' | 'vaccine_serum'
   disposition?: string
   completedAt?: string
@@ -152,6 +155,13 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
   const igharDose = weight ? weight * 20 : undefined
 
   const update = (patch: Partial<RabiesCaseData>) => setData(previous => ({ ...previous, ...patch }))
+  const updateNotification = (notification: RabiesNotificationData) => {
+    const nextData = { ...data, notification, updatedAt: new Date().toISOString() }
+    const nextAnswers = { ...answers, [RABIES_CASE_ANSWER_KEY]: JSON.stringify(nextData) }
+    setData(nextData)
+    setAnswers(nextAnswers)
+    onUpdate(patient.id, stage, history, nextAnswers, progress, data.outcome === 'vaccine_serum' ? 'Exposição grave' : 'Exposição antirrábica')
+  }
   const selectMany = (key: 'initialCare' | 'accidentCriteria' | 'passiveImmunizationChecks', value: string) => setData(previous => ({ ...previous, [key]: toggle(previous[key], value) }))
 
   const legacyPatchFor = (current: RabiesStage, nextData: RabiesCaseData): Record<string, string> => {
@@ -165,7 +175,34 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
   }
 
   const persist = (nextStage: RabiesStage, patch: Partial<RabiesCaseData> = {}) => {
-    const nextData = { ...data, ...patch, updatedAt: new Date().toISOString() }
+    const provisionalData = { ...data, ...patch }
+    const needsNotification = nextStage === 'raiva_vacina' || nextStage === 'raiva_vacina_soro'
+    const today = new Date().toISOString().slice(0, 10)
+    const exposureLocations = [
+      provisionalData.accidentCriteria?.includes('severe_site') ? 'head_neck' : null,
+      provisionalData.accidentCriteria?.some(item => item === 'light_superficial' || item === 'severe_multiple' || item === 'severe_deep') ? 'trunk' : null
+    ].filter(Boolean) as string[]
+    const woundTypes = [
+      provisionalData.accidentCriteria?.includes('severe_deep') ? 'deep' : null,
+      provisionalData.accidentCriteria?.some(item => item.startsWith('light_')) ? 'superficial' : null,
+      provisionalData.contactType === 'indirect' ? 'none' : null
+    ].filter(Boolean) as string[]
+    const notificationDefaults: RabiesNotificationData | undefined = needsNotification ? {
+      notificationDate: today,
+      attendanceDate: today,
+      exposureDate: provisionalData.observationStartDate || today,
+      exposureTypes: provisionalData.contactType === 'indirect' ? ['indirect'] : ['bite'],
+      exposureLocations,
+      woundTypes,
+      animalSpecies: provisionalData.indirectAnimal === 'bat' || provisionalData.animalGroup === 'wild' ? 'bat' : provisionalData.animalGroup === 'dog_cat' ? 'dog' : provisionalData.animalGroup === 'economic' ? 'economic' : undefined,
+      animalCondition: provisionalData.dogCatStatus === 'observable_healthy' ? 'healthy' : provisionalData.dogCatStatus === 'unobservable_suspect' ? 'suspect' : provisionalData.observationOutcome === 'disappeared_sick_dead' ? 'dead_missing' : undefined,
+      animalObservable: provisionalData.dogCatStatus === 'observable_healthy' ? 'yes' : provisionalData.dogCatStatus ? 'no' : undefined,
+      treatmentIndicated: nextStage === 'raiva_vacina_soro' ? 'serum_vaccine' : 'vaccine',
+      serumIndicated: nextStage === 'raiva_vacina_soro' ? 'yes' : undefined,
+      serumWeightKg: patient.weight ? String(patient.weight) : undefined,
+      ...provisionalData.notification
+    } : provisionalData.notification
+    const nextData = { ...provisionalData, notification: notificationDefaults, updatedAt: new Date().toISOString() }
     const nextHistory = [...history, stage]
     const nextAnswers = { ...answers, ...legacyPatchFor(stage, nextData), [RABIES_CASE_ANSWER_KEY]: JSON.stringify(nextData) }
     setData(nextData); setHistory(nextHistory); setStage(nextStage); setAnswers(nextAnswers); setNotice('')
@@ -233,8 +270,13 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
     persist(severity === 'severe' ? 'raiva_vacina_soro' : 'raiva_vacina', { severity, outcome: severity === 'severe' ? 'vaccine_serum' : 'vaccine' })
   }
 
+  const notificationTreatmentConsistent = data.outcome === 'vaccine_serum'
+    ? data.notification?.treatmentIndicated === 'serum_vaccine'
+    : data.outcome === 'vaccine' ? ['vaccine', 'observation_vaccine', 'reexposure'].includes(data.notification?.treatmentIndicated || '') : true
   const finalReady = data.outcome === 'none'
     || (Boolean(data.vaccineRoute) && Boolean(data.previousProphylaxis) && data.immunosuppressed != null
+      && isRabiesNotificationCoreComplete(data.notification)
+      && notificationTreatmentConsistent
       && (data.outcome !== 'vaccine_serum' || (Boolean(data.immunoglobulin) && (data.passiveImmunizationChecks || []).length === passiveChecks.length)))
 
   return <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-blue-50/40 pb-12">
@@ -255,11 +297,16 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
     </header>
 
     <main className="mx-auto mt-7 max-w-6xl px-4 sm:px-6">
+      {!showCompletion && (stage === 'raiva_vacina' || stage === 'raiva_vacina_soro') && <div className="mb-6"><RabiesNotificationForm patient={patient} outcome={stage === 'raiva_vacina_soro' ? 'vaccine_serum' : 'vaccine'} value={data.notification} onChange={updateNotification} /></div>}
       {showCompletion ? <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <section className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl sm:p-8"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15"><CheckCircle2 className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Avaliação registrada</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Fluxo de mordedura concluído</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50">Exposição, animal, gravidade e conduta foram preservados para compor o relatório clínico.</p></div></div><span className="w-fit rounded-full bg-white/15 px-4 py-2 text-sm font-extrabold">100% concluído</span></div></section>
         <section className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Classificação</p><p className="mt-2 text-lg font-black text-slate-950">{data.severity === 'severe' ? 'Acidente grave' : data.severity === 'light' ? 'Acidente leve' : 'Sem classificação necessária'}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Conduta</p><p className="mt-2 text-lg font-black text-slate-950">{data.outcome === 'vaccine_serum' ? 'Vacina + SAR/IGHAR' : data.outcome === 'vaccine' ? 'Vacina' : 'Sem imunoprofilaxia'}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Finalização</p><p className="mt-2 text-sm font-black text-slate-950">{data.completedAt ? new Date(data.completedAt).toLocaleString('pt-BR') : 'Horário não informado'}</p></div></section>
         <section className="rounded-[1.75rem] border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6"><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Síntese do caminho</p><h3 className="mt-2 text-xl font-black text-slate-950">{data.disposition}</h3><p className="mt-2 text-sm leading-relaxed text-blue-950">Abra o relatório para revisar as características da exposição, os cuidados locais, o cálculo em UI quando aplicável e as orientações registradas.</p></section>
-        <div className="grid gap-3 sm:grid-cols-2">{onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-4 font-extrabold text-blue-950"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}<button type="button" onClick={onComplete} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white"><CheckCircle2 className="h-5 w-5" /> Concluir e ir ao dashboard</button></div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(stage === 'raiva_vacina' || stage === 'raiva_vacina_soro') && <button type="button" onClick={() => setShowCompletion(false)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-4 font-extrabold text-indigo-950"><ClipboardList className="h-5 w-5" /> Atualizar ficha SINAN</button>}
+          {onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-4 font-extrabold text-blue-950"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}
+          <button type="button" onClick={onComplete} className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white"><CheckCircle2 className="h-5 w-5" /> Concluir e ir ao dashboard</button>
+        </div>
       </motion.div> : <motion.section key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7">
         {stage === 'raiva_cuidados_iniciais' && <div className="space-y-6"><div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950"><div className="flex gap-3"><Waves className="h-6 w-6 shrink-0" /><p><strong>A lavagem é imediata.</strong> A classificação epidemiológica vem em seguida e não substitui o cuidado local.</p></div></div><div className="grid gap-3 md:grid-cols-2">{initialCareOptions.map(([id, label, description]) => <Choice key={id} selected={(data.initialCare || []).includes(id)} title={label} description={description} onClick={() => selectMany('initialCare', id)} />)}</div><button type="button" disabled={!(data.initialCare || []).includes('wash')} onClick={() => persist('raiva_tipo_contato')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Classificar a exposição <ChevronRight /></button></div>}
 
