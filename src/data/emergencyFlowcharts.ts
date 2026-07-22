@@ -1839,6 +1839,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p class="mt-2"><strong>Se MgSO4 a 50% (500 mg/mL):</strong> aspirar 4 mL (2 g) e adicionar 96 mL de SF 0,9%, obtendo volume final de 100 mL.</p>
           </div>
           <p><strong>Segurança:</strong> confirmar apresentação da ampola, monitorizar pressão e frequência cardíaca e revisar função renal/risco de toxicidade.</p>
+          <button type="button" data-asthma-copy-magnesium="true" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 font-bold text-white hover:bg-slate-800">Copiar preparo do magnésio</button>
         </div>
       `,
       options: [

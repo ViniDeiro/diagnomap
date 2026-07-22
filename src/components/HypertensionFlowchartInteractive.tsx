@@ -7,16 +7,20 @@ import {
   AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   Clock3,
+  FileText,
   HeartPulse,
   Pill,
+  RotateCcw,
   ShieldAlert,
   Stethoscope,
   TestTube2
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
+import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import type { EmergencyPatient } from '@/types/emergency'
 import {
   classifyHypertensionRoute,
@@ -192,6 +196,7 @@ interface Props {
   onUpdate: (patientId: string, currentStep: string, history: string[], answers: Record<string, string>, progress: number, riskGroup?: string) => void
   onComplete: () => void
   onBack?: () => void
+  onOpenReport?: () => void
 }
 
 const stageTitles: Record<HypertensionStage, [string, string]> = {
@@ -206,13 +211,14 @@ const stageTitles: Record<HypertensionStage, [string, string]> = {
   hipertensao_cronica_alta: ['Hipertensão fora do critério de crise', 'Investigue adesão, ajuste longitudinal e oriente retorno.']
 }
 
-const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initialHistory, initialAnswers, onUpdate, onComplete, onBack }) => {
+const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initialHistory, initialAnswers, onUpdate, onComplete, onBack, onOpenReport }) => {
   const initialStage = HYPERTENSION_STAGES.includes(initialStep as HypertensionStage) ? initialStep as HypertensionStage : 'hipertensao_confirmacao'
   const [stage, setStage] = useState<HypertensionStage>(initialStage)
   const [history, setHistory] = useState<string[]>(initialHistory.filter(item => HYPERTENSION_STAGES.includes(item as HypertensionStage)))
   const [answers, setAnswers] = useState(initialAnswers)
   const [data, setData] = useState<HypertensionCaseData>(() => parseHypertensionCase(initialAnswers[HYPERTENSION_CASE_ANSWER_KEY]))
   const [notice, setNotice] = useState('')
+  const [showCompletion, setShowCompletion] = useState(() => Boolean(parseHypertensionCase(initialAnswers[HYPERTENSION_CASE_ANSWER_KEY]).completedAt))
   const [criticalTransition, setCriticalTransition] = useState<CareTransitionData | null>(() => {
     try { return initialAnswers.__care_transition_hipertensao_emergencia_plano ? JSON.parse(initialAnswers.__care_transition_hipertensao_emergencia_plano) : null } catch { return null }
   })
@@ -235,6 +241,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
     const nextAnswers = { ...answers, [HYPERTENSION_CASE_ANSWER_KEY]: JSON.stringify(nextData) }
     setData(nextData); setHistory(nextHistory); setStage(nextStage); setAnswers(nextAnswers); setNotice('')
     onUpdate(patient.id, nextStage, nextHistory, nextAnswers, Math.max(progress, 10), nextData.route === 'emergency' ? 'Emergência hipertensiva' : 'Crise hipertensiva')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const finish = (disposition: string, confirmedTransition?: CareTransitionData) => {
@@ -242,7 +249,8 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
     const nextAnswers = { ...answers, ...(confirmedTransition ? { __care_transition_hipertensao_emergencia_plano: JSON.stringify(confirmedTransition) } : {}), [HYPERTENSION_CASE_ANSWER_KEY]: JSON.stringify(nextData) }
     setData(nextData); setAnswers(nextAnswers)
     onUpdate(patient.id, stage, [...history, stage], nextAnswers, 100, nextData.route === 'emergency' ? 'Emergência hipertensiva' : 'Sem lesão aguda')
-    onComplete()
+    setShowCompletion(true)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const persistCriticalTransition = (transition: CareTransitionData) => {
@@ -258,6 +266,29 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
     const nextHistory = history.slice(0, -1)
     setHistory(nextHistory); setStage(previous)
     onUpdate(patient.id, previous, nextHistory, answers, Math.max(5, progress - 10), patient.emergencyState.riskGroup)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const handleBack = () => {
+    if (showCompletion) {
+      setShowCompletion(false)
+      return
+    }
+    goBack()
+  }
+
+  const restart = () => {
+    const preservedAnswers: Record<string, string> = {}
+    if (answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]) preservedAnswers[UNIVERSAL_ASSESSMENT_ANSWER_KEY] = answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]
+    setStage('hipertensao_confirmacao')
+    setHistory([])
+    setAnswers(preservedAnswers)
+    setData({})
+    setCriticalTransition(null)
+    setNotice('')
+    setShowCompletion(false)
+    onUpdate(patient.id, 'hipertensao_confirmacao', [], preservedAnswers, 8, 'Crise hipertensiva')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const continueFromConfirmation = () => {
@@ -273,13 +304,40 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 pb-12">
+      <div className="sticky top-0 z-50 border-b border-white/70 bg-white/90 shadow-lg backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+          <div className="flex items-center gap-4">
+            <div className={clsx('flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-white shadow-lg', data.route === 'emergency' ? 'bg-gradient-to-br from-red-700 to-rose-600 shadow-red-200' : 'bg-gradient-to-br from-blue-700 to-cyan-600 shadow-blue-200')}><HeartPulse className="h-6 w-6" /></div>
+            <div><h1 className="text-xl font-black text-slate-950 sm:text-2xl">{patient.name || 'Paciente sem nome'}</h1><p className="mt-1 text-sm font-medium text-slate-600">{patient.age != null ? `${patient.age} anos` : 'Idade não informada'} · {patient.medicalRecord || 'Prontuário não informado'}</p></div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {onBack && <motion.button type="button" onClick={onBack} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-gradient-to-br from-slate-100 to-slate-200 px-4 py-2.5 font-bold text-slate-700 shadow-sm"><ArrowLeft className="h-4 w-4" /> Dashboard</motion.button>}
+            <motion.button type="button" onClick={handleBack} disabled={!showCompletion && history.length === 0} whileHover={showCompletion || history.length > 0 ? { scale: 1.02 } : {}} whileTap={showCompletion || history.length > 0 ? { scale: 0.98 } : {}} className={clsx('inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 font-bold', showCompletion || history.length > 0 ? 'border-amber-300 bg-gradient-to-br from-amber-100 to-amber-200 text-amber-900 shadow-sm' : 'cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400')}><ChevronLeft className="h-4 w-4" /> Voltar</motion.button>
+            <motion.button type="button" onClick={restart} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="inline-flex items-center gap-2 rounded-xl border border-blue-300 bg-gradient-to-br from-blue-100 to-cyan-100 px-4 py-2.5 font-bold text-blue-900 shadow-sm"><RotateCcw className="h-4 w-4" /> Reiniciar</motion.button>
+          </div>
+        </div>
+      </div>
       <header className={clsx('relative overflow-hidden px-5 py-7 text-white shadow-lg sm:px-8', data.route === 'emergency' ? 'bg-gradient-to-r from-red-700 to-rose-600' : 'bg-gradient-to-r from-blue-700 to-cyan-600')}>
         <div className="mx-auto flex max-w-6xl items-center gap-4"><div className="rounded-2xl bg-white/15 p-3"><HeartPulse className="h-8 w-8" /></div><div className="min-w-0 flex-1"><p className="text-xs font-black uppercase tracking-[0.2em] text-white/75">Crise hipertensiva · etapa {HYPERTENSION_STAGES.indexOf(stage) + 1}</p><h1 className="mt-1 text-2xl font-black sm:text-3xl">{title}</h1><p className="mt-1 text-sm text-white/85 sm:text-base">{subtitle}</p></div><div className="hidden text-right sm:block"><strong className="text-2xl">{progress}%</strong><p className="text-xs text-white/70">do protocolo</p></div></div>
         <div className="absolute bottom-0 left-0 h-1.5 bg-white/25" style={{ width: `${progress}%` }} />
       </header>
 
       <main className="mx-auto mt-7 max-w-6xl px-4 sm:px-6">
-        <motion.section key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7">
+        {showCompletion && <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl shadow-emerald-900/15 sm:p-8">
+            <div className="absolute -right-12 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+            <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25"><CheckCircle2 className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Protocolo registrado</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Atendimento de hipertensão finalizado</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50">Aferições, classificação, pesquisa de lesão de órgão-alvo e conduta foram preservadas no relatório clínico.</p></div></div><span className="w-fit rounded-full bg-white/15 px-4 py-2 text-sm font-extrabold ring-1 ring-white/25">100% concluído</span></div>
+          </section>
+          <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Pressão inicial</p><p className="mt-2 text-2xl font-black text-slate-950">{data.systolic != null && data.diastolic != null ? `${data.systolic}/${data.diastolic}` : 'Não informada'}</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Classificação</p><p className="mt-2 text-lg font-black text-slate-950">{data.route === 'emergency' ? 'Emergência hipertensiva' : data.route === 'pseudocrisis' ? 'Pseudocrise' : data.route === 'important_elevation' ? 'Elevação sem lesão aguda' : 'Hipertensão crônica'}</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Lesão aguda</p><p className="mt-2 text-lg font-black text-slate-950">{(data.organDamage || []).length > 0 ? `${data.organDamage?.length} achado(s)` : 'Não demonstrada'}</p></div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Destino</p><p className="mt-2 text-sm font-black leading-relaxed text-slate-950">{data.disposition || 'Não informado'}</p></div>
+          </section>
+          <section className="rounded-[1.75rem] border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6 sm:p-7"><div className="flex items-start gap-4"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white"><FileText className="h-5 w-5" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">Síntese clínica</p><h3 className="mt-1 text-xl font-black text-slate-950">{data.disposition || 'Conduta registrada'}</h3><p className="mt-2 text-sm leading-relaxed text-blue-950">Finalizado em {data.completedAt ? new Date(data.completedAt).toLocaleString('pt-BR') : 'horário não informado'}. Consulte o relatório para revisar sinais, exames, metas e decisões terapêuticas.</p></div></div></section>
+          <div className="grid gap-3 sm:grid-cols-2">{onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-4 font-extrabold text-blue-900 shadow-sm hover:bg-blue-50"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}<button type="button" onClick={onComplete} className={clsx('inline-flex items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white shadow-lg shadow-blue-200 hover:bg-blue-800', !onOpenReport && 'sm:col-span-2')}><CheckCircle2 className="h-5 w-5" /> Concluir e ir ao dashboard</button></div>
+        </motion.div>}
+        <motion.section key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={clsx('rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7', showCompletion && 'hidden')}>
           {stage === 'hipertensao_confirmacao' && <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2"><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão sistólica (mmHg)<input aria-label="Pressão sistólica" type="number" value={data.systolic ?? ''} onChange={event => update({ systolic: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-xl" /></label><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão diastólica (mmHg)<input aria-label="Pressão diastólica" type="number" value={data.diastolic ?? ''} onChange={event => update({ diastolic: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-xl" /></label></div>
             {data.systolic != null && data.diastolic != null && <div className={clsx('rounded-2xl border p-4 font-bold', markedElevation ? 'border-red-300 bg-red-50 text-red-950' : 'border-amber-300 bg-amber-50 text-amber-950')}>{markedElevation ? 'Elevação acentuada registrada. A próxima decisão procura lesão aguda de órgão-alvo.' : 'A medida está abaixo do limiar operacional do documento. O fluxo direcionará para hipertensão crônica/descompensada e avaliação longitudinal.'}</div>}

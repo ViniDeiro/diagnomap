@@ -7,6 +7,7 @@ const ts = require('typescript')
 
 const root = path.resolve(__dirname, '..')
 const flowSource = fs.readFileSync(path.join(root, 'src/data/emergencyFlowcharts.ts'), 'utf8')
+const gecaSource = fs.readFileSync(path.join(root, 'src/data/gecaFlowchart.ts'), 'utf8')
 const dengueSource = fs.readFileSync(path.join(root, 'src/components/DengueFlowchartComplete.tsx'), 'utf8')
 const emergencyComponentSource = fs.readFileSync(path.join(root, 'src/components/EmergencyFlowchart.tsx'), 'utf8')
 const abcdeComponentSource = fs.readFileSync(path.join(root, 'src/components/ABCDEChecklist.tsx'), 'utf8')
@@ -19,6 +20,35 @@ const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hyperte
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
 const clinicalScalesSource = fs.readFileSync(path.join(root, 'src/components/ClinicalScaleCalculators.tsx'), 'utf8')
 const anaphylaxisLogicSource = fs.readFileSync(path.join(root, 'src/lib/anaphylaxis.ts'), 'utf8')
+const clinicalSummarySource = fs.readFileSync(path.join(root, 'src/lib/clinicalSummary.ts'), 'utf8')
+
+const compiledGeca = ts.transpileModule(gecaSource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+}).outputText
+const gecaModule = { exports: {} }
+vm.runInNewContext(compiledGeca, { module: gecaModule, exports: gecaModule.exports, require: () => ({}) })
+const gecaFlowchart = gecaModule.exports.gecaFlowchart
+
+const compiledClinicalSummary = ts.transpileModule(clinicalSummarySource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true }
+}).outputText
+const clinicalSummaryModule = { exports: {} }
+vm.runInNewContext(compiledClinicalSummary, {
+  module: clinicalSummaryModule,
+  exports: clinicalSummaryModule.exports,
+  require: request => {
+    if (request.includes('emergencyFlowcharts')) return { getFlowchartById: () => null }
+    if (request.includes('influenza')) return { getOseltamivirDoseText: () => '' }
+    if (request.includes('pneumonia')) return { getPneumoniaSmartCopRisk: () => '' }
+    if (request.includes('UniversalClinicalAssessment')) return {
+      UNIVERSAL_ASSESSMENT_ANSWER_KEY: '__avaliacao_clinica_inicial',
+      parseUniversalClinicalAssessment: raw => raw ? JSON.parse(raw) : null,
+      summarizeUniversalPhysicalExam: exam => exam ? [`Neurológico: Glasgow ${exam.neuro?.glasgow ?? 15}`, `Pulmonar: ${exam.pulmonary?.altered || 'sem alteração descrita'}`] : []
+    }
+    return {}
+  },
+  console
+}, { filename: 'clinicalSummary.compiled.js' })
 
 const compiled = ts.transpileModule(flowSource, {
   compilerOptions: {
@@ -119,6 +149,16 @@ for (const obsolete of ['asma_resgate_beta_iv', 'asma_resgate_aminofilina', 'asm
   assert.equal(asthmaReachable.has(obsolete), false, `Asma: terapia não rotineira ainda está na rota assistencial (${obsolete})`)
 }
 
+for (const marker of [
+  'Crise asmática no pronto-socorro',
+  "['Avaliação', 'Gravidade', 'Tratamento', 'Reavaliação', 'Destino']",
+  'Classificação objetiva da crise',
+  'Achados de gravidade — selecione os presentes',
+  'Nova medida após a primeira hora'
+]) {
+  assert.ok(emergencyComponentSource.includes(marker), `asma: experiência interativa ausente: ${marker}`)
+}
+
 const avcReachable = reachable(avcFlowchart)
 for (const required of [
   'avc_ativacao', 'avc_glicemia', 'avc_triagem', 'avc_nihss', 'avc_exames', 'avc_imagem',
@@ -190,7 +230,7 @@ for (const [input, expected] of hypertensionCases) {
 for (const scenario of ['aortic_syndrome', 'encephalopathy', 'ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage', 'catecholamine_crisis', 'acute_coronary_syndrome', 'pulmonary_edema', 'pregnancy_emergency', 'other']) {
   assert.ok(HYPERTENSION_SCENARIO_TARGETS[scenario]?.length, `Hipertensão: meta ausente para ${scenario}`)
 }
-for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS']) {
+for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY']) {
   assert.match(hypertensionComponentSource, new RegExp(marker), `Hipertensão: implementação interativa sem marcador obrigatório (${marker})`)
 }
 assert.match(reportSource, /flowId === 'hipertensao'/)
@@ -226,9 +266,73 @@ assert.match(avcComponentSource, /NIHSSCalculator/)
 assert.match(avcComponentSource, /ModifiedRankinSelector/)
 assert.match(flowSource, /POCUS não disponível: seguir para D-dímero/, 'TVP de baixa probabilidade deve prosseguir sem POCUS')
 assert.match(flowSource, /MgSO4 a 10% \(100 mg\/mL\)/, 'Asma deve detalhar diluição do magnésio a 10%')
+assert.match(emergencyComponentSource, /ASTHMA_MAGNESIUM_PRESCRIPTION/)
+assert.match(emergencyComponentSource, /data-asthma-copy-magnesium/)
 assert.match(emergencyComponentSource, /ASTHMA_ADULT_DISCHARGE_PRESCRIPTION/)
 assert.match(emergencyComponentSource, /data-asthma-copy-discharge/)
 assert.match(anaphylaxisLogicSource, /age !== null && age > 12[\s\S]*doseMg: 0\.5/, 'Dose adulta de adrenalina deve prevalecer sobre peso inconsistente')
+assert.match(clinicalSummarySource, /buildDengueClinicalSummary/, 'Dengue deve possuir resumo clínico próprio')
+assert.match(clinicalSummarySource, /flowchart\.id === 'dengue'[\s\S]*buildDengueClinicalSummary/, 'Dengue ainda está usando o resumo genérico')
+for (const group of ['Grupo A', 'Grupo B', 'Grupo C', 'Grupo D']) {
+  assert.match(clinicalSummarySource, new RegExp(group), `Resumo da dengue sem narrativa específica para ${group}`)
+}
+const { buildClinicalSummary } = clinicalSummaryModule.exports
+for (const [group, step] of [['A', 'end_group_a'], ['B', 'end_group_b'], ['C', 'group_c'], ['D', 'group_d']]) {
+  const summary = buildClinicalSummary({
+    id: `dengue-${group}`, name: 'Paciente Teste', age: 40, gender: 'masculino', weight: 70,
+    medicalRecord: 'TESTE', selectedFlowchart: 'dengue', generalObservations: '',
+    admission: { date: new Date('2026-07-22T10:00:00'), time: '10:00', symptoms: ['Febre', 'Cefaleia'], vitalSigns: {} },
+    flowchartState: { currentStep: step, history: ['alarm_check', step], answers: {
+      __avaliacao_clinica_inicial: JSON.stringify({ sinaisVitais: { temperature: 39, bloodPressure: '120/80', heartRate: 90, respiratoryRate: 19, oxygenSaturation: 98 }, exameFisico: { neuro: { glasgow: 15 }, pulmonary: { altered: '' } } }),
+      alarm_check: JSON.stringify({ grupoC: group === 'C' ? ['dor_abdominal'] : [], grupoD: group === 'D' ? ['choque_taquicardia'] : [] })
+    }, progress: 50, group, lastUpdate: new Date() },
+    treatment: { prescriptions: [], observations: [] }, status: 'active', createdAt: new Date(), updatedAt: new Date()
+  }, { flowchart: { id: 'dengue', name: 'Dengue', description: '', initialStep: 'alarm_check', steps: { [step]: { id: step, title: step, description: '', type: 'result', options: [] } }, finalSteps: [] } })
+  assert.match(summary.continuousText, new RegExp(`Grupo ${group}`), `Resumo da dengue não contextualizou o Grupo ${group}`)
+  assert.doesNotMatch(summary.continuousText, /feverDays|bloodPressure|continue|Exame físico: Exame físico:/, `Resumo do Grupo ${group} expôs chave técnica ou texto duplicado`)
+}
+
+const narrativePatient = (selectedFlowchart, currentStep, history, answers) => ({
+  id: `summary-${selectedFlowchart}`, name: 'Paciente Narrativa', age: 58, gender: 'masculino', weight: 72,
+  medicalRecord: 'NARRATIVA', selectedFlowchart, generalObservations: '',
+  admission: { date: new Date('2026-07-22T10:00:00'), time: '10:00', chiefComplaint: 'Início súbito dos sintomas', symptoms: ['Sintoma principal'], vitalSigns: {} },
+  flowchartState: { currentStep, history, answers, progress: 100, lastUpdate: new Date() },
+  treatment: { prescriptions: [], observations: [] }, status: 'active', createdAt: new Date(), updatedAt: new Date()
+})
+const universalAnswer = JSON.stringify({ sinaisVitais: { temperature: 36.8, bloodPressure: '170/100', heartRate: 96, respiratoryRate: 24, oxygenSaturation: 94, glucose: 110 }, exameFisico: { neuro: { glasgow: 15 }, pulmonary: { altered: 'sibilos difusos' } } })
+const narrativeCases = [
+  {
+    id: 'avc', flow: avcFlowchart, step: 'avc_aguardo_uti', history: ['avc_ativacao', 'avc_nihss', 'avc_imagem', 'avc_trombolitico'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, avc_caso_estruturado: JSON.stringify({ symptoms: ['fraqueza em hemicorpo', 'fala alterada'], onsetTime: '09:10', glucose: 110, nihss: 12, premorbidRankin: 1, imagingResult: 'sem_hemorragia', timeWindow: 'ate_45h', receivedThrombolysis: true, thrombolytic: 'tenecteplase', thrombolyticDose: '18 mg EV em bolus', outcome: 'UTI' }) },
+    expected: [/NIHSS 12/, /trombólise intravenosa/, /UTI ou unidade neurocrítica/]
+  },
+  {
+    id: 'anafilaxia', flow: anaphylaxisFlowchart, step: 'ana_observacao_alta', history: ['ana_inicio', 'ana_criterios_wao', 'ana_adrenalina_im', 'ana_estratificar_observacao'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, ana_inicio: JSON.stringify({ achadosSelecionados: ['urticária', 'dispneia'], sistemasAcometidos: ['pele', 'respiratorio'] }), ana_criterios_wao: JSON.stringify({ criteriosSelecionados: ['criterio_1'], diagnosticoProvavel: true }), ana_preparo_imediato: JSON.stringify({ medidasSelecionadas: ['ajuda', 'monitorizacao'], abcdeSelecionado: ['airway', 'breathing', 'circulation'] }) },
+    expected: [/Anafilaxia clinicamente provável/, /adrenalina intramuscular/, /alta após período de observação/]
+  },
+  {
+    id: 'asthma', flow: asthmaFlowchart, step: 'asma_alta_final', history: ['asma_avaliacao_inicial', 'asma_tratamento_1h_leve_moderada', 'asma_saba_leve_moderada', 'asma_corticoide_leve_moderada', 'asma_resposta_boa'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, asma_avaliacao_inicial: JSON.stringify({ values: { sato2: 93, fr: 27, fc: 105, pfe: 62 }, flags: { usoMusculatura: true } }), asma_reavaliacao_1h: JSON.stringify({ values: { sato2Re: 97, frRe: 20, pfeRe: 82 }, flags: { melhoraClinica: true } }) },
+    expected: [/exacerbação asmática moderada/i, /boa resposta/, /alta do pronto-socorro/]
+  },
+  {
+    id: 'hipertensao', flow: hypertensionFlowchart, step: 'hipertensao_emergencia_plano', history: ['hipertensao_confirmacao', 'hipertensao_lesao_orgao', 'hipertensao_emergencia_cenario'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, hipertensao_caso_estruturado: JSON.stringify({ systolic: 220, diastolic: 130, symptoms: ['dyspnea'], organDamage: ['pulmonary_edema'], route: 'emergency', scenario: 'pulmonary_edema', selectedIVAgent: 'nitroglycerin', disposition: 'CTI' }) },
+    expected: [/emergência hipertensiva/i, /edema agudo de pulmão/, /CTI/]
+  },
+  {
+    id: 'geca', flow: gecaFlowchart, step: 'geca_alta_plano_a', history: ['geca_inicio', 'geca_perfil_diarreia', 'geca_classificacao_hidratacao', 'geca_plano_a', 'geca_destino'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, geca_perfil_diarreia: 'aguda_aquosa', geca_classificacao_hidratacao: 'plano_a_sem_desidratacao', geca_destino: JSON.stringify({ decision: 'alta_segura', criteriosAltaLabels: ['hidratado', 'tolerando via oral'] }) },
+    expected: [/diarreia aguda aquosa/, /sem sinais de desidratação/, /Plano A/]
+  }
+]
+for (const testCase of narrativeCases) {
+  const patient = narrativePatient(testCase.id, testCase.step, testCase.history, testCase.answers)
+  const summary = buildClinicalSummary(patient, { flowchart: testCase.flow, currentStep: testCase.step, history: testCase.history, answers: testCase.answers })
+  for (const pattern of testCase.expected) assert.match(summary.continuousText, pattern, `${testCase.id}: narrativa não contextualizou ${pattern}`)
+  assert.doesNotMatch(summary.continuousText, /avc_caso_estruturado|hipertensao_caso_estruturado|sato2Re|usoMusculatura|decision:/, `${testCase.id}: resumo expôs chave técnica`)
+}
 
 const tvpReachable = reachable(tvpFlowchart)
 assert.equal(tvpFlowchart.steps.tvp_exame_fisico, undefined, 'TVP: tela duplicada de sinais vitais e exame físico deve ser removida')
@@ -258,4 +362,29 @@ for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao']
   assert.match(finishedIds, new RegExp(`['"]${completed}['"]`), `${completed}: não marcado como finalizado`)
 }
 
-console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma, AVC, hypertension and TVP routes.')
+const gecaStepIds = new Set(Object.keys(gecaFlowchart.steps))
+const gecaReachable = new Set()
+const gecaQueue = [gecaFlowchart.initialStep]
+while (gecaQueue.length > 0) {
+  const stepId = gecaQueue.shift()
+  if (!stepId || gecaReachable.has(stepId)) continue
+  assert.ok(gecaStepIds.has(stepId), `GECA: etapa de destino inexistente: ${stepId}`)
+  gecaReachable.add(stepId)
+  for (const option of gecaFlowchart.steps[stepId].options || []) gecaQueue.push(option.nextStep)
+}
+assert.equal(gecaReachable.size, gecaStepIds.size, 'GECA: existem telas desconectadas do percurso principal')
+const gecaTerminalSteps = [...gecaStepIds].filter(stepId => (gecaFlowchart.steps[stepId].options || []).length === 0)
+assert.deepEqual(
+  [...gecaTerminalSteps].sort(),
+  [...gecaFlowchart.finalSteps].sort(),
+  'GECA: toda tela sem saída deve ser um destino final declarado'
+)
+for (const marker of [
+  'Gastroenterite aguda · percurso assistencial',
+  "['Confirmação', 'Avaliação', 'Hidratação', 'Investigação', 'Tratamento', 'Destino']",
+  'Decisão clínica guiada'
+]) {
+  assert.ok(emergencyComponentSource.includes(marker), `GECA: experiência fluida ausente: ${marker}`)
+}
+
+console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma, AVC, hypertension, GECA and TVP routes.')

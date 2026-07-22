@@ -1636,6 +1636,15 @@ USO INALATÓRIO — RESGATE (quando SABA fizer parte do plano individual)
 
 Orientações: revisar técnica inalatória; manter o controlador prescrito; retornar em 24–48 horas; procurar emergência se houver piora, dificuldade para falar, sonolência, cianose ou ausência de resposta ao resgate. Ajustar esta sugestão às alergias, contraindicações, idade, gestação, comorbidades e tratamento de manutenção.`
 
+const ASTHMA_MAGNESIUM_PRESCRIPTION = `SULFATO DE MAGNÉSIO — CRISE ASMÁTICA GRAVE
+Administrar 2 g por via intravenosa, em dose única, ao longo de 20 a 30 minutos.
+
+Opção com MgSO4 a 10% (100 mg/mL): aspirar 20 mL, correspondentes a 2 g, e adicionar 80 mL de SF 0,9%, totalizando 100 mL.
+
+Opção com MgSO4 a 50% (500 mg/mL): aspirar 4 mL, correspondentes a 2 g, e adicionar 96 mL de SF 0,9%, totalizando 100 mL.
+
+Confirmar a concentração disponível antes do preparo. Monitorizar pressão arterial, frequência cardíaca, resposta clínica e sinais de toxicidade; revisar função renal e contraindicações.`
+
 const tvpAnticoagContraindications = [
   { id: 'abs_sangramento_ativo', text: 'Sangramento ativo maior (GI, intracraniano ou hemoptise significativa)', severity: 'absoluta' },
   { id: 'abs_intracraniano_recente', text: 'Sangramento intracraniano recente', severity: 'absoluta' },
@@ -2345,6 +2354,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   )
   const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
   const [asthmaDischargeCopied, setAsthmaDischargeCopied] = useState(false)
+  const [asthmaMagnesiumCopied, setAsthmaMagnesiumCopied] = useState(false)
   const [influenzaSeveritySigns, setInfluenzaSeveritySigns] = useState<string[]>([])
   const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
   const [influenzaWorseningSigns, setInfluenzaWorseningSigns] = useState<string[]>([])
@@ -6609,6 +6619,43 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     asthmaFlags
   ])
 
+  const asthmaJourney = useMemo(() => {
+    if (!isAsthmaFlow || !currentStepData) return null
+    const id = currentStepData.id
+    const phase = id.includes('alta')
+      ? 5
+      : id.includes('internacao') || id.includes('uti') || id.includes('intubacao') || id.includes('falencia')
+        ? 5
+        : id.includes('reavali') || id.includes('resposta') || id.includes('decisao') || id.includes('observacao')
+          ? 4
+          : id.includes('tratamento') || id.includes('saba') || id.includes('corticoide') || id.includes('magnesio') || id.includes('nebulizacao') || id.includes('o2_') || id.includes('adrenalina') || id.includes('escalonamento') || id.includes('resgate')
+            ? 3
+            : id.includes('classificacao')
+              ? 2
+              : 1
+    return { phase, labels: ['Avaliação', 'Gravidade', 'Tratamento', 'Reavaliação', 'Destino'] }
+  }, [isAsthmaFlow, currentStepData])
+
+  const gecaJourney = useMemo(() => {
+    if (flowchart.id !== 'geca' || !currentStepData) return null
+    const id = currentStepData.id
+    const phase = id === 'geca_inicio' || id === 'geca_nao_compativel'
+      ? 1
+      : id.includes('anamnese') || id.includes('perfil') || id.includes('sinais_alarme') || id.includes('classificacao')
+        ? 2
+        : id.includes('plano_') || id.includes('reavaliacao_plano') || id.includes('falha_plano')
+          ? 3
+          : id.includes('exame') || id.includes('persistente')
+            ? 4
+            : id.includes('antibiotico') || id.includes('stec') || id.includes('suporte')
+              ? 5
+              : 6
+    return {
+      phase,
+      labels: ['Confirmação', 'Avaliação', 'Hidratação', 'Investigação', 'Tratamento', 'Destino']
+    }
+  }, [flowchart.id, currentStepData])
+
   useEffect(() => {
     if (!isGasometryFlow || currentStepData?.id !== 'coleta_parametros') return
     if (!savedGasometryLabs) return
@@ -7669,6 +7716,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         onUpdate={onUpdate}
         onComplete={onComplete}
         onBack={onBack}
+        onOpenReport={onOpenReport}
       />
     )
   }
@@ -11234,8 +11282,79 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
+              {asthmaJourney && (
+                <section className="mb-6 overflow-hidden rounded-2xl border border-cyan-200 bg-gradient-to-br from-white via-cyan-50/60 to-blue-50 shadow-sm">
+                  <div className="flex flex-col gap-3 border-b border-cyan-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-cyan-700">Crise asmática no pronto-socorro</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">Etapa {asthmaJourney.phase} de 5 · {asthmaJourney.labels[asthmaJourney.phase - 1]}</p>
+                    </div>
+                    <span className="w-fit rounded-full border border-cyan-200 bg-white px-3 py-1 text-xs font-bold text-cyan-800">Conduta guiada</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5 p-4 sm:gap-3">
+                    {asthmaJourney.labels.map((label, index) => {
+                      const step = index + 1
+                      const completed = step < asthmaJourney.phase
+                      const active = step === asthmaJourney.phase
+                      return (
+                        <div key={label} className="min-w-0 text-center">
+                          <div className={clsx(
+                            'mx-auto flex h-8 w-8 items-center justify-center rounded-full border text-xs font-extrabold',
+                            completed && 'border-emerald-500 bg-emerald-500 text-white',
+                            active && 'border-cyan-600 bg-cyan-600 text-white ring-4 ring-cyan-100',
+                            !completed && !active && 'border-slate-200 bg-white text-slate-400'
+                          )}>
+                            {completed ? <CheckCircle className="h-4 w-4" /> : step}
+                          </div>
+                          <p className={clsx('mt-2 hidden truncate text-[11px] font-bold sm:block', active ? 'text-cyan-800' : completed ? 'text-emerald-700' : 'text-slate-400')}>{label}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
+              {gecaJourney && (
+                <section className="mb-6 overflow-hidden rounded-2xl border border-blue-200 bg-gradient-to-br from-white via-blue-50/60 to-cyan-50 shadow-sm">
+                  <div className="flex flex-col gap-3 border-b border-blue-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-blue-700">Gastroenterite aguda · percurso assistencial</p>
+                      <p className="mt-1 text-sm font-semibold text-slate-700">Etapa {gecaJourney.phase} de 6 · {gecaJourney.labels[gecaJourney.phase - 1]}</p>
+                    </div>
+                    <span className="w-fit rounded-full border border-blue-200 bg-white px-3 py-1 text-xs font-bold text-blue-800">Decisão clínica guiada</span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1 p-4 sm:gap-3">
+                    {gecaJourney.labels.map((label, index) => {
+                      const step = index + 1
+                      const completed = step < gecaJourney.phase
+                      const active = step === gecaJourney.phase
+                      return (
+                        <div key={label} className="min-w-0 text-center">
+                          <div className={clsx(
+                            'mx-auto flex h-8 w-8 items-center justify-center rounded-full border text-xs font-extrabold',
+                            completed && 'border-emerald-500 bg-emerald-500 text-white',
+                            active && 'border-blue-600 bg-blue-600 text-white ring-4 ring-blue-100',
+                            !completed && !active && 'border-slate-200 bg-white text-slate-400'
+                          )}>
+                            {completed ? <CheckCircle className="h-4 w-4" /> : step}
+                          </div>
+                          <p className={clsx('mt-2 hidden truncate text-[11px] font-bold md:block', active ? 'text-blue-800' : completed ? 'text-emerald-700' : 'text-slate-400')}>{label}</p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </section>
+              )}
+
               {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && !isAnaphylaxisAirwayStep && (
-                <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
+                <div className={clsx(
+                  'mb-6',
+                  isAsthmaFlow
+                    ? 'rounded-2xl border border-cyan-100 bg-slate-50/70 p-3 shadow-sm sm:p-5'
+                    : flowchart.id === 'geca'
+                      ? 'rounded-2xl border border-blue-100 bg-slate-50/70 p-3 shadow-sm sm:p-5'
+                      : 'rounded-lg border-l-4 border-blue-500 bg-gray-50 p-4'
+                )}>
                   {isTVPWaitingForVascularStep && (
                     <div className={clsx(
                       'mb-4 rounded-xl border p-4 text-sm leading-relaxed',
@@ -11262,7 +11381,10 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                   )}
                   <div
-                    className="prose prose-sm max-w-none"
+                    className={clsx(
+                      'prose prose-sm max-w-none',
+                      (isAsthmaFlow || flowchart.id === 'geca') && '[&>div]:space-y-3 [&_div]:rounded-xl [&_div]:border [&_div]:p-4 sm:[&_div]:p-5 [&_p]:leading-relaxed [&_p]:text-slate-700 [&_p+p]:mt-2 [&_strong]:font-extrabold [&_strong]:text-slate-950 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_button]:min-h-11 [&_button]:w-full [&_button]:shadow-sm sm:[&_button]:w-auto'
+                    )}
                     onClick={(event) => {
                       const target = event.target as HTMLElement
                       const pocusDetails = target.closest<HTMLDetailsElement>('[data-pac-pocus-details="true"]')
@@ -11325,6 +11447,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         void navigator.clipboard.writeText(ASTHMA_ADULT_DISCHARGE_PRESCRIPTION).then(() => {
                           setAsthmaDischargeCopied(true)
                           window.setTimeout(() => setAsthmaDischargeCopied(false), 1800)
+                        })
+                      }
+                      if (target.closest('[data-asthma-copy-magnesium="true"]')) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void navigator.clipboard.writeText(ASTHMA_MAGNESIUM_PRESCRIPTION).then(() => {
+                          setAsthmaMagnesiumCopied(true)
+                          window.setTimeout(() => setAsthmaMagnesiumCopied(false), 1800)
                         })
                       }
                       if (target.closest('[data-pep-hiv-guide="true"]')) {
@@ -11922,6 +12052,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
               {isAsthmaFlow && currentStepData.id === 'asma_avaliacao_inicial' && (
                 <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
+                  <div className="mb-4 flex flex-col gap-2 border-b border-cyan-100 pb-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                      <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-cyan-700">Parâmetros respiratórios</p>
+                      <h4 className="mt-1 text-lg font-extrabold text-slate-950">Classificação objetiva da crise</h4>
+                      <p className="mt-1 text-sm text-slate-600">Preencha os valores medidos. A gravidade será calculada junto aos achados clínicos.</p>
+                    </div>
+                    <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-200">Campos com * são obrigatórios</span>
+                  </div>
                   <div className="grid md:grid-cols-2 gap-3">
                     {asthmaInitialFieldConfig.map((field) => {
                       const value = asthmaInitialDraft[field.key]
@@ -11965,7 +12103,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       )
                     })}
                   </div>
-                  <div className="grid md:grid-cols-2 gap-3 mt-3">
+                  <p className="mb-2 mt-5 text-xs font-extrabold uppercase tracking-[0.14em] text-slate-600">Achados de gravidade — selecione os presentes</p>
+                  <div className="grid md:grid-cols-2 gap-3">
                     {[
                       { key: 'usoMusculatura', label: 'Uso de musculatura acessória' },
                       { key: 'incapazFrases', label: 'Incapaz de falar frases completas' },
@@ -11976,11 +12115,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       { key: 'toraxSilente', label: 'Tórax silencioso' },
                       { key: 'sonolencia', label: 'Sonolência/rebaixamento' }
                     ].map((flag) => (
-                      <label key={flag.key} className="flex items-center gap-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                      <label key={flag.key} className={clsx(
+                        'flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold transition-all',
+                        asthmaFlags[flag.key as keyof typeof asthmaFlags]
+                          ? 'border-red-300 bg-red-50 text-red-950 shadow-sm ring-1 ring-red-100'
+                          : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300 hover:bg-cyan-50/50'
+                      )}>
                         <input
                           type="checkbox"
                           checked={asthmaFlags[flag.key as keyof typeof asthmaFlags]}
                           onChange={(e) => setAsthmaFlags(prev => ({ ...prev, [flag.key]: e.target.checked }))}
+                          className="h-5 w-5 rounded border-slate-300 text-red-600 focus:ring-red-500"
                         />
                         <span>{flag.label}</span>
                       </label>
@@ -12010,6 +12155,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
               {isAsthmaFlow && currentStepData.id === 'asma_reavaliacao_1h' && (
                 <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50/40 p-4">
+                  <div className="mb-4 border-b border-cyan-100 pb-4">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-cyan-700">Resposta ao tratamento</p>
+                    <h4 className="mt-1 text-lg font-extrabold text-slate-950">Nova medida após a primeira hora</h4>
+                    <p className="mt-1 text-sm text-slate-600">Use valores atuais, não os da chegada. O sistema cruza melhora clínica, oximetria, frequência respiratória e PFE.</p>
+                  </div>
                   <div className="grid md:grid-cols-3 gap-3">
                     {asthmaReevalFieldConfig.map((field) => {
                       const value = asthmaReevalDraft[field.key]
@@ -12054,19 +12204,21 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     })}
                   </div>
                   <div className="grid md:grid-cols-2 gap-3 mt-3">
-                    <label className="flex items-center gap-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                    <label className={clsx('flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold transition-all', asthmaReevalFlags.melhoraClinica ? 'border-emerald-300 bg-emerald-50 text-emerald-950' : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300')}>
                       <input
                         type="checkbox"
                         checked={asthmaReevalFlags.melhoraClinica}
                         onChange={(e) => setAsthmaReevalFlags(prev => ({ ...prev, melhoraClinica: e.target.checked }))}
+                        className="h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                       />
                       <span>Melhora clínica global após 1 hora</span>
                     </label>
-                    <label className="flex items-center gap-2 text-sm text-slate-700 bg-white border border-slate-200 rounded-lg px-3 py-2">
+                    <label className={clsx('flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm font-semibold transition-all', asthmaReevalFlags.necessidadeBroncoRepetido ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300')}>
                       <input
                         type="checkbox"
                         checked={asthmaReevalFlags.necessidadeBroncoRepetido}
                         onChange={(e) => setAsthmaReevalFlags(prev => ({ ...prev, necessidadeBroncoRepetido: e.target.checked }))}
+                        className="h-5 w-5 rounded border-slate-300 text-amber-600 focus:ring-amber-500"
                       />
                       <span>Necessidade repetida de broncodilatador</span>
                     </label>
@@ -17875,6 +18027,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               {isAsthmaFlow && asthmaDischargeCopied && (
                 <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">Prescrição de alta copiada.</div>
               )}
+              {isAsthmaFlow && asthmaMagnesiumCopied && (
+                <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">Preparo do sulfato de magnésio copiado.</div>
+              )}
 
               {/* Opções */}
               {(() => {
@@ -17898,7 +18053,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       key={index}
                       onClick={() => handleOptionSelect(option)}
                       className={clsx(
-                        "w-full p-6 text-left rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group backdrop-blur-sm",
+                        "w-full p-6 text-left rounded-2xl border-2 transition-all duration-300 relative overflow-hidden group backdrop-blur-sm focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-cyan-200",
                         option.critical 
                           ? "bg-red-50/90 border-red-200/50 hover:border-red-400 hover:bg-red-100/90 shadow-sm"
                           : option.requiresImmediateAction
@@ -17909,6 +18064,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       whileTap={{ scale: 0.98 }}
                     >
                       <div className="flex items-center justify-between relative z-10">
+                        {(isAsthmaFlow || flowchart.id === 'geca') && (
+                          <span className={clsx(
+                            'mr-4 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-sm font-extrabold',
+                            option.critical
+                              ? 'border-red-200 bg-red-100 text-red-700'
+                              : flowchart.id === 'geca'
+                                ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                : 'border-cyan-200 bg-cyan-50 text-cyan-700'
+                          )}>
+                            {index + 1}
+                          </span>
+                        )}
                         <div className="flex-1">
                           <span className={clsx(
                             "text-lg font-semibold block mb-1",
