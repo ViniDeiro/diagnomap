@@ -1670,10 +1670,24 @@ const buildAVCClinicalSummary = (
   const windowLabels: Record<string, string> = { ate_45h: 'até 4,5 horas', '45_6h': 'entre 4,5 e 6 horas', '6_9h': 'entre 6 e 9 horas', '9_24h': 'entre 9 e 24 horas', mais_24h: 'acima de 24 horas', desconhecida: 'desconhecida' }
   const imagingLabels: Record<string, string> = { hemorragia: 'hemorragia intracraniana demonstrada', sem_hemorragia: 'sem hemorragia na imagem inicial', inconclusiva: 'imagem inicial inconclusiva' }
   const vesselLabels: Record<string, string> = { grande_anterior: 'oclusão de grande vaso em circulação anterior', m2_dominante: 'oclusão M2 dominante', medio_distal: 'oclusão de vaso médio/distal', basilar: 'oclusão da artéria basilar', sem_ogv: 'sem oclusão de grande vaso tratável' }
+  const supportiveLabels: Record<string, string> = {
+    disfagia: 'jejum mantido até triagem segura da deglutição',
+    temperatura: 'vigilância e correção de alteração térmica',
+    glicemia: 'controle glicêmico sem metas intensivas',
+    volume: 'correção de hipovolemia ou hipotensão com solução isotônica',
+    pressao: 'meta pressórica individualizada conforme ausência ou presença de reperfusão',
+    antiagregante: 'estratégia antitrombótica condicionada à imagem, etiologia e risco hemorrágico',
+    tevc: 'prevenção de tromboembolismo venoso e lesão por pressão',
+    etiologia: 'investigação etiológica, prevenção secundária e reabilitação precoce'
+  }
+  const postBPManagementLabels: Record<string, string> = { monitoring: 'monitorização pressórica intensificada', labetalol: 'labetalol EV conforme protocolo', nicardipine: 'nicardipina em infusão titulada', clevidipine: 'clevidipina em infusão titulada', local_protocol: 'alternativa anti-hipertensiva prevista no protocolo institucional' }
+  const supportiveCare = Array.isArray(data.supportiveCare) ? data.supportiveCare.map((item: unknown) => supportiveLabels[String(item)] || String(item)) : []
+  const postBPManagement = Array.isArray(data.postThrombolysisBPManagement) ? data.postThrombolysisBPManagement.map((item: unknown) => postBPManagementLabels[String(item)] || String(item)) : []
   const scoreLines = uniqueTextItems([
     typeof data.nihss === 'number' ? `NIHSS ${data.nihss} ponto(s)${data.disablingDeficit ? ', com déficit incapacitante' : ', sem déficit incapacitante marcado'}` : null,
     typeof data.premorbidRankin === 'number' ? `Rankin modificada prévia ${data.premorbidRankin}` : null,
     data.currentBloodPressure ? `pressão arterial na avaliação para reperfusão ${data.currentBloodPressure} mmHg` : null,
+    data.postThrombolysisBloodPressure ? `pressão arterial registrada após reperfusão ${data.postThrombolysisBloodPressure} mmHg` : null,
     data.timeWindow ? `janela terapêutica ${windowLabels[String(data.timeWindow)] || String(data.timeWindow)}` : null,
     data.imagingResult ? imagingLabels[String(data.imagingResult)] || null : null,
     data.vesselTerritory ? vesselLabels[String(data.vesselTerritory)] || null : null,
@@ -1684,13 +1698,16 @@ const buildAVCClinicalSummary = (
   const isHemorrhagic = data.imagingResult === 'hemorragia' || path.has('avc_hemorragico_destino')
   const receivedThrombolysis = data.receivedThrombolysis === true || path.has('avc_trombolitico')
   const thrombectomy = path.has('avc_desfecho_trombectomia') || /trombect/i.test(String(data.outcome || ''))
+  const outsideRoutineReperfusionWindow = data.timeWindow === 'mais_24h'
   const impression = isHemorrhagic
     ? 'Quadro compatível com acidente vascular cerebral hemorrágico, com necessidade de manejo neurocrítico.'
-    : `Quadro conduzido como acidente vascular cerebral isquêmico agudo${receivedThrombolysis ? ', submetido à trombólise intravenosa' : ''}${thrombectomy ? ' e com indicação de trombectomia mecânica' : ''}.`
+    : `Quadro conduzido como acidente vascular cerebral isquêmico agudo${outsideRoutineReperfusionWindow ? ', com apresentação acima de 24 horas e fora da janela rotineira de reperfusão pelo caminho registrado' : ''}${receivedThrombolysis ? ', submetido à trombólise intravenosa' : ''}${thrombectomy ? ' e com indicação de trombectomia mecânica' : ''}.`
   const conduct = uniqueTextItems([
     receivedThrombolysis ? `Foi administrado ${data.thrombolytic === 'tenecteplase' ? 'tenecteplase' : 'alteplase'}${data.thrombolyticDose ? `, conforme cálculo registrado: ${data.thrombolyticDose}` : ''}, seguido de vigilância pós-reperfusão.` : null,
+    receivedThrombolysis && data.postThrombolysisBloodPressure ? `Na vigilância pós-reperfusão, foi registrada PA de ${data.postThrombolysisBloodPressure} mmHg${postBPManagement.length ? `; foram selecionadas as medidas: ${formatClinicalListText(postBPManagement)}` : ''}.` : null,
     thrombectomy ? 'Foi indicada transferência imediata para centro com capacidade de terapia endovascular, sem interromper os cuidados de suporte.' : null,
-    !receivedThrombolysis && !thrombectomy && !isHemorrhagic ? 'Foram definidos cuidados clínicos, prevenção de complicações e prevenção secundária conforme etiologia e contraindicações.' : null,
+    outsideRoutineReperfusionWindow ? 'A ausência de reperfusão foi determinada pela apresentação acima de 24 horas no caminho documentado; permaneceu indicada avaliação especializada e revisão da imagem vascular quando clinicamente pertinente.' : null,
+    !receivedThrombolysis && !thrombectomy && !isHemorrhagic ? `Foi instituído manejo clínico sem reperfusão imediata${supportiveCare.length ? `, contemplando ${formatClinicalListText(supportiveCare)}` : ', com suporte, prevenção de complicações e prevenção secundária individualizada'}.` : null,
     'O paciente foi destinado à UTI ou unidade neurocrítica, mantendo monitorização neurológica, hemodinâmica e respiratória até a transferência formal do cuidado.'
   ])
   return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - ACIDENTE VASCULAR CEREBRAL', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, doctor })
@@ -1809,11 +1826,18 @@ const buildHypertensionClinicalSummary = (
   const organLabels: Record<string, string> = { encephalopathy: 'encefalopatia hipertensiva', stroke: 'evento cerebrovascular agudo', aorta: 'síndrome aórtica aguda', coronary: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', renal: 'injúria renal aguda', pregnancy: 'pré-eclâmpsia grave/eclâmpsia/HELLP', catecholamine: 'crise catecolaminérgica' }
   const scenarioLabels: Record<string, string> = { aortic_syndrome: 'síndrome aórtica aguda', encephalopathy: 'encefalopatia hipertensiva', ischemic_stroke_lysis: 'AVC isquêmico candidato à trombólise', ischemic_stroke_no_lysis: 'AVC isquêmico sem trombólise', intracerebral_hemorrhage: 'hemorragia intracerebral', subarachnoid_hemorrhage: 'hemorragia subaracnoide', catecholamine_crisis: 'crise catecolaminérgica', acute_coronary_syndrome: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', pregnancy_emergency: 'emergência hipertensiva na gestação', other: 'outra lesão aguda de órgão-alvo' }
   const routeLabels: Record<string, string> = { chronic: 'hipertensão crônica descompensada, sem quadro agudo tempo-dependente', emergency: 'emergência hipertensiva com lesão aguda de órgão-alvo', important_elevation: 'elevação pressórica importante sem lesão aguda demonstrada', pseudocrisis: 'pseudocrise hipertensiva associada a fator precipitante' }
-  const symptoms = Array.isArray(data.symptoms) ? data.symptoms.map(item => symptomLabels[String(item)] || String(item)) : []
+  const recordedSymptoms = Array.isArray(data.symptoms) ? data.symptoms.map(String) : []
+  const explicitlyAsymptomatic = recordedSymptoms.includes('asymptomatic')
+  const symptoms = recordedSymptoms.filter(item => item !== 'asymptomatic').map(item => symptomLabels[item] || item)
   const organDamage = Array.isArray(data.organDamage) ? data.organDamage.map(item => organLabels[String(item)] || String(item)) : []
   const chiefComplaint = patient.admission?.chiefComplaint?.trim() || formatClinicalListText(symptoms) || 'elevação importante da pressão arterial'
   const pressure = data.systolic != null && data.diastolic != null ? `${data.systolic}/${data.diastolic} mmHg` : 'não registrada'
-  const historyNarrative = `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}, com pressão arterial inicial de ${pressure}.${symptoms.length ? ` Os sintomas associados foram ${formatClinicalListText(symptoms)}.` : ' Não foram documentados sintomas agudos específicos no formulário estruturado.'}`
+  const symptomNarrative = explicitlyAsymptomatic
+    ? ' O paciente foi registrado como assintomático em relação à elevação pressórica.'
+    : symptoms.length
+      ? ` Os sintomas associados foram ${formatClinicalListText(symptoms)}.`
+      : ' Não foram documentados sintomas agudos específicos no formulário estruturado.'
+  const historyNarrative = `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}, com pressão arterial inicial de ${pressure}.${symptomNarrative}`
   const examLines = uniqueTextItems([
     universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null,
     ...universal.examItems,

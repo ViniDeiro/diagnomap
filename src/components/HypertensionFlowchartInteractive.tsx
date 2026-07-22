@@ -84,7 +84,8 @@ const symptomOptions = [
   ['visual', 'Alteração visual aguda'],
   ['renal', 'Oligúria ou piora renal recente'],
   ['pregnancy', 'Gestação/puerpério com cefaleia, escotomas ou dor epigástrica'],
-  ['nonspecific', 'Mal-estar, tontura ou sintomas inespecíficos']
+  ['nonspecific', 'Mal-estar, tontura ou sintomas inespecíficos'],
+  ['asymptomatic', 'Assintomático — sem sintomas associados à elevação pressórica']
 ] as const
 
 const measurementOptions = [
@@ -226,7 +227,8 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const finalStage = ['hipertensao_emergencia_plano', 'hipertensao_alta_sem_loa', 'hipertensao_cronica_alta'].includes(stage)
   const progress = finalStage ? 100 : Math.max(8, Math.round(((HYPERTENSION_STAGES.indexOf(stage) + 1) / HYPERTENSION_STAGES.length) * 100))
   const markedElevation = isMarkedBloodPressureElevation(data.systolic, data.diastolic)
-  const hasSymptoms = (data.symptoms || []).length > 0
+  const symptomChoiceMade = (data.symptoms || []).length > 0
+  const hasSymptoms = (data.symptoms || []).some(item => item !== 'asymptomatic')
   const hasOrganDamage = (data.organDamage || []).length > 0
   const hasTrigger = (data.triggers || []).length > 0
   const target = useMemo(() => data.scenario ? HYPERTENSION_SCENARIO_TARGETS[data.scenario] : [], [data.scenario])
@@ -234,6 +236,13 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const update = (patch: Partial<HypertensionCaseData>) => setData(previous => ({ ...previous, ...patch }))
   const selectMany = (key: 'symptoms' | 'measurementChecks' | 'organDamage' | 'triggers' | 'observationMeasures' | 'emergencyMeasures' | 'exams', value: string) =>
     setData(previous => ({ ...previous, [key]: toggle(previous[key], value) }))
+  const selectHypertensionSymptom = (value: string) => setData(previous => {
+    const current = previous.symptoms || []
+    if (value === 'asymptomatic') {
+      return { ...previous, symptoms: current.includes(value) ? [] : ['asymptomatic'] }
+    }
+    return { ...previous, symptoms: toggle(current.filter(item => item !== 'asymptomatic'), value) }
+  })
 
   const persist = (nextStage: HypertensionStage, patch: Partial<HypertensionCaseData> = {}) => {
     const nextData = { ...data, ...patch, updatedAt: new Date().toISOString() }
@@ -292,7 +301,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   }
 
   const continueFromConfirmation = () => {
-    if (data.systolic == null || data.diastolic == null || !hasSymptoms) { setNotice('Registre a pressão e selecione ao menos um sintoma ou a opção de sintoma inespecífico.'); return }
+    if (data.systolic == null || data.diastolic == null || !symptomChoiceMade) { setNotice('Registre a pressão e selecione os sintomas presentes ou marque Assintomático.'); return }
     const route = classifyHypertensionRoute({ systolic: data.systolic, diastolic: data.diastolic, hasSymptoms, hasAcuteOrganDamage: false, hasSituationalTrigger: false })
     persist(route === 'chronic' ? 'hipertensao_cronica_alta' : 'hipertensao_lesao_orgao', { route })
   }
@@ -341,7 +350,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
           {stage === 'hipertensao_confirmacao' && <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2"><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão sistólica (mmHg)<input aria-label="Pressão sistólica" type="number" value={data.systolic ?? ''} onChange={event => update({ systolic: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-xl" /></label><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão diastólica (mmHg)<input aria-label="Pressão diastólica" type="number" value={data.diastolic ?? ''} onChange={event => update({ diastolic: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-xl" /></label></div>
             {data.systolic != null && data.diastolic != null && <div className={clsx('rounded-2xl border p-4 font-bold', markedElevation ? 'border-red-300 bg-red-50 text-red-950' : 'border-amber-300 bg-amber-50 text-amber-950')}>{markedElevation ? 'Elevação acentuada registrada. A próxima decisão procura lesão aguda de órgão-alvo.' : 'A medida está abaixo do limiar operacional do documento. O fluxo direcionará para hipertensão crônica/descompensada e avaliação longitudinal.'}</div>}
-            <section><h2 className="mb-3 font-black text-slate-950">Sintomas associados</h2><div className="grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <Option key={id} selected={(data.symptoms || []).includes(id)} title={label} danger={id !== 'nonspecific'} onClick={() => selectMany('symptoms', id)} />)}</div></section>
+            <section><h2 className="mb-3 font-black text-slate-950">Sintomas associados</h2><p className="mb-3 text-sm text-slate-600">Selecione os achados presentes ou marque Assintomático. As opções são mutuamente exclusivas.</p><div className="grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <Option key={id} selected={(data.symptoms || []).includes(id)} title={label} danger={id !== 'nonspecific' && id !== 'asymptomatic'} onClick={() => selectHypertensionSymptom(id)} />)}</div></section>
             <section><h2 className="mb-3 font-black text-slate-950">Conferência da aferição</h2><div className="grid gap-3 md:grid-cols-2">{measurementOptions.map(([id, label]) => <Option key={id} selected={(data.measurementChecks || []).includes(id)} title={label} onClick={() => selectMany('measurementChecks', id)} />)}</div></section>
             <button type="button" onClick={continueFromConfirmation} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white">Classificar medida e continuar <ChevronRight /></button>
           </div>}

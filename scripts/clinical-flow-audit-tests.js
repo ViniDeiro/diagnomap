@@ -74,7 +74,7 @@ const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
 }).outputText
 const avcLogicModule = { exports: {} }
 vm.runInNewContext(compiledAVCLogic, { module: avcLogicModule, exports: avcLogicModule.exports }, { filename: 'avc.compiled.js' })
-const { evaluateAVCThrombectomy, calculateAVCThrombolyticDose } = avcLogicModule.exports
+const { evaluateAVCThrombectomy, calculateAVCThrombolyticDose, parseAVCBloodPressure, isAVCBloodPressureWithinThrombolysisLimit } = avcLogicModule.exports
 
 const compiledHypertensionLogic = ts.transpileModule(hypertensionLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -159,6 +159,8 @@ for (const marker of [
 ]) {
   assert.ok(emergencyComponentSource.includes(marker), `asma: experiência interativa ausente: ${marker}`)
 }
+assert.match(emergencyComponentSource, /key: 'pfe',[^\n]+required: false/, 'Asma: PFE inicial deve ser opcional')
+assert.match(emergencyComponentSource, /key: 'pfeRe',[^\n]+required: false/, 'Asma: PFE da reavaliação deve ser opcional')
 
 const avcReachable = reachable(avcFlowchart)
 for (const required of [
@@ -208,6 +210,15 @@ for (const [input, expected] of thrombectomyCases) {
 assert.match(calculateAVCThrombolyticDose(72, 'tenecteplase'), /18,0 mg/)
 assert.match(calculateAVCThrombolyticDose(72, 'alteplase'), /64,8 mg/)
 assert.match(calculateAVCThrombolyticDose(120, 'alteplase'), /90,0 mg/)
+assert.deepEqual({ ...parseAVCBloodPressure('185/110') }, { systolic: 185, diastolic: 110 })
+assert.equal(isAVCBloodPressureWithinThrombolysisLimit('185/110'), true, 'AVC: pressão exatamente no limite deve permitir confirmação')
+assert.equal(isAVCBloodPressureWithinThrombolysisLimit('186/100'), false, 'AVC: sistólica acima do limite deve bloquear confirmação')
+assert.equal(isAVCBloodPressureWithinThrombolysisLimit('180/111'), false, 'AVC: diastólica acima do limite deve bloquear confirmação')
+assert.equal(isAVCBloodPressureWithinThrombolysisLimit('pressão normal'), false, 'AVC: formato inválido deve bloquear confirmação')
+assert.match(avcComponentSource, /disabled={!pressureWithinThrombolysisLimit}/, 'AVC: confirmação da meta pressórica deve ser bloqueada pelo valor digitado')
+for (const marker of ['postThrombolysisBloodPressure', 'postThrombolysisBPManagement', 'PA acima da meta pós-trombólise', 'Plano terapêutico — apresentação acima de 24 horas']) {
+  assert.match(avcComponentSource, new RegExp(marker), `AVC: orientação solicitada pelo revisor ausente (${marker})`)
+}
 
 const hypertensionReachable = reachable(hypertensionFlowchart)
 for (const required of [
@@ -234,6 +245,9 @@ for (const scenario of ['aortic_syndrome', 'encephalopathy', 'ischemic_stroke_ly
 for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY']) {
   assert.match(hypertensionComponentSource, new RegExp(marker), `Hipertensão: implementação interativa sem marcador obrigatório (${marker})`)
 }
+assert.match(hypertensionComponentSource, /'asymptomatic', 'Assintomático/, 'Hipertensão: opção assintomático ausente')
+assert.match(hypertensionComponentSource, /some\(item => item !== 'asymptomatic'\)/, 'Hipertensão: assintomático não deve ser interpretado como sintoma presente')
+assert.match(hypertensionComponentSource, /current\.filter\(item => item !== 'asymptomatic'\)/, 'Hipertensão: opção assintomático deve ser mutuamente exclusiva')
 assert.match(reportSource, /flowId === 'hipertensao'/)
 assert.match(reportSource, /parseHypertensionCase/)
 
@@ -309,8 +323,13 @@ const universalAnswer = JSON.stringify({ sinaisVitais: { temperature: 36.8, bloo
 const narrativeCases = [
   {
     id: 'avc', flow: avcFlowchart, step: 'avc_aguardo_uti', history: ['avc_ativacao', 'avc_nihss', 'avc_imagem', 'avc_trombolitico'],
-    answers: { __avaliacao_clinica_inicial: universalAnswer, avc_caso_estruturado: JSON.stringify({ symptoms: ['fraqueza em hemicorpo', 'fala alterada'], onsetTime: '09:10', glucose: 110, nihss: 12, premorbidRankin: 1, imagingResult: 'sem_hemorragia', timeWindow: 'ate_45h', receivedThrombolysis: true, thrombolytic: 'tenecteplase', thrombolyticDose: '18 mg EV em bolus', outcome: 'UTI' }) },
-    expected: [/NIHSS 12/, /trombólise intravenosa/, /UTI ou unidade neurocrítica/]
+    answers: { __avaliacao_clinica_inicial: universalAnswer, avc_caso_estruturado: JSON.stringify({ symptoms: ['fraqueza em hemicorpo', 'fala alterada'], onsetTime: '09:10', glucose: 110, nihss: 12, premorbidRankin: 1, imagingResult: 'sem_hemorragia', timeWindow: 'ate_45h', receivedThrombolysis: true, thrombolytic: 'tenecteplase', thrombolyticDose: '18 mg EV em bolus', postThrombolysisBloodPressure: '190/108', postThrombolysisBPManagement: ['monitoring', 'nicardipine'], outcome: 'UTI' }) },
+    expected: [/NIHSS 12/, /trombólise intravenosa/, /PA de 190\/108/, /nicardipina em infusão titulada/, /UTI ou unidade neurocrítica/]
+  },
+  {
+    id: 'avc', flow: avcFlowchart, step: 'avc_aguardo_uti', history: ['avc_ativacao', 'avc_imagem', 'avc_janela', 'avc_cuidados_sem_reperfusao'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, avc_caso_estruturado: JSON.stringify({ symptoms: ['fraqueza em hemicorpo'], imagingResult: 'sem_hemorragia', timeWindow: 'mais_24h', supportiveCare: ['disfagia', 'pressao', 'antiagregante', 'etiologia'], outcome: 'AVC acima de 24 horas - manejo clínico e prevenção secundária' }) },
+    expected: [/apresentação acima de 24 horas/, /ausência de reperfusão foi determinada/, /estratégia antitrombótica/, /investigação etiológica/]
   },
   {
     id: 'anafilaxia', flow: anaphylaxisFlowchart, step: 'ana_observacao_alta', history: ['ana_inicio', 'ana_criterios_wao', 'ana_adrenalina_im', 'ana_estratificar_observacao'],

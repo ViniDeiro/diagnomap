@@ -3,6 +3,21 @@ export type AVCVesselTerritory = 'grande_anterior' | 'm2_dominante' | 'medio_dis
 export type AVCThrombectomyRecommendation = 'forte' | 'considerar' | 'sem_beneficio' | 'dados_insuficientes'
 export type AVCThrombolytic = 'tenecteplase' | 'alteplase'
 
+export const parseAVCBloodPressure = (value?: string | null) => {
+  if (!value) return null
+  const match = value.trim().match(/^(\d{2,3})\s*[\/xX]\s*(\d{2,3})$/)
+  if (!match) return null
+  const systolic = Number(match[1])
+  const diastolic = Number(match[2])
+  if (systolic <= 0 || diastolic <= 0) return null
+  return { systolic, diastolic }
+}
+
+export const isAVCBloodPressureWithinThrombolysisLimit = (value?: string | null) => {
+  const pressure = parseAVCBloodPressure(value)
+  return Boolean(pressure && pressure.systolic <= 185 && pressure.diastolic <= 110)
+}
+
 export type AVCThrombectomyInput = {
   vesselTerritory?: AVCVesselTerritory
   timeWindow?: AVCTimeWindow

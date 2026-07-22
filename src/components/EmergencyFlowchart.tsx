@@ -1066,14 +1066,14 @@ const asthmaInitialFieldConfig: Array<{ key: AsthmaInitialFieldKey; label: strin
   { key: 'sato2', label: 'SatO2', unit: '%', min: 50, max: 100, required: true },
   { key: 'fr', label: 'FR', unit: 'irpm', min: 8, max: 60, required: true },
   { key: 'fc', label: 'FC', unit: 'bpm', min: 30, max: 220, required: true },
-  { key: 'pfe', label: 'PFE', unit: '% previsto', min: 0, max: 100, required: true },
+  { key: 'pfe', label: 'PFE', unit: '% previsto', min: 0, max: 100, required: false },
   { key: 'paco2', label: 'PaCO2', unit: 'mmHg', min: 10, max: 120, required: false }
 ]
 
 const asthmaReevalFieldConfig: Array<{ key: AsthmaReevalFieldKey; label: string; unit: string; min: number; max: number; required: boolean }> = [
   { key: 'sato2Re', label: 'SatO2 reavaliação', unit: '%', min: 50, max: 100, required: true },
   { key: 'frRe', label: 'FR reavaliação', unit: 'irpm', min: 8, max: 60, required: true },
-  { key: 'pfeRe', label: 'PFE reavaliação', unit: '% previsto', min: 0, max: 100, required: true }
+  { key: 'pfeRe', label: 'PFE reavaliação', unit: '% previsto', min: 0, max: 100, required: false }
 ]
 
 const asthmaInitialInfo: Record<AsthmaInitialFieldKey, string[]> = {
@@ -6430,19 +6430,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const flags = savedAsthmaInitial?.flags || asthmaFlags
     const reFlags = savedAsthmaReeval?.flags || asthmaReevalFlags
 
-    if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null && pfe !== null) {
+    if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null) {
       const ameacaVida = flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)
       if (ameacaVida) return [pick('asma_tratamento_1h_grave_vida')].filter(Boolean) as EmergencyOption[]
-      const grave = fr > 30 || fc > 120 || sat < 92 || pfe < 50 || flags.falaPalavras || flags.incapazFrases || flags.usoMusculatura
+      const grave = fr > 30 || fc > 120 || sat < 92 || (pfe !== null && pfe < 50) || flags.falaPalavras || flags.incapazFrases || flags.usoMusculatura
       if (grave) return [pick('asma_tratamento_1h_grave_vida')].filter(Boolean) as EmergencyOption[]
-      const moderada = (fr >= 25 && fr <= 30) || (sat >= 92 && sat < 94) || (pfe >= 50 && pfe <= 70)
+      const moderada = (fr >= 25 && fr <= 30) || (sat >= 92 && sat < 94) || (pfe !== null && pfe >= 50 && pfe <= 70)
       return [pick(moderada ? 'asma_tratamento_1h_leve_moderada' : 'asma_tratamento_1h_leve')].filter(Boolean) as EmergencyOption[]
     }
 
-    if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
-      const melhora = pfeRe > 70 && satRe > 92 && frRe < 25 && reFlags.melhoraClinica && !reFlags.necessidadeBroncoRepetido
+    if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null) {
+      const melhora = (pfeRe === null || pfeRe > 70) && satRe > 92 && frRe < 25 && reFlags.melhoraClinica && !reFlags.necessidadeBroncoRepetido
       if (melhora) return [pick('asma_resposta_boa')].filter(Boolean) as EmergencyOption[]
-      const parcial = (pfeRe >= 50 && pfeRe <= 70) || satRe <= 92 || reFlags.necessidadeBroncoRepetido
+      const parcial = (pfeRe !== null && pfeRe >= 50 && pfeRe <= 70) || satRe <= 92 || reFlags.necessidadeBroncoRepetido
       if (parcial) return [pick('asma_resposta_incompleta')].filter(Boolean) as EmergencyOption[]
       return [pick('asma_resposta_ma')].filter(Boolean) as EmergencyOption[]
     }
@@ -6581,14 +6581,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const pfeRe = reeval.pfeRe ?? null
     const flags = savedAsthmaInitial?.flags || asthmaFlags
 
-    if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null && pfe !== null) {
+    if (currentStepData.id === 'asma_classificacao_gravidade' && sat !== null && fr !== null && fc !== null) {
       if (flags.toraxSilente || flags.cianose || flags.confusao || flags.exaustao || flags.sonolencia || (paco2 !== null && paco2 >= 45)) {
         return `Ameaça à vida: sinais críticos e/ou PaCO2 ${paco2 ?? '--'} indicam risco de falência respiratória.`
       }
-      if (fr > 30 || fc > 120 || sat < 92 || pfe < 50 || flags.falaPalavras || flags.incapazFrases || flags.usoMusculatura) {
-        return `Crise grave: FR ${fr}, FC ${fc}, SatO2 ${sat}% e PFE ${pfe}% sugerem necessidade de manejo agressivo.`
+      if (fr > 30 || fc > 120 || sat < 92 || (pfe !== null && pfe < 50) || flags.falaPalavras || flags.incapazFrases || flags.usoMusculatura) {
+        return `Crise grave: FR ${fr}, FC ${fc} e SatO2 ${sat}%${pfe !== null ? `, com PFE ${pfe}%` : ''} sugerem necessidade de manejo agressivo.`
       }
-      if ((fr >= 25 && fr <= 30) || (sat >= 92 && sat < 94) || (pfe >= 50 && pfe <= 70)) {
+      if ((fr >= 25 && fr <= 30) || (sat >= 92 && sat < 94) || (pfe !== null && pfe >= 50 && pfe <= 70)) {
         return `Crise moderada: parâmetros intermediários com necessidade de tratamento intensivo no PS.`
       }
       return `Crise leve: parâmetros sem critérios de gravidade imediata.`
@@ -6599,8 +6599,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (currentStepData.id === 'asma_o2_leve_moderada' && sat !== null) {
       return sat < 94 ? `SatO2 ${sat}%: indicar oxigênio suplementar com meta 93–95%.` : `SatO2 ${sat}%: manter monitorização e suporte conforme resposta.`
     }
-    if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null && pfeRe !== null) {
-      return `Reavaliação 1h: SatO2 ${satRe}%, FR ${frRe}, PFE ${pfeRe}% para decidir alta, observação ou escalonamento.`
+    if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null) {
+      return `Reavaliação 1h: SatO2 ${satRe}% e FR ${frRe}${pfeRe !== null ? `, com PFE ${pfeRe}%` : ''}, para decidir alta, observação ou escalonamento.`
     }
     if (currentStepData.id === 'asma_escalonamento') {
       return 'Sem resposta adequada após terapia inicial: iniciar sequência de terapias de resgate e reavaliar necessidade de UTI.'
