@@ -133,7 +133,7 @@ export const avcFlowchart: EmergencyFlowchart = {
   icon: 'brain',
   color: 'from-purple-600 to-purple-800',
   initialStep: 'avc_ativacao',
-  finalSteps: ['avc_aguardo_uti'],
+  finalSteps: ['avc_aguardo_uti', 'avc_transferencia_reperfusao'],
   steps: {
     avc_ativacao: {
       id: 'avc_ativacao', title: 'Ativação do protocolo de AVC', description: 'Registrar déficits, último momento bem e medidas paralelas.', type: 'question', critical: true, timeSensitive: true,
@@ -175,7 +175,8 @@ export const avcFlowchart: EmergencyFlowchart = {
       id: 'avc_imagem_avancada', title: 'Imagem avançada', description: 'Avaliar tecido viável em janela estendida ou wake-up stroke.', type: 'question', critical: true,
       options: [
         { text: 'Padrão favorável', nextStep: 'avc_trombolise_seguranca', value: 'mismatch', critical: true },
-        { text: 'Sem seleção para trombólise IV', nextStep: 'avc_vaso', value: 'sem_mismatch' }
+        { text: 'Sem seleção para trombólise IV', nextStep: 'avc_vaso', value: 'sem_mismatch' },
+        { text: 'Imagem/terapia indisponível: transferir', nextStep: 'avc_transferencia_reperfusao', value: 'transferir', critical: true }
       ]
     },
     avc_trombolise_seguranca: {
@@ -217,6 +218,9 @@ export const avcFlowchart: EmergencyFlowchart = {
     avc_desfecho_trombectomia: {
       id: 'avc_desfecho_trombectomia', title: 'Trombectomia indicada', description: 'Acionar neurointervenção ou transferência imediata.', type: 'result', critical: true, requiresSpecialist: true, timeSensitive: true,
       options: [{ text: 'Solicitar cuidado intensivo', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }]
+    },
+    avc_transferencia_reperfusao: {
+      id: 'avc_transferencia_reperfusao', title: 'Transferência para centro de AVC', description: 'Imagem avançada, angioimagem ou terapia endovascular indisponível no serviço de origem.', type: 'result', critical: true, requiresSpecialist: true, timeSensitive: true, options: []
     },
     avc_cuidados_sem_reperfusao: {
       id: 'avc_cuidados_sem_reperfusao', title: 'Cuidados clínicos e prevenção secundária', description: 'Aplicar suporte e prevenção de complicações conforme reperfusão realizada.', type: 'result',
@@ -8873,7 +8877,7 @@ export const ituFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Pertence a grupo com indicação específica', nextStep: 'itu_cistite_antibiotico', value: 'grupo_especial' },
+        { text: 'Pertence a grupo com indicação específica', nextStep: 'itu_bacteriuria_grupo_especial', value: 'grupo_especial' },
         { text: 'Não pertence: não tratar', nextStep: 'itu_bacteriuria_nao_tratar', value: 'nao_tratar' }
       ]
     },

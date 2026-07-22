@@ -1697,15 +1697,17 @@ const buildAVCClinicalSummary = (
   ])
   const isHemorrhagic = data.imagingResult === 'hemorragia' || path.has('avc_hemorragico_destino')
   const receivedThrombolysis = data.receivedThrombolysis === true || path.has('avc_trombolitico')
-  const thrombectomy = path.has('avc_desfecho_trombectomia') || /trombect/i.test(String(data.outcome || ''))
+  const thrombectomy = path.has('avc_desfecho_trombectomia')
+  const transferredForReperfusionAssessment = path.has('avc_transferencia_reperfusao') || /transferência para centro de avc/i.test(String(data.outcome || ''))
   const outsideRoutineReperfusionWindow = data.timeWindow === 'mais_24h'
   const impression = isHemorrhagic
     ? 'Quadro compatível com acidente vascular cerebral hemorrágico, com necessidade de manejo neurocrítico.'
-    : `Quadro conduzido como acidente vascular cerebral isquêmico agudo${outsideRoutineReperfusionWindow ? ', com apresentação acima de 24 horas e fora da janela rotineira de reperfusão pelo caminho registrado' : ''}${receivedThrombolysis ? ', submetido à trombólise intravenosa' : ''}${thrombectomy ? ' e com indicação de trombectomia mecânica' : ''}.`
+    : `Quadro conduzido como acidente vascular cerebral isquêmico agudo${outsideRoutineReperfusionWindow ? ', com apresentação acima de 24 horas e fora da janela rotineira de reperfusão pelo caminho registrado' : ''}${receivedThrombolysis ? ', submetido à trombólise intravenosa' : ''}${thrombectomy ? ' e com indicação de trombectomia mecânica' : ''}${transferredForReperfusionAssessment ? ', encaminhado para centro de referência por indisponibilidade local dos recursos necessários à avaliação de reperfusão' : ''}.`
   const conduct = uniqueTextItems([
     receivedThrombolysis ? `Foi administrado ${data.thrombolytic === 'tenecteplase' ? 'tenecteplase' : 'alteplase'}${data.thrombolyticDose ? `, conforme cálculo registrado: ${data.thrombolyticDose}` : ''}, seguido de vigilância pós-reperfusão.` : null,
     receivedThrombolysis && data.postThrombolysisBloodPressure ? `Na vigilância pós-reperfusão, foi registrada PA de ${data.postThrombolysisBloodPressure} mmHg${postBPManagement.length ? `; foram selecionadas as medidas: ${formatClinicalListText(postBPManagement)}` : ''}.` : null,
     thrombectomy ? 'Foi indicada transferência imediata para centro com capacidade de terapia endovascular, sem interromper os cuidados de suporte.' : null,
+    transferredForReperfusionAssessment ? 'A ausência local de imagem avançada, angioimagem ou terapia endovascular foi registrada como limitação de recurso, e não como resultado negativo; foi solicitada transferência para continuidade da avaliação em centro de AVC.' : null,
     outsideRoutineReperfusionWindow ? 'A ausência de reperfusão foi determinada pela apresentação acima de 24 horas no caminho documentado; permaneceu indicada avaliação especializada e revisão da imagem vascular quando clinicamente pertinente.' : null,
     !receivedThrombolysis && !thrombectomy && !isHemorrhagic ? `Foi instituído manejo clínico sem reperfusão imediata${supportiveCare.length ? `, contemplando ${formatClinicalListText(supportiveCare)}` : ', com suporte, prevenção de complicações e prevenção secundária individualizada'}.` : null,
     'O paciente foi destinado à UTI ou unidade neurocrítica, mantendo monitorização neurológica, hemodinâmica e respiratória até a transferência formal do cuidado.'

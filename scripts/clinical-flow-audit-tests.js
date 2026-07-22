@@ -67,7 +67,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -113,6 +113,7 @@ validateLinks(asthmaFlowchart)
 validateLinks(tvpFlowchart)
 validateLinks(avcFlowchart)
 validateLinks(hypertensionFlowchart)
+validateLinks(ituFlowchart)
 
 const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [
@@ -167,7 +168,7 @@ for (const required of [
   'avc_ativacao', 'avc_glicemia', 'avc_triagem', 'avc_nihss', 'avc_exames', 'avc_imagem',
   'avc_janela', 'avc_imagem_avancada', 'avc_trombolise_seguranca', 'avc_trombolitico',
   'avc_pos_trombolise', 'avc_complicacao_trombolise', 'avc_vaso', 'avc_trombectomia_criterios',
-  'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino', 'avc_aguardo_uti'
+  'avc_desfecho_trombectomia', 'avc_transferencia_reperfusao', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino', 'avc_aguardo_uti'
 ]) assert.ok(avcReachable.has(required), `AVC: caminho obrigatório não alcançável (${required})`)
 
 for (const obsolete of ['avaliacao_multiprofissional_sala_vermelha', 'avaliar_tc_cranio_sem_contraste', 'tempo_sintomas_menor_8h']) {
@@ -219,6 +220,16 @@ assert.match(avcComponentSource, /disabled={!pressureWithinThrombolysisLimit}/, 
 for (const marker of ['postThrombolysisBloodPressure', 'postThrombolysisBPManagement', 'PA acima da meta pós-trombólise', 'Plano terapêutico — apresentação acima de 24 horas']) {
   assert.match(avcComponentSource, new RegExp(marker), `AVC: orientação solicitada pelo revisor ausente (${marker})`)
 }
+assert.match(avcComponentSource, /Imagem vascular\/avançada ou trombectomia indisponível — solicitar transferência/, 'AVC: falta opção explícita de transferência quando o recurso local é insuficiente')
+assert.match(avcComponentSource, /destination="transfer" context="avc:centro_reperfusao"/, 'AVC: transferência deve usar a tela universal de espera e passagem do cuidado')
+assert.equal(ituFlowchart.steps.itu_bacteriuria_excecoes.options.find(option => option.value === 'grupo_especial')?.nextStep, 'itu_bacteriuria_grupo_especial', 'ITU: bacteriúria em grupo especial deve passar pela orientação específica')
+const ituReachable = reachable(ituFlowchart)
+for (const required of [
+  'itu_cistite_complicadores', 'itu_cistite_antibiotico', 'itu_bacteriuria_excecoes', 'itu_bacteriuria_grupo_especial',
+  'itu_pielo_sepse', 'itu_estabilizacao_sepse', 'itu_exames_pielonefrite', 'itu_criterios_internacao',
+  'itu_antibiotico_ambulatorial', 'itu_reavaliacao_ambulatorial', 'itu_antibiotico_hospitalar',
+  'itu_cuidados_aguarda_enfermaria', 'itu_criterios_alta'
+]) assert.ok(ituReachable.has(required), `ITU: caminho clínico obrigatório não alcançável (${required})`)
 
 const hypertensionReachable = reachable(hypertensionFlowchart)
 for (const required of [

@@ -57,6 +57,7 @@ export const AVC_STAGES = [
   'avc_vaso',
   'avc_trombectomia_criterios',
   'avc_desfecho_trombectomia',
+  'avc_transferencia_reperfusao',
   'avc_cuidados_sem_reperfusao',
   'avc_hemorragico_destino',
   'avc_aguardo_uti'
@@ -87,7 +88,7 @@ export type AVCCaseData = {
   exams?: string[]
   imagingResult?: 'hemorragia' | 'sem_hemorragia' | 'inconclusiva'
   timeWindow?: AVCTimeWindow
-  advancedImaging?: 'mismatch' | 'sem_mismatch' | 'indisponivel'
+  advancedImaging?: 'mismatch' | 'sem_mismatch' | 'indisponivel' | 'indisponivel_angio_disponivel' | 'indisponivel_transferir'
   thrombolysisContraindications?: string[]
   pressureReadyForThrombolysis?: boolean
   thrombolytic?: AVCThrombolytic
@@ -135,6 +136,7 @@ const stageMeta: Record<AVCStage, { title: string; subtitle: string; icon: React
   avc_vaso: { title: 'Território vascular na angioimagem', subtitle: 'A localização da oclusão define a árvore de trombectomia.', icon: <ScanLine /> },
   avc_trombectomia_criterios: { title: 'Elegibilidade para trombectomia', subtitle: 'Integre território, tempo, ASPECTS, Rankin prévio e NIHSS.', icon: <Brain /> },
   avc_desfecho_trombectomia: { title: 'Trombectomia indicada', subtitle: 'Acione transferência ou equipe neurointervencionista sem observar resposta à trombólise.', icon: <Hospital /> },
+  avc_transferencia_reperfusao: { title: 'Transferência para centro de AVC', subtitle: 'A indisponibilidade local de imagem avançada ou terapia endovascular não deve encerrar a avaliação de reperfusão.', icon: <Hospital /> },
   avc_cuidados_sem_reperfusao: { title: 'Cuidados quando não há reperfusão imediata', subtitle: 'Mantenha suporte, prevenção de complicações e prevenção secundária individualizada.', icon: <CheckCircle2 /> },
   avc_hemorragico_destino: { title: 'Hemorragia intracraniana identificada', subtitle: 'Interrompa o caminho de AVC isquêmico e acione protocolo neurocrítico.', icon: <AlertTriangle /> },
   avc_aguardo_uti: { title: 'Aguardar leito de UTI', subtitle: 'O AVC confirmado permanece sob vigilância contínua até a transferência para cuidado intensivo/neurocrítico.', icon: <Hospital /> }
@@ -314,7 +316,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     try { return initialAnswers.__care_transition_avc_aguardo_uti ? JSON.parse(initialAnswers.__care_transition_avc_aguardo_uti) : null } catch { return null }
   })
 
-  const isFinalStage = stage === 'avc_aguardo_uti'
+  const isFinalStage = stage === 'avc_aguardo_uti' || stage === 'avc_transferencia_reperfusao'
   const progress = isFinalStage ? 100 : Math.max(4, Math.round(((AVC_STAGES.indexOf(stage) + 1) / AVC_STAGES.length) * 100))
   const currentMeta = stageMeta[stage]
   const hasAbsoluteContraindication = (data.thrombolysisContraindications || []).some(value => value.startsWith('abs_'))
@@ -607,7 +609,14 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_imagem_avancada' && (
-            <div className="space-y-4"><CardOption selected={data.advancedImaging === 'mismatch'} title="Padrão favorável de tecido viável" description="Há discordância compatível com tecido potencialmente recuperável na perfusão ou DWI-FLAIR." onClick={() => update({ advancedImaging: 'mismatch' })} /><CardOption selected={data.advancedImaging === 'sem_mismatch'} title="Sem padrão favorável" description="A imagem não demonstra seleção adequada para trombólise em janela estendida." danger onClick={() => update({ advancedImaging: 'sem_mismatch' })} /><CardOption selected={data.advancedImaging === 'indisponivel'} title="Imagem avançada indisponível" description="Não atrasar angioimagem, transferência ou discussão com centro especializado." onClick={() => update({ advancedImaging: 'indisponivel' })} /><button type="button" disabled={!data.advancedImaging} onClick={() => data.advancedImaging === 'mismatch' ? persist('avc_trombolise_seguranca') : persist('avc_vaso')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar resultado da imagem <ChevronRight /></button></div>
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Imagem avançada seleciona reperfusão na janela estendida, mas não existe na maioria dos serviços.</strong> Registre a capacidade local. A falta do recurso não deve ser convertida em resultado negativo nem encerrar a discussão com um centro de AVC.</div>
+              <CardOption selected={data.advancedImaging === 'mismatch'} title="Padrão favorável de tecido viável" description="Perfusão ou RM demonstrou discordância compatível com tecido potencialmente recuperável." onClick={() => update({ advancedImaging: 'mismatch' })} />
+              <CardOption selected={data.advancedImaging === 'sem_mismatch'} title="Imagem avançada realizada, sem padrão favorável" description="O exame foi efetivamente realizado e não demonstrou seleção adequada para trombólise em janela estendida." danger onClick={() => update({ advancedImaging: 'sem_mismatch' })} />
+              <CardOption selected={data.advancedImaging === 'indisponivel_angio_disponivel' || data.advancedImaging === 'indisponivel'} title="Perfusão/RM indisponível, mas angio-TC disponível" description="Prosseguir para pesquisa de oclusão tratável e avaliar trombectomia conforme território, tempo e imagem." onClick={() => update({ advancedImaging: 'indisponivel_angio_disponivel' })} />
+              <CardOption selected={data.advancedImaging === 'indisponivel_transferir'} title="Imagem vascular/avançada ou trombectomia indisponível — solicitar transferência" description="Contatar imediatamente centro de AVC com capacidade diagnóstica e endovascular; enviar TC simples, horários, NIHSS e dados clínicos." danger onClick={() => update({ advancedImaging: 'indisponivel_transferir' })} />
+              <button type="button" disabled={!data.advancedImaging} onClick={() => data.advancedImaging === 'mismatch' ? persist('avc_trombolise_seguranca') : data.advancedImaging === 'indisponivel_transferir' ? persist('avc_transferencia_reperfusao') : persist('avc_vaso')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar disponibilidade e continuar <ChevronRight /></button>
+            </div>
           )}
 
           {stage === 'avc_trombolise_seguranca' && (
@@ -677,6 +686,13 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_desfecho_trombectomia' && (
             <div className="space-y-5"><div className="rounded-2xl border border-emerald-400 bg-emerald-50 p-6 text-emerald-950"><h2 className="text-2xl font-black">Reperfusão endovascular indicada</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Acionar imediatamente centro com capacidade de trombectomia.</li><li>Não esperar melhora após trombólise antes de transferir.</li><li>Levar imagem, horários, NIHSS, Rankin, medicações e dados do trombolítico.</li><li>Manter monitorização e suporte durante a transferência.</li></ul></div><button type="button" onClick={() => proceedToIcu('Trombectomia mecânica indicada/encaminhada')} className="w-full rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white">Registrar encaminhamento e solicitar UTI</button></div>
+          )}
+
+          {stage === 'avc_transferencia_reperfusao' && (
+            <div className="space-y-6">
+              <div className="rounded-2xl border-2 border-violet-400 bg-violet-50 p-6 text-violet-950"><h2 className="text-2xl font-black">Não encerrar a avaliação por indisponibilidade local</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Contatar neurologia vascular, regulação e centro com imagem avançada/terapia endovascular.</li><li>Compartilhar TC sem contraste e angio-TC, quando disponível, sem repetir exames desnecessariamente.</li><li>Informar último momento bem, janela, NIHSS, Rankin prévio, glicemia, pressão, contraindicações e terapias já realizadas.</li><li>Manter suporte, monitorização e transporte compatível com a gravidade até a entrega formal.</li><li>Se o centro receptor afastar reperfusão, retornar ao plano de cuidados clínicos e prevenção secundária.</li></ul></div>
+              <UniversalCareTransition destination="transfer" context="avc:centro_reperfusao" value={careTransition} onChange={persistCareTransition} onConfirmed={(transition) => finishWithTransition('Transferência para centro de AVC com capacidade de imagem avançada e/ou trombectomia', transition)} />
+            </div>
           )}
 
           {stage === 'avc_cuidados_sem_reperfusao' && (
