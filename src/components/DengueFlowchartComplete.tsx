@@ -3286,6 +3286,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
           <UniversalCareTransition
             destination="icu"
+            context="dengue:grupo_d"
             value={criticalCareTransition}
             onChange={persistCriticalCareTransition}
             onConfirmed={() => undefined}

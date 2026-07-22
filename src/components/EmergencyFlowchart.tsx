@@ -19122,6 +19122,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mt-6">
                   <UniversalCareTransition
                     destination={careDestination}
+                    context={`${flowchart.id}:${currentStep}`}
                     value={careTransitionData}
                     onChange={persistCareTransition}
                     onConfirmed={() => undefined}

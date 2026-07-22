@@ -18,6 +18,7 @@ const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8'
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
+const universalCareTransitionSource = fs.readFileSync(path.join(root, 'src/components/UniversalCareTransition.tsx'), 'utf8')
 const clinicalScalesSource = fs.readFileSync(path.join(root, 'src/components/ClinicalScaleCalculators.tsx'), 'utf8')
 const anaphylaxisLogicSource = fs.readFileSync(path.join(root, 'src/lib/anaphylaxis.ts'), 'utf8')
 const clinicalSummarySource = fs.readFileSync(path.join(root, 'src/lib/clinicalSummary.ts'), 'utf8')
@@ -260,6 +261,11 @@ assert.match(abcdeComponentSource, /aria-pressed=\{selected\}/, 'ABCDE deve expo
 assert.match(abcdeComponentSource, /value\.length} de \{items\.length\}/, 'ABCDE deve mostrar progresso por domínio')
 assert.match(reportSource, /ANAPHYLAXIS_ABCDE_LABELS/, 'Relatório de anafilaxia deve traduzir o ABCDE selecionado')
 assert.match(universalAssessmentSource, /GlasgowCalculator/, 'Avaliação universal deve calcular Glasgow dentro do exame neurológico')
+for (const marker of ['Plano assistencial durante a espera', 'O cuidado continua antes da transferência', 'Vigilância neurológica', 'Perfusão e balanço hídrico', 'Meta orientada pelo órgão acometido', 'Suporte respiratório escalonado']) {
+  assert.ok(universalCareTransitionSource.includes(marker), `Transição universal perdeu orientação clínica: ${marker}`)
+}
+assert.match(avcComponentSource, /context="avc:unidade_neurocritica"/, 'AVC deve receber orientações neurocríticas na tela universal')
+assert.match(hypertensionComponentSource, /context="hipertensao:emergencia"/, 'Hipertensão deve receber orientações específicas na tela universal')
 assert.match(clinicalScalesSource, /NIHSS guiado/)
 assert.match(clinicalScalesSource, /Rankin modificada prévia/)
 assert.match(avcComponentSource, /NIHSSCalculator/)

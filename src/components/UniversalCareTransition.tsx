@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Activity, CheckCircle2, Hospital, ShieldCheck } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, Clock3, Hospital, ShieldCheck, Stethoscope, TestTube2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 export type CareDestination = 'observation' | 'ward' | 'transfer' | 'icu'
@@ -44,12 +44,65 @@ export const inferCareDestination = (step?: { id?: string; title?: string; descr
 
 interface Props {
   destination: CareDestination
+  context?: string
   value?: CareTransitionData | null
   onChange: (value: CareTransitionData) => void
   onConfirmed: (value: CareTransitionData) => void
 }
 
-const UniversalCareTransition: React.FC<Props> = ({ destination, value, onChange, onConfirmed }) => {
+type WaitingCareCard = { title: string; description: string; tone: 'blue' | 'emerald' | 'amber' | 'red'; icon: 'care' | 'clock' | 'tests' | 'alert' }
+
+const generalCareCards: Record<CareDestination, WaitingCareCard[]> = {
+  observation: [
+    { title: 'Tratamento continua ativo', description: 'Manter medicações, hidratação, oxigênio e demais medidas já indicadas; observação não significa suspensão da conduta.', tone: 'blue', icon: 'care' },
+    { title: 'Reavaliação programada', description: 'Definir horário e parâmetros para nova avaliação, comparando sintomas, sinais vitais, exame físico e resposta ao tratamento.', tone: 'emerald', icon: 'clock' },
+    { title: 'Resultados e pendências', description: 'Acompanhar exames solicitados, registrar resultados críticos e revisar se eles modificam tratamento ou destino.', tone: 'amber', icon: 'tests' },
+    { title: 'Critérios de escalonamento', description: 'Instabilidade, piora do estado geral ou falha terapêutica exigem nova classificação e aumento imediato do nível de cuidado.', tone: 'red', icon: 'alert' }
+  ],
+  ward: [
+    { title: 'Cuidado hospitalar desde já', description: 'Executar no pronto-socorro o tratamento compatível com a internação indicada, sem aguardar a liberação física do leito.', tone: 'blue', icon: 'care' },
+    { title: 'Vigilância e reavaliação', description: 'Repetir sinais vitais e exame dirigido em intervalos definidos, documentando resposta e necessidade de novo escalonamento.', tone: 'emerald', icon: 'clock' },
+    { title: 'Exames e prescrições', description: 'Revisar resultados pendentes, horários das próximas doses, hidratação, analgesia, profilaxias e reconciliação medicamentosa.', tone: 'amber', icon: 'tests' },
+    { title: 'Não aguardar diante de piora', description: 'Deterioração respiratória, neurológica ou hemodinâmica exige estabilização imediata e reavaliação da necessidade de UTI.', tone: 'red', icon: 'alert' }
+  ],
+  transfer: [
+    { title: 'Estabilização antes e durante o transporte', description: 'Manter suporte, acessos, oxigênio, infusões e monitorização compatíveis com o risco clínico até a entrega presencial.', tone: 'blue', icon: 'care' },
+    { title: 'Reavaliação pré-saída', description: 'Documentar a condição imediatamente antes do transporte e comunicar qualquer mudança à equipe receptora.', tone: 'emerald', icon: 'clock' },
+    { title: 'Documentação completa', description: 'Enviar resumo, horários, doses, balanço, exames, imagens e pendências; confirmar aceite e modalidade de transporte.', tone: 'amber', icon: 'tests' },
+    { title: 'Transporte incompatível com instabilidade', description: 'Se houver deterioração, interromper a saída até estabilização e adequar equipe, equipamentos e destino.', tone: 'red', icon: 'alert' }
+  ],
+  icu: [
+    { title: 'Suporte intensivo no local atual', description: 'Manter monitorização contínua, ABCDE seriado, acessos funcionantes e suporte respiratório/hemodinâmico sem esperar o leito.', tone: 'blue', icon: 'care' },
+    { title: 'Reavaliações em intervalos curtos', description: 'Repetir parâmetros críticos e exame dirigido, registrando tendência e resposta a cada intervenção.', tone: 'emerald', icon: 'clock' },
+    { title: 'Infusões, exames e dispositivos', description: 'Conferir bombas, doses, diluições, balanço, diurese, exames críticos e necessidade de dispositivos invasivos.', tone: 'amber', icon: 'tests' },
+    { title: 'Deterioração é ação imediata', description: 'Falência respiratória, choque, rebaixamento ou nova disfunção orgânica exigem intervenção imediata e contato direto com a equipe crítica.', tone: 'red', icon: 'alert' }
+  ]
+}
+
+const contextualCareCards = (context = ''): WaitingCareCard[] => {
+  if (/avc/i.test(context)) return [
+    { title: 'Vigilância neurológica', description: 'Repetir nível de consciência, pupilas, NIHSS e déficit focal; nova cefaleia, vômito, hipertensão ou piora neurológica exige imagem e avaliação imediatas.', tone: 'red', icon: 'alert' },
+    { title: 'Metas após reperfusão', description: 'Quando houver trombólise, manter PA abaixo de 180/105 mmHg, evitar procedimentos invasivos dispensáveis e aguardar imagem de controle antes de antitrombóticos.', tone: 'blue', icon: 'care' }
+  ]
+  if (/dengue/i.test(context)) return [
+    { title: 'Perfusão e balanço hídrico', description: 'Reavaliar pulso, pressão, enchimento capilar, diurese, hematócrito e balanço; ajustar fluidos pela resposta e evitar sobrecarga.', tone: 'red', icon: 'care' },
+    { title: 'Vigiar fase crítica', description: 'Sangramento, choque, desconforto respiratório, oligúria ou elevação progressiva do hematócrito exigem reavaliação imediata da estratégia.', tone: 'amber', icon: 'alert' }
+  ]
+  if (/hipertens/i.test(context)) return [
+    { title: 'Meta orientada pelo órgão acometido', description: 'Titular a redução pressórica conforme o cenário, evitando queda abrupta que comprometa perfusão cerebral, coronariana ou renal.', tone: 'red', icon: 'care' },
+    { title: 'Infusão e lesão de órgão-alvo', description: 'Conferir agente, bomba, pressão em intervalos curtos, diurese e evolução neurológica, cardiovascular e respiratória.', tone: 'amber', icon: 'tests' }
+  ]
+  if (/pneumonia|pac|influenza|srag|asma/i.test(context)) return [
+    { title: 'Suporte respiratório escalonado', description: 'Titular oxigênio, repetir esforço respiratório e gasometria quando indicada; preparar suporte ventilatório diante de fadiga ou hipoxemia persistente.', tone: 'red', icon: 'care' },
+    { title: 'Tratamento não pode esperar', description: 'Manter broncodilatadores, corticoide, antimicrobianos ou antiviral conforme o diagnóstico e os horários já prescritos.', tone: 'amber', icon: 'clock' }
+  ]
+  return []
+}
+
+const cardTone = { blue: 'border-blue-200 bg-blue-50 text-blue-950', emerald: 'border-emerald-200 bg-emerald-50 text-emerald-950', amber: 'border-amber-200 bg-amber-50 text-amber-950', red: 'border-red-200 bg-red-50 text-red-950' }
+const cardIcon = { care: Stethoscope, clock: Clock3, tests: TestTube2, alert: AlertTriangle }
+
+const UniversalCareTransition: React.FC<Props> = ({ destination, context = '', value, onChange, onConfirmed }) => {
   const copy = destinationCopy[destination]
   const data: CareTransitionData = value?.destination === destination ? value : {
     destination,
@@ -64,6 +117,7 @@ const UniversalCareTransition: React.FC<Props> = ({ destination, value, onChange
   const update = (patch: Partial<CareTransitionData>) => onChange({ ...data, ...patch })
   const toggle = (item: string) => update({ checks: data.checks.includes(item) ? data.checks.filter(entry => entry !== item) : [...data.checks, item] })
   const ready = data.receivingUnit.trim().length > 0 && requiredChecks.every(item => data.checks.includes(item))
+  const careCards = [...contextualCareCards(context), ...generalCareCards[destination]]
 
   return (
     <div className="space-y-5">
@@ -73,6 +127,20 @@ const UniversalCareTransition: React.FC<Props> = ({ destination, value, onChange
           <div><p className="text-xs font-black uppercase tracking-[0.2em] text-white/75">Transição assistencial obrigatória</p><h2 className="mt-1 text-2xl font-black">{copy.title}</h2><p className="mt-2 text-sm text-white/85">{copy.subtitle}</p></div>
         </div>
       </header>
+
+      <section>
+        <div className="mb-4">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-700">Plano assistencial durante a espera</p>
+          <h3 className="mt-1 text-xl font-black text-slate-950">O cuidado continua antes da transferência</h3>
+          <p className="mt-1 text-sm leading-relaxed text-slate-600">Estas orientações recuperam o plano clínico que deve permanecer ativo enquanto a vaga, o aceite ou o transporte são organizados.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          {careCards.map((card, index) => {
+            const Icon = cardIcon[card.icon]
+            return <article key={`${card.title}-${index}`} className={clsx('rounded-2xl border p-5', cardTone[card.tone])}><div className="flex items-start gap-3"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/75 shadow-sm"><Icon className="h-5 w-5" /></span><div><h4 className="font-black">{card.title}</h4><p className="mt-2 text-sm leading-relaxed opacity-90">{card.description}</p></div></div></article>
+          })}
+        </div>
+      </section>
 
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-5 md:grid-cols-2">
         <label className="text-sm font-bold text-slate-800">Destino ou unidade receptora<input value={data.receivingUnit} onChange={event => update({ receivingUnit: event.target.value })} placeholder="Ex.: UTI adulta, enfermaria clínica, sala de observação" className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 font-medium" /></label>

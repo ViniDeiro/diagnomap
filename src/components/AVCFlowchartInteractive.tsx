@@ -630,7 +630,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_aguardo_uti' && (
             <div className="space-y-6">
-              <UniversalCareTransition destination="icu" value={careTransition} onChange={persistCareTransition} onConfirmed={(transition) => finishWithTransition(data.outcome || 'AVC confirmado - encaminhado para cuidado intensivo/neurocrítico', transition)} />
+              <UniversalCareTransition destination="icu" context="avc:unidade_neurocritica" value={careTransition} onChange={persistCareTransition} onConfirmed={(transition) => finishWithTransition(data.outcome || 'AVC confirmado - encaminhado para cuidado intensivo/neurocrítico', transition)} />
               <div className="hidden" aria-hidden="true">
               <section className="relative overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-indigo-800 via-violet-800 to-slate-900 p-6 text-white shadow-xl sm:p-8">
                 <div className="absolute -right-16 -top-20 h-60 w-60 rounded-full bg-cyan-300/10 blur-3xl" />
