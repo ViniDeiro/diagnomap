@@ -17,6 +17,7 @@ import type { PhysicalExamData } from './PhysicalExamForm'
 import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import { AVC_CASE_ANSWER_KEY, parseAVCCase } from './AVCFlowchartInteractive'
 import { HYPERTENSION_CASE_ANSWER_KEY, HYPERTENSION_LABELS, parseHypertensionCase } from './HypertensionFlowchartInteractive'
+import { RABIES_CASE_ANSWER_KEY, parseRabiesCase } from './RabiesExposureFlowchartInteractive'
 import { HYPERTENSION_SCENARIO_TARGETS } from '@/lib/hypertension'
 import {
   ANAPHYLAXIS_ADJUNCT_CARDS,
@@ -760,6 +761,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
     }
 
     if (flowId === 'atendimento_antirrabico') {
+      const rabiesCase = parseRabiesCase(answers[RABIES_CASE_ANSWER_KEY])
       const contactAnswer = answers.raiva_tipo_contato
       const batAnswer = answers.raiva_indireto_morcego
       const speciesAnswer = answers.raiva_especie
@@ -810,6 +812,16 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         : vaccineAndSerum
           ? ['Peso não registrado; calcular SAR a 40 UI/kg ou IGHAR a 20 UI/kg antes da administração.']
           : []
+      const vaccineRouteText = rabiesCase.vaccineRoute === 'id'
+        ? 'Via intradérmica registrada: 0,2 mL por dia, divididos em duas aplicações de 0,1 mL em sítios distintos.'
+        : rabiesCase.vaccineRoute === 'im'
+          ? 'Via intramuscular registrada: administrar o volume integral da apresentação no sítio recomendado, sem aplicação glútea.'
+          : ''
+      const previousProphylaxisText = rabiesCase.previousProphylaxis === 'complete'
+        ? 'Há relato de profilaxia antirrábica anterior completa; o esquema de reexposição deve ser confirmado antes da aplicação.'
+        : rabiesCase.previousProphylaxis === 'incomplete_unknown'
+          ? 'Histórico antirrábico anterior incompleto ou desconhecido; registros e conduta devem ser revistos com a referência.'
+          : rabiesCase.previousProphylaxis === 'none' ? 'Paciente sem profilaxia antirrábica anterior informada.' : ''
 
       return {
         title: 'PRONTUÁRIO MÉDICO – MORDEDURA',
@@ -838,9 +850,13 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           {
             title: 'Conduta Antirrábica',
             text: outcomeDescription,
-            items: serumDoseItems.length > 0
-              ? [...serumDoseItems, 'Infiltrar o máximo possível do soro/imunoglobulina ao redor e no interior das lesões; aplicar eventual restante por via IM, em sítio distinto da vacina.']
-              : undefined
+            items: uniqueItems([
+              vaccineRouteText || null,
+              previousProphylaxisText || null,
+              rabiesCase.immunosuppressed === true ? 'Imunossupressão registrada; necessária revisão especializada do esquema e do controle de resposta.' : null,
+              ...serumDoseItems,
+              vaccineAndSerum ? 'Infiltrar o máximo possível do soro/imunoglobulina ao redor e no interior das lesões; aplicar eventual restante por via IM, em sítio distinto da vacina.' : null
+            ])
           },
           {
             title: 'Plano e Orientações',

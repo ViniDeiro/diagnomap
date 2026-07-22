@@ -16,6 +16,7 @@ const avcComponentSource = fs.readFileSync(path.join(root, 'src/components/AVCFl
 const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewer.tsx'), 'utf8')
 const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8')
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
+const rabiesComponentSource = fs.readFileSync(path.join(root, 'src/components/RabiesExposureFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
 const physicalExamSource = fs.readFileSync(path.join(root, 'src/components/PhysicalExamForm.tsx'), 'utf8')
@@ -68,7 +69,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -115,6 +116,27 @@ validateLinks(tvpFlowchart)
 validateLinks(avcFlowchart)
 validateLinks(hypertensionFlowchart)
 validateLinks(ituFlowchart)
+validateLinks(atendimentoAntirrabicoFlowchart)
+
+const rabiesOption = (step, value) => atendimentoAntirrabicoFlowchart.steps[step].options.find(option => option.value === value)?.nextStep
+assert.equal(rabiesOption('raiva_tipo_contato', 'contato_indireto'), 'raiva_indireto_morcego')
+assert.equal(rabiesOption('raiva_indireto_morcego', 'morcego'), 'raiva_vacina_soro')
+assert.equal(rabiesOption('raiva_indireto_morcego', 'outro_animal'), 'raiva_sem_profilaxia')
+assert.equal(rabiesOption('raiva_especie', 'cao_gato'), 'raiva_cao_gato_observavel')
+assert.equal(rabiesOption('raiva_especie', 'mamifero_domestico'), 'raiva_gravidade')
+assert.equal(rabiesOption('raiva_especie', 'animal_silvestre'), 'raiva_vacina_soro')
+assert.equal(rabiesOption('raiva_observacao_10_dias', 'vivo_saudavel'), 'raiva_sem_profilaxia')
+assert.equal(rabiesOption('raiva_observacao_10_dias', 'evolucao_suspeita'), 'raiva_gravidade')
+assert.equal(rabiesOption('raiva_gravidade', 'leve'), 'raiva_vacina')
+assert.equal(rabiesOption('raiva_gravidade', 'grave'), 'raiva_vacina_soro')
+for (const marker of [
+  'RABIES_CASE_ANSWER_KEY', 'Dashboard', 'Reiniciar', 'Contato indireto',
+  'Janela de observação do animal', 'severeSelected', 'Intradérmica', 'Intramuscular',
+  'SAR · 40 UI/kg', 'IGHAR · 20 UI/kg', 'Fluxo de mordedura concluído',
+  'Abrir relatório completo'
+]) assert.ok(rabiesComponentSource.includes(marker), `Mordedura: experiência interativa ausente (${marker})`)
+assert.match(emergencyComponentSource, /flowchart\.id === 'atendimento_antirrabico'[\s\S]*RabiesExposureFlowchartInteractive/)
+assert.match(reportSource, /parseRabiesCase/)
 
 const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [

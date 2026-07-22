@@ -9350,12 +9350,12 @@ export const atendimentoAntirrabicoFlowchart: EmergencyFlowchart = {
         <div class="space-y-3 text-sm">
           <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-950">
             <p class="font-bold">Esquema vacinal pós-exposição</p>
-            <p class="mt-1">Aplicar vacina antirrábica nos dias <strong>0, 3, 7 e 14</strong>, por via intramuscular, conforme apresentação e protocolo do serviço.</p>
+            <p class="mt-1">Aplicar vacina antirrábica nos dias <strong>0, 3, 7 e 14</strong>. A administração pode ser intradérmica ou intramuscular, conforme produto, capacitação e protocolo do serviço.</p>
           </div>
           <ul class="list-disc space-y-1 pl-5">
             <li>Dia 0: primeira dose no atendimento.</li>
             <li>Agendar e registrar as doses dos dias 3, 7 e 14.</li>
-            <li>Não aplicar na região glútea.</li>
+            <li>Via intradérmica: 0,2 mL divididos em dois sítios; via intramuscular: volume integral da apresentação. Não aplicar no glúteo.</li>
             <li>Reavaliar esquema em imunossuprimidos e em pessoas previamente vacinadas.</li>
           </ul>
         </div>

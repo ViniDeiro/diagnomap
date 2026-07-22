@@ -39,6 +39,7 @@ import UniversalClinicalAssessment, { parseUniversalClinicalAssessment, UNIVERSA
 import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS, type ABCDEItem } from './ABCDEChecklist'
 import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
+import RabiesExposureFlowchartInteractive from './RabiesExposureFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
 import TEPAssessment from './TEPAssessment'
 import {
@@ -7721,6 +7722,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     )
   }
 
+  if (flowchart.id === 'atendimento_antirrabico') {
+    return (
+      <RabiesExposureFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
+      />
+    )
+  }
+
   return (
     <div className="min-h-screen pb-12">
       {/* Premium Medical Header */}
@@ -7871,7 +7887,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                   <div>
                     <h2 className="flex items-center gap-2 text-xl font-bold">
                       <span>{isTVPUrgentAlertStep ? tvpAlertPresentation.title : currentStepData.title}</span>
-                      {flowchart.id === 'atendimento_antirrabico' && currentStepData.id === 'raiva_tipo_contato' && (
+                      {String(flowchart.id) === 'atendimento_antirrabico' && currentStepData.id === 'raiva_tipo_contato' && (
                         <button
                           type="button"
                           onClick={(event) => {
