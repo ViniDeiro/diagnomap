@@ -3915,7 +3915,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Avaliação inicial / Sinais Vitais / Exame Físico', nextStep: 'influenza_exame_fisico', value: 'iniciar_exame_fisico' }
+        { text: 'Iniciar classificação de gravidade', nextStep: 'influenza_sinais_gravidade', value: 'avaliacao_universal_concluida' }
       ]
     },
     influenza_exame_fisico: {
@@ -4727,7 +4727,7 @@ export const pneumoniaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Avaliação inicial / Sinais Vitais / Exame Físico', nextStep: 'pac_exame_fisico', value: 'iniciar_exame_fisico' }
+        { text: 'Iniciar estratificação clínica', nextStep: 'pac_crb65_triagem', value: 'avaliacao_universal_concluida' }
       ]
     },
     pac_exame_fisico: {

@@ -36,7 +36,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -207,6 +207,10 @@ for (const source of [dengueSource, emergencyComponentSource]) {
   assert.match(source, /UNIVERSAL_ASSESSMENT_ANSWER_KEY/)
   assert.match(source, /UniversalClinicalAssessment/)
 }
+
+assert.equal(influenzaFlowchart.steps.start.options[0].nextStep, 'influenza_sinais_gravidade', 'Síndrome gripal: tela antiga de sinais vitais ainda está na rota principal')
+assert.equal(pneumoniaFlowchart.steps.pac_inicio.options[0].nextStep, 'pac_crb65_triagem', 'PAC: tela antiga de sinais vitais ainda está na rota principal')
+assert.match(emergencyComponentSource, /parseUniversalClinicalAssessment\(answers\[UNIVERSAL_ASSESSMENT_ANSWER_KEY\]\)/, 'PAC: escores não consomem a avaliação clínica universal')
 
 assert.match(emergencyComponentSource, /stepId === UNIVERSAL_ASSESSMENT_ANSWER_KEY/, 'Voltar deve preservar sinais vitais e exame físico universais')
 assert.match(emergencyComponentSource, /<ABCDEChecklist[\s\S]*items=\{GECA_PLAN_C_ABCDE\}/, 'GECA deve usar o ABCDE reutilizável')

@@ -35,7 +35,7 @@ import type { EmergencyPatient, EmergencyFlowchart as EmergencyFlowchartType, Em
 import { patientService } from '@/services/patientService'
 import { getCurrentDoctor, type DoctorProfile } from '@/services/doctorRepo'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
-import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
+import UniversalClinicalAssessment, { parseUniversalClinicalAssessment, UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
 import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS, type ABCDEItem } from './ABCDEChecklist'
 import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
@@ -2243,6 +2243,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (flowchart.id === 'tvp' && step === 'tvp_exame_fisico' && flowchart.steps.avaliacao_clinica) {
       return 'avaliacao_clinica'
     }
+    if (flowchart.id === 'influenza' && step === 'influenza_exame_fisico' && flowchart.steps.influenza_sinais_gravidade) {
+      return 'influenza_sinais_gravidade'
+    }
+    if (flowchart.id === 'pneumonia' && step === 'pac_exame_fisico' && flowchart.steps.pac_crb65_triagem) {
+      return 'pac_crb65_triagem'
+    }
     if (step && flowchart.steps[step]) return step
     if (flowchart.id === 'asthma' && step) {
       const legacyAsthmaStep: Record<string, string> = {
@@ -2259,7 +2265,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     return Object.keys(flowchart.steps)[0]
   }, [flowchart.id, flowchart.initialStep, flowchart.steps])
   const resolveHistory = useCallback((savedHistory: string[] = []) => {
-    const migrated = savedHistory.map(step => flowchart.id === 'tvp' && step === 'tvp_exame_fisico' ? 'avaliacao_clinica' : step)
+    const migrated = savedHistory.map((step) => {
+      if (flowchart.id === 'tvp' && step === 'tvp_exame_fisico') return 'avaliacao_clinica'
+      if (flowchart.id === 'influenza' && step === 'influenza_exame_fisico') return 'influenza_sinais_gravidade'
+      if (flowchart.id === 'pneumonia' && step === 'pac_exame_fisico') return 'pac_crb65_triagem'
+      return step
+    })
     return migrated.filter((step, index) => index === 0 || step !== migrated[index - 1])
   }, [flowchart.id])
   const [currentStep, setCurrentStep] = useState(resolveCurrentStep(patient.emergencyState.currentStep))
@@ -4462,12 +4473,16 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     () => pneumoniaSelectedExams.filter((exam) => pneumoniaLabResultConfig[exam]),
     [pneumoniaSelectedExams]
   )
+  const universalClinicalAssessment = useMemo(
+    () => parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]),
+    [answers]
+  )
   const pneumoniaAutomaticCurbValues = useMemo<PneumoniaCurbValues>(() => {
     const savedPhysicalExam = parseSavedPhysicalExamAnswer(answers.pac_exame_fisico, patient)
     const savedCrbCriteria = parseSavedPneumoniaCrbCriteria(answers.pac_crb65_triagem)
     const combinedCrbCriteria = new Set([...savedCrbCriteria, ...pneumoniaCrbCriteria])
-    const sourceVitalSigns = answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns
-    const sourcePhysicalExam = answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam
+    const sourceVitalSigns = universalClinicalAssessment?.sinaisVitais || (answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns)
+    const sourcePhysicalExam = universalClinicalAssessment?.exameFisico || (answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam)
     const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
     const respiratoryRate = parseClinicalNumber(sourceVitalSigns?.respiratoryRate)
     const bloodPressure = parseBloodPressure(sourceVitalSigns?.bloodPressure)
@@ -4490,13 +4505,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       paBaixa: hasLowBloodPressure,
       idadeMaior65: hasAge65
     }
-  }, [answers.pac_crb65_triagem, answers.pac_exame_fisico, patient, pneumoniaCrbCriteria, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
+  }, [answers.pac_crb65_triagem, answers.pac_exame_fisico, patient, pneumoniaCrbCriteria, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns, universalClinicalAssessment])
   const pneumoniaAutomaticCurbDetails = useMemo<Record<PneumoniaCurbFieldKey, string>>(() => {
     const savedPhysicalExam = parseSavedPhysicalExamAnswer(answers.pac_exame_fisico, patient)
     const savedCrbCriteria = parseSavedPneumoniaCrbCriteria(answers.pac_crb65_triagem)
     const combinedCrbCriteria = new Set([...savedCrbCriteria, ...pneumoniaCrbCriteria])
-    const sourceVitalSigns = answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns
-    const sourcePhysicalExam = answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam
+    const sourceVitalSigns = universalClinicalAssessment?.sinaisVitais || (answers.pac_exame_fisico ? savedPhysicalExam.sinaisVitais : pneumoniaVitalSigns)
+    const sourcePhysicalExam = universalClinicalAssessment?.exameFisico || (answers.pac_exame_fisico ? savedPhysicalExam.exameFisico : pneumoniaPhysicalExam)
     const urea = parseClinicalNumber(pneumoniaLabResults.Ureia)
     const respiratoryRate = parseClinicalNumber(sourceVitalSigns?.respiratoryRate)
     const bloodPressure = sourceVitalSigns?.bloodPressure?.trim()
@@ -4529,7 +4544,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
           ? `Idade do cadastro: ${patientAge} anos`
           : 'Idade não informada no cadastro'
     }
-  }, [answers.pac_crb65_triagem, answers.pac_exame_fisico, patient, pneumoniaCrbCriteria, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns])
+  }, [answers.pac_crb65_triagem, answers.pac_exame_fisico, patient, pneumoniaCrbCriteria, pneumoniaLabResults.Ureia, pneumoniaPhysicalExam, pneumoniaVitalSigns, universalClinicalAssessment])
   const savedPneumoniaCurbScore = useMemo(() => {
     const raw = answers.pac_curb65_protocolo || answers.pac_calcular_curb65
     if (!raw) return undefined
@@ -8743,7 +8758,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep || isTVPPhysicalExamStep || isTEPPhysicalExamStep) && (
+              {(isTVPPhysicalExamStep || isTEPPhysicalExamStep) && (
                 <div className="mb-8 space-y-6">
                   <div className="overflow-hidden rounded-2xl border border-sky-200 bg-white shadow-sm">
                     <div className="bg-sky-950 px-5 py-5 text-white sm:px-6">
@@ -8783,7 +8798,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                   </div>
 
-                  {(isPneumoniaPhysicalExamStep || isInfluenzaPhysicalExamStep || isTVPPhysicalExamStep || isTEPPhysicalExamStep) && (
+                  {(isTVPPhysicalExamStep || isTEPPhysicalExamStep) && (
                     <div className="overflow-hidden rounded-2xl border border-sky-300 bg-white shadow-sm ring-1 ring-sky-100">
                       <div className="border-b border-sky-200 bg-sky-50 px-5 py-4">
                         <div className="flex items-center gap-3">
