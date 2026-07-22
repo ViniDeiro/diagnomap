@@ -822,23 +822,26 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         : rabiesCase.previousProphylaxis === 'incomplete_unknown'
           ? 'Histórico antirrábico anterior incompleto ou desconhecido; registros e conduta devem ser revistos com a referência.'
           : rabiesCase.previousProphylaxis === 'none' ? 'Paciente sem profilaxia antirrábica anterior informada.' : ''
-      const notification = rabiesCase.notification
+      const notification = rabiesCase.notification || {}
       const notificationExposureLabels: Record<string, string> = { indirect: 'contato indireto', scratch: 'arranhadura', lick: 'lambedura', bite: 'mordedura', other: 'outro' }
       const notificationLocationLabels: Record<string, string> = { mucosa: 'mucosa', head_neck: 'cabeça/pescoço', hands_feet: 'mãos/pés', trunk: 'tronco', upper_limbs: 'membros superiores', lower_limbs: 'membros inferiores' }
       const notificationAnimalLabels: Record<string, string> = { dog: 'canina', cat: 'felina', bat: 'quiróptera/morcego', primate: 'primata', fox: 'raposa', economic: 'herbívoro doméstico', other: 'outra espécie' }
-      const notificationCoreItems = notification ? uniqueItems([
+      const exposureTypes = notification.exposureTypes || []
+      const exposureLocations = notification.exposureLocations || []
+      const vaccineDates = notification.vaccineDates || []
+      const notificationCoreItems = uniqueItems([
         notification.notificationNumber ? `Número da notificação: ${notification.notificationNumber}.` : null,
         notification.notificationDate ? `Notificação registrada em ${new Date(`${notification.notificationDate}T12:00:00`).toLocaleDateString('pt-BR')}.` : null,
         notification.notifyingUnit || notification.notifyingCity ? `Unidade notificadora: ${[notification.notifyingUnit, notification.notifyingCity, notification.notifyingState].filter(Boolean).join(' - ')}.` : null,
         notification.exposureDate ? `Data da exposição: ${new Date(`${notification.exposureDate}T12:00:00`).toLocaleDateString('pt-BR')}.` : null,
-        notification.exposureTypes?.length ? `Tipo de exposição: ${notification.exposureTypes.map(item => notificationExposureLabels[item] || item).join(', ')}.` : null,
-        notification.exposureLocations?.length ? `Localização: ${notification.exposureLocations.map(item => notificationLocationLabels[item] || item).join(', ')}.` : null,
+        exposureTypes.length ? `Tipo de exposição: ${exposureTypes.map(item => notificationExposureLabels[item] || item).join(', ')}.` : null,
+        exposureLocations.length ? `Localização: ${exposureLocations.map(item => notificationLocationLabels[item] || item).join(', ')}.` : null,
         notification.animalSpecies ? `Espécie registrada: ${notificationAnimalLabels[notification.animalSpecies] || notification.otherAnimalSpecies || notification.animalSpecies}.` : null,
         notification.vaccineLot ? `Vacina: lote ${notification.vaccineLot}${notification.vaccineManufacturer ? `, fabricante ${notification.vaccineManufacturer}` : ''}.` : null,
-        notification.vaccineDates?.filter(Boolean).length ? `Aplicações registradas: ${notification.vaccineDates.filter(Boolean).map(date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR')).join(', ')}.` : null,
+        vaccineDates.filter(Boolean).length ? `Aplicações registradas: ${vaccineDates.filter(Boolean).map(date => new Date(`${date}T12:00:00`).toLocaleDateString('pt-BR')).join(', ')}.` : null,
         notification.serumAmountMl ? `Imunização passiva aplicada: ${notification.serumAmountMl} mL${notification.serumType === 'heterologous' ? ' de SAR' : notification.serumType === 'homologous' ? ' de IGHAR' : ''}.` : null,
         notification.closureDate ? `Caso encerrado em ${new Date(`${notification.closureDate}T12:00:00`).toLocaleDateString('pt-BR')}.` : null
-      ]) : []
+      ])
 
       return {
         title: 'PRONTUÁRIO MÉDICO – MORDEDURA',

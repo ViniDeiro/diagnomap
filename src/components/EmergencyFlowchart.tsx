@@ -40,6 +40,7 @@ import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS, type ABCDEItem } from './ABCDEChec
 import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
 import RabiesExposureFlowchartInteractive from './RabiesExposureFlowchartInteractive'
+import ITUFlowchartInteractive from './ITUFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
 import TEPAssessment from './TEPAssessment'
 import {
@@ -7725,6 +7726,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   if (flowchart.id === 'atendimento_antirrabico') {
     return (
       <RabiesExposureFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
+      />
+    )
+  }
+
+  if (flowchart.id === 'itu') {
+    return (
+      <ITUFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
         initialHistory={history}

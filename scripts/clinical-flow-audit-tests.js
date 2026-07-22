@@ -18,6 +18,7 @@ const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8'
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
 const rabiesComponentSource = fs.readFileSync(path.join(root, 'src/components/RabiesExposureFlowchartInteractive.tsx'), 'utf8')
 const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components/RabiesNotificationForm.tsx'), 'utf8')
+const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
 const physicalExamSource = fs.readFileSync(path.join(root, 'src/components/PhysicalExamForm.tsx'), 'utf8')
@@ -146,6 +147,14 @@ for (const marker of [
   'Acompanhamento e encerramento', 'isRabiesNotificationCoreComplete'
 ]) assert.ok(rabiesNotificationSource.includes(marker), `Mordedura: ficha SINAN sem bloco obrigatório (${marker})`)
 assert.match(reportSource, /Ficha de investigação antirrábica/)
+
+for (const marker of [
+  'ITU · {phase}', 'Dashboard', 'Reiniciar', 'Decisão clínica guiada',
+  'UniversalCareTransition', 'destination="ward"',
+  'Atendimento de ITU finalizado', 'Abrir relatório completo', 'Registrar desfecho e concluir',
+  'buildItuPrescriptionItems', 'ITU_PRESCRIBER'
+]) assert.ok(ituComponentSource.includes(marker), `ITU: experiência interativa nova ausente (${marker})`)
+assert.match(emergencyComponentSource, /flowchart\.id === 'itu'[\s\S]*ITUFlowchartInteractive/)
 
 const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [
