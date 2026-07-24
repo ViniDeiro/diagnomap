@@ -41,6 +41,7 @@ import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
 import RabiesExposureFlowchartInteractive from './RabiesExposureFlowchartInteractive'
 import ITUFlowchartInteractive from './ITUFlowchartInteractive'
+import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
 import TEPAssessment from './TEPAssessment'
 import {
@@ -7749,6 +7750,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         onComplete={onComplete}
         onBack={onBack}
         onOpenReport={onOpenReport}
+      />
+    )
+  }
+
+  if (flowchart.id === 'crise_ansiedade') {
+    return (
+      <AnxietyFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
+        onSwitchFlowchart={onSwitchFlowchart}
       />
     )
   }

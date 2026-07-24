@@ -599,6 +599,52 @@ const ansiedadeRouteAlertLabels: Record<string, string> = {
   respiratorio_toxico: 'suspeita de causa respiratória ou tóxica'
 }
 
+const ansiedadeSymptomLabels: Record<string, string> = {
+  cardiovascular: 'palpitação, taquicardia ou sudorese',
+  respiratory: 'sensação de falta de ar ou aperto',
+  neurological: 'tontura, tremor ou parestesias',
+  cognitive: 'medo intenso ou perda de controle',
+  dissociative: 'desrealização ou despersonalização',
+  gastrointestinal: 'náusea ou desconforto abdominal'
+}
+
+const ansiedadeAssessmentLabels: Record<string, string> = {
+  vitals: 'sinais vitais',
+  oximetry: 'oximetria',
+  glucose: 'glicemia conforme indicação',
+  cardiopulmonary: 'exame cardiovascular e respiratório direcionado',
+  neurological: 'exame neurológico direcionado',
+  substances: 'revisão de substâncias, abstinência e medicações'
+}
+
+const ansiedadeInterventionLabels: Record<string, string> = {
+  environment: 'redução de estímulos',
+  validation: 'validação e psicoeducação',
+  breathing: 'respiração diafragmática',
+  grounding: 'técnica de aterramento'
+}
+
+const ansiedadeMedicationLabels: Record<string, string> = {
+  clonazepam_tablet: 'clonazepam 0,25 a 0,5 mg VO',
+  clonazepam_drops: 'clonazepam solução 2 mg/mL, 5 a 10 gotas VO',
+  diazepam: 'diazepam 5 mg VO',
+  alprazolam: 'alprazolam 0,25 a 0,5 mg VO'
+}
+
+const ansiedadeMentalRiskLabels: Record<string, string> = {
+  suicide: 'ideação suicida ou risco de autoagressão',
+  aggression: 'risco de heteroagressão',
+  psychosis: 'psicose ou desorganização importante',
+  intoxication: 'intoxicação grave',
+  self_care: 'incapacidade de autocuidado ou ausência de suporte seguro'
+}
+
+const getAnsiedadeList = (answers: Record<string, string>, stepId: string, key: string, labels: Record<string, string>) => {
+  const parsed = parseFlowAnswerForSummary(answers[stepId])
+  const values = Array.isArray(parsed?.[key]) ? parsed[key] : []
+  return values.filter((item): item is string => typeof item === 'string').map(item => labels[item] || formatClinicalValue(item))
+}
+
 const getAnsiedadeDecision = (answers: Record<string, string>, stepId: string) => {
   const parsed = parseFlowAnswerForSummary(answers[stepId])
   const decision = typeof parsed?.decision === 'string' ? parsed.decision : answers[stepId]
@@ -629,12 +675,31 @@ const buildAnsiedadeClinicalSummary = (
     : ''
   const nonDrugDecision = getAnsiedadeDecision(answers, 'ansiedade_abordagem_nao_medicamentosa')
   const medicationDecision = getAnsiedadeDecision(answers, 'ansiedade_medicamentosa')
+  const symptoms = getAnsiedadeList(answers, 'ansiedade_inicio', 'symptoms', ansiedadeSymptomLabels)
+  const assessmentChecks = getAnsiedadeList(answers, 'ansiedade_excluir_organico', 'assessmentChecks', ansiedadeAssessmentLabels)
+  const interventions = getAnsiedadeList(answers, 'ansiedade_abordagem_nao_medicamentosa', 'interventions', ansiedadeInterventionLabels)
+  const medicationAnswer = parseFlowAnswerForSummary(answers.ansiedade_medicamentosa)
+  const medicationCode = typeof medicationAnswer?.medication === 'string' ? medicationAnswer.medication : ''
+  const mentalAnswer = parseFlowAnswerForSummary(answers.ansiedade_avaliacao_psiquiatrica)
+  const mentalRisks = getAnsiedadeList(answers, 'ansiedade_avaliacao_psiquiatrica', 'mentalRisks', ansiedadeMentalRiskLabels)
+  const mentalPlan = mentalAnswer?.mentalPlan === 'urgent'
+    ? 'foi definida avaliação especializada urgente, com observação protegida conforme risco'
+    : mentalAnswer?.mentalPlan === 'ambulatory'
+      ? 'foi programado seguimento ambulatorial em saúde mental'
+      : ''
   const decisionLines = uniqueTextItems([
     initialDecision,
+    symptoms.length ? `foram registradas as manifestações ${formatClinicalListText(symptoms)}` : '',
     organicDecision,
+    assessmentChecks.length ? `a triagem de segurança incluiu ${formatClinicalListText(assessmentChecks)}` : '',
     routeAlertDecision,
     nonDrugDecision,
-    medicationDecision
+    interventions.length ? `foram realizadas as medidas ${formatClinicalListText(interventions)}` : '',
+    medicationDecision,
+    medicationCode ? `foi registrada dose de ${ansiedadeMedicationLabels[medicationCode] || formatClinicalValue(medicationCode)}, com reavaliação clínica` : '',
+    medicationAnswer?.medicationWithheld ? 'a medicação foi evitada e o caso seguiu para avaliação de segurança em saúde mental' : '',
+    mentalRisks.length ? `foram identificados os fatores de risco ${formatClinicalListText(mentalRisks)}` : '',
+    mentalPlan
   ])
 
   const finalTitle = currentStepData?.title || flowchart.name

@@ -19,6 +19,7 @@ const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/compone
 const rabiesComponentSource = fs.readFileSync(path.join(root, 'src/components/RabiesExposureFlowchartInteractive.tsx'), 'utf8')
 const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components/RabiesNotificationForm.tsx'), 'utf8')
 const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFlowchartInteractive.tsx'), 'utf8')
+const anxietyComponentSource = fs.readFileSync(path.join(root, 'src/components/AnxietyFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
 const physicalExamSource = fs.readFileSync(path.join(root, 'src/components/PhysicalExamForm.tsx'), 'utf8')
@@ -155,6 +156,15 @@ for (const marker of [
   'buildItuPrescriptionItems', 'ITU_PRESCRIBER'
 ]) assert.ok(ituComponentSource.includes(marker), `ITU: experiência interativa nova ausente (${marker})`)
 assert.match(emergencyComponentSource, /flowchart\.id === 'itu'[\s\S]*ITUFlowchartInteractive/)
+
+for (const marker of [
+  'Crise de ansiedade · {phase}', 'Reconheça as manifestações do episódio',
+  'Não atribuir automaticamente à ansiedade', 'Respiração diafragmática',
+  'Contraindicações ou cautelas presentes', 'Fluxo de ansiedade concluído',
+  'ANSIEDADE_MEDICATION_OPTIONS', 'Abrir relatório completo'
+]) assert.ok(anxietyComponentSource.includes(marker), `Ansiedade: experiência interativa nova ausente (${marker})`)
+assert.match(emergencyComponentSource, /flowchart\.id === 'crise_ansiedade'[\s\S]*AnxietyFlowchartInteractive/)
+assert.match(clinicalSummarySource, /ansiedadeSymptomLabels[\s\S]*ansiedadeInterventionLabels[\s\S]*ansiedadeMentalRiskLabels/)
 
 const anaphylaxisReachable = reachable(anaphylaxisFlowchart)
 for (const required of [
