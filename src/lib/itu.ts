@@ -66,7 +66,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '1 g',
     frequency: 'EV uma vez ao dia',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Reavaliar diariamente para ajuste ou descalonamento do antimicrobiano.',
+    instructions: 'Via EV: após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5%. Se houver administração IM, reconstituir e diluir conforme a bula da apresentação utilizada. Reavaliar diariamente para ajuste ou descalonamento do antimicrobiano.',
     prescribedBy: ITU_PRESCRIBER
   },
   ciprofloxacino_ev: {
@@ -82,7 +82,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '4,5 g',
     frequency: 'EV de 6/6 horas',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Ajustar à função renal e descalonar conforme culturas e resposta clínica.',
+    instructions: 'Após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5% e administrar por infusão conforme a bula e o protocolo institucional. Ajustar à função renal e descalonar conforme culturas e resposta clínica.',
     prescribedBy: ITU_PRESCRIBER
   },
   meropenem: {
@@ -90,7 +90,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '1 g',
     frequency: 'EV de 8/8 horas',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Reservar para quadro grave ou alto risco de resistência; ajustar à função renal e descalonar quando possível.',
+    instructions: 'Após reconstituição, diluir em 100 mL de SF 0,9% e administrar por infusão conforme a bula e o protocolo institucional. Reservar para quadro grave ou alto risco de resistência; ajustar à função renal e descalonar quando possível.',
     prescribedBy: ITU_PRESCRIBER
   }
 }

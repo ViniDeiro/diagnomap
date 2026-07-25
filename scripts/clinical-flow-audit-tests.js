@@ -21,6 +21,7 @@ const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components
 const rabiesSinanPdfSource = fs.readFileSync(path.join(root, 'src/lib/rabiesSinanPdf.ts'), 'utf8')
 const rabiesConductSource = fs.readFileSync(path.join(root, 'src/lib/rabiesConduct.ts'), 'utf8')
 const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFlowchartInteractive.tsx'), 'utf8')
+const ituLogicSource = fs.readFileSync(path.join(root, 'src/lib/itu.ts'), 'utf8')
 const anxietyComponentSource = fs.readFileSync(path.join(root, 'src/components/AnxietyFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
@@ -165,6 +166,12 @@ for (const marker of [
   'buildItuPrescriptionItems', 'ITU_PRESCRIBER'
 ]) assert.ok(ituComponentSource.includes(marker), `ITU: experiência interativa nova ausente (${marker})`)
 assert.match(emergencyComponentSource, /flowchart\.id === 'itu'[\s\S]*ITUFlowchartInteractive/)
+for (const marker of [
+  'Via EV: após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5%',
+  'Se houver administração IM, reconstituir e diluir conforme a bula',
+  'Piperacilina-tazobactam', 'diluir em 100 mL de SF 0,9% ou SG 5%',
+  'Meropenem', 'diluir em 100 mL de SF 0,9%'
+]) assert.ok(ituLogicSource.includes(marker), `ITU: orientação de preparo ausente (${marker})`)
 
 for (const marker of [
   'Crise de ansiedade · {phase}', 'Reconheça as manifestações do episódio',
