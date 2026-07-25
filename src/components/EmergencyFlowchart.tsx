@@ -1369,7 +1369,9 @@ const defaultPneumoniaPhysicalExam = (): PhysicalExamData => ({
   cardiac: { altered: '' },
   pulmonary: { altered: '' },
   abdomen: { altered: '' },
-  extremities: { altered: '' }
+  extremities: { altered: '' },
+  skin: { altered: '' },
+  additionalInformation: ''
 })
 
 const pneumoniaAtsIdsaMajorItems = [

@@ -1096,7 +1096,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           `Aparelho cardiovascular: ${exam.cardiac.altered?.trim() || 'bulhas rítmicas, normofonéticas, sem sopros audíveis'}.`,
           `Aparelho respiratório: ${exam.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}.`,
           `Abdome: ${exam.abdomen.altered?.trim() || 'sem alterações relevantes descritas'}.`,
-          `Extremidades e perfusão: ${exam.extremities.altered?.trim() || 'pulsos periféricos simétricos e perfusão preservada'}.`
+          `Extremidades e perfusão: ${exam.extremities.altered?.trim() || 'pulsos periféricos simétricos e perfusão preservada'}.`,
+          `Pele: ${exam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}.`,
+          exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}.` : null
         ])
       })()
       const physicalExamItems = uniqueItems([
@@ -2016,7 +2018,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           `Glasgow ${influenzaPhysicalExam.neuro.glasgow ?? 'não informado'}; ${influenzaPhysicalExam.neuro.altered?.trim() || 'consciente e contactuante'}.`,
           `Ausculta pulmonar: ${influenzaPhysicalExam.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}.`,
           `Aparelho cardiovascular: ${influenzaPhysicalExam.cardiac.altered?.trim() || 'bulhas rítmicas, normofonéticas, sem sopros audíveis'}.`,
-          influenzaPhysicalExam.extremities.altered?.trim() ? `Extremidades: ${influenzaPhysicalExam.extremities.altered.trim()}.` : null
+          influenzaPhysicalExam.extremities.altered?.trim() ? `Extremidades: ${influenzaPhysicalExam.extremities.altered.trim()}.` : null,
+          `Pele: ${influenzaPhysicalExam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}.`,
+          influenzaPhysicalExam.additionalInformation?.trim() ? `Informações adicionais: ${influenzaPhysicalExam.additionalInformation.trim()}.` : null
         ].filter(Boolean).join(' ')
       })()
 
@@ -2437,7 +2441,9 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           `Aparelho cardiovascular: ${physicalExamData.cardiac.altered?.trim() || 'bulhas rítmicas, normofonéticas, sem sopros audíveis'}.`,
           `Aparelho respiratório: ${physicalExamData.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}.`,
           `Abdome: ${physicalExamData.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, sem sinais de irritação peritoneal'}.`,
-          `Extremidades e perfusão: ${physicalExamData.extremities.altered?.trim() || 'pulsos periféricos simétricos, perfusão preservada, sem edema ou empastamento'}.`
+          `Extremidades e perfusão: ${physicalExamData.extremities.altered?.trim() || 'pulsos periféricos simétricos, perfusão preservada, sem edema ou empastamento'}.`,
+          `Pele: ${physicalExamData.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}.`,
+          physicalExamData.additionalInformation?.trim() ? `Informações adicionais: ${physicalExamData.additionalInformation.trim()}.` : null
         ])
       })()
 

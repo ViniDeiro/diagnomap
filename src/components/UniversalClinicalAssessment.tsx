@@ -41,7 +41,9 @@ const defaultPhysicalExam = (): PhysicalExamData => ({
   cardiac: { altered: '' },
   pulmonary: { altered: '' },
   abdomen: { altered: '' },
-  extremities: { altered: '' }
+  extremities: { altered: '' },
+  skin: { altered: '' },
+  additionalInformation: ''
 })
 
 export const parseUniversalClinicalAssessment = (raw?: string | null): UniversalClinicalAssessmentData | null => {
@@ -76,8 +78,10 @@ export const summarizeUniversalPhysicalExam = (exam?: PhysicalExamData | null): 
     `Cardiovascular: ${exam.cardiac.altered?.trim() || 'sem alteração descrita'}`,
     `Pulmonar: ${exam.pulmonary.altered?.trim() || 'sem alteração descrita'}`,
     `Abdome: ${exam.abdomen.altered?.trim() || 'sem alteração descrita'}`,
-    `Extremidades: ${exam.extremities.altered?.trim() || 'sem alteração descrita'}`
-  ]
+    `Extremidades: ${exam.extremities.altered?.trim() || 'sem alteração descrita'}`,
+    `Pele: ${exam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}`,
+    exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}` : null
+  ].filter((item): item is string => Boolean(item))
 }
 
 const fromPatient = (patient: Pick<Patient, 'admission'>): UniversalVitalSigns => {

@@ -272,6 +272,13 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
     lines.push(
       `Extremidades: ${pe.extremities.altered && pe.extremities.altered.trim().length > 0 ? `Alterado: ${pe.extremities.altered.trim()}` : extremitiesNormal}`
     )
+    const skinNormal = 'Pele íntegra, sem lesões cutâneas aparentes'
+    lines.push(
+      `Pele: ${pe.skin?.altered?.trim() ? `Alterado: ${pe.skin.altered.trim()}` : skinNormal}`
+    )
+    if (pe.additionalInformation?.trim()) {
+      lines.push(`Informações adicionais: ${pe.additionalInformation.trim()}`)
+    }
 
     return lines.join('\n')
   }
@@ -334,7 +341,9 @@ const PatientForm: React.FC<PatientFormProps> = ({ onSubmit, onCancel, onSeverit
     cardiac: { altered: '' },
     pulmonary: { altered: '' },
     abdomen: { altered: '' },
-    extremities: { altered: '' }
+    extremities: { altered: '' },
+    skin: { altered: '' },
+    additionalInformation: ''
   })
 
   const formatDateBR = (date: Date): string => {

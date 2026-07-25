@@ -29,6 +29,8 @@ type TVPExamSummary = {
   extremities?: { altered?: string }
   cardiac?: { altered?: string }
   pulmonary?: { altered?: string }
+  skin?: { altered?: string }
+  additionalInformation?: string
 }
 type PneumoniaExamSummary = {
   generalState?: string
@@ -43,6 +45,8 @@ type PneumoniaExamSummary = {
   cardiac?: { altered?: string }
   abdomen?: { altered?: string }
   extremities?: { altered?: string }
+  skin?: { altered?: string }
+  additionalInformation?: string
 }
 
 const houseBrackmannLabels: Record<string, string> = {
@@ -267,7 +271,9 @@ const buildTVPClinicalSummary = (
     ...selectedFindings.filter((item) => /edema|cacifo|circunferência|calor|rubor|veias|palpação|eritema|cianose|palidez|pulsos|Homans/i.test(item)),
     exam?.extremities?.altered ? `extremidades: ${String(exam.extremities.altered).trim()}` : null,
     exam?.cardiac?.altered ? `aparelho cardiovascular: ${String(exam.cardiac.altered).trim()}` : null,
-    exam?.pulmonary?.altered ? `aparelho respiratório: ${String(exam.pulmonary.altered).trim()}` : null
+    exam?.pulmonary?.altered ? `aparelho respiratório: ${String(exam.pulmonary.altered).trim()}` : null,
+    exam?.skin?.altered ? `pele: ${String(exam.skin.altered).trim()}` : null,
+    exam?.additionalInformation?.trim() ? `informações adicionais: ${exam.additionalInformation.trim()}` : null
   ])
 
   const wellsScore = typeof wellsData?.score === 'number' ? wellsData.score : undefined
@@ -911,7 +917,9 @@ const buildInfluenzaClinicalSummary = (
     exam.pulmonary?.altered?.trim() ? `Ausculta pulmonar: ${exam.pulmonary.altered.trim()}` : null,
     exam.cardiac?.altered?.trim() ? `Aparelho cardiovascular: ${exam.cardiac.altered.trim()}` : null,
     exam.neuro?.altered?.trim() ? `Neurológico: ${exam.neuro.altered.trim()}` : null,
-    exam.extremities?.altered?.trim() ? `Extremidades: ${exam.extremities.altered.trim()}` : null
+    exam.extremities?.altered?.trim() ? `Extremidades: ${exam.extremities.altered.trim()}` : null,
+    exam.skin?.altered?.trim() ? `Pele: ${exam.skin.altered.trim()}` : 'Pele íntegra, sem lesões cutâneas aparentes',
+    exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}` : null
   ]) : []
   const examinationLines = uniqueTextItems([
     vitalItems.length ? `Sinais vitais: ${vitalItems.join(', ')}` : null,
@@ -1133,7 +1141,9 @@ const buildPneumoniaClinicalSummary = (
     exam.cardiac?.altered?.trim() ? `Aparelho cardiovascular: ${exam.cardiac.altered.trim()}` : null,
     exam.abdomen?.altered?.trim() ? `Abdome: ${exam.abdomen.altered.trim()}` : null,
     neuroAltered ? `Neurológico: ${neuroAltered}` : null,
-    exam.extremities?.altered?.trim() ? `Extremidades: ${exam.extremities.altered.trim()}` : null
+    exam.extremities?.altered?.trim() ? `Extremidades: ${exam.extremities.altered.trim()}` : null,
+    exam.skin?.altered?.trim() ? `Pele: ${exam.skin.altered.trim()}` : 'Pele íntegra, sem lesões cutâneas aparentes',
+    exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}` : null
   ]) : []
   const vitalItems = uniqueTextItems([
     temperature != null ? `temperatura ${String(temperature).replace('.', ',')} °C` : null,

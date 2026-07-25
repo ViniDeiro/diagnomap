@@ -17,6 +17,8 @@ export interface PhysicalExamData {
   pulmonary: { altered?: string }
   abdomen: { altered?: string }
   extremities: { altered?: string }
+  skin?: { altered?: string }
+  additionalInformation?: string
 }
 
 interface PhysicalExamFormProps {
@@ -489,6 +491,30 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           value={value.extremities.altered}
           onChange={(v) => update('extremities', { altered: v })}
           placeholder="Descreva alterações em extremidades"
+        />
+
+        <ExamSection
+          icon={<Stethoscope className="w-5 h-5" />}
+          title="Pele"
+          standardText="Pele íntegra, sem lesões cutâneas aparentes."
+          value={value.skin?.altered}
+          onChange={(v) => onChange({ ...value, skin: { ...(value.skin || {}), altered: v } })}
+          placeholder="Descreva lesões, erupções, equimoses, úlceras, alterações de temperatura, umidade ou outras alterações cutâneas"
+        />
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
+        <SectionTitle
+          icon={<Stethoscope className="h-5 w-5" />}
+          title="Informações adicionais"
+          subtitle="Registre outros achados relevantes do exame físico"
+        />
+        <textarea
+          value={value.additionalInformation ?? ''}
+          onChange={(event) => onChange({ ...value, additionalInformation: event.target.value })}
+          placeholder="Inclua aqui achados que não se enquadram nos sistemas acima, limitações do exame ou observações complementares."
+          rows={4}
+          className="w-full resize-y rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
     </div>

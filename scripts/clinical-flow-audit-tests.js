@@ -339,6 +339,9 @@ assert.match(reportSource, /ANAPHYLAXIS_ABCDE_LABELS/, 'Relatório de anafilaxia
 assert.match(universalAssessmentSource, /GlasgowCalculator/, 'Avaliação universal deve calcular Glasgow dentro do exame neurológico')
 assert.match(universalAssessmentSource, /neurologicalAssessment=\{[\s\S]*<GlasgowCalculator/, 'Glasgow universal deve ser entregue ao bloco neurológico, não ficar solto no início do exame')
 assert.match(physicalExamSource, /title="Neurológico"[\s\S]*\{neurologicalAssessment &&/, 'Bloco neurológico deve renderizar a calculadora antes da descrição dos achados')
+assert.match(physicalExamSource, /title="Pele"[\s\S]*value=\{value\.skin\?\.altered\}/, 'Exame físico deve incluir avaliação estruturada da pele')
+assert.match(physicalExamSource, /title="Informações adicionais"[\s\S]*additionalInformation/, 'Exame físico deve terminar com informações adicionais persistidas')
+assert.match(universalAssessmentSource, /Pele:[\s\S]*Informações adicionais:/, 'Resumo universal deve incluir pele e informações adicionais')
 for (const marker of ['Plano assistencial durante a espera', 'O cuidado continua antes da transferência', 'Vigilância neurológica', 'Perfusão e balanço hídrico', 'Meta orientada pelo órgão acometido', 'Suporte respiratório escalonado']) {
   assert.ok(universalCareTransitionSource.includes(marker), `Transição universal perdeu orientação clínica: ${marker}`)
 }
