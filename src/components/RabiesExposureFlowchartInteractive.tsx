@@ -8,9 +8,13 @@ import {
   CalendarDays,
   CheckCircle2,
   ClipboardList,
+  Copy,
   ChevronLeft,
   ChevronRight,
+  Download,
   FileText,
+  Loader2,
+  Printer,
   RotateCcw,
   ShieldCheck,
   Sparkles,
@@ -19,8 +23,10 @@ import {
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { EmergencyPatient } from '@/types/emergency'
+import { buildRabiesConductText } from '@/lib/rabiesConduct'
+import { printRabiesSinanPdf, saveRabiesSinanPdf } from '@/lib/rabiesSinanPdf'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
-import RabiesNotificationForm, { isRabiesNotificationCoreComplete, type RabiesNotificationData } from './RabiesNotificationForm'
+import RabiesNotificationForm, { type RabiesNotificationData } from './RabiesNotificationForm'
 
 export const RABIES_CASE_ANSWER_KEY = 'raiva_caso_estruturado'
 
@@ -146,6 +152,9 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
   const [data, setData] = useState<RabiesCaseData>(stored)
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(Boolean(stored.completedAt))
+  const [copiedConduct, setCopiedConduct] = useState(false)
+  const [pdfAction, setPdfAction] = useState<'save' | 'print' | null>(null)
+  const [pdfError, setPdfError] = useState('')
   const [title, subtitle] = stageCopy[stage]
   const finalStage = ['raiva_sem_profilaxia', 'raiva_vacina', 'raiva_vacina_soro'].includes(stage)
   const progress = finalStage ? 94 : Math.max(10, Math.round(((RABIES_STAGES.indexOf(stage) + 1) / 8) * 82))
@@ -153,6 +162,10 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
   const weight = typeof patient.weight === 'number' && patient.weight > 0 ? patient.weight : undefined
   const sarDose = weight ? weight * 40 : undefined
   const igharDose = weight ? weight * 20 : undefined
+  const conductText = buildRabiesConductText({
+    ...data,
+    observations: data.notification?.observations
+  }, weight)
 
   const update = (patch: Partial<RabiesCaseData>) => setData(previous => ({ ...previous, ...patch }))
   const updateNotification = (notification: RabiesNotificationData) => {
@@ -163,6 +176,25 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
     onUpdate(patient.id, stage, history, nextAnswers, progress, data.outcome === 'vaccine_serum' ? 'Exposição grave' : 'Exposição antirrábica')
   }
   const selectMany = (key: 'initialCare' | 'accidentCriteria' | 'passiveImmunizationChecks', value: string) => setData(previous => ({ ...previous, [key]: toggle(previous[key], value) }))
+
+  const copyConduct = async () => {
+    await navigator.clipboard.writeText(conductText)
+    setCopiedConduct(true)
+    window.setTimeout(() => setCopiedConduct(false), 2500)
+  }
+
+  const handleSinanPdf = async (action: 'save' | 'print') => {
+    setPdfAction(action)
+    setPdfError('')
+    try {
+      if (action === 'save') await saveRabiesSinanPdf({ patient, notification: data.notification })
+      else await printRabiesSinanPdf({ patient, notification: data.notification })
+    } catch (error) {
+      setPdfError(error instanceof Error ? error.message : 'Não foi possível gerar a ficha SINAN.')
+    } finally {
+      setPdfAction(null)
+    }
+  }
 
   const legacyPatchFor = (current: RabiesStage, nextData: RabiesCaseData): Record<string, string> => {
     if (current === 'raiva_tipo_contato' && nextData.contactType) return { raiva_tipo_contato: nextData.contactType === 'indirect' ? 'contato_indireto' : 'contato_direto' }
@@ -270,24 +302,15 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
     persist(severity === 'severe' ? 'raiva_vacina_soro' : 'raiva_vacina', { severity, outcome: severity === 'severe' ? 'vaccine_serum' : 'vaccine' })
   }
 
-  const reexposureSelected = data.notification?.treatmentIndicated === 'reexposure'
-  const reexposureReviewRequired = data.previousProphylaxis === 'complete' || data.previousProphylaxis === 'incomplete_unknown'
-  const notificationTreatmentConsistent = data.outcome === 'vaccine_serum'
-    ? data.notification?.treatmentIndicated === 'serum_vaccine' || (reexposureReviewRequired && reexposureSelected)
-    : data.outcome === 'vaccine' ? ['vaccine', 'observation_vaccine', 'reexposure'].includes(data.notification?.treatmentIndicated || '') : true
   const passivePlanComplete = data.outcome !== 'vaccine_serum' || (Boolean(data.immunoglobulin)
     && passiveChecks.every(([id]) => (data.passiveImmunizationChecks || []).includes(id)))
   const finalReady = data.outcome === 'none'
     || (Boolean(data.vaccineRoute) && Boolean(data.previousProphylaxis) && data.immunosuppressed != null
-      && isRabiesNotificationCoreComplete(data.notification)
-      && notificationTreatmentConsistent
       && passivePlanComplete)
   const pendingFinalRequirements = data.outcome === 'none' ? [] : [
     !data.vaccineRoute ? 'Selecione a via planejada da vacina.' : null,
     !data.previousProphylaxis ? 'Informe o histórico de profilaxia anterior.' : null,
     data.immunosuppressed == null ? 'Informe se há imunossupressão relevante.' : null,
-    !isRabiesNotificationCoreComplete(data.notification) ? 'Complete os campos obrigatórios da ficha SINAN.' : null,
-    !notificationTreatmentConsistent ? 'Alinhe o tratamento indicado na ficha SINAN com a conduta calculada.' : null,
     !passivePlanComplete ? 'Selecione SAR ou IGHAR e confirme os quatro itens da imunização passiva.' : null
   ].filter((item): item is string => Boolean(item))
 
@@ -314,6 +337,8 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
         <section className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl sm:p-8"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15"><CheckCircle2 className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Avaliação registrada</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Fluxo de mordedura concluído</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50">Exposição, animal, gravidade e conduta foram preservados para compor o relatório clínico.</p></div></div><span className="w-fit rounded-full bg-white/15 px-4 py-2 text-sm font-extrabold">100% concluído</span></div></section>
         <section className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Classificação</p><p className="mt-2 text-lg font-black text-slate-950">{data.severity === 'severe' ? 'Acidente grave' : data.severity === 'light' ? 'Acidente leve' : 'Sem classificação necessária'}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Conduta</p><p className="mt-2 text-lg font-black text-slate-950">{data.outcome === 'vaccine_serum' ? 'Vacina + SAR/IGHAR' : data.outcome === 'vaccine' ? 'Vacina' : 'Sem imunoprofilaxia'}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Finalização</p><p className="mt-2 text-sm font-black text-slate-950">{data.completedAt ? new Date(data.completedAt).toLocaleString('pt-BR') : 'Horário não informado'}</p></div></section>
         <section className="rounded-[1.75rem] border border-blue-200 bg-gradient-to-br from-blue-50 to-cyan-50 p-6"><p className="text-xs font-black uppercase tracking-[0.16em] text-blue-700">Síntese do caminho</p><h3 className="mt-2 text-xl font-black text-slate-950">{data.disposition}</h3><p className="mt-2 text-sm leading-relaxed text-blue-950">Abra o relatório para revisar as características da exposição, os cuidados locais, o cálculo em UI quando aplicável e as orientações registradas.</p></section>
+        <section className="rounded-[1.75rem] border border-emerald-200 bg-white p-6 shadow-sm"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Conduta pronta para copiar</p><h3 className="mt-2 text-xl font-black text-slate-950">Texto conforme as escolhas registradas</h3></div><button type="button" onClick={copyConduct} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-3 text-sm font-extrabold text-white"><Copy className="h-4 w-4" /> {copiedConduct ? 'Conduta copiada' : 'Copiar conduta'}</button></div><pre className="mt-4 whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50 p-4 font-sans text-sm leading-relaxed text-slate-800">{conductText}</pre></section>
+        {(stage === 'raiva_vacina' || stage === 'raiva_vacina_soro') && <section className="rounded-[1.75rem] border border-indigo-200 bg-indigo-50 p-6"><div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-700">Ficha oficial SINAN</p><h3 className="mt-2 text-xl font-black text-slate-950">Salvar ou imprimir o formulário completo</h3><p className="mt-1 text-sm text-indigo-950">Os dados preenchidos são aplicados ao modelo oficial; os demais campos permanecem em branco.</p></div><div className="flex flex-col gap-2 sm:flex-row"><button type="button" disabled={pdfAction !== null} onClick={() => handleSinanPdf('save')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-700 px-4 py-3 text-sm font-extrabold text-white disabled:bg-slate-300">{pdfAction === 'save' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Salvar PDF</button><button type="button" disabled={pdfAction !== null} onClick={() => handleSinanPdf('print')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-white px-4 py-3 text-sm font-extrabold text-indigo-950 disabled:text-slate-400">{pdfAction === 'print' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} Imprimir ficha</button></div></div>{pdfError && <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800">{pdfError}</p>}</section>}
         <div className="grid gap-3 sm:grid-cols-3">
           {(stage === 'raiva_vacina' || stage === 'raiva_vacina_soro') && <button type="button" onClick={() => setShowCompletion(false)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-4 font-extrabold text-indigo-950"><ClipboardList className="h-5 w-5" /> Atualizar ficha SINAN</button>}
           {onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-5 py-4 font-extrabold text-blue-950"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}

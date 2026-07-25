@@ -18,6 +18,8 @@ const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8'
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
 const rabiesComponentSource = fs.readFileSync(path.join(root, 'src/components/RabiesExposureFlowchartInteractive.tsx'), 'utf8')
 const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components/RabiesNotificationForm.tsx'), 'utf8')
+const rabiesSinanPdfSource = fs.readFileSync(path.join(root, 'src/lib/rabiesSinanPdf.ts'), 'utf8')
+const rabiesConductSource = fs.readFileSync(path.join(root, 'src/lib/rabiesConduct.ts'), 'utf8')
 const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFlowchartInteractive.tsx'), 'utf8')
 const anxietyComponentSource = fs.readFileSync(path.join(root, 'src/components/AnxietyFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
@@ -141,12 +143,19 @@ for (const marker of [
 assert.match(emergencyComponentSource, /flowchart\.id === 'atendimento_antirrabico'[\s\S]*RabiesExposureFlowchartInteractive/)
 assert.match(reportSource, /parseRabiesCase/)
 assert.match(rabiesComponentSource, /stage === 'raiva_vacina' \|\| stage === 'raiva_vacina_soro'[\s\S]*RabiesNotificationForm/)
-assert.match(rabiesComponentSource, /isRabiesNotificationCoreComplete\(data\.notification\)/)
 for (const marker of [
   'Ficha de investigação SINAN', 'Notificação e atendimento', 'Identificação complementar',
   'Residência e contato', 'Exposição e animal', 'Tratamento atual',
-  'Acompanhamento e encerramento', 'isRabiesNotificationCoreComplete'
-]) assert.ok(rabiesNotificationSource.includes(marker), `Mordedura: ficha SINAN sem bloco obrigatório (${marker})`)
+  'Acompanhamento e encerramento', 'Preenchimento opcional', 'Salvar PDF', 'Imprimir ficha'
+]) assert.ok(rabiesNotificationSource.includes(marker), `Mordedura: ficha SINAN sem bloco esperado (${marker})`)
+assert.doesNotMatch(rabiesNotificationSource, /requiredKeys|isRabiesNotificationCoreComplete|<[^>]+ required /)
+assert.doesNotMatch(rabiesComponentSource, /campos obrigatórios da ficha SINAN|isRabiesNotificationCoreComplete/)
+for (const marker of ['createRabiesSinanPdf', 'ficha-sinan-raiva-pagina-1.png', 'ficha-sinan-raiva-pagina-2.png', 'saveRabiesSinanPdf', 'printRabiesSinanPdf']) {
+  assert.ok(rabiesSinanPdfSource.includes(marker), `Mordedura: geração da ficha oficial ausente (${marker})`)
+}
+for (const marker of ['buildRabiesConductText', 'Via intradérmica (ID)', 'Via intramuscular (IM)', 'Informações adicionais']) {
+  assert.ok(rabiesConductSource.includes(marker), `Mordedura: conduta copiável ausente (${marker})`)
+}
 assert.match(reportSource, /Ficha de investigação antirrábica/)
 
 for (const marker of [
