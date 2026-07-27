@@ -667,6 +667,10 @@ const buildPepHivClinicalSummary = (
   const exposedDecision = getPepHivDecision(answers, 'pep_exposta_hiv')
   const sourceDecision = getPepHivDecision(answers, 'pep_fonte_hiv')
   const sourceRiskDecision = getPepHivDecision(answers, 'pep_fonte_risco_30d')
+  const laboratoryNotebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
+  const laboratoryLines = laboratoryNotebook.entries
+    .filter((entry) => entry.test.trim() && entry.value.trim())
+    .map((entry) => `${entry.test}: ${entry.value}${entry.unit ? ` ${entry.unit}` : ''}${entry.critical ? ' (resultado crítico sinalizado)' : ''}`)
 
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
@@ -702,11 +706,11 @@ const buildPepHivClinicalSummary = (
               : 'A decisão final seguiu a estratificação do fluxograma de PEP ao HIV, considerando risco biológico, tipo de exposição, janela temporal e status sorológico disponível.'
 
   const conductSentence = isPepIndicated
-    ? 'Foi orientado iniciar profilaxia imediatamente, preferencialmente com tenofovir/lamivudina associado a dolutegravir por 28 dias, além de acompanhamento com infectologista, seguimento sorológico, avaliação de ISTs e hepatites virais, orientação de adesão e retorno se sinais de toxicidade ou intolerância.'
+    ? 'Foi orientado iniciar profilaxia imediatamente, preferencialmente com tenofovir/lamivudina associado a dolutegravir por 28 dias, além de avaliação basal para HIV, hepatites e outras ISTs, orientação de adesão e alta com seguimento ambulatorial em serviço de referência ou Atenção Primária conforme a rede local.'
     : isOutsideWindow
       ? 'Foi orientado manter acompanhamento sorológico da pessoa exposta, avaliar outras ISTs/hepatites conforme contexto e registrar orientações de retorno.'
       : isExposedPositive
-        ? 'Foi indicado encaminhamento para acompanhamento clínico especializado, com confirmação diagnóstica e vinculação ao cuidado, sem uso de PEP como profilaxia.'
+        ? 'Foi indicada confirmação diagnóstica e vinculação ambulatorial ao cuidado especializado em HIV, sem uso de PEP como profilaxia e sem caracterizar transferência hospitalar na ausência de outra indicação clínica.'
         : 'Foi orientado que a PEP não é necessária para HIV neste cenário, mantendo aconselhamento, prevenção combinada e reavaliação se surgirem novas informações sobre a exposição.'
 
   const title = isPepIndicated
@@ -730,7 +734,12 @@ const buildPepHivClinicalSummary = (
     exam: { generalAppearance: examinationLine },
     hd: [indicationSentence],
     conduct: [conductSentence],
-    therapeuticPlan: [conductSentence],
+    therapeuticPlan: [
+      conductSentence,
+      laboratoryLines.length > 0
+        ? `Resultados basais registrados: ${formatClinicalListText(laboratoryLines)}.${laboratoryNotebook.notes ? ` Observações: ${laboratoryNotebook.notes}` : ''}`
+        : 'Resultados basais de HIV, hepatites e outras ISTs não foram preenchidos no campo estruturado.'
+    ],
     finalTitle,
     finalDescription
   })
@@ -1857,7 +1866,7 @@ const buildAVCClinicalSummary = (
   const examLines = uniqueTextItems([
     universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null,
     ...universal.examItems,
-    data.glucose != null ? `glicemia capilar ${data.glucose} mg/dL${data.glucoseCorrected ? ', com alteração corrigida antes da reavaliação neurológica' : ''}` : null,
+    data.glucose != null ? `glicemia capilar ${data.glucose} mg/dL${data.glucoseCorrected ? `, corrigida para ${data.repeatGlucose ?? 'valor não informado'} mg/dL antes da reavaliação neurológica` : ''}` : null,
     cincinnati.length ? `teste AVEI/Cincinnati com ${cincinnati.length} alteração(ões) registrada(s)` : null
   ])
   const windowLabels: Record<string, string> = { ate_45h: 'até 4,5 horas', '45_6h': 'entre 4,5 e 6 horas', '6_9h': 'entre 6 e 9 horas', '9_24h': 'entre 9 e 24 horas', mais_24h: 'acima de 24 horas', desconhecida: 'desconhecida' }
@@ -1877,6 +1886,8 @@ const buildAVCClinicalSummary = (
   const supportiveCare = Array.isArray(data.supportiveCare) ? data.supportiveCare.map((item: unknown) => supportiveLabels[String(item)] || String(item)) : []
   const postBPManagement = Array.isArray(data.postThrombolysisBPManagement) ? data.postThrombolysisBPManagement.map((item: unknown) => postBPManagementLabels[String(item)] || String(item)) : []
   const scoreLines = uniqueTextItems([
+    data.arrivalTime && data.ctStartTime ? `chegada às ${data.arrivalTime} e início da imagem às ${data.ctStartTime}` : null,
+    data.ctResultTime ? `imagem interpretada às ${data.ctResultTime}` : null,
     typeof data.nihss === 'number' ? `NIHSS ${data.nihss} ponto(s)${data.disablingDeficit ? ', com déficit incapacitante' : ', sem déficit incapacitante marcado'}` : null,
     typeof data.premorbidRankin === 'number' ? `Rankin modificada prévia ${data.premorbidRankin}` : null,
     data.currentBloodPressure ? `pressão arterial na avaliação para reperfusão ${data.currentBloodPressure} mmHg` : null,
@@ -1897,11 +1908,13 @@ const buildAVCClinicalSummary = (
     ? 'Quadro compatível com acidente vascular cerebral hemorrágico, com necessidade de manejo neurocrítico.'
     : `Quadro conduzido como acidente vascular cerebral isquêmico agudo${outsideRoutineReperfusionWindow ? ', com apresentação acima de 24 horas e fora da janela rotineira de reperfusão pelo caminho registrado' : ''}${receivedThrombolysis ? ', submetido à trombólise intravenosa' : ''}${thrombectomy ? ' e com indicação de trombectomia mecânica' : ''}${transferredForReperfusionAssessment ? ', encaminhado para centro de referência por indisponibilidade local dos recursos necessários à avaliação de reperfusão' : ''}.`
   const conduct = uniqueTextItems([
+    Array.isArray(data.hypoglycemiaTreatment) && data.hypoglycemiaTreatment.length ? `A hipoglicemia foi tratada por ${data.hypoglycemiaTreatment.includes('iv') ? 'via intravenosa' : 'via oral segura'}, com glicemia de controle e repetição do exame neurológico documentadas.` : null,
     receivedThrombolysis ? `Foi administrado ${data.thrombolytic === 'tenecteplase' ? 'tenecteplase' : 'alteplase'}${data.thrombolyticDose ? `, conforme cálculo registrado: ${data.thrombolyticDose}` : ''}, seguido de vigilância pós-reperfusão.` : null,
     receivedThrombolysis && data.postThrombolysisBloodPressure ? `Na vigilância pós-reperfusão, foi registrada PA de ${data.postThrombolysisBloodPressure} mmHg${postBPManagement.length ? `; foram selecionadas as medidas: ${formatClinicalListText(postBPManagement)}` : ''}.` : null,
     thrombectomy ? 'Foi indicada transferência imediata para centro com capacidade de terapia endovascular, sem interromper os cuidados de suporte.' : null,
     transferredForReperfusionAssessment ? 'A ausência local de imagem avançada, angioimagem ou terapia endovascular foi registrada como limitação de recurso, e não como resultado negativo; foi solicitada transferência para continuidade da avaliação em centro de AVC.' : null,
     outsideRoutineReperfusionWindow ? 'A ausência de reperfusão foi determinada pela apresentação acima de 24 horas no caminho documentado; permaneceu indicada avaliação especializada e revisão da imagem vascular quando clinicamente pertinente.' : null,
+    isHemorrhagic && data.neurosurgeryContacted ? `A equipe de neurologia/neurocirurgia ou a regulação foi acionada${data.neurosurgeryConsultationNotes ? `, com o seguinte registro: ${data.neurosurgeryConsultationNotes}` : ''}.` : null,
     !receivedThrombolysis && !thrombectomy && !isHemorrhagic ? `Foi instituído manejo clínico sem reperfusão imediata${supportiveCare.length ? `, contemplando ${formatClinicalListText(supportiveCare)}` : ', com suporte, prevenção de complicações e prevenção secundária individualizada'}.` : null,
     'O paciente foi destinado à UTI ou unidade neurocrítica, mantendo monitorização neurológica, hemodinâmica e respiratória até a transferência formal do cuidado.'
   ])

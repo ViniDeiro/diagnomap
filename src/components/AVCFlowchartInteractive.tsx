@@ -77,8 +77,14 @@ export type AVCCaseData = {
   abcdeDomains?: string[]
   anticoagulantStatus?: 'nao' | 'sim' | 'incerto'
   anticoagulantDetails?: string
+  arrivalTime?: string
+  ctStartTime?: string
+  ctResultTime?: string
   glucose?: number
   glucoseCorrected?: boolean
+  hypoglycemiaTreatment?: string[]
+  repeatGlucose?: number
+  neurologicalReassessed?: boolean
   cincinnati?: string[]
   nihss?: number
   nihssItems?: NIHSSValues
@@ -108,6 +114,8 @@ export type AVCCaseData = {
   utiNotes?: string
   utiRequestedAt?: string
   outcome?: string
+  neurosurgeryContacted?: boolean
+  neurosurgeryConsultationNotes?: string
   completedAt?: string
 }
 
@@ -169,6 +177,17 @@ const parseBRDateToISO = (value: string) => {
   const date = new Date(year, month - 1, day)
   if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return undefined
   return `${match[3]}-${match[2]}-${match[1]}`
+}
+
+const minutesBetweenClockTimes = (start?: string, end?: string) => {
+  if (!start || !end) return null
+  const [startHour, startMinute] = start.split(':').map(Number)
+  const [endHour, endMinute] = end.split(':').map(Number)
+  if (![startHour, startMinute, endHour, endMinute].every(Number.isFinite)) return null
+  const startTotal = startHour * 60 + startMinute
+  let endTotal = endHour * 60 + endMinute
+  if (endTotal < startTotal) endTotal += 24 * 60
+  return endTotal - startTotal
 }
 
 const initialMeasureOptions = [
@@ -327,6 +346,14 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const parsedPostThrombolysisBloodPressure = parseAVCBloodPressure(data.postThrombolysisBloodPressure)
   const postThrombolysisPressureAboveTarget = Boolean(parsedPostThrombolysisBloodPressure && (parsedPostThrombolysisBloodPressure.systolic >= 180 || parsedPostThrombolysisBloodPressure.diastolic >= 105))
   const thrombolysisBlocked = hasAbsoluteContraindication || nonDisablingMinorStroke || !pressureWithinThrombolysisLimit || !data.pressureReadyForThrombolysis
+  const doorToCtMinutes = minutesBetweenClockTimes(data.arrivalTime, data.ctStartTime)
+  const doorToCtResultMinutes = minutesBetweenClockTimes(data.arrivalTime, data.ctResultTime)
+  const hypoglycemiaResolved = data.glucose == null || data.glucose >= 60 || (
+    Boolean(data.glucoseCorrected) &&
+    Boolean(data.neurologicalReassessed) &&
+    (data.hypoglycemiaTreatment || []).length > 0 &&
+    (data.repeatGlucose ?? 0) >= 60
+  )
 
   const update = (patch: Partial<AVCCaseData>) => setData(previous => ({ ...previous, ...patch }))
   const persist = (nextStage: AVCStage, patch: Partial<AVCCaseData> = {}) => {
@@ -578,6 +605,15 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
               <section><h2 className="text-lg font-black text-slate-950">Manifestações de início súbito</h2><p className="mt-1 text-sm text-slate-600">Marque todos os déficits presentes. Sinais posteriores também exigem ativação do protocolo.</p><div className="mt-4 grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <CardOption key={id} selected={(data.symptoms || []).includes(id)} title={label} onClick={() => selectMany('symptoms', id)} />)}</div></section>
               <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><h2 className="font-black text-slate-950">Último momento conhecido sem déficit</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-bold text-slate-700">Data<input type="text" inputMode="numeric" lang="pt-BR" placeholder="DD/MM/AAAA" maxLength={10} value={onsetDateText} onChange={event => { const digits = event.target.value.replace(/\D/g, '').slice(0, 8); const masked = digits.replace(/^(\d{2})(\d)/, '$1/$2').replace(/^(\d{2}\/\d{2})(\d)/, '$1/$2'); const onsetDate = parseBRDateToISO(masked); setOnsetDateText(masked); update({ onsetDate, onsetUnknown: false }) }} aria-label="Data do último momento conhecido sem déficit no formato dia, mês e ano" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><label className="text-sm font-bold text-slate-700">Horário<input type="time" lang="pt-BR" value={data.onsetTime || ''} onChange={event => update({ onsetTime: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><CardOption selected={Boolean(data.wakeUpStroke)} title="Déficit percebido ao acordar" onClick={() => update({ wakeUpStroke: !data.wakeUpStroke, onsetUnknown: true })} /><CardOption selected={Boolean(data.onsetUnknown)} title="Horário não determinado" onClick={() => update({ onsetUnknown: !data.onsetUnknown })} /></div></section>
+              <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
+                <div className="flex items-start gap-3"><Clock3 className="mt-0.5 h-6 w-6 shrink-0 text-violet-700" /><div><h2 className="font-black text-violet-950">Cronometria porta–imagem</h2><p className="mt-1 text-sm leading-relaxed text-violet-900">Registre os horários reais. A meta operacional é iniciar a imagem cerebral em até 20 minutos da chegada e obter interpretação sem atraso; a meta institucional deve ser conferida localmente.</p></div></div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                  <label className="text-sm font-bold text-violet-950">Chegada ao serviço<input type="time" value={data.arrivalTime || ''} onChange={event => update({ arrivalTime: event.target.value })} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-3" /></label>
+                  <label className="text-sm font-bold text-violet-950">Início da TC/RM<input type="time" value={data.ctStartTime || ''} onChange={event => update({ ctStartTime: event.target.value })} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-3" /></label>
+                  <label className="text-sm font-bold text-violet-950">Imagem interpretada<input type="time" value={data.ctResultTime || ''} onChange={event => update({ ctResultTime: event.target.value })} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-3" /></label>
+                </div>
+                {(doorToCtMinutes != null || doorToCtResultMinutes != null) && <div className="mt-4 flex flex-wrap gap-2 text-sm font-black"><span className={clsx('rounded-full border px-3 py-2', doorToCtMinutes != null && doorToCtMinutes <= 20 ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-amber-300 bg-amber-50 text-amber-950')}>Porta–imagem: {doorToCtMinutes ?? '—'} min</span><span className="rounded-full border border-violet-300 bg-white px-3 py-2 text-violet-950">Porta–interpretação: {doorToCtResultMinutes ?? '—'} min</span></div>}
+              </section>
               <ABCDEChecklist
                 value={data.abcdeDomains || []}
                 onChange={updateAbcde}
@@ -591,11 +627,24 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_glicemia' && (
-            <div className="space-y-5"><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-5"><span className="font-black text-slate-950">Glicemia capilar (mg/dL)</span><input type="number" min="10" max="1000" value={data.glucose ?? ''} onChange={event => update({ glucose: event.target.value ? Number(event.target.value) : undefined, glucoseCorrected: false })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg font-bold" /></label>{data.glucose != null && data.glucose < 60 && <div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-red-950"><h3 className="font-black">Hipoglicemia identificada</h3><p className="mt-1 text-sm">Corrija imediatamente e repita o exame neurológico. Persistência do déficit mantém a investigação de AVC.</p><CardOption selected={Boolean(data.glucoseCorrected)} title="Hipoglicemia corrigida e paciente reavaliado" danger onClick={() => update({ glucoseCorrected: !data.glucoseCorrected })} /></div>}<button type="button" disabled={data.glucose == null || (data.glucose < 60 && !data.glucoseCorrected)} onClick={() => persist('avc_triagem')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Seguir para triagem neurológica <ChevronRight /></button></div>
+            <div className="space-y-5">
+              <label className="block rounded-2xl border border-slate-200 bg-slate-50 p-5"><span className="font-black text-slate-950">Glicemia capilar (mg/dL)</span><input type="number" min="10" max="1000" value={data.glucose ?? ''} onChange={event => update({ glucose: event.target.value ? Number(event.target.value) : undefined, glucoseCorrected: false, hypoglycemiaTreatment: [], repeatGlucose: undefined, neurologicalReassessed: false })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg font-bold" /></label>
+              {data.glucose != null && data.glucose < 60 && <section className="space-y-4 rounded-2xl border-2 border-red-300 bg-red-50 p-5 text-red-950"><div><h3 className="font-black">Hipoglicemia identificada — tratar e documentar a resposta</h3><p className="mt-1 text-sm leading-relaxed">Corrigir imediatamente conforme nível de consciência e via segura. A investigação de AVC continua se o déficit focal persistir após normalização da glicose.</p></div><div className="grid gap-3 md:grid-cols-2"><CardOption selected={(data.hypoglycemiaTreatment || []).includes('oral')} title="Carboidrato por via oral, se consciente e deglutição segura" description="Registrar produto/dose na prescrição e reavaliar em curto intervalo." danger onClick={() => update({ hypoglycemiaTreatment: toggleValue(data.hypoglycemiaTreatment, 'oral') })} /><CardOption selected={(data.hypoglycemiaTreatment || []).includes('iv')} title="Glicose intravenosa, se alteração de consciência ou via oral insegura" description="Usar apresentação e dose do protocolo institucional, com acesso pérvio e nova glicemia." danger onClick={() => update({ hypoglycemiaTreatment: toggleValue(data.hypoglycemiaTreatment, 'iv') })} /></div><label className="block text-sm font-black">Glicemia após correção (mg/dL)<input type="number" min="10" max="1000" value={data.repeatGlucose ?? ''} onChange={event => update({ repeatGlucose: event.target.value ? Number(event.target.value) : undefined, glucoseCorrected: Number(event.target.value) >= 60 })} className="mt-2 w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-lg" /></label><CardOption selected={Boolean(data.neurologicalReassessed)} title="Exame neurológico repetido após a correção" description="Registrar se o déficit focal resolveu, melhorou ou persistiu." danger onClick={() => update({ neurologicalReassessed: !data.neurologicalReassessed })} />{!hypoglycemiaResolved && <p className="rounded-xl border border-red-200 bg-white p-3 text-sm font-bold">Para continuar, registre a intervenção, glicemia de controle ≥60 mg/dL e nova avaliação neurológica.</p>}</section>}
+              <button type="button" disabled={data.glucose == null || !hypoglycemiaResolved} onClick={() => persist('avc_triagem')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Seguir para triagem neurológica <ChevronRight /></button>
+            </div>
           )}
 
           {stage === 'avc_triagem' && (
-            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-3">{[['face','Assimetria ao sorrir','Um lado da face apresenta menor movimento.'],['braco','Queda de um braço','Há queda, ausência de elevação ou assimetria sustentada.'],['fala','Alteração da fala','Fala incompreensível, troca de palavras ou incapacidade de repetir frase.']].map(([id,title,description]) => <CardOption key={id} selected={(data.cincinnati || []).includes(id)} title={title} description={description} onClick={() => selectMany('cincinnati', id)} />)}</div><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Importante:</strong> triagem sem alteração não exclui circulação posterior, déficit visual, ataxia, AIT ou outros AVCs. A decisão deve considerar todo o exame neurológico.</div><button type="button" onClick={() => persist('avc_nihss')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Registrar triagem e calcular gravidade <ChevronRight /></button></div>
+            <div className="space-y-5">
+              <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-950 to-blue-900 text-white shadow-lg"><div className="p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200">Referência visual · Escala de Cincinnati</p><h2 className="mt-1 text-2xl font-black">Face, braços e fala</h2><p className="mt-2 max-w-3xl text-sm text-blue-100">Execute os três itens em menos de um minuto. Qualquer alteração torna a triagem positiva e exige continuidade do protocolo, sem transformar a escala em diagnóstico isolado.</p></div><div className="grid gap-px bg-white/15 md:grid-cols-3">{[
+                ['1','Face','Solicite um sorriso mostrando os dentes. Compare a mobilidade dos dois lados e procure queda da comissura.'],
+                ['2','Braços','Peça para manter ambos os braços elevados, palmas para cima, por 10 segundos. Observe queda ou incapacidade.'],
+                ['3','Fala','Peça para repetir uma frase simples. Procure fala arrastada, palavras inadequadas ou incapacidade de responder.']
+              ].map(([number,title,description]) => <article key={number} className="bg-white/10 p-5 backdrop-blur-sm"><div className="flex items-center gap-3"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white font-black text-indigo-900">{number}</span><h3 className="text-lg font-black">{title}</h3></div><p className="mt-3 text-sm leading-relaxed text-blue-50">{description}</p><div className="mt-4 grid grid-cols-2 gap-2 text-xs font-bold"><span className="rounded-lg border border-emerald-300/40 bg-emerald-400/15 p-2">Sem alteração: resposta simétrica e adequada</span><span className="rounded-lg border border-red-300/40 bg-red-400/15 p-2">Alterado: assimetria, queda ou resposta inadequada</span></div></article>)}</div></section>
+              <div className="grid gap-3 md:grid-cols-3">{[['face','Assimetria ao sorrir','Um lado da face apresenta menor movimento.'],['braco','Queda de um braço','Há queda, ausência de elevação ou assimetria sustentada.'],['fala','Alteração da fala','Fala incompreensível, troca de palavras ou incapacidade de repetir frase.']].map(([id,title,description]) => <CardOption key={id} selected={(data.cincinnati || []).includes(id)} title={title} description={description} onClick={() => selectMany('cincinnati', id)} />)}</div>
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Importante:</strong> triagem sem alteração não exclui circulação posterior, déficit visual, ataxia, AIT ou outros AVCs. A decisão deve considerar todo o exame neurológico.</div>
+              <button type="button" onClick={() => persist('avc_nihss')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Registrar triagem e calcular gravidade <ChevronRight /></button>
+            </div>
           )}
 
           {stage === 'avc_nihss' && (
@@ -607,7 +656,14 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_imagem' && (
-            <div className="space-y-4"><CardOption selected={data.imagingResult === 'hemorragia'} title="Hemorragia intracraniana presente" description="O caminho de reperfusão isquêmica deve ser interrompido." danger onClick={() => update({ imagingResult: 'hemorragia' })} /><CardOption selected={data.imagingResult === 'sem_hemorragia'} title="Sem hemorragia na imagem inicial" description="Prosseguir como possível AVC isquêmico conforme tempo e déficit." onClick={() => update({ imagingResult: 'sem_hemorragia' })} /><CardOption selected={data.imagingResult === 'inconclusiva'} title="Imagem sem diagnóstico definitivo" description="Uma TC precoce normal não exclui isquemia; correlacionar com clínica e imagem vascular." onClick={() => update({ imagingResult: 'inconclusiva' })} /><button type="button" disabled={!data.imagingResult} onClick={() => data.imagingResult === 'hemorragia' ? persist('avc_hemorragico_destino') : persist('avc_janela')} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:bg-slate-300', data.imagingResult === 'hemorragia' ? 'bg-red-700' : 'bg-indigo-700')}>Confirmar resultado e continuar <ChevronRight /></button></div>
+            <div className="space-y-5">
+              <section className="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white"><div className="flex gap-3"><ScanLine className="h-6 w-6 text-cyan-300" /><div><h2 className="font-black">Guia visual esquemático da imagem inicial</h2><p className="mt-1 text-sm text-slate-300">Representação didática para organizar a decisão; não substitui a leitura das imagens nem o laudo radiológico.</p></div></div><div className="mt-4 grid gap-3 md:grid-cols-3">{[
+                ['Hemorragia','Área hiperdensa no parênquima, ventrículos ou espaços subaracnoides muda imediatamente o caminho terapêutico.','bg-white'],
+                ['Isquemia precoce','Pode haver hipodensidade discreta, perda da diferenciação córtico-subcortical ou apagamento de sulcos.','bg-slate-500'],
+                ['Sem alteração aguda evidente','Uma TC inicial aparentemente normal ainda pode coexistir com AVC isquêmico nas primeiras horas.','bg-slate-800']
+              ].map(([title,description,tone], index) => <article key={title} className="rounded-xl border border-white/15 bg-white/5 p-4"><div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[10px] border-slate-500 bg-slate-700 shadow-inner"><span className={clsx('block rounded-full', tone, index === 0 ? 'h-7 w-5 translate-x-3 -translate-y-2' : index === 1 ? 'h-10 w-12 opacity-35' : 'h-2 w-2 opacity-20')} /></div><h3 className="mt-3 font-black">{title}</h3><p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p></article>)}</div></section>
+              <CardOption selected={data.imagingResult === 'hemorragia'} title="Hemorragia intracraniana presente" description="O caminho de reperfusão isquêmica deve ser interrompido." danger onClick={() => update({ imagingResult: 'hemorragia' })} /><CardOption selected={data.imagingResult === 'sem_hemorragia'} title="Sem hemorragia na imagem inicial" description="Prosseguir como possível AVC isquêmico conforme tempo e déficit." onClick={() => update({ imagingResult: 'sem_hemorragia' })} /><CardOption selected={data.imagingResult === 'inconclusiva'} title="Imagem sem diagnóstico definitivo" description="Uma TC precoce normal não exclui isquemia; correlacionar com clínica e imagem vascular." onClick={() => update({ imagingResult: 'inconclusiva' })} /><button type="button" disabled={!data.imagingResult} onClick={() => data.imagingResult === 'hemorragia' ? persist('avc_hemorragico_destino') : persist('avc_janela')} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:bg-slate-300', data.imagingResult === 'hemorragia' ? 'bg-red-700' : 'bg-indigo-700')}>Confirmar resultado e continuar <ChevronRight /></button>
+            </div>
           )}
 
           {stage === 'avc_janela' && (
@@ -711,7 +767,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_hemorragico_destino' && (
-            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-500 bg-red-50 p-6 text-red-950"><h2 className="text-2xl font-black">Migrar imediatamente para manejo de hemorragia intracraniana</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Suspender trombolítico, antiagregante e anticoagulante até avaliação específica.</li><li>Acionar neurologia/neurocirurgia e controlar pressão e sinais de hipertensão intracraniana.</li><li>Diferenciar hemorragia intraparenquimatosa de hemorragia subaracnoide e outras causas.</li><li>Providenciar reversão de anticoagulação quando indicada.</li></ul></div><ABCDEChecklist value={data.abcdeDomains || []} onChange={updateAbcde} title="ABCDE no destino neurocrítico" subtitle="Atualize os domínios durante a estabilização e transferência para a equipe especializada." tone="red" /><button type="button" onClick={() => proceedToIcu('Hemorragia intracraniana - encaminhado para protocolo neurocrítico')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar destino crítico e solicitar UTI</button></div>
+            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-500 bg-red-50 p-6 text-red-950"><h2 className="text-2xl font-black">Migrar imediatamente para manejo de hemorragia intracraniana</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Suspender trombolítico, antiagregante e anticoagulante até avaliação específica.</li><li>Controlar pressão, via aérea e sinais de hipertensão intracraniana conforme o tipo de sangramento.</li><li>Diferenciar hemorragia intraparenquimatosa, subaracnoide e outras causas na imagem.</li><li>Providenciar reversão de anticoagulação quando indicada.</li></ul></div><section className="rounded-2xl border border-violet-300 bg-violet-50 p-5"><h2 className="font-black text-violet-950">Interconsulta neurocirúrgica/neurológica</h2><p className="mt-1 text-sm text-violet-900">Acione imediatamente a equipe disponível e documente o contato, sem esperar o leito de UTI. Se não houver cobertura local, registrar regulação e centro de referência.</p><div className="mt-4"><CardOption selected={Boolean(data.neurosurgeryContacted)} title="Neurocirurgia/neurologia acionada ou regulação iniciada" danger onClick={() => update({ neurosurgeryContacted: !data.neurosurgeryContacted })} /></div><textarea value={data.neurosurgeryConsultationNotes || ''} onChange={event => update({ neurosurgeryConsultationNotes: event.target.value })} rows={3} placeholder="Equipe contatada, horário, orientação recebida e destino solicitado" className="mt-3 w-full rounded-xl border border-violet-200 bg-white p-3 text-sm text-slate-950" /></section><ABCDEChecklist value={data.abcdeDomains || []} onChange={updateAbcde} title="ABCDE no destino neurocrítico" subtitle="Atualize os domínios durante a estabilização e transferência para a equipe especializada." tone="red" /><button type="button" disabled={!data.neurosurgeryContacted} onClick={() => proceedToIcu('Hemorragia intracraniana - interconsulta especializada acionada e encaminhamento neurocrítico solicitado')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar interconsulta e solicitar UTI</button>{!data.neurosurgeryContacted && <p className="text-center text-sm font-bold text-red-700">Confirme o acionamento da equipe especializada ou da regulação para continuar.</p>}</div>
           )}
 
           {stage === 'avc_aguardo_uti' && (

@@ -3774,6 +3774,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   ))
   const universalSuggestedLabs = flowchart.id === 'geca'
     ? ['Hemograma', 'Ureia', 'Creatinina', 'Sódio', 'Potássio', 'Magnésio', 'Glicemia', 'PCR', 'Lactato', 'Coprocultura/painel', 'Toxina Shiga/STEC', 'C. difficile']
+    : flowchart.id === 'pep_hiv'
+      ? ['HIV — teste rápido/algoritmo diagnóstico', 'HBsAg', 'Anti-HBs', 'Anti-HCV', 'Sífilis — teste treponêmico', 'Gonococo — teste molecular', 'Clamídia — teste molecular', 'Teste de gravidez', 'Creatinina', 'TGO/TGP']
     : flowchart.id === 'edema_agudo_pulmao'
       ? ['Gasometria', 'Troponina', 'BNP/NT-proBNP', 'Ureia', 'Creatinina', 'Sódio', 'Potássio']
       : []
@@ -18700,39 +18702,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               )}
 
               {pepHivImageOpen && typeof document !== 'undefined' && createPortal((
-                <div
-                  className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"
-                  onClick={() => setPepHivImageOpen(false)}
-                  role="presentation"
-                >
-                  <div
-                    className="flex h-[92vh] max-h-[92vh] w-full max-w-[95vw] flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <div className="flex shrink-0 items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
-                      <div>
-                        <h4 className="text-lg font-extrabold text-slate-950">Fluxo visual da PEP ao HIV</h4>
-                        <p className="mt-1 text-sm text-slate-600">Referência rápida para decisão após exposição de risco.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setPepHivImageOpen(false)}
-                        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition-colors hover:bg-slate-200"
-                        title="Fechar imagem"
-                        aria-label="Fechar imagem do fluxo de PEP ao HIV"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-                    <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto bg-slate-50 p-4 sm:p-6">
-                      <img
-                        src="/pephiv.jpeg"
-                        alt="Fluxo visual de profilaxia pós-exposição ao HIV"
-                        className="max-h-full max-w-full rounded-xl border border-slate-200 bg-white object-contain shadow-sm"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <ZoomableImageModal
+                  title="Fluxo visual da PEP ao HIV"
+                  description="Use os controles para ampliar e percorra a imagem sem perder legibilidade."
+                  src="/pephiv.jpeg"
+                  alt="Fluxo visual de profilaxia pós-exposição ao HIV"
+                  onClose={() => setPepHivImageOpen(false)}
+                  maxWidthClassName="max-w-[96vw]"
+                />
               ), document.body)}
 
               {pepHivGuideOpen && typeof document !== 'undefined' && createPortal((

@@ -57,6 +57,10 @@ vm.runInNewContext(compiledClinicalSummary, {
       parseUniversalClinicalAssessment: raw => raw ? JSON.parse(raw) : null,
       summarizeUniversalPhysicalExam: exam => exam ? [`Neurológico: Glasgow ${exam.neuro?.glasgow ?? 15}`, `Pulmonar: ${exam.pulmonary?.altered || 'sem alteração descrita'}`] : []
     }
+    if (request.includes('UniversalLabNotebook')) return {
+      UNIVERSAL_LAB_RESULTS_KEY: '__universal_lab_results',
+      parseUniversalLabNotebook: raw => raw ? JSON.parse(raw) : { entries: [], notes: '' }
+    }
     return {}
   },
   console
@@ -78,7 +82,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, hellpFlowchart, acuteAorticSyndromeFlowchart, acutePulmonaryEdemaFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, hellpFlowchart, acuteAorticSyndromeFlowchart, acutePulmonaryEdemaFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart, pepHivFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -123,6 +127,7 @@ validateLinks(anaphylaxisFlowchart)
 validateLinks(asthmaFlowchart)
 validateLinks(tvpFlowchart)
 validateLinks(avcFlowchart)
+validateLinks(pepHivFlowchart)
 validateLinks(hypertensionFlowchart)
 validateLinks(hellpFlowchart)
 validateLinks(acuteAorticSyndromeFlowchart)
@@ -310,6 +315,16 @@ for (const marker of ['postThrombolysisBloodPressure', 'postThrombolysisBPManage
 }
 assert.match(avcComponentSource, /Imagem vascular\/avançada ou trombectomia indisponível — solicitar transferência/, 'AVC: falta opção explícita de transferência quando o recurso local é insuficiente')
 assert.match(avcComponentSource, /destination="transfer" context="avc:centro_reperfusao"/, 'AVC: transferência deve usar a tela universal de espera e passagem do cuidado')
+for (const marker of ['Cronometria porta–imagem', 'arrivalTime', 'ctStartTime', 'hypoglycemiaTreatment', 'repeatGlucose', 'Referência visual · Escala de Cincinnati', 'Guia visual esquemático da imagem inicial', 'neurosurgeryContacted', 'Interconsulta neurocirúrgica/neurológica']) {
+  assert.match(avcComponentSource, new RegExp(marker), `AVC: correção solicitada nos vídeos ausente (${marker})`)
+}
+for (const finalStep of pepHivFlowchart.finalSteps) {
+  assert.equal(pepHivFlowchart.steps[finalStep].requiresLabs, true, `PEP HIV: desfecho ${finalStep} deve permitir registrar exames basais`)
+}
+assert.match(flowSource, /Destino correto: alta com encaminhamento ambulatorial/, 'PEP HIV: indicação não pode terminar como transferência hospitalar')
+assert.match(flowSource, /Não é transferência hospitalar/, 'PEP HIV positivo: encaminhamento deve ser explicitamente ambulatorial')
+assert.match(emergencyComponentSource, /HIV — teste rápido\/algoritmo diagnóstico/, 'PEP HIV: campo de exames precisa sugerir testagem basal de HIV')
+assert.match(emergencyComponentSource, /ZoomableImageModal[\s\S]*src="\/pephiv\.jpeg"/, 'PEP HIV: imagem de referência deve abrir com ampliação')
 assert.equal(ituFlowchart.steps.itu_bacteriuria_excecoes.options.find(option => option.value === 'grupo_especial')?.nextStep, 'itu_bacteriuria_grupo_especial', 'ITU: bacteriúria em grupo especial deve passar pela orientação específica')
 const ituReachable = reachable(ituFlowchart)
 for (const required of [

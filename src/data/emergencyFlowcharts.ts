@@ -7152,9 +7152,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
     pep_iniciar: {
       id: 'pep_iniciar',
       title: 'Iniciar PEP',
-      description: 'Iniciar PEP e encaminhar para acompanhamento sorológico.',
+      description: 'Iniciar PEP e programar alta com seguimento ambulatorial especializado.',
       type: 'result',
       critical: true,
+      requiresLabs: true,
       group: 'PEP indicada',
       content: `
         <div class="space-y-4 text-sm">
@@ -7181,6 +7182,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
           <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
             <p><strong>Seguimento:</strong> repetir testagem para HIV em 30 dias, procurar infectologista para seguimento, avaliar outras ISTs/hepatites e orientar retorno se toxicidade grave, rash extenso, icterícia ou vômitos persistentes.</p>
           </div>
+          <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-950">
+            <p class="font-extrabold">Destino correto: alta com encaminhamento ambulatorial</p>
+            <p class="mt-1">Após prescrever e orientar, vincular a pessoa a serviço de referência em HIV/IST, infectologia ou Atenção Primária, conforme a rede local. Isso não corresponde a transferência hospitalar.</p>
+          </div>
         </div>
       `,
       options: []
@@ -7190,9 +7195,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
       title: 'PEP não indicada',
       description: 'Não houve exposição a material biológico com risco de transmissão do HIV.',
       type: 'result',
+      requiresLabs: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP não está indicada. Acompanhamento sorológico não é necessário para HIV por esta exposição.</p>
+          <p><strong>Conduta:</strong> PEP para HIV não está indicada por este contato. Documentar o evento, orientar prevenção e avaliar testagem ou cuidado de outras condições quando a história clínica indicar.</p>
         </div>
       `,
       options: []
@@ -7202,9 +7208,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
       title: 'PEP não indicada',
       description: 'Não houve tipo de exposição com risco de transmissão do HIV.',
       type: 'result',
+      requiresLabs: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP não está indicada. Acompanhamento sorológico não é necessário para HIV por esta exposição.</p>
+          <p><strong>Conduta:</strong> PEP para HIV não está indicada por esta via de contato. Registrar a avaliação e oferecer investigação dirigida de ISTs, hepatites, gestação ou lesões quando pertinente.</p>
         </div>
       `,
       options: []
@@ -7214,9 +7221,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
       title: 'PEP não indicada: fora da janela',
       description: 'Atendimento após 72 horas da exposição.',
       type: 'result',
+      requiresLabs: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP não está indicada após 72 horas. Manter acompanhamento sorológico da pessoa exposta.</p>
+          <p><strong>Conduta:</strong> não iniciar PEP após 72 horas. Realizar avaliação basal, definir o cronograma de testagem e encaminhar para seguimento ambulatorial conforme o tipo de exposição.</p>
         </div>
       `,
       options: []
@@ -7224,12 +7232,14 @@ export const pepHivFlowchart: EmergencyFlowchart = {
     pep_exposta_hiv_positivo: {
       id: 'pep_exposta_hiv_positivo',
       title: 'Pessoa exposta com HIV positivo/reagente',
-      description: 'PEP não indicada; encaminhar para cuidado especializado.',
+      description: 'PEP não indicada; alta com vinculação ambulatorial ao cuidado em HIV.',
       type: 'result',
       critical: true,
+      requiresLabs: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP não está indicada. Encaminhar para acompanhamento clínico especializado.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada. Confirmar o diagnóstico conforme o algoritmo de testagem, avaliar condições associadas e providenciar vinculação ambulatorial a serviço especializado para início do cuidado.</p>
+          <p class="mt-2"><strong>Não é transferência hospitalar:</strong> se a pessoa estiver clinicamente estável, concluir o atendimento com alta orientada e encaminhamento ambulatorial documentado.</p>
         </div>
       `,
       options: []
@@ -7239,9 +7249,10 @@ export const pepHivFlowchart: EmergencyFlowchart = {
       title: 'PEP não indicada',
       description: 'Pessoa fonte HIV negativa e sem exposição de risco recente.',
       type: 'result',
+      requiresLabs: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> PEP não está indicada. Acompanhamento sorológico não é necessário para HIV por esta exposição.</p>
+          <p><strong>Conduta:</strong> PEP não está indicada com os dados atuais. Registrar a testagem da fonte e da pessoa exposta e revisar outras ISTs, hepatites e necessidades preventivas conforme o contexto.</p>
         </div>
       `,
       options: []
