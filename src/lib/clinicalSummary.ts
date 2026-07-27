@@ -558,8 +558,6 @@ const buildTVPClinicalSummary = (
           : hasNegativeImaging
             ? 'O Doppler venoso não demonstrou trombose, devendo o resultado ser interpretado com a probabilidade clínica e a necessidade de exame seriado.'
             : 'Não foi documentado resultado conclusivo de imagem vascular nesta avaliação.'
-  const diagnosticInterpretation = `${wellsSentence} ${imagingAndLaboratorySentence}`
-
   const diagnosticImpression = hasPositiveImaging
     ? `Os achados obtidos são compatíveis com trombose venosa profunda${confirmedLocation ? ` ${confirmedLocation}` : ''} em ${selectedLegLabel}.`
     : isExcluded
@@ -591,8 +589,7 @@ const buildTVPClinicalSummary = (
       : '',
     vascularAlertFindings.length > 0
       ? `Foram ainda observados sinais de possível comprometimento venoso extenso ou ameaça ao membro: ${formatClinicalListText(vascularAlertFindings)}.`
-      : '',
-    diagnosticInterpretation
+      : ''
   ].filter(Boolean).join(' ')
 
   const antecedentesPessoais = uniqueTextItems([
@@ -604,7 +601,7 @@ const buildTVPClinicalSummary = (
 
   const extremitiesExamLine = `Membro avaliado: ${selectedLegLabel}. ${directedExamLines.length > 0 ? formatClinicalListText(directedExamLines) : 'sem achados semiológicos direcionados registrados neste atendimento'}${hasLimbThreat ? ' — sinais de ameaça ao membro presentes' : ''}.`
 
-  const hd = uniqueTextItems([diagnosticImpression, respiratoryImpression, vascularSeverityImpression])
+  const hd = uniqueTextItems([diagnosticImpression, respiratoryImpression, vascularSeverityImpression, wellsSentence, imagingAndLaboratorySentence])
 
   const conduct = uniqueTextItems([conductText])
   const therapeuticPlan = uniqueTextItems([anticoagulationText, therapyText, specialContextText])
@@ -775,7 +772,6 @@ const buildPepHivClinicalSummary = (
     hd: [indicationSentence],
     conduct: [conductSentence],
     therapeuticPlan: [
-      conductSentence,
       baselineAssessment
         ? `Na avaliação inicial, foram selecionados ${baselineAssessment.baselineTests.length ? formatClinicalListText(labelPepBaselineList(baselineAssessment.baselineTests)) : 'nenhum teste basal estruturado'}${baselineAssessment.conditionalTests.length ? `; conforme o perfil clínico, ${formatClinicalListText(labelPepBaselineList(baselineAssessment.conditionalTests))}` : ''}.${baselineAssessment.exposedSites.length ? ` Para gonococo e clamídia, foram identificados os seguintes sítios expostos: ${formatClinicalListText(labelPepBaselineList(baselineAssessment.exposedSites))}.` : ''}`
         : 'A avaliação inicial estruturada não foi registrada neste atendimento.',
@@ -1145,10 +1141,10 @@ const buildInfluenzaClinicalSummary = (
         : null
   ].filter(Boolean).join('. ') + '.'
   const investigationSentence = requestedExams.length
-    ? `Foi registrada coleta respiratória e solicitação dos seguintes exames: ${formatClinicalListText(requestedExams)}. A investigação etiológica não deve atrasar o início do antiviral nem as medidas de suporte indicadas.`
+    ? `Coleta respiratória e solicitação de ${formatClinicalListText(requestedExams)}.`
     : hasSRAG
-      ? 'Em razão da classificação como SRAG, recomenda-se coleta respiratória precoce para RT-PCR ou painel viral e investigação laboratorial e radiológica conforme gravidade, sem atrasar o tratamento.'
-      : 'Não há exames complementares estruturados registrados neste caminho.'
+      ? 'Em razão da classificação como SRAG, recomenda-se coleta respiratória precoce para RT-PCR ou painel viral e investigação laboratorial e radiológica conforme gravidade.'
+      : ''
 
   const prescribedItems = uniqueTextItems(
     patient.treatment.prescriptions
@@ -1156,9 +1152,9 @@ const buildInfluenzaClinicalSummary = (
       .map((item) => [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean).join(' - '))
   )
   const treatmentSentence = hasOseltamivirIndication
-    ? `Foi indicado oseltamivir ${oseltamivirDose}, com ajuste à função renal quando aplicável.${prescribedItems.length ? ` Prescrição registrada: ${formatClinicalListText(prescribedItems)}.` : ''}`
+    ? `Oseltamivir ${oseltamivirDose}, com ajuste à função renal quando aplicável.${prescribedItems.length ? ` Prescrição registrada: ${formatClinicalListText(prescribedItems)}.` : ''}`
     : isAmbulatorySymptomatic
-      ? 'Foi definido tratamento sintomático, hidratação, repouso relativo e orientação de sinais de alarme, sem indicação obrigatória de antiviral pelo checklist atual.'
+      ? 'Tratamento sintomático, hidratação e repouso relativo, sem indicação obrigatória de antiviral pelo checklist atual.'
       : 'A indicação definitiva de antiviral ainda não foi registrada neste caminho.'
   const diagnosticImpression = needsICU
     ? 'o quadro é compatível com síndrome respiratória aguda grave, com indicação de terapia intensiva e risco de deterioração respiratória ou hemodinâmica.'
@@ -1172,16 +1168,14 @@ const buildInfluenzaClinicalSummary = (
             ? 'há síndrome respiratória aguda grave ainda em estratificação quanto ao nível de internação.'
             : 'o quadro permanece em avaliação para síndrome gripal ou influenza, sem desfecho assistencial definitivo registrado.'
   const conductSentence = needsICU
-    ? `Manter internação e estabilização no pronto-socorro até a transferência efetiva para a UTI, com isolamento respiratório, monitorização contínua, oxigenoterapia e escalonamento do suporte ventilatório ou hemodinâmico conforme necessidade.${isBoarding ? ' A indisponibilidade de leito não deve atrasar as medidas compatíveis com cuidado intensivo.' : ''}`
+    ? `Internação e estabilização no pronto-socorro até a transferência efetiva para a UTI, com isolamento respiratório e monitorização contínua.${isBoarding ? ' A indisponibilidade de leito não deve atrasar as medidas compatíveis com cuidado intensivo.' : ''}`
     : isWard
-      ? `Manter internação em enfermaria, isolamento por gotículas, oseltamivir ${oseltamivirDose}, oxigenoterapia conforme necessidade e reavaliação clínica e respiratória seriada.${isBoarding ? ' Enquanto aguarda leito, manter os cuidados correspondentes ao nível de internação indicado.' : ''}`
-      : isAmbulatoryOseltamivir
-        ? 'Orientar hidratação, medidas sintomáticas, reavaliação em 48 a 72 horas e retorno imediato diante de dispneia, hipoxemia, confusão, hipotensão, desidratação ou piora do estado geral.'
-        : isAmbulatorySymptomatic
-          ? 'Orientar hidratação, repouso relativo, controle de febre e dor, reavaliação em 48 a 72 horas e retorno imediato diante de sinais de alarme.'
-          : 'Completar a avaliação de gravidade e definir tratamento e destino assistencial conforme evolução clínica.'
+      ? `Internação em enfermaria, isolamento por gotículas e reavaliação clínica e respiratória seriada.${isBoarding ? ' Enquanto aguarda leito, manter os cuidados correspondentes ao nível de internação indicado.' : ''}`
+      : isAmbulatoryOseltamivir || isAmbulatorySymptomatic
+        ? 'Alta com manejo ambulatorial, reavaliação em 48 a 72 horas e retorno imediato diante de dispneia, hipoxemia, confusão, hipotensão, desidratação ou piora do estado geral.'
+        : 'Completar a avaliação de gravidade e definir destino assistencial conforme evolução clínica.'
   const title = 'RELATÓRIO MÉDICO - INFLUENZA / SÍNDROME GRIPAL'
-  const hpma = uniqueTextItems([historySentence, severitySentence, investigationSentence]).join(' ')
+  const hpma = historySentence
   const ap = uniqueTextItems([
     riskFactors.length ? formatClinicalListText(riskFactors) : null,
     patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : null
@@ -1189,7 +1183,9 @@ const buildInfluenzaClinicalSummary = (
   const apText = ap.length > 0 ? formatClinicalListText(ap) : 'sem antecedentes ou fatores de risco relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
   const hd = uniqueTextItems([
-    `Síndrome gripal/influenza — ${diagnosticImpression}`
+    `Síndrome gripal/influenza — ${diagnosticImpression}`,
+    severitySentence,
+    investigationSentence
   ])
 
   return buildStructuredClinicalNote({
@@ -1368,14 +1364,11 @@ const buildPneumoniaClinicalSummary = (
           ? 'Pneumonia adquirida na comunidade sem critérios atuais de gravidade ou limitadores registrados, com manejo ambulatorial e reavaliação precoce.'
           : 'Suspeita de pneumonia adquirida na comunidade ainda em estratificação clínica e prognóstica.'
   const conductItems = uniqueTextItems([
-    destination === 'uti' ? 'Manter monitorização contínua, oxigenoterapia titulada, antibioticoterapia precoce, suporte hemodinâmico/ventilatório conforme necessidade e comunicação com a equipe da UTI.' : null,
-    destination === 'uti' && path.has('pac_cuidados_aguarda_uti') ? 'Enquanto aguarda leito, reavaliar em intervalos de 30 a 60 minutos ou imediatamente diante de deterioração.' : null,
-    destination === 'enfermaria' || destination === 'limitador' ? 'Internação em enfermaria ou unidade intermediária, com antibioticoterapia, controle de sintomas, oxigênio se necessário e reavaliação seriada.' : null,
-    destination === 'ambulatorial' ? 'Tratamento ambulatorial conforme prescrição, orientações de retorno e reavaliação em 48 a 72 horas.' : null,
-    dripScore != null && dripScore >= 4 ? 'Considerar cobertura ampliada para patógenos resistentes conforme epidemiologia, culturas, gravidade e protocolo institucional.' : null,
-    smartCopGuidance,
-    destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, função renal, eletrólitos e disfunção orgânica conforme disponibilidade e contexto clínico.' : null,
-    destination === 'ambulatorial' ? 'Orientar retorno imediato em caso de piora da dispneia, hipoxemia, confusão, hipotensão, febre persistente, intolerância oral ou piora do estado geral.' : null
+    destination === 'uti' ? 'Internação em terapia intensiva, com monitorização contínua e comunicação/transição formal para a equipe da UTI.' : null,
+    destination === 'uti' && path.has('pac_cuidados_aguarda_uti') ? 'Enquanto aguarda leito de UTI, reavaliar em intervalos de 30 a 60 minutos ou imediatamente diante de deterioração.' : null,
+    destination === 'enfermaria' || destination === 'limitador' ? 'Internação em enfermaria ou unidade intermediária, com reavaliação clínica e respiratória seriada.' : null,
+    destination === 'ambulatorial' ? 'Manejo ambulatorial, com reavaliação agendada em 48 a 72 horas.' : null,
+    destination === 'avaliacao' || destination === 'estabilizacao' ? 'Manter em observação no pronto-socorro até a conclusão da estratificação de gravidade e definição do destino assistencial.' : null
   ])
   const doctorSignature = formatDoctorSignature(doctor)
   const examinationLines = uniqueTextItems([
@@ -1384,21 +1377,33 @@ const buildPneumoniaClinicalSummary = (
     ...systemExamItems
   ])
   const investigationLines = uniqueTextItems([
-    requestedExams.length ? `Exames solicitados: ${requestedExams.join('; ')}` : null,
-    recordedLabs.length ? `Resultados disponíveis: ${recordedLabs.join('; ')}` : null
+    requestedExams.length ? `exames solicitados: ${requestedExams.join('; ')}` : null,
+    recordedLabs.length ? `resultados disponíveis: ${recordedLabs.join('; ')}` : null
   ])
   const investigationSentence = investigationLines.length
-    ? `Quanto à investigação complementar, constam: ${investigationLines.join('; ')}.`
-    : 'Não há exames complementares solicitados ou resultados laboratoriais registrados até o momento.'
+    ? `Investigação complementar: ${investigationLines.join('; ')}.`
+    : ''
   const severitySentence = scoreLines.length
-    ? `A estratificação de gravidade demonstrou: ${scoreLines.join('; ')}.`
-    : 'A estratificação prognóstica ainda não foi concluída neste caminho do fluxo.'
-  const hpma = uniqueTextItems([historyNarrative, investigationSentence, severitySentence]).join(' ')
+    ? `A estratificação de gravidade demonstrou ${scoreLines.join('; ')}.`
+    : ''
+  const hpma = historyNarrative
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
-  const planLine = conductItems.length
-    ? conductItems.join(' ')
-    : 'Recomenda-se completar a avaliação clínica e a estratificação de gravidade antes da definição do tratamento e do destino assistencial.'
+  const prescribedItems = uniqueTextItems(
+    patient.treatment.prescriptions
+      .filter((item) => item.prescribedBy === 'Fluxograma Pneumonia')
+      .map((item) => [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean).join(' - '))
+  )
+  const therapeuticPlan = uniqueTextItems([
+    destination === 'uti' ? 'Antibioticoterapia empírica precoce, oxigenoterapia titulada e suporte hemodinâmico/ventilatório conforme necessidade.' : null,
+    destination === 'enfermaria' || destination === 'limitador' ? 'Antibioticoterapia empírica, controle sintomático e oxigênio suplementar se necessário.' : null,
+    destination === 'ambulatorial' ? 'Antibioticoterapia oral conforme prescrição, hidratação, antitérmico/analgésico e retorno agendado em 48 a 72 horas.' : null,
+    prescribedItems.length ? `Prescrição registrada: ${formatClinicalListText(prescribedItems)}.` : null,
+    dripScore != null && dripScore >= 4 ? 'Considerar cobertura ampliada para patógenos resistentes conforme epidemiologia, culturas, gravidade e protocolo institucional.' : null,
+    smartCopGuidance,
+    destination === 'uti' || destination === 'estabilizacao' ? 'Avaliar gasometria, lactato, culturas, função renal, eletrólitos e disfunção orgânica conforme disponibilidade e contexto clínico.' : null,
+    destination === 'ambulatorial' ? 'Orientar retorno imediato em caso de piora da dispneia, hipoxemia, confusão, hipotensão, febre persistente, intolerância oral ou piora do estado geral.' : null
+  ])
 
   return buildStructuredClinicalNote({
     patient,
@@ -1409,9 +1414,9 @@ const buildPneumoniaClinicalSummary = (
     ap,
     muc,
     exam: formatRichExamFields(exam, vitalItems),
-    hd: [`Pneumonia adquirida na comunidade — ${impression}`],
-    conduct: [impression],
-    therapeuticPlan: [planLine],
+    hd: uniqueTextItems([`Pneumonia adquirida na comunidade${destination === 'avaliacao' ? ', ainda em estratificação de gravidade' : destination === 'uti' ? ' grave' : ''}.`, severitySentence, investigationSentence]),
+    conduct: conductItems.length ? conductItems : ['Recomenda-se completar a avaliação clínica e a estratificação de gravidade antes da definição do destino assistencial.'],
+    therapeuticPlan,
     finalTitle: current?.title || flowchart.name,
     finalDescription: current?.description || flowchart.description
   })
@@ -1494,11 +1499,12 @@ const buildTEPClinicalSummary = (
     }
     return Object.keys(physical).length ? normalDefault : undefined
   }
-  const hpma = uniqueTextItems([
-    `Paciente avaliado por ${chiefComplaint}.`,
-    scoreLines.length ? `A estratificação demonstrou ${scoreLines.join('; ')}.` : 'A estratificação diagnóstica ainda está em andamento.',
-    impression
-  ]).join(' ')
+  const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
+  const hpma = `${[
+    `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}`,
+    durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
+    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `associado a ${symptomText.replace(/[.]+$/, '')}` : null
+  ].filter(Boolean).join(', ')}.${patient.generalObservations?.trim() ? ` Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''}`
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
   const dispositionLine = isIcu
@@ -1515,7 +1521,7 @@ const buildTEPClinicalSummary = (
     patient,
     doctor,
     title: 'RELATÓRIO MÉDICO - TROMBOEMBOLISMO PULMONAR',
-    chiefComplaintAndDuration: `${chiefComplaint}${durationText ? `, com evolução há ${durationText}` : ''}`,
+    chiefComplaintAndDuration: `${chiefComplaint.replace(/[.]+$/, '')}${durationText ? `, com evolução há ${durationText}` : ''}`,
     hpma,
     ap,
     muc,
@@ -1528,7 +1534,7 @@ const buildTEPClinicalSummary = (
       extremities: findAltered(['extremities'], 'Pulsos periféricos simétricos, sem edemas, perfusão preservada'),
       skin: findAltered(['skin'], 'Pele íntegra, sem lesões cutâneas aparentes')
     },
-    hd: [impression],
+    hd: uniqueTextItems([impression, scoreLines.length ? `Estratificação: ${scoreLines.join('; ')}.` : null]),
     conduct: [dispositionLine],
     therapeuticPlan: [conduct],
     finalTitle,
@@ -1789,10 +1795,10 @@ const buildGecaClinicalSummary = (
       ? `A investigação complementar foi orientada pela gravidade, padrão das fezes, imunidade e contexto epidemiológico${selectedDirectedExamLabels.length > 0 ? `, com seleção de: ${selectedDirectedExamLabels.join('; ')}` : ''}.`
       : null,
     path.has('geca_antibioticos')
-      ? `Foi selecionada antibioticoterapia para cenário específico, após triagem de contraindicações e de suspeita de STEC${antibioticSchemeLabel ? `: ${antibioticSchemeLabel}${antibioticRegimen ? ` (${antibioticRegimen})` : ''}` : ''}.`
+      ? 'Foi indicada antibioticoterapia para o cenário específico, após triagem de contraindicações e de suspeita de STEC (esquema detalhado no plano terapêutico).'
       : null,
     path.has('geca_suporte_sintomatico')
-      ? `Foi definido plano de suporte com hidratação, alimentação e sintomáticos individualizados${selectedSupportActionLabels.length > 0 ? `: ${selectedSupportActionLabels.join('; ')}` : ''}${supportSafetyLabels.length > 0 ? `; orientações de segurança confirmadas: ${supportSafetyLabels.join('; ')}` : ''}.`
+      ? 'Foi definido plano de suporte com hidratação, alimentação e sintomáticos individualizados (medidas detalhadas no plano terapêutico).'
       : null,
     path.has('geca_suspeita_stec_shu')
       ? 'Diante da suspeita de STEC/SHU, foi indicada investigação de toxina Shiga, hemólise, plaquetas e função renal, sem antibiótico empírico ou antiperistáltico.'
@@ -1811,10 +1817,7 @@ const buildGecaClinicalSummary = (
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
   const durationText = patient.admission?.complaintDuration?.trim()
-  const hpma = uniqueTextItems([
-    `Apresentou ${chiefComplaint}, com classificação clínica compatível com ${profile}.`,
-    ...scoreLines
-  ]).join(' ')
+  const hpma = `Apresentou ${chiefComplaint}, com classificação clínica compatível com ${profile}.`
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
   const safetyText = 'Orientou-se reavaliação imediata diante de piora das perdas, vômitos repetidos, sangue nas fezes, febre alta persistente, muita sede, redução da diurese, prostração, síncope, dor abdominal intensa ou incapacidade de ingerir líquidos.'
@@ -1833,7 +1836,7 @@ const buildGecaClinicalSummary = (
     ap,
     muc,
     exam: splitUniversalExamLines(universalExamLines, vitalLines),
-    hd: [`Gastroenterite aguda — ${profile}, ${hydration}.`],
+    hd: uniqueTextItems([`Gastroenterite aguda — ${profile}, ${hydration}.`, ...scoreLines]),
     conduct: conductLines,
     therapeuticPlan,
     finalTitle,
@@ -1860,7 +1863,7 @@ const getUniversalAssessmentNarrative = (answers: Record<string, string>) => {
 
 const buildNarrativeSummary = ({
   patient, title, chiefComplaint, historyNarrative, examinationLines, scoreLines, finalTitle,
-  finalDescription, impression, conductLines, doctor
+  finalDescription, impression, conductLines, therapeuticPlanLines, doctor
 }: {
   patient: Patient
   title: string
@@ -1872,11 +1875,9 @@ const buildNarrativeSummary = ({
   finalDescription: string
   impression: string
   conductLines: string[]
+  therapeuticPlanLines?: string[]
   doctor?: { name?: string | null; crm?: string | null } | null
 }): ClinicalSummaryData => {
-  const stratificationNarrative = scoreLines.length
-    ? `A investigação e a estratificação clínica demonstraram ${scoreLines.join('; ')}.`
-    : 'A investigação e a estratificação ainda não possuem dados estruturados suficientes para uma conclusão definitiva.'
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
 
@@ -1885,13 +1886,13 @@ const buildNarrativeSummary = ({
     doctor,
     title,
     chiefComplaintAndDuration: chiefComplaint,
-    hpma: uniqueTextItems([historyNarrative, stratificationNarrative]).join(' '),
+    hpma: historyNarrative,
     ap,
     muc,
     exam: splitNarrativeExamLines(examinationLines),
-    hd: [impression],
+    hd: uniqueTextItems([impression, ...scoreLines]),
     conduct: conductLines,
-    therapeuticPlan: conductLines,
+    therapeuticPlan: therapeuticPlanLines ?? conductLines,
     finalTitle,
     finalDescription
   })
@@ -1961,17 +1962,19 @@ const buildAVCClinicalSummary = (
     ? 'Quadro compatível com acidente vascular cerebral hemorrágico, com necessidade de manejo neurocrítico.'
     : `Quadro conduzido como acidente vascular cerebral isquêmico agudo${outsideRoutineReperfusionWindow ? ', com apresentação acima de 24 horas e fora da janela rotineira de reperfusão pelo caminho registrado' : ''}${receivedThrombolysis ? ', submetido à trombólise intravenosa' : ''}${thrombectomy ? ' e com indicação de trombectomia mecânica' : ''}${transferredForReperfusionAssessment ? ', encaminhado para centro de referência por indisponibilidade local dos recursos necessários à avaliação de reperfusão' : ''}.`
   const conduct = uniqueTextItems([
-    Array.isArray(data.hypoglycemiaTreatment) && data.hypoglycemiaTreatment.length ? `A hipoglicemia foi tratada por ${data.hypoglycemiaTreatment.includes('iv') ? 'via intravenosa' : 'via oral segura'}, com glicemia de controle e repetição do exame neurológico documentadas.` : null,
-    receivedThrombolysis ? `Foi administrado ${data.thrombolytic === 'tenecteplase' ? 'tenecteplase' : 'alteplase'}${data.thrombolyticDose ? `, conforme cálculo registrado: ${data.thrombolyticDose}` : ''}, seguido de vigilância pós-reperfusão.` : null,
-    receivedThrombolysis && data.postThrombolysisBloodPressure ? `Na vigilância pós-reperfusão, foi registrada PA de ${data.postThrombolysisBloodPressure} mmHg${postBPManagement.length ? `; foram selecionadas as medidas: ${formatClinicalListText(postBPManagement)}` : ''}.` : null,
     thrombectomy ? 'Foi indicada transferência imediata para centro com capacidade de terapia endovascular, sem interromper os cuidados de suporte.' : null,
     transferredForReperfusionAssessment ? 'A ausência local de imagem avançada, angioimagem ou terapia endovascular foi registrada como limitação de recurso, e não como resultado negativo; foi solicitada transferência para continuidade da avaliação em centro de AVC.' : null,
-    outsideRoutineReperfusionWindow ? 'A ausência de reperfusão foi determinada pela apresentação acima de 24 horas no caminho documentado; permaneceu indicada avaliação especializada e revisão da imagem vascular quando clinicamente pertinente.' : null,
     isHemorrhagic && data.neurosurgeryContacted ? `A equipe de neurologia/neurocirurgia ou a regulação foi acionada${data.neurosurgeryConsultationNotes ? `, com o seguinte registro: ${data.neurosurgeryConsultationNotes}` : ''}.` : null,
-    !receivedThrombolysis && !thrombectomy && !isHemorrhagic ? `Foi instituído manejo clínico sem reperfusão imediata${supportiveCare.length ? `, contemplando ${formatClinicalListText(supportiveCare)}` : ', com suporte, prevenção de complicações e prevenção secundária individualizada'}.` : null,
     'O paciente foi destinado à UTI ou unidade neurocrítica, mantendo monitorização neurológica, hemodinâmica e respiratória até a transferência formal do cuidado.'
   ])
-  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - ACIDENTE VASCULAR CEREBRAL', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, doctor })
+  const therapeuticPlan = uniqueTextItems([
+    Array.isArray(data.hypoglycemiaTreatment) && data.hypoglycemiaTreatment.length ? `Correção da hipoglicemia por ${data.hypoglycemiaTreatment.includes('iv') ? 'via intravenosa' : 'via oral segura'}, com glicemia de controle e repetição do exame neurológico documentadas.` : null,
+    receivedThrombolysis ? `Administrado ${data.thrombolytic === 'tenecteplase' ? 'tenecteplase' : 'alteplase'}${data.thrombolyticDose ? `, conforme cálculo registrado: ${data.thrombolyticDose}` : ''}, seguido de vigilância pós-reperfusão.` : null,
+    receivedThrombolysis && data.postThrombolysisBloodPressure ? `Na vigilância pós-reperfusão, foi registrada PA de ${data.postThrombolysisBloodPressure} mmHg${postBPManagement.length ? `; foram selecionadas as medidas: ${formatClinicalListText(postBPManagement)}` : ''}.` : null,
+    outsideRoutineReperfusionWindow ? 'A ausência de reperfusão foi determinada pela apresentação acima de 24 horas no caminho documentado; permaneceu indicada avaliação especializada e revisão da imagem vascular quando clinicamente pertinente.' : null,
+    !receivedThrombolysis && !thrombectomy && !isHemorrhagic ? `Manejo clínico sem reperfusão imediata${supportiveCare.length ? `, contemplando ${formatClinicalListText(supportiveCare)}` : ', com suporte, prevenção de complicações e prevenção secundária individualizada'}.` : null
+  ])
+  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - ACIDENTE VASCULAR CEREBRAL', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, therapeuticPlanLines: therapeuticPlan, doctor })
 }
 
 const buildAsthmaClinicalSummary = (
@@ -2018,13 +2021,16 @@ const buildAsthmaClinicalSummary = (
   const destination = currentStep === 'asma_alta_final' ? 'alta do pronto-socorro' : currentStep === 'asma_internacao' ? 'internação hospitalar' : currentStep === 'asma_uti' ? 'internação em UTI' : currentStep === 'asma_intubacao' ? 'intubação orotraqueal e ventilação mecânica' : current?.title || 'conduta em definição'
   const impression = `Exacerbação asmática classificada como ${severity}, com ${response}.`
   const conduct = uniqueTextItems([
-    treatmentItems.length ? `Foram instituídos ${formatClinicalListText(treatmentItems)}.` : null,
     `O destino assistencial definido foi ${destination}.`,
+    currentStep === 'asma_uti' || currentStep === 'asma_intubacao' ? 'Manter cuidado intensivo com vigilância de falência ventilatória.' : null
+  ])
+  const therapeuticPlan = uniqueTextItems([
+    treatmentItems.length ? `Foram instituídos ${formatClinicalListText(treatmentItems)}.` : null,
     currentStep === 'asma_alta_final' ? 'Na alta, foram orientados tratamento controlador e de resgate, curso curto de corticoide oral quando indicado, revisão da técnica inalatória, plano de ação escrito, retorno precoce e sinais de alarme.' : null,
     currentStep === 'asma_internacao' ? 'Manter broncodilatação, corticoide sistêmico, oxigenação e reavaliação seriada em ambiente hospitalar.' : null,
-    currentStep === 'asma_uti' || currentStep === 'asma_intubacao' ? 'Manter cuidado intensivo, vigilância de falência ventilatória e estratégia ventilatória que reduza hiperinsuflação dinâmica.' : null
+    currentStep === 'asma_uti' || currentStep === 'asma_intubacao' ? 'Manter estratégia ventilatória que reduza hiperinsuflação dinâmica.' : null
   ])
-  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - EXACERBAÇÃO ASMÁTICA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines: uniqueTextItems([`gravidade inicial: ${severity}`, `resposta após tratamento: ${response}`, treatmentItems.length ? `tratamento realizado: ${formatClinicalListText(treatmentItems)}` : null]), finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, doctor })
+  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - EXACERBAÇÃO ASMÁTICA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines: uniqueTextItems([`gravidade inicial: ${severity}`, `resposta após tratamento: ${response}`]), finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, therapeuticPlanLines: therapeuticPlan, doctor })
 }
 
 const buildAnaphylaxisClinicalSummary = (
@@ -2061,11 +2067,13 @@ const buildAnaphylaxisClinicalSummary = (
     : 'Os critérios clínicos para anafilaxia não foram preenchidos no momento da avaliação, permanecendo indicada observação e reavaliação diante de progressão.'
   const observation = path.has('ana_observacao_alta') ? 'alta após período de observação e resolução dos sintomas' : path.has('ana_observacao_prolongada') ? 'observação prolongada ou internação pelo risco de recorrência' : currentStep === 'ana_internacao_via_aerea_choque' ? 'internação em unidade de cuidado intensivo' : 'reavaliação clínica seriada'
   const conduct = uniqueTextItems([
-    likely ? 'Foi priorizada adrenalina intramuscular na face anterolateral da coxa, sem aguardar exames complementares.' : null,
     prepared.length ? `A preparação simultânea incluiu ${prepared.length} medida(s) registrada(s), com ${abcde.length} domínio(s) do ABCDE documentado(s).` : null,
-    adjuncts.length ? `Foram selecionadas medidas adjuntas conforme as manifestações: ${formatClinicalListText(adjuncts)}.` : null,
     refractory ? 'Diante de refratariedade ou ameaça à via aérea, foram acionados suporte avançado, equipe experiente e planejamento de via aérea difícil, mantendo tratamento da anafilaxia em paralelo.' : null,
-    `O destino definido foi ${observation}.`,
+    `O destino definido foi ${observation}.`
+  ])
+  const therapeuticPlan = uniqueTextItems([
+    likely ? 'Adrenalina intramuscular na face anterolateral da coxa, priorizada sem aguardar exames complementares.' : null,
+    adjuncts.length ? `Foram selecionadas medidas adjuntas conforme as manifestações: ${formatClinicalListText(adjuncts)}.` : null,
     path.has('ana_observacao_alta') ? 'Na alta, orientar evitação do desencadeante, plano escrito, prescrição de adrenalina autoinjetável quando disponível e retorno imediato em caso de recorrência.' : null
   ])
   const scoreLines = uniqueTextItems([
@@ -2073,7 +2081,7 @@ const buildAnaphylaxisClinicalSummary = (
     abcde.length ? `ABCDE registrado: ${abcde.map(item => abcdeDomainLabels[item] || item).join('; ')}` : null,
     refractory ? 'anafilaxia refratária ou ameaça à vida identificada no percurso' : null
   ])
-  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - ANAFILAXIA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, doctor })
+  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - ANAFILAXIA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, therapeuticPlanLines: therapeuticPlan, doctor })
 }
 
 const buildHypertensionClinicalSummary = (
@@ -2087,6 +2095,9 @@ const buildHypertensionClinicalSummary = (
   const organLabels: Record<string, string> = { encephalopathy: 'encefalopatia hipertensiva', stroke: 'evento cerebrovascular agudo', aorta: 'síndrome aórtica aguda', coronary: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', renal: 'injúria renal aguda', pregnancy: 'pré-eclâmpsia grave/eclâmpsia/HELLP', catecholamine: 'crise catecolaminérgica' }
   const scenarioLabels: Record<string, string> = { aortic_syndrome: 'síndrome aórtica aguda', encephalopathy: 'encefalopatia hipertensiva', ischemic_stroke_lysis: 'AVC isquêmico candidato à trombólise', ischemic_stroke_no_lysis: 'AVC isquêmico sem trombólise', intracerebral_hemorrhage: 'hemorragia intracerebral', subarachnoid_hemorrhage: 'hemorragia subaracnoide', catecholamine_crisis: 'crise catecolaminérgica', acute_coronary_syndrome: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', pregnancy_emergency: 'emergência hipertensiva na gestação', other: 'outra lesão aguda de órgão-alvo' }
   const routeLabels: Record<string, string> = { chronic: 'hipertensão crônica descompensada, sem quadro agudo tempo-dependente', emergency: 'emergência hipertensiva com lesão aguda de órgão-alvo', important_elevation: 'elevação pressórica importante sem lesão aguda demonstrada', pseudocrisis: 'pseudocrise hipertensiva associada a fator precipitante' }
+  const pressureStrategyLabels: Record<string, string> = { nitroprusside: 'nitroprussiato de sódio', nitroglycerin: 'nitroglicerina', nicardipine: 'nicardipina', labetalol: 'labetalol', hydralazine: 'hidralazina', esmolol: 'esmolol', metoprolol: 'metoprolol', phentolamine: 'fentolamina', nifedipine_pregnancy: 'nifedipino no protocolo obstétrico', protocol_specific: 'agente definido pelo protocolo institucional' }
+  const oralPlanLabels: Record<string, string> = { adjust_chronic: 'retomada do esquema habitual', captopril: 'captopril por via oral', amlodipine: 'anlodipino por via oral', clonidine: 'clonidina por via oral', cause_only: 'tratamento do fator precipitante', no_medication: 'sem medicação imediata, com seguimento programado' }
+  const magnesiumLabels: Record<string, string> = { zuspan: 'Zuspan (ataque de 4 g EV e manutenção de 1 g/h)', pritchard: 'Pritchard conforme protocolo obstétrico' }
   const recordedSymptoms = Array.isArray(data.symptoms) ? data.symptoms.map(String) : []
   const explicitlyAsymptomatic = recordedSymptoms.includes('asymptomatic')
   const symptoms = recordedSymptoms.filter(item => item !== 'asymptomatic').map(item => symptomLabels[item] || item)
@@ -2102,28 +2113,58 @@ const buildHypertensionClinicalSummary = (
   const examLines = uniqueTextItems([
     universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null,
     ...universal.examItems,
-    data.pressureAfterRest ? `pressão após repouso e nova aferição: ${data.pressureAfterRest} mmHg` : null,
-    organDamage.length ? `lesão aguda de órgão-alvo identificada: ${formatClinicalListText(organDamage)}` : 'sem lesão aguda de órgão-alvo selecionada'
+    data.pressureAfterRest ? `pressão após repouso e nova aferição: ${data.pressureAfterRest} mmHg` : null
   ])
+  const examLabels: Record<string, string> = {
+    cbc: 'hemograma completo', renal: 'ureia, creatinina, sódio e potássio', ecg: 'eletrocardiograma',
+    troponin: 'troponina conforme apresentação', chest_xray: 'radiografia de tórax', glucose: 'glicemia capilar',
+    urinalysis: 'urina tipo 1', fundoscopy: 'fundoscopia', pregnancy: 'teste de gestação', targeted_image: 'imagem direcionada à lesão suspeita'
+  }
   const route = String(data.route || '')
   const scenario = data.scenario ? scenarioLabels[String(data.scenario)] || String(data.scenario) : ''
   const scoreLines = uniqueTextItems([
     route ? `classificação: ${routeLabels[route] || route}` : null,
     scenario ? `cenário predominante: ${scenario}` : null,
-    Array.isArray(data.exams) && data.exams.length ? `exames direcionados selecionados: ${formatClinicalListText(data.exams.map(String))}` : null,
-    data.selectedIVAgent ? `agente intravenoso selecionado: ${String(data.selectedIVAgent)}` : null,
-    data.selectedOralPlan ? `plano oral selecionado: ${String(data.selectedOralPlan)}` : null
+    organDamage.length ? `lesão aguda de órgão-alvo identificada: ${formatClinicalListText(organDamage)}` : 'sem lesão aguda de órgão-alvo selecionada',
+    Array.isArray(data.exams) && data.exams.length ? `exames direcionados: ${formatClinicalListText(data.exams.map((item) => examLabels[String(item)] || String(item)))}` : null
   ])
   const impression = routeLabels[route] ? `${routeLabels[route][0].toUpperCase()}${routeLabels[route].slice(1)}.` : 'Elevação pressórica ainda em classificação quanto à presença de lesão aguda de órgão-alvo.'
   const conduct = uniqueTextItems([
-    route === 'emergency' ? `Foi indicado tratamento intravenoso titulável orientado pelo cenário de ${scenario || 'lesão de órgão-alvo'}, com metas específicas e redução controlada da pressão.` : null,
-    route === 'emergency' ? 'Manter monitorização contínua, investigação dirigida e cuidado em CTI até estabilização e transferência formal.' : null,
-    route === 'important_elevation' ? 'Após repouso e nova aferição, foi definido ajuste cauteloso do tratamento oral, sem redução abrupta da pressão, com seguimento precoce.' : null,
-    route === 'pseudocrisis' ? 'Foi priorizado o tratamento do fator precipitante, observação da resposta e reavaliação da pressão antes da alta.' : null,
-    route === 'chronic' ? 'Foi orientada revisão do tratamento anti-hipertensivo habitual, adesão, fatores associados e acompanhamento ambulatorial.' : null,
+    route === 'emergency' ? 'Manter monitorização contínua, investigação dirigida e cuidado em UTI até estabilização e transferência formal.' : null,
+    route === 'important_elevation' ? 'Após repouso e nova aferição, permanece em observação até resposta ao ajuste terapêutico, com seguimento em até 7 dias.' : null,
+    route === 'pseudocrisis' ? 'Observação da resposta ao tratamento do fator precipitante, com reavaliação da pressão antes da alta.' : null,
+    route === 'chronic' ? 'Acompanhamento ambulatorial programado.' : null,
     data.disposition ? `Destino registrado: ${String(data.disposition)}.` : null
   ])
-  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - AVALIAÇÃO HIPERTENSIVA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, doctor })
+  const therapeuticPlan = uniqueTextItems([
+    route === 'emergency' ? `Tratamento intravenoso titulável orientado pelo cenário de ${scenario || 'lesão de órgão-alvo'}, com metas específicas e redução controlada da pressão.` : null,
+    data.selectedIVAgent ? `Estratégia pressórica selecionada: ${pressureStrategyLabels[String(data.selectedIVAgent)] || String(data.selectedIVAgent)}.` : null,
+    route === 'emergency' && data.scenario === 'pregnancy_emergency' && data.magnesiumRegimen ? `Sulfato de magnésio (esquema ${magnesiumLabels[String(data.magnesiumRegimen)] || String(data.magnesiumRegimen)}) para prevenção ou tratamento de convulsões, associado ao controle pressórico e à vigilância de reflexo patelar, respiração, diurese e função renal.` : null,
+    route === 'important_elevation' ? `Ajuste cauteloso do tratamento oral, com redução gradual em 24–72 horas, sem aplicar a meta aguda de 25%.` : null,
+    data.selectedOralPlan ? `Plano oral selecionado: ${oralPlanLabels[String(data.selectedOralPlan)] || String(data.selectedOralPlan)}.` : null,
+    route === 'pseudocrisis' ? 'Tratamento direcionado ao fator precipitante identificado.' : null,
+    route === 'chronic' ? 'Revisão do tratamento anti-hipertensivo habitual, adesão e fatores associados.' : null
+  ])
+  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - AVALIAÇÃO HIPERTENSIVA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, therapeuticPlanLines: therapeuticPlan, doctor })
+}
+
+const buildAorticClinicalSummary = (
+  patient: Patient, flowchart: EmergencyFlowchart, currentStep: string, answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+) => {
+  const data = parseFlowAnswerForSummary(answers.sindrome_aortica_caso_estruturado) || {}
+  const universal = getUniversalAssessmentNarrative(answers)
+  const findingLabels: Record<string, string> = { abrupt_pain: 'dor abrupta e intensa', pulse_deficit: 'assimetria de pulsos ou pressão entre membros', malperfusion: 'sinais de má perfusão', aortic_regurgitation: 'novo sopro de insuficiência aórtica', shock: 'instabilidade, choque ou tamponamento', risk_condition: 'condição predisponente para doença aórtica' }
+  const blockerLabels: Record<string, string> = { esmolol: 'esmolol', seloken: 'Seloken (tartarato de metoprolol)', labetalol: 'labetalol', non_dhp: 'alternativa não di-hidropiridínica por contraindicação ao betabloqueador' }
+  const vasodilatorLabels: Record<string, string> = { none: 'sem vasodilatador adicional após atingir a meta', nitroprusside: 'nitroprussiato após betabloqueio', nicardipine: 'nicardipina após betabloqueio' }
+  const imageLabels: Record<string, string> = { cta: 'angio-TC da aorta', tee: 'ecocardiograma transesofágico', pocus: 'POCUS/ecocardiograma focado complementar', transfer_imaging: 'transferência para obtenção de imagem definitiva' }
+  const findings = Array.isArray(data.findings) ? data.findings.map(item => findingLabels[String(item)] || String(item)) : []
+  const imaging = Array.isArray(data.imaging) ? data.imaging.map(item => imageLabels[String(item)] || String(item)) : []
+  const historyNarrative = `Paciente avaliado por suspeita de síndrome aórtica aguda${findings.length ? `, sustentada por ${formatClinicalListText(findings)}` : ''}. Foi iniciada terapia anti-impulso com ${blockerLabels[String(data.blocker)] || 'betabloqueador não especificado'}, com controle de frequência registrado antes da decisão sobre vasodilatação.`
+  const examLines = uniqueTextItems([universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null, ...universal.examItems])
+  const scoreLines = uniqueTextItems([data.blocker ? `betabloqueador inicial: ${blockerLabels[String(data.blocker)] || String(data.blocker)}` : null, data.vasodilator ? `estratégia pressórica subsequente: ${vasodilatorLabels[String(data.vasodilator)] || String(data.vasodilator)}` : null, imaging.length ? `imagem planejada/realizada: ${formatClinicalListText(imaging)}` : null, data.classification ? `classificação: ${String(data.classification).replaceAll('_', ' ')}` : null])
+  const conduct = uniqueTextItems(['Manter frequência entre 60–80 bpm e pressão sistólica abaixo de 120 mmHg, ou no menor valor que preserve perfusão adequada.', data.vasodilator && data.vasodilator !== 'none' ? 'O vasodilatador foi associado somente após o controle do impulso cardíaco.' : null, imaging.includes('POCUS/ecocardiograma focado complementar') ? 'POCUS foi registrado como exame complementar e não como método isolado para excluir síndrome aórtica.' : null, data.disposition ? `Destino: ${String(data.disposition)}.` : 'Acionar precocemente equipe vascular/cardiotorácica e organizar cuidado em UTI.'])
+  return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - SÍNDROME AÓRTICA AGUDA', chiefComplaint: 'Suspeita de síndrome aórtica aguda', historyNarrative, examinationLines: examLines, scoreLines, finalTitle: flowchart.steps[currentStep]?.title || flowchart.name, finalDescription: flowchart.steps[currentStep]?.description || flowchart.description, impression: data.classification ? `Síndrome aórtica em classificação ${String(data.classification).replaceAll('_', ' ')}.` : 'Síndrome aórtica aguda em investigação e estabilização.', conductLines: conduct, doctor })
 }
 
 const dengueAlarmLabels: Record<string, string> = {
@@ -2251,11 +2292,10 @@ const buildDengueClinicalSummary = (
   const safetyText = group === 'A' || group === 'B'
     ? 'Orientado retorno imediato diante de dor abdominal intensa, vômitos persistentes, sangramento, tontura ou síncope, sonolência ou irritabilidade, dispneia, redução da diurese ou piora do estado geral.'
     : 'Manter vigilância para choque, sangramento, disfunção orgânica, piora da perfusão, redução da diurese e alteração do nível de consciência, com escalonamento imediato do suporte quando necessário.'
-  const hpma = uniqueTextItems([historyNarrative, classificationText, investigationNarrative]).join(' ')
+  const hpma = historyNarrative
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
   const therapeuticPlan = uniqueTextItems([
-    conductText,
     prescriptions.length > 0 ? `Medicações registradas: ${formatClinicalListText(prescriptions)}.` : null,
     safetyText,
     notification ? `Notificação compulsória registrada sob o número ${notification}.` : null,
@@ -2271,7 +2311,7 @@ const buildDengueClinicalSummary = (
     ap,
     muc,
     exam: splitUniversalExamLines(physicalLines, vitalLines),
-    hd: [`Dengue — ${classificationText}`],
+    hd: uniqueTextItems([`Dengue — ${classificationText}`, investigationNarrative]),
     conduct: [conductText],
     therapeuticPlan,
     finalTitle,
@@ -2386,6 +2426,10 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'hipertensao') {
     return buildHypertensionClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'sindrome_aortica_aguda') {
+    return buildAorticClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
   }
 
   if (flowchart.id === 'hellp') {
