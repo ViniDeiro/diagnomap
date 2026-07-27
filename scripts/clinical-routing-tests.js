@@ -29,6 +29,7 @@ assert.equal(top('Começou com boca torta e fala enrolada', ['deficit_focal'])[0
 assert.equal(top('Reação alérgica após medicamento', ['urticaria', 'dispneia'])[0], 'anafilaxia')
 assert.equal(top('Febre e pele amarela com dor abdominal', ['febre', 'ictericia', 'dor_abdominal'])[0], 'cholangitis')
 assert.equal(top('Pressão muito alta com cefaleia', ['pressao_alta', 'cefaleia'])[0], 'hipertensao')
+assert.equal(top('Gestante com dor epigástrica e plaquetas baixas, suspeita de HELLP', ['dor_epigastrica'])[0], 'hellp')
 
 const thromboembolic = top('Falta de ar súbita e panturrilha inchada', ['dispneia', 'edema_perna'])
 assert.equal(thromboembolic[0], 'tep')
@@ -46,4 +47,3 @@ assert.match(sidebarSource, /Biblioteca de fluxogramas[\s\S]*view=emergency-sele
 assert.match(pageSource, /shouldOpenFlowchartLibraryDirectly/)
 
 console.log('Clinical routing tests passed: complaint matching, red flags, manual fallback and sidebar library route.')
-

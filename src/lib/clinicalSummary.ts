@@ -4,6 +4,7 @@ import type { EmergencyFlowchart, EmergencyStep } from '@/types/emergency'
 import { getOseltamivirDoseText } from '@/lib/influenza'
 import { getPneumoniaSmartCopRisk } from '@/lib/pneumonia'
 import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from '@/components/UniversalClinicalAssessment'
+import { parseUniversalLabNotebook, UNIVERSAL_LAB_RESULTS_KEY } from '@/components/UniversalLabNotebook'
 
 export type ClinicalSummaryData = {
   chiefComplaint: string
@@ -192,6 +193,171 @@ const formatClinicalListText = (items: string[]) => {
   return `${items.slice(0, -1).join(', ')} e ${items.at(-1)}`
 }
 
+const NOT_RECORDED = 'não registrado neste atendimento'
+
+type StructuredExamFields = {
+  generalAppearance?: string
+  neuro?: string
+  cardiac?: string
+  pulmonary?: string
+  abdomen?: string
+  extremities?: string
+  skin?: string
+}
+
+const formatStructuredExamBlock = (exam: StructuredExamFields) => [
+  'SINAIS VITAIS',
+  exam.generalAppearance?.trim() || `Estado geral e sinais vitais: ${NOT_RECORDED}.`,
+  exam.neuro?.trim() || `Neurológico: ${NOT_RECORDED}.`,
+  exam.cardiac?.trim() || `Cardiovascular: ${NOT_RECORDED}.`,
+  exam.pulmonary?.trim() || `Respiratório: ${NOT_RECORDED}.`,
+  `Abdome: ${exam.abdomen?.trim() || NOT_RECORDED}.`,
+  exam.extremities?.trim() || `Extremidades: ${NOT_RECORDED}.`,
+  `Pele: ${exam.skin?.trim() || NOT_RECORDED}.`
+].join('\n')
+
+const buildStructuredClinicalNote = ({
+  patient,
+  doctor,
+  title,
+  chiefComplaintAndDuration,
+  hpma,
+  ap,
+  muc,
+  exam,
+  hd,
+  conduct,
+  therapeuticPlan,
+  finalTitle,
+  finalDescription
+}: {
+  patient: Patient
+  doctor?: { name?: string | null; crm?: string | null } | null
+  title: string
+  chiefComplaintAndDuration: string
+  hpma: string
+  ap: string
+  muc: string
+  exam: StructuredExamFields
+  hd: string[]
+  conduct: string[]
+  therapeuticPlan: string[]
+  finalTitle: string
+  finalDescription: string
+}): ClinicalSummaryData => {
+  const doctorSignature = formatDoctorSignature(doctor)
+  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`
+  const hdList = uniqueTextItems(hd).length > 0 ? uniqueTextItems(hd) : ['Hipótese diagnóstica ainda não definida neste atendimento.']
+  const conductList = uniqueTextItems(conduct).length > 0 ? uniqueTextItems(conduct) : ['Conduta ainda em definição neste atendimento.']
+  const planList = uniqueTextItems(therapeuticPlan).length > 0 ? uniqueTextItems(therapeuticPlan) : ['Plano terapêutico ainda em definição neste atendimento.']
+  const sections = [
+    title,
+    '',
+    'IDENTIFICAÇÃO',
+    identification,
+    '',
+    `Queixa e Duração: ${chiefComplaintAndDuration}`,
+    '',
+    `HPMA (História Pregressa da Moléstia Atual): ${hpma}`,
+    '',
+    `AP (Antecedentes Pessoais): ${ap}`,
+    '',
+    `MUC (Medicações de Uso Contínuo): ${muc}`,
+    '',
+    'Exame Físico:',
+    formatStructuredExamBlock(exam),
+    '',
+    'HD (Hipóteses Diagnósticas):',
+    hdList.map((item) => `- ${item}`).join('\n'),
+    '',
+    'Conduta:',
+    conductList.map((item) => `- ${item}`).join('\n'),
+    '',
+    'Plano Terapêutico:',
+    planList.map((item) => `- ${item}`).join('\n'),
+    '',
+    doctorSignature,
+    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
+  ]
+  const continuousText = sections.join('\n')
+  return {
+    chiefComplaint: chiefComplaintAndDuration,
+    historyLines: [hpma],
+    examinationLines: uniqueTextItems([exam.generalAppearance, exam.neuro, exam.cardiac, exam.pulmonary, exam.abdomen, exam.extremities, exam.skin]),
+    scoreLines: hdList,
+    finalTitle,
+    finalDescription,
+    finalNarrative: [...conductList, ...planList].join(' '),
+    doctorSignature,
+    conductLines: [...conductList, ...planList],
+    continuousText,
+    text: continuousText
+  }
+}
+
+const formatRichExamFields = (exam: PneumoniaExamSummary | null, vitalItems: string[]): StructuredExamFields => {
+  const generalLabels: Record<string, string> = { bom: 'BEG', regular: 'REG', mal: 'MEG', grave: 'estado grave', pessimo: 'estado péssimo' }
+  const grade = (value: unknown) => (typeof value === 'number' && Number.isFinite(value)) ? ` ${value}/4+` : ''
+  const generalParts = exam ? uniqueTextItems([
+    generalLabels[String(exam.generalState)] || null,
+    exam.coloration?.status === 'corado' ? 'corado' : exam.coloration?.status ? `descorado${grade(exam.coloration.grade)}` : null,
+    exam.hydration?.status === 'hidratado' ? 'hidratado' : exam.hydration?.status ? `desidratado${grade(exam.hydration.grade)}` : null,
+    exam.cyanosis?.status === 'acianotico' ? 'acianótico' : exam.cyanosis?.status ? `cianótico${grade(exam.cyanosis.grade)}` : null,
+    exam.jaundice?.status === 'anicterico' ? 'anictérico' : exam.jaundice?.status ? `ictérico${grade(exam.jaundice.grade)}` : null,
+    exam.temperature?.status === 'afebril' ? 'afebril' : exam.temperature?.status === 'febril' ? 'febril' : null,
+    exam.respiration?.status === 'eupneico' ? 'eupneico' : exam.respiration?.status === 'taquipneico' ? 'taquipneico' : exam.respiration?.status ? `dispneico${grade(exam.respiration.grade)}` : null
+  ]) : []
+  const generalAppearance = [generalParts.join(', ') || null, vitalItems.length ? vitalItems.join(', ') : null].filter(Boolean).join(' – ') || undefined
+  const glasgow = exam?.neuro?.glasgow
+  const neuroAltered = exam?.neuro?.altered?.trim()
+  const neuro = glasgow != null || neuroAltered
+    ? uniqueTextItems([glasgow != null ? `Consciente, Glasgow ${glasgow}` : null, neuroAltered || null]).join(' — ')
+    : undefined
+  const cardiac = exam?.cardiac?.altered?.trim() || undefined
+  const pulmonary = exam?.pulmonary?.altered?.trim() || undefined
+  const abdomen = exam?.abdomen?.altered?.trim() || undefined
+  const extremities = exam?.extremities?.altered?.trim() || undefined
+  const skin = exam ? (exam.skin?.altered?.trim() || 'Pele íntegra, sem lesões cutâneas aparentes') : undefined
+  return { generalAppearance, neuro, cardiac, pulmonary, abdomen, extremities, skin }
+}
+
+const splitUniversalExamLines = (examLines: string[], vitalItems: string[]): StructuredExamFields => {
+  const get = (label: string) => {
+    const line = examLines.find((item) => item.startsWith(`${label}:`))
+    return line ? line.slice(label.length + 1).trim() : undefined
+  }
+  const cianose = get('Cianose')
+  const icter = get('Icterícia')
+  const generalParts = uniqueTextItems([
+    get('Estado geral'),
+    get('Coloração'),
+    get('Hidratação'),
+    cianose ? (cianose === 'ausente' ? 'acianótico' : `cianose ${cianose}`) : undefined,
+    icter ? (icter === 'ausente' ? 'anictérico' : `icterícia ${icter}`) : undefined,
+    get('Respiração')
+  ])
+  const generalAppearance = [generalParts.join(', ') || null, vitalItems.length ? vitalItems.join(', ') : null].filter(Boolean).join(' – ') || undefined
+  return {
+    generalAppearance,
+    neuro: get('Neurológico'),
+    cardiac: get('Cardiovascular'),
+    pulmonary: get('Pulmonar'),
+    abdomen: get('Abdome'),
+    extremities: get('Extremidades'),
+    skin: get('Pele')
+  }
+}
+
+const splitNarrativeExamLines = (examLines: string[]): StructuredExamFields => {
+  const knownLabels = new Set(['Estado geral', 'Coloração', 'Hidratação', 'Cianose', 'Icterícia', 'Respiração', 'Neurológico', 'Cardiovascular', 'Pulmonar', 'Abdome', 'Extremidades', 'Pele', 'Informações adicionais'])
+  const base = splitUniversalExamLines(examLines, [])
+  const leftovers = examLines.filter((line) => !knownLabels.has(line.split(':')[0]))
+  return {
+    ...base,
+    generalAppearance: uniqueTextItems([base.generalAppearance, ...leftovers]).join(' | ') || undefined
+  }
+}
+
 const getTVPLegLabel = (value?: string) => {
   if (value === 'left') return 'membro inferior esquerdo'
   if (value === 'right') return 'membro inferior direito'
@@ -253,9 +419,11 @@ const buildTVPClinicalSummary = (
   const vascularAlertFindings = uniqueTextItems([
     ...allReportedFindings.filter((item) => limbThreatPattern.test(item))
   ])
-  const vitalSigns = examData?.sinaisVitais && typeof examData.sinaisVitais === 'object'
-    ? examData.sinaisVitais as Record<string, unknown>
-    : {}
+  const legacyExamData = examData?.exameFisico && typeof examData.exameFisico === 'object' ? examData : null
+  const vitalSigns = {
+    ...(patient.admission?.vitalSigns || {}),
+    ...(legacyExamData?.sinaisVitais && typeof legacyExamData.sinaisVitais === 'object' ? legacyExamData.sinaisVitais as Record<string, unknown> : {})
+  }
   const vitalLines = uniqueTextItems([
     vitalSigns.temperature != null ? `temperatura ${String(vitalSigns.temperature).replace('.', ',')} °C` : null,
     vitalSigns.heartRate != null ? `frequência cardíaca ${vitalSigns.heartRate} bpm` : null,
@@ -264,8 +432,8 @@ const buildTVPClinicalSummary = (
     vitalSigns.oxygenSaturation != null ? `saturação de oxigênio ${vitalSigns.oxygenSaturation}%` : null,
     vitalSigns.glucose ? `glicemia capilar ${vitalSigns.glucose} mg/dL` : null
   ])
-  const exam = examData?.exameFisico && typeof examData.exameFisico === 'object'
-    ? examData.exameFisico as TVPExamSummary
+  const exam = legacyExamData?.exameFisico && typeof legacyExamData.exameFisico === 'object'
+    ? legacyExamData.exameFisico as TVPExamSummary
     : null
   const directedExamLines = uniqueTextItems([
     ...selectedFindings.filter((item) => /edema|cacifo|circunferência|calor|rubor|veias|palpação|eritema|cianose|palidez|pulsos|Homans/i.test(item)),
@@ -411,12 +579,9 @@ const buildTVPClinicalSummary = (
     : isUrgentVascular
       ? 'A gravidade clínica registrada motivou abordagem vascular em caráter de urgência.'
       : ''
-  const diagnosticConclusion = [diagnosticImpression, respiratoryImpression, vascularSeverityImpression].filter(Boolean).join(' ')
-  const finalNarrative = `Conclusão: ${diagnosticConclusion} ${conductText}`
-
   const historyNarrative = [
     symptoms.length > 0
-      ? `Na história clínica, foram registrados sintomas locais compatíveis com doença tromboembólica venosa, incluindo ${formatClinicalListText(symptoms)}.`
+      ? `Paciente com queixa de ${formatClinicalListText(symptoms)} em ${selectedLegLabel}, quadro compatível com doença tromboembólica venosa.`
       : `A investigação foi motivada por suspeita clínica de trombose venosa profunda em ${selectedLegLabel}.`,
     riskFactors.length > 0
       ? `Como fatores predisponentes, foram identificados ${formatClinicalListText(riskFactors)}.`
@@ -426,44 +591,43 @@ const buildTVPClinicalSummary = (
       : '',
     vascularAlertFindings.length > 0
       ? `Foram ainda observados sinais de possível comprometimento venoso extenso ou ameaça ao membro: ${formatClinicalListText(vascularAlertFindings)}.`
-      : ''
+      : '',
+    diagnosticInterpretation
   ].filter(Boolean).join(' ')
-  const examinationNarrative = `${vitalLines.length > 0 ? `Na avaliação inicial, foram registrados ${formatClinicalListText(vitalLines)}. ` : ''}${directedExamLines.length > 0 ? `Ao exame físico direcionado do ${selectedLegLabel}, observaram-se ${formatClinicalListText(directedExamLines)}.` : `O exame físico direcionado do ${selectedLegLabel} não apresentou registro estruturado suficiente no fluxo aplicado, devendo seus achados ser correlacionados com a avaliação presencial realizada pela equipe assistente.`}`
-  const antithromboticNarrative = [anticoagulationText, therapyText, specialContextText].filter(Boolean).join(' ')
 
-  const paragraphs = [
+  const antecedentesPessoais = uniqueTextItems([
+    riskFactors.length > 0 ? formatClinicalListText(riskFactors) : null,
+    patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : null
+  ])
+  const ap = antecedentesPessoais.length > 0 ? formatClinicalListText(antecedentesPessoais) : 'sem antecedentes ou fatores de risco relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+
+  const extremitiesExamLine = `Membro avaliado: ${selectedLegLabel}. ${directedExamLines.length > 0 ? formatClinicalListText(directedExamLines) : 'sem achados semiológicos direcionados registrados neste atendimento'}${hasLimbThreat ? ' — sinais de ameaça ao membro presentes' : ''}.`
+
+  const hd = uniqueTextItems([diagnosticImpression, respiratoryImpression, vascularSeverityImpression])
+
+  const conduct = uniqueTextItems([conductText])
+  const therapeuticPlan = uniqueTextItems([anticoagulationText, therapyText, specialContextText])
+
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
     title,
-    '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint.replace(/[.]+$/, '')}. Durante a avaliação, foram analisados fatores clínicos de risco, sinais de gravidade, probabilidade pré-teste pelo escore de Wells, marcadores laboratoriais e achados de imagem vascular.`,
-    '',
-    historyNarrative,
-    '',
-    examinationNarrative,
-    '',
-    diagnosticInterpretation,
-    '',
-    antithromboticNarrative,
-    '',
-    finalNarrative,
-    '',
-    doctorSignature,
-    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
-  ]
-  const continuousText = paragraphs.join('\n')
-
-  return {
-    chiefComplaint,
-    historyLines: [historyNarrative],
-    examinationLines: [examinationNarrative],
-    scoreLines: [diagnosticInterpretation],
+    chiefComplaintAndDuration: `${chiefComplaint.replace(/[.]+$/, '')}${patient.admission?.complaintDuration ? `, com duração de ${patient.admission.complaintDuration}` : ''}`,
+    hpma: historyNarrative,
+    ap,
+    muc,
+    exam: {
+      generalAppearance: vitalLines.length > 0 ? formatClinicalListText(vitalLines) : undefined,
+      extremities: extremitiesExamLine,
+      skin: exam?.skin?.altered?.trim() || undefined
+    },
+    hd,
+    conduct,
+    therapeuticPlan,
     finalTitle,
-    finalDescription,
-    finalNarrative,
-    doctorSignature,
-    conductLines: uniqueTextItems([antithromboticNarrative, conductText]),
-    continuousText,
-    text: continuousText
-  }
+    finalDescription
+  })
 }
 
 const pepHivDecisionLabels: Record<string, string> = {
@@ -548,45 +712,28 @@ const buildPepHivClinicalSummary = (
   const title = isPepIndicated
     ? 'RELATÓRIO MÉDICO - PROFILAXIA PÓS-EXPOSIÇÃO AO HIV'
     : 'RELATÓRIO MÉDICO - AVALIAÇÃO DE EXPOSIÇÃO AO HIV'
-  const finalNarrative = `${indicationSentence} ${conductSentence}`
   const examinationLine = 'Não há necessidade de exame físico específico para definir PEP ao HIV quando a decisão depende principalmente da caracterização da exposição; eventuais lesões, violência sexual, ferimentos ou sinais de IST devem ser avaliados e documentados no atendimento presencial.'
+  const hpma = decisionLines.length > 0
+    ? `Atendimento por possível exposição ao HIV. Na história da exposição e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}. ${indicationSentence}`
+    : `Atendimento por possível exposição ao HIV. Ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório. ${indicationSentence}`
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
 
-  const paragraphs = [
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
     title,
-    '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint}. A avaliação foi conduzida como urgência médica por possível exposição ao HIV, com objetivo de definir indicação de profilaxia pós-exposição dentro da janela terapêutica.`,
-    '',
-    decisionLines.length > 0
-      ? `Na história da exposição e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.`
-      : 'Na história da exposição, ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório.',
-    '',
-    examinationLine,
-    '',
-    `A impressão clínica final foi: ${finalTitle}. ${finalDescription}`,
-    '',
-    finalNarrative,
-    '',
-    doctorSignature
-  ]
-  const continuousText = paragraphs.join('\n')
-
-  return {
-    chiefComplaint,
-    historyLines: decisionLines,
-    examinationLines: [examinationLine],
-    scoreLines: uniqueTextItems([
-      windowDecision || null,
-      exposedDecision || null,
-      sourceDecision || sourceRiskDecision || null
-    ]),
+    chiefComplaintAndDuration: chiefComplaint,
+    hpma,
+    ap,
+    muc,
+    exam: { generalAppearance: examinationLine },
+    hd: [indicationSentence],
+    conduct: [conductSentence],
+    therapeuticPlan: [conductSentence],
     finalTitle,
-    finalDescription,
-    finalNarrative,
-    doctorSignature,
-    conductLines: [conductSentence],
-    continuousText,
-    text: continuousText
-  }
+    finalDescription
+  })
 }
 
 const ansiedadeDecisionLabels: Record<string, string> = {
@@ -681,18 +828,16 @@ const buildAnsiedadeClinicalSummary = (
     : ''
   const nonDrugDecision = getAnsiedadeDecision(answers, 'ansiedade_abordagem_nao_medicamentosa')
   const medicationDecision = getAnsiedadeDecision(answers, 'ansiedade_medicamentosa')
-  const symptoms = getAnsiedadeList(answers, 'ansiedade_inicio', 'symptoms', ansiedadeSymptomLabels)
+  const symptoms = uniqueTextItems(patient.admission?.symptoms || [])
   const assessmentChecks = getAnsiedadeList(answers, 'ansiedade_excluir_organico', 'assessmentChecks', ansiedadeAssessmentLabels)
   const interventions = getAnsiedadeList(answers, 'ansiedade_abordagem_nao_medicamentosa', 'interventions', ansiedadeInterventionLabels)
   const medicationAnswer = parseFlowAnswerForSummary(answers.ansiedade_medicamentosa)
   const medicationCode = typeof medicationAnswer?.medication === 'string' ? medicationAnswer.medication : ''
-  const mentalAnswer = parseFlowAnswerForSummary(answers.ansiedade_avaliacao_psiquiatrica)
-  const mentalRisks = getAnsiedadeList(answers, 'ansiedade_avaliacao_psiquiatrica', 'mentalRisks', ansiedadeMentalRiskLabels)
-  const mentalPlan = mentalAnswer?.mentalPlan === 'urgent'
-    ? 'foi definida avaliação especializada urgente, com observação protegida conforme risco'
-    : mentalAnswer?.mentalPlan === 'ambulatory'
-      ? 'foi programado seguimento ambulatorial em saúde mental'
-      : ''
+  const administeredMedications = uniqueTextItems(
+    patient.treatment.prescriptions
+      .filter((item) => item.prescribedBy === 'Fluxograma Crise de Ansiedade')
+      .map((item) => [item.medication, item.dosage, item.frequency, item.duration].filter(Boolean).join(' - '))
+  )
   const decisionLines = uniqueTextItems([
     initialDecision,
     symptoms.length ? `foram registradas as manifestações ${formatClinicalListText(symptoms)}` : '',
@@ -703,9 +848,7 @@ const buildAnsiedadeClinicalSummary = (
     interventions.length ? `foram realizadas as medidas ${formatClinicalListText(interventions)}` : '',
     medicationDecision,
     medicationCode ? `foi registrada dose de ${ansiedadeMedicationLabels[medicationCode] || formatClinicalValue(medicationCode)}, com reavaliação clínica` : '',
-    medicationAnswer?.medicationWithheld ? 'a medicação foi evitada e o caso seguiu para avaliação de segurança em saúde mental' : '',
-    mentalRisks.length ? `foram identificados os fatores de risco ${formatClinicalListText(mentalRisks)}` : '',
-    mentalPlan
+    medicationAnswer?.medicationWithheld ? 'a medicação foi evitada e o caso seguiu para avaliação de segurança em saúde mental' : ''
   ])
 
   const finalTitle = currentStepData?.title || flowchart.name
@@ -732,55 +875,39 @@ const buildAnsiedadeClinicalSummary = (
         ? 'Foi recomendado solicitar avaliação psicológica/psiquiátrica quando disponível no pronto-socorro ou programar seguimento ambulatorial, com atenção a ideação suicida, risco psicossocial, intoxicação, psicose ou incapacidade de autocuidado.'
         : 'Foi mantida abordagem escalonada, priorizando acolhimento, psicoeducação, respiração diafragmática e benzodiazepínico em dose baixa apenas se persistirem sofrimento importante e não houver contraindicação clínica.'
 
-  const medicationSentence = hadMedicationStep && !isOrganic
-    ? 'Na etapa medicamentosa, foi considerado benzodiazepínico em baixa dose, com necessidade de reavaliar resposta clínica, nível de sedação e segurança respiratória, evitando uso em intoxicação por álcool ou outros depressores, hipoxemia, sedação excessiva ou risco respiratório.'
-    : ''
+  const medicationSentence = administeredMedications.length > 0
+    ? `Medicação administrada: ${formatClinicalListText(administeredMedications)}, com necessidade de reavaliar resposta clínica, nível de sedação e segurança respiratória.`
+    : hadMedicationStep && !isOrganic
+      ? 'Na etapa medicamentosa, foi considerado benzodiazepínico em baixa dose, com necessidade de reavaliar resposta clínica, nível de sedação e segurança respiratória, evitando uso em intoxicação por álcool ou outros depressores, hipoxemia, sedação excessiva ou risco respiratório.'
+      : ''
 
   const title = isOrganic
     ? 'RELATÓRIO MÉDICO - SINTOMAS ANSIOSOS COM SUSPEITA DE CAUSA ORGÂNICA'
     : 'RELATÓRIO MÉDICO - CRISE DE ANSIEDADE / ATAQUE DE PÂNICO'
-  const finalNarrative = [clinicalImpression, medicationSentence, conductSentence].filter(Boolean).join(' ')
   const examinationLine = isOrganic
     ? 'A avaliação física e complementar deve ser direcionada ao sinal de alerta predominante, incluindo sinais vitais, oximetria, glicemia, ECG, exame neurológico ou avaliação respiratória conforme apresentação.'
     : 'Na avaliação inicial, recomenda-se registrar sinais vitais, oximetria, glicemia quando indicada, exame cardiovascular, respiratório e neurológico direcionado, especialmente quando houver dor torácica, palpitações, dispneia, parestesias ou alteração do nível de consciência.'
+  const hpma = decisionLines.length > 0
+    ? `${clinicalImpression} Na história da moléstia atual e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.`
+    : `${clinicalImpression} Ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório.`
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
 
-  const paragraphs = [
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
     title,
-    '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de ${chiefComplaint}. A avaliação foi conduzida no contexto de sintomas ansiosos agudos no pronto-socorro, com prioridade inicial de excluir causas orgânicas potencialmente graves antes de atribuir o quadro a ansiedade.`,
-    '',
-    decisionLines.length > 0
-      ? `Na história da moléstia atual e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.`
-      : 'Na história da moléstia atual, ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório.',
-    '',
-    examinationLine,
-    '',
-    `A impressão clínica final foi: ${finalTitle}. ${finalDescription}`,
-    '',
-    finalNarrative,
-    '',
-    doctorSignature
-  ]
-  const continuousText = paragraphs.join('\n')
-
-  return {
-    chiefComplaint,
-    historyLines: decisionLines,
-    examinationLines: [examinationLine],
-    scoreLines: uniqueTextItems([
-      organicDecision || null,
-      routeAlertDecision || null,
-      nonDrugDecision || null,
-      medicationDecision || null
-    ]),
+    chiefComplaintAndDuration: chiefComplaint,
+    hpma,
+    ap,
+    muc,
+    exam: { generalAppearance: examinationLine },
+    hd: [clinicalImpression],
+    conduct: [conductSentence],
+    therapeuticPlan: uniqueTextItems([medicationSentence]),
     finalTitle,
-    finalDescription,
-    finalNarrative,
-    doctorSignature,
-    conductLines: [conductSentence],
-    continuousText,
-    text: continuousText
-  }
+    finalDescription
+  })
 }
 
 const formatStructuredAnswer = (parsed: FlowSummaryAnswer | null) => {
@@ -991,35 +1118,33 @@ const buildInfluenzaClinicalSummary = (
         : isAmbulatorySymptomatic
           ? 'Orientar hidratação, repouso relativo, controle de febre e dor, reavaliação em 48 a 72 horas e retorno imediato diante de sinais de alarme.'
           : 'Completar a avaliação de gravidade e definir tratamento e destino assistencial conforme evolução clínica.'
-  const finalNarrative = `Conclusão: ${diagnosticImpression} ${conductSentence}`
-  const doctorSignature = formatDoctorSignature(doctor)
   const title = 'RELATÓRIO MÉDICO - INFLUENZA / SÍNDROME GRIPAL'
-  const continuousText = [
-    title, '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaint.replace(/[.]+$/, '')}". Durante a avaliação, foi realizada investigação estruturada para síndrome gripal e influenza, com registro de sinais vitais, exame físico, critérios de SRAG, fatores de risco, necessidade de antiviral e definição do nível de cuidado.`, '',
-    historySentence, '',
-    examinationSentence, '',
-    severitySentence, '',
-    investigationSentence, '',
-    treatmentSentence, '',
-    finalNarrative, '',
-    doctorSignature,
-    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
-  ].join('\n')
+  const hpma = uniqueTextItems([historySentence, severitySentence, investigationSentence]).join(' ')
+  const ap = uniqueTextItems([
+    riskFactors.length ? formatClinicalListText(riskFactors) : null,
+    patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : null
+  ])
+  const apText = ap.length > 0 ? formatClinicalListText(ap) : 'sem antecedentes ou fatores de risco relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+  const hd = uniqueTextItems([
+    `Síndrome gripal/influenza — ${diagnosticImpression}`
+  ])
 
-  return {
-    chiefComplaint,
-    historyLines: [historySentence],
-    examinationLines,
-    scoreLines: uniqueTextItems([...severitySigns, ...riskFactors, ...worseningSigns, ...icuCriteria, ...requestedExams]),
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
+    title,
+    chiefComplaintAndDuration: `${chiefComplaint.replace(/[.]+$/, '')}${durationText ? `, com evolução há ${durationText}` : ''}`,
+    hpma,
+    ap: apText,
+    muc,
+    exam: formatRichExamFields(exam, vitalItems),
+    hd,
+    conduct: [conductSentence],
+    therapeuticPlan: [treatmentSentence],
     finalTitle: current?.title || flowchart.name,
-    finalDescription: current?.description || flowchart.description,
-    finalNarrative,
-    doctorSignature,
-    conductLines: [conductSentence],
-    continuousText,
-    text: continuousText
-  }
+    finalDescription: current?.description || flowchart.description
+  })
 }
 
 const buildPneumoniaClinicalSummary = (
@@ -1201,46 +1326,34 @@ const buildPneumoniaClinicalSummary = (
     requestedExams.length ? `Exames solicitados: ${requestedExams.join('; ')}` : null,
     recordedLabs.length ? `Resultados disponíveis: ${recordedLabs.join('; ')}` : null
   ])
-  const finalNarrative = `${impression} ${conductItems.join(' ')}`.trim()
-  const identificationSentence = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${patient.gender || 'não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}, com queixa principal de "${chiefComplaint.replace(/[.]+$/, '')}". Durante a avaliação, foi realizada investigação estruturada para pneumonia adquirida na comunidade, com registro da história clínica, sinais vitais, exame físico, exames complementares e escores de gravidade para definição do destino assistencial.`
-  const examinationSentence = examinationLines.length
-    ? `Na avaliação clínica e semiológica, foram registrados: ${examinationLines.join('; ')}.`
-    : 'Na avaliação clínica e semiológica, não foram registrados sinais vitais ou achados de exame físico estruturado, devendo esses dados ser complementados e correlacionados com a avaliação presencial.'
   const investigationSentence = investigationLines.length
     ? `Quanto à investigação complementar, constam: ${investigationLines.join('; ')}.`
     : 'Não há exames complementares solicitados ou resultados laboratoriais registrados até o momento.'
   const severitySentence = scoreLines.length
     ? `A estratificação de gravidade demonstrou: ${scoreLines.join('; ')}.`
     : 'A estratificação prognóstica ainda não foi concluída neste caminho do fluxo.'
-  const conclusionSentence = `Conclusão: ${impression}`
-  const planSentence = conductItems.length
+  const hpma = uniqueTextItems([historyNarrative, investigationSentence, severitySentence]).join(' ')
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+  const planLine = conductItems.length
     ? conductItems.join(' ')
     : 'Recomenda-se completar a avaliação clínica e a estratificação de gravidade antes da definição do tratamento e do destino assistencial.'
-  const continuousSections = [
-    title, '',
-    identificationSentence, '',
-    historyNarrative, '',
-    examinationSentence, '',
-    investigationSentence, '',
-    severitySentence, '',
-    `${conclusionSentence} ${planSentence}`, '',
-    doctorSignature,
-    `Gerado em: ${new Date().toLocaleString('pt-BR')}`
-  ]
-  const continuousText = continuousSections.join('\n')
-  return {
-    chiefComplaint,
-    historyLines: [historyNarrative],
-    examinationLines,
-    scoreLines: [...scoreLines, ...investigationLines],
+
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
+    title,
+    chiefComplaintAndDuration: `${chiefComplaint.replace(/[.]+$/, '')}${durationText ? `, com evolução há ${durationText}` : ''}`,
+    hpma,
+    ap,
+    muc,
+    exam: formatRichExamFields(exam, vitalItems),
+    hd: [`Pneumonia adquirida na comunidade — ${impression}`],
+    conduct: [impression],
+    therapeuticPlan: [planLine],
     finalTitle: current?.title || flowchart.name,
-    finalDescription: current?.description || flowchart.description,
-    finalNarrative,
-    doctorSignature,
-    conductLines: conductItems,
-    continuousText,
-    text: continuousText
-  }
+    finalDescription: current?.description || flowchart.description
+  })
 }
 
 const buildTEPClinicalSummary = (
@@ -1307,29 +1420,58 @@ const buildTEPClinicalSummary = (
           ? 'Orientada investigação de diagnósticos diferenciais e retorno imediato diante de piora respiratória, dor torácica, síncope, hemoptise ou hipoxemia.'
           : 'Prosseguir com a estratégia diagnóstica conforme probabilidade pré-teste e estabilidade clínica.'
   const chiefComplaint = patient.admission?.chiefComplaint || patient.admission?.symptoms?.join('; ') || 'suspeita clínica de tromboembolismo pulmonar'
-  const doctorSignature = formatDoctorSignature(doctor)
   const finalTitle = current?.title || flowchart.name
   const finalDescription = current?.description || flowchart.description
-  const historyLines = decisions.slice(-10)
-  const examinationLines = [...(vitalLines.length ? [`Sinais vitais: ${vitalLines.join(', ')}`] : []), ...examLines]
-  const finalNarrative = `${impression} ${conduct}`
-  const text = [
-    'RESUMO CLÍNICO SEMIOLÓGICO - TEP', '', 'Identificação e contexto',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`,
-    '', 'Queixa principal / HMA', chiefComplaint,
-    '', 'Sinais vitais e exame físico', examinationLines.length ? examinationLines.map(item => `- ${item}`).join('\n') : '- Não registrados.',
-    '', 'Raciocínio diagnóstico e estratificação', scoreLines.length ? scoreLines.map(item => `- ${item}`).join('\n') : '- Estratificação ainda não concluída.',
-    '', 'Caminho percorrido', historyLines.length ? historyLines.map(item => `- ${item}`).join('\n') : '- Avaliação inicial.',
-    '', 'Impressão clínica e conduta', finalNarrative, '', 'Médico responsável', doctorSignature
-  ].join('\n')
-  const continuousText = [
-    'RELATÓRIO MÉDICO - TROMBOEMBOLISMO PULMONAR', '',
-    `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, avaliado(a) por ${chiefComplaint}.`,
-    examinationLines.length ? `Na avaliação objetiva, foram registrados ${examinationLines.join('; ')}.` : 'Sinais vitais e exame físico ainda não foram registrados.',
+  const durationText = patient.admission?.complaintDuration?.trim()
+  const findAltered = (keys: string[]) => {
+    for (const key of keys) {
+      const record = physical[key]
+      if (record && typeof record === 'object' && typeof (record as Record<string, unknown>).altered === 'string' && ((record as Record<string, unknown>).altered as string).trim()) {
+        return ((record as Record<string, unknown>).altered as string).trim()
+      }
+    }
+    return undefined
+  }
+  const hpma = uniqueTextItems([
+    `Paciente avaliado por ${chiefComplaint}.`,
     scoreLines.length ? `A estratificação demonstrou ${scoreLines.join('; ')}.` : 'A estratificação diagnóstica ainda está em andamento.',
-    impression, conduct, '', doctorSignature
-  ].join('\n\n')
-  return { chiefComplaint, historyLines, examinationLines, scoreLines, finalTitle, finalDescription, finalNarrative, doctorSignature, conductLines: [conduct], continuousText, text }
+    impression
+  ]).join(' ')
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+  const dispositionLine = isIcu
+    ? 'Internação em UTI/unidade de cuidado intensivo.'
+    : isOutpatient
+      ? 'Alta com tratamento ambulatorial.'
+      : currentStep === 'tep_internacao'
+        ? 'Internação hospitalar.'
+        : isExcluded
+          ? 'Investigação de diagnósticos diferenciais; sem indicação de internação por TEP.'
+          : 'Conduta em definição conforme estratégia diagnóstica e estabilidade clínica.'
+
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
+    title: 'RELATÓRIO MÉDICO - TROMBOEMBOLISMO PULMONAR',
+    chiefComplaintAndDuration: `${chiefComplaint}${durationText ? `, com evolução há ${durationText}` : ''}`,
+    hpma,
+    ap,
+    muc,
+    exam: {
+      generalAppearance: vitalLines.length > 0 ? formatClinicalListText(vitalLines) : undefined,
+      neuro: findAltered(['neuro', 'neurological']),
+      cardiac: findAltered(['cardiac', 'cardiovascular']),
+      pulmonary: findAltered(['pulmonary', 'respiratory']),
+      abdomen: findAltered(['abdomen', 'abdominal']),
+      extremities: findAltered(['extremities']),
+      skin: findAltered(['skin']) || (Object.keys(physical).length ? 'Pele íntegra, sem lesões cutâneas aparentes' : undefined)
+    },
+    hd: [impression],
+    conduct: [dispositionLine],
+    therapeuticPlan: [conduct],
+    finalTitle,
+    finalDescription
+  })
 }
 
 const buildGecaClinicalSummary = (
@@ -1496,9 +1638,10 @@ const buildGecaClinicalSummary = (
     vitalSigns?.glucose != null ? `glicemia capilar ${vitalSigns.glucose} mg/dL` : null
   ])
 
+  const universalExamLines = summarizeUniversalPhysicalExam(universalAssessment?.exameFisico)
   const examinationLines = uniqueTextItems([
     vitalLines.length > 0 ? `Sinais vitais: ${vitalLines.join(', ')}` : null,
-    ...summarizeUniversalPhysicalExam(universalAssessment?.exameFisico),
+    ...universalExamLines,
     `Avaliação do estado de hidratação: ${hydration}.`,
     planCMonitoringLines.length > 0 ? `Monitorização inicial do Plano C: ${planCMonitoringLines.join(', ')}.` : null,
     planCReassessmentClinicalLines.length > 0 ? `Reavaliação após expansão: ${planCReassessmentClinicalLines.join(', ')}.` : null,
@@ -1605,52 +1748,35 @@ const buildGecaClinicalSummary = (
 
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
-  const finalNarrative = conductLines.length > 0
-    ? conductLines.join(' ')
-    : `A avaliação encontra-se na etapa ${finalTitle}. ${finalDescription}`
-  const doctorSignature = formatDoctorSignature(doctor)
-  const historyLines = decisionLines.slice(-12)
-  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`
-  const continuousText = [
-    'RELATÓRIO MÉDICO - GASTROENTERITE AGUDA',
-    '',
-    `${identification} Apresentou ${chiefComplaint}, com classificação clínica compatível com ${profile}.`,
-    '',
-    examinationLines.length > 0
-      ? `Na avaliação inicial, registrou-se ${examinationLines.join(' ')}`
-      : 'Sinais vitais e achados objetivos do exame físico não foram registrados no fluxo.',
-    '',
-    scoreLines.length > 0 ? `A estratificação demonstrou: ${scoreLines.join(' ')}` : null,
-    '',
-    finalNarrative,
-    '',
-    'Orientou-se reavaliação imediata diante de piora das perdas, vômitos repetidos, sangue nas fezes, febre alta persistente, muita sede, redução da diurese, prostração, síncope, dor abdominal intensa ou incapacidade de ingerir líquidos.',
-    '',
-    doctorSignature
-  ].filter((item): item is string => item != null).join('\n')
-  const text = [
-    'RESUMO CLÍNICO SEMIOLÓGICO - GECA', '', 'Identificação e contexto', identification,
-    '', 'Queixa principal / HMA', chiefComplaint,
-    '', 'Padrão clínico e hidratação', scoreLines.map((item) => `- ${item}`).join('\n'),
-    '', 'Caminho percorrido', historyLines.length > 0 ? historyLines.map((item) => `- ${item}`).join('\n') : '- Avaliação inicial.',
-    '', 'Exame e dados objetivos', examinationLines.length > 0 ? examinationLines.map((item) => `- ${item}`).join('\n') : '- Não registrados.',
-    '', 'Síntese final e conduta', finalNarrative,
-    '', 'Médico responsável', doctorSignature
-  ].join('\n')
+  const durationText = patient.admission?.complaintDuration?.trim()
+  const hpma = uniqueTextItems([
+    `Apresentou ${chiefComplaint}, com classificação clínica compatível com ${profile}.`,
+    ...scoreLines
+  ]).join(' ')
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+  const safetyText = 'Orientou-se reavaliação imediata diante de piora das perdas, vômitos repetidos, sangue nas fezes, febre alta persistente, muita sede, redução da diurese, prostração, síncope, dor abdominal intensa ou incapacidade de ingerir líquidos.'
+  const therapeuticPlan = uniqueTextItems([
+    antibioticSchemeLabel ? `Esquema antimicrobiano: ${antibioticSchemeLabel}${antibioticRegimen ? ` — ${antibioticRegimen}` : ''}.` : null,
+    selectedSupportActionLabels.length > 0 ? `Suporte sintomático: ${selectedSupportActionLabels.join('; ')}.` : null,
+    safetyText
+  ])
 
-  return {
-    chiefComplaint,
-    historyLines,
-    examinationLines,
-    scoreLines,
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
+    title: 'RELATÓRIO MÉDICO - GASTROENTERITE AGUDA',
+    chiefComplaintAndDuration: `${chiefComplaint}${durationText ? `, com evolução há ${durationText}` : ''}`,
+    hpma,
+    ap,
+    muc,
+    exam: splitUniversalExamLines(universalExamLines, vitalLines),
+    hd: [`Gastroenterite aguda — ${profile}, ${hydration}.`],
+    conduct: conductLines,
+    therapeuticPlan,
     finalTitle,
-    finalDescription,
-    finalNarrative,
-    doctorSignature,
-    conductLines,
-    continuousText,
-    text
-  }
+    finalDescription
+  })
 }
 
 const getUniversalAssessmentNarrative = (answers: Record<string, string>) => {
@@ -1686,35 +1812,27 @@ const buildNarrativeSummary = ({
   conductLines: string[]
   doctor?: { name?: string | null; crm?: string | null } | null
 }): ClinicalSummaryData => {
-  const doctorSignature = formatDoctorSignature(doctor)
-  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, sexo ${patient.gender || 'não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`
-  const examinationNarrative = examinationLines.length
-    ? `Ao exame e na avaliação objetiva, foram registrados ${examinationLines.join('; ')}.`
-    : 'Não há sinais vitais ou achados de exame físico estruturado disponíveis neste registro; esses dados devem ser conferidos na avaliação presencial.'
   const stratificationNarrative = scoreLines.length
     ? `A investigação e a estratificação clínica demonstraram ${scoreLines.join('; ')}.`
     : 'A investigação e a estratificação ainda não possuem dados estruturados suficientes para uma conclusão definitiva.'
-  const finalNarrative = `${impression} ${conductLines.join(' ')}`.trim()
-  const continuousText = [
-    title, '', identification, '',
-    historyNarrative, '', examinationNarrative, '', stratificationNarrative, '',
-    `Impressão clínica: ${impression}`, '',
-    conductLines.length ? `Conduta e destino: ${conductLines.join(' ')}` : null, '',
-    doctorSignature, `Gerado em: ${new Date().toLocaleString('pt-BR')}`
-  ].filter((item): item is string => item != null).join('\n')
-  return {
-    chiefComplaint,
-    historyLines: [historyNarrative],
-    examinationLines,
-    scoreLines,
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
+    title,
+    chiefComplaintAndDuration: chiefComplaint,
+    hpma: uniqueTextItems([historyNarrative, stratificationNarrative]).join(' '),
+    ap,
+    muc,
+    exam: splitNarrativeExamLines(examinationLines),
+    hd: [impression],
+    conduct: conductLines,
+    therapeuticPlan: conductLines,
     finalTitle,
-    finalDescription,
-    finalNarrative,
-    doctorSignature,
-    conductLines,
-    continuousText,
-    text: continuousText
-  }
+    finalDescription
+  })
 }
 
 const buildAVCClinicalSummary = (
@@ -2039,7 +2157,7 @@ const buildDengueClinicalSummary = (
     : group === 'B'
       ? 'O paciente foi classificado no Grupo B, sem sinais de alarme ou gravidade, porém com condição clínica que exige avaliação complementar e acompanhamento mais próximo.'
       : group === 'C'
-        ? `O paciente foi classificado no Grupo C por apresentar sinal de alarme${alarmSigns.length > 1 ? 's' : ''}${alarmSigns.length > 0 ? `, incluindo ${formatClinicalListText(alarmSigns)}` : ''}, sem critério de dengue grave documentado neste momento.`
+        ? `O paciente foi classificado no Grupo C por apresentar ${alarmSigns.length > 1 ? 'sinais de alarme' : 'sinal de alarme'}${alarmSigns.length > 0 ? `, incluindo ${formatClinicalListText(alarmSigns)}` : ''}, sem critério de dengue grave documentado neste momento.`
         : group === 'D'
           ? `O paciente foi classificado no Grupo D por critério de dengue grave${gravitySigns.length > 0 ? `, com registro de ${formatClinicalListText(gravitySigns)}` : ''}.`
           : 'A classificação definitiva de risco ainda não foi concluída no fluxo.'
@@ -2059,13 +2177,6 @@ const buildDengueClinicalSummary = (
   const notification = answers.dengue_notification_number?.trim()
   const finalTitle = group ? `Dengue — Grupo ${group}` : (currentStepData?.title || 'Dengue em classificação')
   const finalDescription = classificationText
-  const finalNarrative = [
-    classificationText,
-    conductText,
-    prescriptions.length > 0 ? `Medicações registradas: ${formatClinicalListText(prescriptions)}.` : '',
-    notification ? `Notificação compulsória registrada sob o número ${notification}.` : '',
-    observations.length > 0 ? `Observações clínicas adicionais: ${formatClinicalListText(observations)}.` : ''
-  ].filter(Boolean).join(' ')
   const historyNarrative = `Paciente atendido por ${chiefComplaint.replace(/[.;]+$/, '')}${patient.admission?.complaintDuration ? `, com duração informada de ${patient.admission.complaintDuration}` : ''}. ${symptoms.length > 1 ? `Foram também registrados ${formatClinicalListText(symptoms.slice(1))}.` : ''} A avaliação foi direcionada à pesquisa de sinais de alarme e critérios de gravidade.`
   const investigationNarrative = [
     laboratoryLines.length > 0 ? `Exames disponíveis: ${formatClinicalListText(laboratoryLines)}.` : 'Não há resultados laboratoriais estruturados disponíveis até esta etapa.',
@@ -2074,28 +2185,60 @@ const buildDengueClinicalSummary = (
   const safetyText = group === 'A' || group === 'B'
     ? 'Orientado retorno imediato diante de dor abdominal intensa, vômitos persistentes, sangramento, tontura ou síncope, sonolência ou irritabilidade, dispneia, redução da diurese ou piora do estado geral.'
     : 'Manter vigilância para choque, sangramento, disfunção orgânica, piora da perfusão, redução da diurese e alteração do nível de consciência, com escalonamento imediato do suporte quando necessário.'
-  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`
-  const continuousText = [
-    'RELATÓRIO MÉDICO — DENGUE', '', identification, '',
-    historyNarrative, '', examinationNarrative || 'Sinais vitais e exame físico não foram registrados de forma estruturada.', '',
-    classificationText, '', investigationNarrative, '', conductText, '', safetyText, '',
-    notification ? `Notificação compulsória: ${notification}.` : '',
-    doctorSignature
-  ].filter((item, index, array) => item !== '' || array[index - 1] !== '').join('\n')
+  const hpma = uniqueTextItems([historyNarrative, classificationText, investigationNarrative]).join(' ')
+  const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
+  const muc = 'não informado no formulário deste atendimento'
+  const therapeuticPlan = uniqueTextItems([
+    conductText,
+    prescriptions.length > 0 ? `Medicações registradas: ${formatClinicalListText(prescriptions)}.` : null,
+    safetyText,
+    notification ? `Notificação compulsória registrada sob o número ${notification}.` : null,
+    observations.length > 0 ? `Observações clínicas adicionais: ${formatClinicalListText(observations)}.` : null
+  ])
 
-  return {
-    chiefComplaint,
-    historyLines: [historyNarrative],
-    examinationLines: examinationNarrative ? [examinationNarrative] : [],
-    scoreLines: [classificationText, investigationNarrative],
+  return buildStructuredClinicalNote({
+    patient,
+    doctor,
+    title: 'RELATÓRIO MÉDICO — DENGUE',
+    chiefComplaintAndDuration: `${chiefComplaint.replace(/[.;]+$/, '')}${patient.admission?.complaintDuration ? `, com duração de ${patient.admission.complaintDuration}` : ''}`,
+    hpma,
+    ap,
+    muc,
+    exam: splitUniversalExamLines(physicalLines, vitalLines),
+    hd: [`Dengue — ${classificationText}`],
+    conduct: [conductText],
+    therapeuticPlan,
     finalTitle,
-    finalDescription,
-    finalNarrative,
-    doctorSignature,
-    conductLines: [conductText, safetyText],
-    continuousText,
-    text: continuousText
+    finalDescription
+  })
+}
+
+function buildHellpClinicalSummary(patient: Patient, flowchart: EmergencyFlowchart, currentStep: string, history: string[], answers: Record<string, string>, doctor?: { name?: string | null; crm?: string | null } | null): ClinicalSummaryData {
+  const hellp = parseFlowAnswerForSummary(answers.hellp_caso_estruturado) || {}
+  const universal = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+  const labNotebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
+  const symptoms = Array.isArray(hellp.symptoms) ? hellp.symptoms.map(String) : []
+  const dangers = Array.isArray(hellp.danger) ? hellp.danger.map(String) : []
+  const measures = Array.isArray(hellp.stabilization) ? hellp.stabilization.map(String) : []
+  const plan = Array.isArray(hellp.obstetricPlan) ? hellp.obstetricPlan.map(String) : []
+  const labels: Record<string, string> = {
+    epigastric: 'dor epigástrica ou em hipocôndrio direito', nausea: 'náuseas ou vômitos', headache: 'cefaleia ou alteração visual', dyspnea: 'dispneia/dor torácica', edema: 'edema súbito ou ganho ponderal', bleeding: 'sangramento/petéquias', malaise: 'mal-estar intenso',
+    eclampsia: 'convulsão ou alteração de consciência', severe_bp: 'hipertensão grave', pulmonary: 'edema pulmonar/hipoxemia', shock: 'choque, sangramento ou CIVD', liver: 'ameaça hepática', renal: 'oligúria/disfunção renal', fetal: 'comprometimento fetal',
+    obstetric: 'equipes obstétrica, anestésica, neonatal e crítica acionadas', monitor: 'monitorização contínua e diurese horária', magnesium: 'sulfato de magnésio iniciado/conferido', toxicity: 'vigilância de toxicidade do magnésio', bp: 'tratamento da hipertensão grave', blood: 'planejamento hemoterápico', fluids: 'fluidos administrados com cautela',
+    delivery: 'resolução da gestação planejada após estabilização', route: 'via de parto definida por indicação obstétrica', steroid: 'maturação fetal avaliada conforme prematuridade', serial: 'laboratório seriado programado', differential: 'diferenciais e complicações revistos', postpartum: 'vigilância puerperal programada'
   }
+  const laboratory = uniqueTextItems([
+    hellp.platelets ? `plaquetas ${hellp.platelets}/mm³` : null, hellp.ast ? `TGO/AST ${hellp.ast} U/L` : null, hellp.alt ? `TGP/ALT ${hellp.alt} U/L` : null,
+    hellp.ldh ? `LDH ${hellp.ldh} U/L` : null, hellp.bilirubin ? `bilirrubina total ${hellp.bilirubin} mg/dL` : null, hellp.creatinine ? `creatinina ${hellp.creatinine} mg/dL` : null,
+    ...labNotebook.entries.filter(entry => entry.test && entry.value).map(entry => `${entry.test} ${entry.value}${entry.unit ? ` ${entry.unit}` : ''}${entry.critical ? ' (marcado como crítico)' : ''}`)
+  ])
+  const examLines = summarizeUniversalPhysicalExam(universal?.exameFisico)
+  const gestationalContext = hellp.postpartum ? `puerpério${hellp.postpartumHours ? ` com ${hellp.postpartumHours} desde o parto` : ''}` : `gestação de ${hellp.gestationalAge || 'idade gestacional não registrada'}`
+  const interpretation = hellp.interpretation === 'compatible' ? 'conjunto compatível com síndrome HELLP' : hellp.interpretation === 'partial' ? 'HELLP parcial ou suspeita em evolução' : hellp.interpretation === 'unlikely' ? 'critérios atuais insuficientes para HELLP, mantendo investigação diferencial' : 'interpretação ainda pendente'
+  const doctorSignature = formatDoctorSignature(doctor)
+  const narrative = `Paciente em ${gestationalContext}, avaliada por suspeita de emergência hipertensiva obstétrica. ${symptoms.length ? `Apresentava ${formatClinicalListText(symptoms.map(item => labels[item] || item))}.` : 'A apresentação clínica específica ainda não foi totalmente registrada.'} ${dangers.length ? `Foram reconhecidos sinais de ameaça imediata: ${formatClinicalListText(dangers.map(item => labels[item] || item))}.` : 'Não foram selecionadas ameaças maternas ou fetais imediatas nesta etapa.'} A integração clínica e laboratorial foi registrada como ${interpretation}. ${laboratory.length ? `Resultados disponíveis: ${formatClinicalListText(laboratory)}.` : 'Os resultados laboratoriais permanecem pendentes ou não foram transcritos.'} ${measures.length ? `Foram registradas as seguintes medidas de estabilização: ${formatClinicalListText(measures.map(item => labels[item] || item))}.` : ''} ${plan.length ? `Plano obstétrico: ${formatClinicalListText(plan.map(item => labels[item] || item))}.` : ''}`
+  const continuousText = ['RELATÓRIO MÉDICO — SÍNDROME HELLP', '', `Paciente ${patient.name || 'não identificada'}, ${patient.age || 'idade não informada'} anos, atendida em ${formatClinicalDate(patient.admission?.date)}.`, '', narrative, '', examLines.length ? `Exame físico: ${formatClinicalListText(examLines)}.` : '', labNotebook.notes ? `Evolução laboratorial/pendências: ${labNotebook.notes}` : '', 'Manter cuidado obstétrico crítico, monitorização materna e fetal, prevenção de eclâmpsia, controle da hipertensão grave e reavaliação clínica/laboratorial seriada até a passagem formal do cuidado.', '', doctorSignature].filter((item, index, array) => item !== '' || array[index - 1] !== '').join('\n')
+  return { chiefComplaint: 'Suspeita de síndrome HELLP', historyLines: [narrative], examinationLines: examLines, scoreLines: [interpretation, ...laboratory], finalTitle: flowchart.steps[currentStep]?.title || 'Síndrome HELLP', finalDescription: interpretation, finalNarrative: narrative, doctorSignature, conductLines: [...measures.map(item => labels[item] || item), ...plan.map(item => labels[item] || item)], continuousText, text: continuousText }
 }
 
 export function buildClinicalSummary(
@@ -2177,6 +2320,10 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'hipertensao') {
     return buildHypertensionClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'hellp') {
+    return buildHellpClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
   }
 
   const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {

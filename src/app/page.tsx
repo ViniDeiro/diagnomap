@@ -345,7 +345,12 @@ export default function Home() {
       const nextState = {
         currentStep: targetFlowchart.initialStep,
         history: [],
-        answers: { __linkedFlowOrigin: originRecord },
+        answers: {
+          __linkedFlowOrigin: originRecord,
+          ...(currentEmergencyPatient.emergencyState.answers?.__avaliacao_clinica_inicial
+            ? { __avaliacao_clinica_inicial: currentEmergencyPatient.emergencyState.answers.__avaliacao_clinica_inicial }
+            : {})
+        },
         progress: 0,
         lastUpdate: now
       }

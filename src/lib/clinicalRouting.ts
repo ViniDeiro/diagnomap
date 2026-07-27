@@ -57,6 +57,7 @@ export const INTAKE_SYMPTOMS: IntakeSymptom[] = [
 const routes: ClinicalRouteDefinition[] = [
   { flowchartId: 'avc', symptomIds: ['deficit_focal', 'confusao', 'paralisia_facial', 'vertigem'], keywords: ['fraqueza de um lado', 'boca torta', 'fala enrolada', 'nao consegue falar', 'perda de forca', 'avc', 'derrame', 'hemiparesia'], urgency: 'critica', shortDescription: 'Déficit neurológico focal de início agudo.' },
   { flowchartId: 'hipertensao', symptomIds: ['pressao_alta', 'cefaleia', 'confusao', 'dor_toracica', 'dispneia'], keywords: ['pressao alta', 'pressao muito alta', 'pa elevada', 'hipertensao', '210/120', '200/120', '180/110'], urgency: 'critica', shortDescription: 'Elevação pressórica com pesquisa de lesão aguda.' },
+  { flowchartId: 'hellp', symptomIds: ['pressao_alta', 'cefaleia', 'vomitos', 'dor_epigastrica', 'dispneia'], keywords: ['hellp', 'pre eclampsia', 'preeclampsia', 'gestante com pressao alta', 'dor epigastrica na gestacao', 'plaquetas baixas na gestacao', 'puerpera com pressao alta'], urgency: 'critica', shortDescription: 'Gestação ou puerpério com suspeita de pré-eclâmpsia grave/HELLP.' },
   { flowchartId: 'iam', symptomIds: ['dor_toracica', 'dispneia', 'prostracao'], keywords: ['dor no peito', 'aperto no peito', 'dor precordial', 'dor irradiando', 'infarto', 'sudorese fria'], urgency: 'critica', shortDescription: 'Dor torácica ou equivalente isquêmico.' },
   { flowchartId: 'tep', symptomIds: ['dispneia', 'dor_toracica', 'edema_perna', 'hipotensao'], keywords: ['falta de ar subita', 'dispneia subita', 'dor pleuritica', 'hemoptise', 'embolia pulmonar'], urgency: 'critica', shortDescription: 'Dispneia/dor torácica com risco tromboembólico.' },
   { flowchartId: 'anafilaxia', symptomIds: ['urticaria', 'dispneia', 'chiado', 'hipotensao'], keywords: ['reacao alergica', 'alergia grave', 'inchaco da lingua', 'edema de labios', 'anafilaxia', 'depois de comer', 'depois de medicamento'], urgency: 'critica', shortDescription: 'Reação sistêmica rápida com ameaça respiratória ou circulatória.' },
@@ -130,4 +131,3 @@ export const recommendClinicalRoutes = (complaint: string, selectedSymptoms: str
     .sort((a, b) => b.score - a.score || (a.urgency === 'critica' ? -1 : 1))
     .slice(0, 6)
 }
-

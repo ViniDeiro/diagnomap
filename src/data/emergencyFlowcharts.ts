@@ -9414,10 +9414,54 @@ export const hypertensionFlowchart: EmergencyFlowchart = {
   }
 }
 
+export const hellpFlowchart: EmergencyFlowchart = {
+  id: 'hellp',
+  name: 'Síndrome HELLP',
+  description: 'Reconhecimento, confirmação laboratorial, estabilização materna e transição obstétrica crítica.',
+  category: 'obstetric',
+  priority: 'high',
+  icon: 'baby',
+  color: 'from-violet-900 to-rose-700',
+  initialStep: 'hellp_contexto',
+  finalSteps: ['hellp_aguarda_cuidado_critico'],
+  steps: {
+    hellp_contexto: { id: 'hellp_contexto', title: 'Contexto obstétrico', description: 'Gestação ou puerpério com suspeita de síndrome hipertensiva grave.', type: 'question', options: [{ text: 'Prosseguir', nextStep: 'hellp_sinais_gravidade', value: 'contexto_registrado' }] },
+    hellp_sinais_gravidade: { id: 'hellp_sinais_gravidade', title: 'Sintomas e ameaças', description: 'Pesquisar deterioração materna e fetal.', type: 'question', critical: true, options: [{ text: 'Avaliar exames', nextStep: 'hellp_laboratorio', value: 'avaliado' }] },
+    hellp_laboratorio: { id: 'hellp_laboratorio', title: 'Investigação laboratorial', description: 'Hemólise, fígado, plaquetas, rim e coagulação.', type: 'lab_wait', requiresLabs: true, options: [{ text: 'Interpretar', nextStep: 'hellp_interpretacao', value: 'laboratorio_registrado' }] },
+    hellp_interpretacao: { id: 'hellp_interpretacao', title: 'Interpretação integrada', description: 'Compatibilidade completa, parcial ou diagnóstico alternativo.', type: 'question', options: [{ text: 'Estabilizar', nextStep: 'hellp_estabilizacao', value: 'compativel', critical: true }] },
+    hellp_estabilizacao: { id: 'hellp_estabilizacao', title: 'Estabilização materna', description: 'Prevenir convulsão, controlar hipertensão grave e preparar suporte.', type: 'action', critical: true, timeSensitive: true, options: [{ text: 'Definir plano obstétrico', nextStep: 'hellp_plano_obstetrico', value: 'estabilizada' }] },
+    hellp_plano_obstetrico: { id: 'hellp_plano_obstetrico', title: 'Plano obstétrico', description: 'Planejar resolução após estabilização e organizar equipe.', type: 'action', critical: true, options: [{ text: 'Solicitar cuidado crítico', nextStep: 'hellp_aguarda_cuidado_critico', value: 'plano_registrado' }] },
+    hellp_aguarda_cuidado_critico: { id: 'hellp_aguarda_cuidado_critico', title: 'Cuidado obstétrico crítico', description: 'Manter suporte e monitorização até a passagem formal.', type: 'result', critical: true, options: [] }
+  }
+}
+
+export const acuteAorticSyndromeFlowchart: EmergencyFlowchart = {
+  id: 'sindrome_aortica_aguda', name: 'Síndrome Aórtica Aguda', description: 'Estabilização, imagem aórtica e transferência vascular/cardiotorácica sem atraso.', category: 'cardiovascular', priority: 'high', icon: 'activity', color: 'from-red-800 to-slate-900', initialStep: 'aorta_reconhecimento', finalSteps: ['aorta_transferencia'],
+  steps: {
+    aorta_reconhecimento: { id: 'aorta_reconhecimento', title: 'Suspeita de síndrome aórtica aguda', description: 'Dor abrupta, déficit de pulso/perfusão ou imagem sugestiva.', type: 'question', critical: true, options: [{ text: 'Suspeita mantida', nextStep: 'aorta_estabilizacao', value: 'suspeita', critical: true }, { text: 'Suspeita afastada após avaliação', nextStep: 'aorta_transferencia', value: 'afastada' }] },
+    aorta_estabilizacao: { id: 'aorta_estabilizacao', title: 'Estabilização anti-impulso', description: 'Monitorização contínua, analgesia, controle de frequência/pressão e avaliação de perfusão.', type: 'action', critical: true, timeSensitive: true, options: [{ text: 'Estabilização iniciada', nextStep: 'aorta_imagem', value: 'estabilizada', critical: true }] },
+    aorta_imagem: { id: 'aorta_imagem', title: 'Imagem e equipe especializada', description: 'Angiotomografia quando estável; estratégia à beira-leito e transferência quando instável ou sem recurso.', type: 'procedure', critical: true, requiresSpecialist: true, options: [{ text: 'Organizar transferência vascular/cardiotorácica', nextStep: 'aorta_transferencia', value: 'transferencia', critical: true }] },
+    aorta_transferencia: { id: 'aorta_transferencia', title: 'Transferência especializada', description: 'Manter controle anti-impulso, perfusão e transporte monitorizado até a passagem do cuidado.', type: 'result', critical: true, options: [] }
+  }
+}
+
+export const acutePulmonaryEdemaFlowchart: EmergencyFlowchart = {
+  id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', description: 'Suporte respiratório, redução de congestão/pós-carga e investigação do fator precipitante.', category: 'respiratory', priority: 'high', icon: 'lungs', color: 'from-cyan-800 to-blue-900', initialStep: 'eap_reconhecimento', finalSteps: ['eap_destino_critico'],
+  steps: {
+    eap_reconhecimento: { id: 'eap_reconhecimento', title: 'Insuficiência respiratória congestiva', description: 'Confirmar desconforto, hipoxemia, congestão e pesquisar diagnósticos alternativos.', type: 'question', critical: true, options: [{ text: 'Edema pulmonar provável', nextStep: 'eap_suporte', value: 'provavel', critical: true }] },
+    eap_suporte: { id: 'eap_suporte', title: 'Suporte respiratório imediato', description: 'Posicionar, monitorizar, titular oxigênio e considerar ventilação não invasiva conforme trabalho respiratório.', type: 'action', critical: true, timeSensitive: true, options: [{ text: 'Suporte iniciado', nextStep: 'eap_tratamento', value: 'suporte', critical: true }] },
+    eap_tratamento: { id: 'eap_tratamento', title: 'Tratamento guiado pela pressão e perfusão', description: 'Vasodilatador quando hipertenso, diurético quando congesto e suporte de choque quando hipoperfundido.', type: 'action', critical: true, requiresLabs: true, options: [{ text: 'Tratamento e investigação iniciados', nextStep: 'eap_destino_critico', value: 'tratado', critical: true }] },
+    eap_destino_critico: { id: 'eap_destino_critico', title: 'Unidade monitorizada/UTI', description: 'Manter suporte, reavaliação respiratória e tratamento do precipitante até transferência.', type: 'result', critical: true, options: [] }
+  }
+}
+
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
   avc: avcFlowchart,
   hipertensao: hypertensionFlowchart,
+  hellp: hellpFlowchart,
+  sindrome_aortica_aguda: acuteAorticSyndromeFlowchart,
+  edema_agudo_pulmao: acutePulmonaryEdemaFlowchart,
   sepsis: sepsisFlowchart,
   dengue: dengueFlowchart,
   gasometria: gasometryFlowchart,
@@ -9534,7 +9578,7 @@ export const allFlowcharts = [
   { id: 'asthma', name: 'Crise asmática/Broncoespasmo', category: 'respiratory', implemented: true },
   { id: 'dispneia', name: 'Dispnéia', category: 'respiratory', implemented: false },
   { id: 'dpoc_exacerbado', name: 'DPOC exacerbado', category: 'respiratory', implemented: true },
-  { id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', category: 'respiratory', implemented: false },
+  { id: 'edema_agudo_pulmao', name: 'Edema Agudo de Pulmão', category: 'respiratory', implemented: true },
   { id: 'tep', name: 'Tromboembolismo Pulmonar (TEP)', category: 'respiratory', implemented: true },
   { id: 'tosse', name: 'Tosse', category: 'respiratory', implemented: false },
 
@@ -9551,6 +9595,7 @@ export const allFlowcharts = [
   { id: 'fibrilacao_atrial_instavel', name: 'Fibrilação atrial de alta resposta ventricular instável', category: 'cardiovascular', implemented: false },
   { id: 'flutter_atrial', name: 'Flutter atrial', category: 'cardiovascular', implemented: false },
   { id: 'hipertensao', name: 'Hipertensão (Crise e Emergência Hipertensiva)', category: 'cardiovascular', implemented: true },
+  { id: 'sindrome_aortica_aguda', name: 'Síndrome Aórtica Aguda', category: 'cardiovascular', implemented: true },
   { id: 'iam', name: 'IAM', category: 'cardiovascular', implemented: true },
   { id: 'insuficiencia_cardiaca', name: 'Insuficiência Cardíaca descompensada', category: 'cardiovascular', implemented: false },
   { id: 'miocardite', name: 'Miocardite', category: 'cardiovascular', implemented: false },
@@ -9566,6 +9611,9 @@ export const allFlowcharts = [
   { id: 'tv_monomorfica_instavel', name: 'TV monomórfica instável', category: 'cardiovascular', implemented: false },
   { id: 'tv_polimorfica', name: 'TV polimórfica', category: 'cardiovascular', implemented: false },
   { id: 'tvp', name: 'TVP', category: 'cardiovascular', implemented: true },
+
+  // Obstétricos
+  { id: 'hellp', name: 'Síndrome HELLP', category: 'obstetric', implemented: true },
 
   // Distúrbios Hidroeletrolíticos (DHEL)
   { id: 'dhel_hipercalcemia', name: 'DHEL - Hipercalcemia', category: 'metabolic', implemented: false },

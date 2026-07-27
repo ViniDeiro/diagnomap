@@ -28,6 +28,7 @@ import ABCDEChecklist from './ABCDEChecklist'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import { ModifiedRankinSelector, NIHSSCalculator, type NIHSSValues } from './ClinicalScaleCalculators'
 import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
+import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 import {
   calculateAVCThrombolyticDose,
   evaluateAVCThrombectomy,
@@ -344,6 +345,11 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     onUpdate(patient.id, nextStage, nextHistory, nextAnswers, Math.max(progress, 8), 'AVC')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+  const persistLabNotebook = (serialized: string) => {
+    const nextAnswers = { ...answers, [UNIVERSAL_LAB_RESULTS_KEY]: serialized, [AVC_CASE_ANSWER_KEY]: JSON.stringify(data) }
+    setAnswers(nextAnswers)
+    onUpdate(patient.id, stage, history, nextAnswers, progress, 'AVC')
+  }
   const goBack = () => {
     const previous = history[history.length - 1]
     if (!previous || !AVC_STAGES.includes(previous as AVCStage)) {
@@ -597,7 +603,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_exames' && (
-            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{examOptions.map(([id,label]) => <CardOption key={id} selected={(data.exams || []).includes(id)} title={label} onClick={() => selectMany('exams', id)} />)}</div><div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Não aguarde toda a bateria laboratorial:</strong> quando não há suspeita de coagulopatia ou exposição relevante a anticoagulantes, glicemia e imagem cerebral orientam a decisão inicial de reperfusão.</div><button type="button" disabled={!(data.exams || []).includes('tc')} onClick={() => persist('avc_imagem')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar exames e interpretar imagem <ChevronRight /></button></div>
+            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{examOptions.map(([id,label]) => <CardOption key={id} selected={(data.exams || []).includes(id)} title={label} onClick={() => selectMany('exams', id)} />)}</div><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados laboratoriais do protocolo AVC" suggestedTests={['Glicemia','Hemograma/plaquetas','TP/INR','TTPa','Creatinina','Troponina']} /><div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><strong>Não aguarde toda a bateria laboratorial:</strong> quando não há suspeita de coagulopatia ou exposição relevante a anticoagulantes, glicemia e imagem cerebral orientam a decisão inicial de reperfusão.</div><button type="button" disabled={!(data.exams || []).includes('tc')} onClick={() => persist('avc_imagem')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar exames e interpretar imagem <ChevronRight /></button></div>
           )}
 
           {stage === 'avc_imagem' && (

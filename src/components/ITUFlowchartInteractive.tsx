@@ -25,6 +25,7 @@ import { buildItuPrescriptionItems, ITU_PRESCRIBER } from '@/lib/itu'
 import { patientService } from '@/services/patientService'
 import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
+import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 
 interface Props {
   patient: EmergencyPatient
@@ -107,6 +108,12 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
     moveTo(option.nextStep, option.value, { [transitionKey]: JSON.stringify(transition) })
   }
 
+  const persistLabNotebook = (serialized: string) => {
+    const nextAnswers = { ...answers, [UNIVERSAL_LAB_RESULTS_KEY]: serialized }
+    setAnswers(nextAnswers)
+    onUpdate(patient.id, stage, history, nextAnswers, progress, riskLabel(stage))
+  }
+
   const goBack = () => {
     if (showCompletion) { setShowCompletion(false); return }
     if (!history.length) { onBack?.(); return }
@@ -155,6 +162,8 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
       </motion.div> : <motion.section key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7">
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950"><Droplets className="mt-0.5 h-5 w-5 shrink-0" /><p className="text-sm"><strong>Decisão clínica guiada:</strong> selecione o cenário que corresponde ao paciente. A escolha ficará registrada no relatório e determinará somente o próximo ramo previsto.</p></div>
         {step.content && <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: step.content }} />}
+
+        {phase === 'Investigação' && <div className="mt-6"><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados da investigação urinária" suggestedTests={['Urina tipo 1','Urocultura','Hemograma','Creatinina','Ureia','Lactato','Hemoculturas']} /></div>}
 
         {isTransition && <div className="mt-6"><UniversalCareTransition destination="ward" context={stage === 'itu_cuidados_aguarda_internacao' ? 'itu sepse urinária com internação solicitada' : 'itu pielonefrite hospitalar'} value={storedTransition} onChange={persistTransition} onConfirmed={confirmTransition} /></div>}
 

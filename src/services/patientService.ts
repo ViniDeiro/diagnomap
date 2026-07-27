@@ -227,10 +227,11 @@ class PatientService {
     })
 
     patient.selectedFlowchart = targetFlowchartId
+    const universalAssessment = patient.flowchartState.answers?.__avaliacao_clinica_inicial
     patient.flowchartState = {
       currentStep: targetFlowchart.initialStep,
       history: [],
-      answers: { __linkedFlowOrigin: originRecord },
+      answers: { __linkedFlowOrigin: originRecord, ...(universalAssessment ? { __avaliacao_clinica_inicial: universalAssessment } : {}) },
       progress: 0,
       lastUpdate: now
     }

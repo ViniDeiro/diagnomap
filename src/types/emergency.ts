@@ -63,6 +63,9 @@ export type EmergencyType =
   | 'anafilaxia'
   | 'atendimento_antirrabico'
   | 'itu'
+  | 'hellp'
+  | 'sindrome_aortica_aguda'
+  | 'edema_agudo_pulmao'
 
 export interface EmergencyFlowchart {
   id: EmergencyType

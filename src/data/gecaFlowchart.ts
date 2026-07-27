@@ -341,6 +341,7 @@ export const gecaFlowchart: EmergencyFlowchart = {
       title: 'Investigação Dirigida',
       description: 'Selecionar exames conforme gravidade, padrão clínico e risco epidemiológico.',
       type: 'action',
+      requiresLabs: true,
       content: `
         <div class="grid gap-3 text-sm md:grid-cols-2">
           <div class="rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-950">
@@ -460,6 +461,7 @@ export const gecaFlowchart: EmergencyFlowchart = {
       title: 'Suspeita de STEC / SHU',
       description: 'Bloquear antibiótico empírico e antiperistáltico; investigar e monitorar complicações.',
       type: 'result',
+      requiresLabs: true,
       critical: true,
       content: `
         <div class="rounded-lg border-l-4 border-red-700 bg-red-50 p-4 text-sm text-red-950">

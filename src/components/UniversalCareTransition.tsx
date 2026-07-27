@@ -92,6 +92,24 @@ const contextualCareCards = (context = ''): WaitingCareCard[] => {
     { title: 'Meta orientada pelo órgão acometido', description: 'Titular a redução pressórica conforme o cenário, evitando queda abrupta que comprometa perfusão cerebral, coronariana ou renal.', tone: 'red', icon: 'care' },
     { title: 'Infusão e lesão de órgão-alvo', description: 'Conferir agente, bomba, pressão em intervalos curtos, diurese e evolução neurológica, cardiovascular e respiratória.', tone: 'amber', icon: 'tests' }
   ]
+  if (/hellp|pr[eé]-ecl|obst[eé]tric/i.test(context)) return [
+    { title: 'Vigilância materna crítica', description: 'Repetir pressão, consciência, sintomas visuais, dor epigástrica, reflexos, frequência respiratória, diurese e sinais de edema pulmonar; piora exige ação imediata.', tone: 'red', icon: 'alert' },
+    { title: 'Magnésio e toxicidade', description: 'Manter a infusão prescrita, conferir bomba e função renal e interromper para avaliação se houver depressão respiratória, arreflexia ou oligúria importante; manter antídoto disponível.', tone: 'amber', icon: 'tests' },
+    { title: 'Laboratório e hemoterapia', description: 'Acompanhar tendência de plaquetas, hemólise, transaminases, creatinina, coagulação e fibrinogênio; revisar reserva e indicação de hemocomponentes com a equipe obstétrica.', tone: 'blue', icon: 'tests' },
+    { title: 'Mãe e feto em paralelo', description: 'Manter avaliação fetal e preparo do parto sem retardar estabilização materna; documentar plano obstétrico, anestésico e neonatal.', tone: 'emerald', icon: 'care' }
+  ]
+  if (/anafilax/i.test(context)) return [
+    { title: 'Adrenalina e ABCDE continuam', description: 'Repetir adrenalina intramuscular quando indicada e manter via aérea, oxigenação, posição segura, acessos e reposição guiada pela resposta.', tone: 'red', icon: 'care' },
+    { title: 'Via aérea difícil preparada', description: 'Vigiar edema progressivo, estridor, disfonia e sialorreia; limitar tentativas, acionar equipe experiente e manter plano de acesso de emergência.', tone: 'amber', icon: 'alert' }
+  ]
+  if (/geca|diarre|desidrata/i.test(context)) return [
+    { title: 'Perfusão, perdas e tolerância oral', description: 'Reavaliar estado mental, pulso, pressão, enchimento capilar, diurese, perdas e ausculta pulmonar; ajustar reposição e introduzir solução oral assim que possível.', tone: 'red', icon: 'care' },
+    { title: 'Eletrólitos e função renal', description: 'Acompanhar sódio, potássio, glicemia e função renal quando indicados, registrando resultados críticos e resposta à hidratação.', tone: 'amber', icon: 'tests' }
+  ]
+  if (/itu|pielonefr|urin[aá]ria/i.test(context)) return [
+    { title: 'Sepse e obstrução não podem esperar', description: 'Manter antimicrobiano, culturas quando viáveis, perfusão, diurese e investigação de obstrução; deterioração exige protocolo de sepse e escalonamento.', tone: 'red', icon: 'alert' },
+    { title: 'Dose e função renal', description: 'Revisar alergias, função renal, cultura, horários e ajuste do antimicrobiano, além de náusea, dor e capacidade de hidratação.', tone: 'amber', icon: 'tests' }
+  ]
   if (/pneumonia|pac|influenza|srag|asma/i.test(context)) return [
     { title: 'Suporte respiratório escalonado', description: 'Titular oxigênio, repetir esforço respiratório e gasometria quando indicada; preparar suporte ventilatório diante de fadiga ou hipoxemia persistente.', tone: 'red', icon: 'care' },
     { title: 'Tratamento não pode esperar', description: 'Manter broncodilatadores, corticoide, antimicrobianos ou antiviral conforme o diagnóstico e os horários já prescritos.', tone: 'amber', icon: 'clock' }
@@ -120,7 +138,7 @@ const UniversalCareTransition: React.FC<Props> = ({ destination, context = '', v
   const careCards = [...contextualCareCards(context), ...generalCareCards[destination]]
 
   return (
-    <div className="space-y-5">
+    <div className="max-h-[82vh] space-y-5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
       <header className={clsx('overflow-hidden rounded-2xl bg-gradient-to-r p-6 text-white shadow-xl', copy.tone)}>
         <div className="flex items-start gap-4">
           <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25"><Hospital className="h-8 w-8" /></span>

@@ -41,6 +41,8 @@ import AVCFlowchartInteractive from './AVCFlowchartInteractive'
 import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive'
 import RabiesExposureFlowchartInteractive from './RabiesExposureFlowchartInteractive'
 import ITUFlowchartInteractive from './ITUFlowchartInteractive'
+import HELLPFlowchartInteractive from './HELLPFlowchartInteractive'
+import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
 import TEPAssessment from './TEPAssessment'
@@ -3766,6 +3768,15 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  const shouldShowUniversalLabNotebook = Boolean(currentStepData && (
+    currentStepData.requiresLabs || currentStepData.type === 'lab_wait' ||
+    /(exames_dirigidos|resultados_exames|laboratorio|investigacao_dirigida)/i.test(currentStepData.id)
+  ))
+  const universalSuggestedLabs = flowchart.id === 'geca'
+    ? ['Hemograma', 'Ureia', 'Creatinina', 'Sódio', 'Potássio', 'Magnésio', 'Glicemia', 'PCR', 'Lactato', 'Coprocultura/painel', 'Toxina Shiga/STEC', 'C. difficile']
+    : flowchart.id === 'edema_agudo_pulmao'
+      ? ['Gasometria', 'Troponina', 'BNP/NT-proBNP', 'Ureia', 'Creatinina', 'Sódio', 'Potássio']
+      : []
   const careDestination = flowchart.finalSteps.includes(currentStep) ? inferCareDestination(currentStepData) : null
   const careTransitionKey = `__care_transition_${currentStep}`
   const careTransitionData = useMemo(() => {
@@ -3778,6 +3789,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setAnswers(updatedAnswers)
     onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
   }, [answers, careTransitionKey, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
+  const persistUniversalLabNotebook = useCallback((serialized: string) => {
+    const updatedAnswers = { ...answers, [UNIVERSAL_LAB_RESULTS_KEY]: serialized }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
   useEffect(() => {
     let mounted = true
     getCurrentDoctor()
@@ -7722,6 +7738,22 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         onComplete={onComplete}
         onBack={onBack}
         onOpenReport={onOpenReport}
+        onSwitchFlowchart={onSwitchFlowchart}
+      />
+    )
+  }
+
+  if (flowchart.id === 'hellp') {
+    return (
+      <HELLPFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
       />
     )
   }
@@ -11395,6 +11427,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     })}
                   </div>
                 </section>
+              )}
+
+              {shouldShowUniversalLabNotebook && (
+                <div className="mb-6">
+                  <UniversalLabNotebook
+                    value={answers[UNIVERSAL_LAB_RESULTS_KEY]}
+                    onChange={persistUniversalLabNotebook}
+                    title={`Resultados laboratoriais · ${currentStepData.title}`}
+                    suggestedTests={universalSuggestedLabs}
+                  />
+                </div>
               )}
 
               {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && !isAnaphylaxisAirwayStep && (

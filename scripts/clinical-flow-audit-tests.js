@@ -21,6 +21,9 @@ const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components
 const rabiesSinanPdfSource = fs.readFileSync(path.join(root, 'src/lib/rabiesSinanPdf.ts'), 'utf8')
 const rabiesConductSource = fs.readFileSync(path.join(root, 'src/lib/rabiesConduct.ts'), 'utf8')
 const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFlowchartInteractive.tsx'), 'utf8')
+const hellpComponentSource = fs.readFileSync(path.join(root, 'src/components/HELLPFlowchartInteractive.tsx'), 'utf8')
+const labNotebookSource = fs.readFileSync(path.join(root, 'src/components/UniversalLabNotebook.tsx'), 'utf8')
+const patientServiceSource = fs.readFileSync(path.join(root, 'src/services/patientService.ts'), 'utf8')
 const ituLogicSource = fs.readFileSync(path.join(root, 'src/lib/itu.ts'), 'utf8')
 const anxietyComponentSource = fs.readFileSync(path.join(root, 'src/components/AnxietyFlowchartInteractive.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
@@ -75,7 +78,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart } = moduleBox.exports
+const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, hellpFlowchart, acuteAorticSyndromeFlowchart, acutePulmonaryEdemaFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -121,6 +124,9 @@ validateLinks(asthmaFlowchart)
 validateLinks(tvpFlowchart)
 validateLinks(avcFlowchart)
 validateLinks(hypertensionFlowchart)
+validateLinks(hellpFlowchart)
+validateLinks(acuteAorticSyndromeFlowchart)
+validateLinks(acutePulmonaryEdemaFlowchart)
 validateLinks(ituFlowchart)
 validateLinks(atendimentoAntirrabicoFlowchart)
 
@@ -166,6 +172,21 @@ for (const marker of [
   'buildItuPrescriptionItems', 'ITU_PRESCRIBER'
 ]) assert.ok(ituComponentSource.includes(marker), `ITU: experiência interativa nova ausente (${marker})`)
 assert.match(emergencyComponentSource, /flowchart\.id === 'itu'[\s\S]*ITUFlowchartInteractive/)
+
+for (const marker of [
+  'Síndrome HELLP', 'Contexto obstétrico', 'Ameaças imediatas', 'UniversalLabNotebook',
+  'Sulfato de magnésio: ataque 4 g EV em 5–15 min', 'Planejar resolução da gestação após estabilização materna',
+  'UniversalCareTransition destination="icu"', 'Plano HELLP registrado'
+]) assert.ok(hellpComponentSource.includes(marker), `HELLP: etapa interativa ausente (${marker})`)
+assert.match(emergencyComponentSource, /flowchart\.id === 'hellp'[\s\S]*HELLPFlowchartInteractive/)
+assert.match(clinicalSummarySource, /buildHellpClinicalSummary[\s\S]*RELATÓRIO MÉDICO — SÍNDROME HELLP/)
+for (const marker of ['Resultado crítico', 'Interpretação, tendência e pendências', 'overflow-y-auto', 'UNIVERSAL_LAB_RESULTS_KEY']) {
+  assert.ok(labNotebookSource.includes(marker), `Exames universais: recurso ausente (${marker})`)
+}
+for (const marker of ['sindrome_aortica_aguda', 'edema_agudo_pulmao', "id: 'hellp' as EmergencyType", "id: 'avc' as EmergencyType"]) {
+  assert.ok(hypertensionComponentSource.includes(marker), `Hipertensão: interlink ausente (${marker})`)
+}
+assert.match(patientServiceSource, /__linkedFlowOrigin[\s\S]*__avaliacao_clinica_inicial/)
 for (const marker of [
   'Via EV: após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5%',
   'Se houver administração IM, reconstituir e diluir conforme a bula',
