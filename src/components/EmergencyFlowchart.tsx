@@ -1652,6 +1652,41 @@ Opção com MgSO4 a 50% (500 mg/mL): aspirar 4 mL, correspondentes a 2 g, e adic
 
 Confirmar a concentração disponível antes do preparo. Monitorizar pressão arterial, frequência cardíaca, resposta clínica e sinais de toxicidade; revisar função renal e contraindicações.`
 
+const GECA_ADULT_DISCHARGE_PRESCRIPTION = `RECEITA MÉDICA — GECA / PLANO A — ADULTO
+
+USO ORAL
+1. Sais para reidratação oral — envelopes.
+Dissolver cada envelope exatamente no volume de água potável indicado pelo fabricante. Ingerir em pequenos goles e com maior frequência, especialmente após cada evacuação diarreica ou episódio de vômito. Descartar a solução preparada conforme a orientação do produto.
+
+2. Paracetamol 500 mg — comprimidos.
+Tomar 1 comprimido por via oral a cada 6 horas se dor ou febre. Não ultrapassar 3.000 mg ao dia. Não usar em doença hepática relevante ou junto com outro produto que contenha paracetamol.
+
+3. Ondansetrona 4 mg — comprimidos, SOMENTE SE PRESCRITA após avaliação individual.
+Tomar 1 comprimido por via oral a cada 8 horas se náuseas ou vômitos estiverem impedindo a hidratação, pelo menor tempo necessário. Rever intervalo QT, interações, gestação e contraindicações.
+
+ORIENTAÇÕES
+Manter alimentação habitual em porções menores e frequentes. Não usar antibiótico, antiparasitário ou antidiarreico por conta própria. Retornar imediatamente se houver sangue nas fezes, vômitos repetidos, incapacidade de beber, sede intensa, redução da urina, prostração, desmaio, febre alta persistente ou dor abdominal intensa/localizada. Reavaliar se não houver melhora em até 48 horas.
+
+Modelo de apoio à prescrição: confirmar alergias, peso, idade, gestação, função renal/hepática, medicamentos em uso e protocolo institucional antes de assinar.`
+
+const GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION = `RECEITA MÉDICA — GECA / PLANO A — PEDIATRIA
+
+USO ORAL
+1. Sais para reidratação oral — envelopes.
+Dissolver cada envelope exatamente no volume de água potável indicado pelo fabricante e oferecer em pequenas quantidades, repetidamente, após cada evacuação diarreica ou episódio de vômito.
+
+Quantidade adicional após cada evacuação:
+• menor de 1 ano: 50 a 100 mL;
+• de 1 a 10 anos: 100 a 200 mL;
+• acima de 10 anos: oferecer a quantidade que aceitar.
+
+Manter aleitamento e alimentação habitual, em porções menores e frequentes. Antitérmico, analgésico ou antiemético somente com dose calculada pelo peso e após avaliação de contraindicações.
+
+ORIENTAÇÕES
+Não oferecer refrigerantes, energéticos ou soluções concentradas. Retornar imediatamente se houver piora, sangue nas fezes, vômitos repetidos, recusa de líquidos/alimentos, muita sede, redução da urina, sonolência/prostração, febre alta persistente ou dor abdominal intensa. Reavaliar se não houver melhora em até 48 horas.
+
+Modelo de apoio à prescrição: registrar peso e calcular qualquer medicamento individualmente antes de assinar.`
+
 const tvpAnticoagContraindications = [
   { id: 'abs_sangramento_ativo', text: 'Sangramento ativo maior (GI, intracraniano ou hemoptise significativa)', severity: 'absoluta' },
   { id: 'abs_intracraniano_recente', text: 'Sangramento intracraniano recente', severity: 'absoluta' },
@@ -1673,9 +1708,6 @@ const tvpTherapeuticOptions = [
   { id: 'hnf', group: 'Parenteral', text: 'HNF EV: bolus 80 U/kg (ou 5.000 U), depois 18 U/kg/h (ou 1.300 U/h), ajustar TTPa 1,5–2,5x basal' },
   { id: 'varfarina', group: 'VKA', text: 'Varfarina: alvo INR 2–3; sobrepor com heparina por ≥5 dias e INR terapêutico por 24h' }
 ]
-
-const isTVPICUDisposition = (currentStep: string, history: string[]) =>
-  currentStep === 'tvp_internacao_uti' || history.includes('tvp_internacao_uti')
 
 const tvpAnticoagulationConsiderations = [
   {
@@ -3025,9 +3057,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     const treatmentAnswer = JSON.stringify({
       decision: value || nextStep,
-      opcoesTerapeuticasSelecionadas: selectedTherapies.filter(
-        (therapyId) => therapyId !== 'hnf' || isTVPICUDisposition(currentStep, history)
-      ),
+      opcoesTerapeuticasSelecionadas: selectedTherapies,
       planoDuracaoSelecionado: selectedDurationPlan,
       solicitarAvaliacaoCirurgiaoVascular: true
     })
@@ -4305,13 +4335,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isTVPContraCheck = flowchart.id === 'tvp' && currentStepData?.id === 'checar_contra_anticoagulacao'
   const isTVPTreatmentInitial = flowchart.id === 'tvp' && currentStepData?.id === 'tratamento_inicial'
   const isTVPWaitingForVascularStep = flowchart.id === 'tvp' && currentStepData?.id === 'tvp_aguarda_avaliacao_vascular'
-  const hasTVPICUDisposition = flowchart.id === 'tvp' && isTVPICUDisposition(currentStep, history)
-  const availableTVPTherapeuticOptions = tvpTherapeuticOptions.filter(
-    (item) => item.id !== 'hnf' || hasTVPICUDisposition
-  )
-  const availableSelectedTherapies = selectedTherapies.filter(
-    (therapyId) => therapyId !== 'hnf' || hasTVPICUDisposition
-  )
+  const availableTVPTherapeuticOptions = tvpTherapeuticOptions
+  const availableSelectedTherapies = selectedTherapies
   const isTVPVascularReferralStep = flowchart.id === 'tvp' && [
     'encaminhamento_urgente',
     'tvp_urgencia_vascular_concluida'
@@ -6978,7 +7003,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       const parsed = JSON.parse(saved)
       const therapies = Array.isArray(parsed?.opcoesTerapeuticasSelecionadas)
         ? parsed.opcoesTerapeuticasSelecionadas.filter(
-            (therapyId: unknown) => typeof therapyId === 'string' && (therapyId !== 'hnf' || hasTVPICUDisposition)
+            (therapyId: unknown): therapyId is string => typeof therapyId === 'string'
           )
         : []
       const duration = typeof parsed?.planoDuracaoSelecionado === 'string' ? parsed.planoDuracaoSelecionado : ''
@@ -6988,7 +7013,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setSelectedTherapies([])
       setSelectedDurationPlan('')
     }
-  }, [isTVPTreatmentInitial, answers, currentStep, hasTVPICUDisposition])
+  }, [isTVPTreatmentInitial, answers, currentStep])
 
   useEffect(() => {
     if (!isInfluenzaSeverityStep) {
@@ -11815,6 +11840,26 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         void navigator.clipboard.writeText(ASTHMA_MAGNESIUM_PRESCRIPTION).then(() => {
                           setAsthmaMagnesiumCopied(true)
                           window.setTimeout(() => setAsthmaMagnesiumCopied(false), 1800)
+                        })
+                      }
+                      const gecaAdultCopyButton = target.closest('[data-geca-copy-adult="true"]') as HTMLButtonElement | null
+                      if (gecaAdultCopyButton) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void navigator.clipboard.writeText(GECA_ADULT_DISCHARGE_PRESCRIPTION).then(() => {
+                          const previousText = gecaAdultCopyButton.textContent
+                          gecaAdultCopyButton.textContent = 'Prescrição adulta copiada'
+                          window.setTimeout(() => { gecaAdultCopyButton.textContent = previousText }, 1800)
+                        })
+                      }
+                      const gecaPediatricCopyButton = target.closest('[data-geca-copy-pediatric="true"]') as HTMLButtonElement | null
+                      if (gecaPediatricCopyButton) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void navigator.clipboard.writeText(GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION).then(() => {
+                          const previousText = gecaPediatricCopyButton.textContent
+                          gecaPediatricCopyButton.textContent = 'Prescrição pediátrica copiada'
+                          window.setTimeout(() => { gecaPediatricCopyButton.textContent = previousText }, 1800)
                         })
                       }
                       if (target.closest('[data-pep-hiv-guide="true"]')) {

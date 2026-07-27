@@ -74,11 +74,11 @@ export const summarizeUniversalPhysicalExam = (exam?: PhysicalExamData | null): 
     `Cianose: ${exam.cyanosis.status === 'acianotico' ? 'ausente' : `presente${grade(exam.cyanosis.grade)}`}`,
     `Icterícia: ${exam.jaundice.status === 'anicterico' ? 'ausente' : `presente${grade(exam.jaundice.grade)}`}`,
     `Respiração: ${exam.respiration.status === 'eupneico' ? 'eupneico' : exam.respiration.status === 'taquipneico' ? 'taquipneico' : `dispneico${grade(exam.respiration.grade)}`}`,
-    `Neurológico: Glasgow ${exam.neuro.glasgow ?? 'não informado'}${exam.neuro.altered?.trim() ? `; ${exam.neuro.altered.trim()}` : ''}`,
-    `Cardiovascular: ${exam.cardiac.altered?.trim() || 'sem alteração descrita'}`,
-    `Pulmonar: ${exam.pulmonary.altered?.trim() || 'sem alteração descrita'}`,
-    `Abdome: ${exam.abdomen.altered?.trim() || 'sem alteração descrita'}`,
-    `Extremidades: ${exam.extremities.altered?.trim() || 'sem alteração descrita'}`,
+    `Neurológico: Glasgow ${exam.neuro.glasgow ?? 'não informado'}; ${exam.neuro.altered?.trim() || 'consciente, contactuante, pupilas isofotorreagentes'}`,
+    `Cardiovascular: ${exam.cardiac.altered?.trim() || 'ritmo regular, bulhas normofonéticas e sem sopros'}`,
+    `Pulmonar: ${exam.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}`,
+    `Abdome: ${exam.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, indolor, sem sinais de irritação peritoneal'}`,
+    `Extremidades: ${exam.extremities.altered?.trim() || 'pulsos periféricos simétricos, sem edemas, perfusão preservada'}`,
     `Pele: ${exam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}`,
     exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}` : null
   ].filter((item): item is string => Boolean(item))

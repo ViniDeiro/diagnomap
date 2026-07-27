@@ -310,13 +310,13 @@ const formatRichExamFields = (exam: PneumoniaExamSummary | null, vitalItems: str
   const generalAppearance = [generalParts.join(', ') || null, vitalItems.length ? vitalItems.join(', ') : null].filter(Boolean).join(' – ') || undefined
   const glasgow = exam?.neuro?.glasgow
   const neuroAltered = exam?.neuro?.altered?.trim()
-  const neuro = glasgow != null || neuroAltered
-    ? uniqueTextItems([glasgow != null ? `Consciente, Glasgow ${glasgow}` : null, neuroAltered || null]).join(' — ')
+  const neuro = exam
+    ? uniqueTextItems([glasgow != null ? `Consciente, Glasgow ${glasgow}` : 'Consciente', neuroAltered || 'contactuante, pupilas isofotorreagentes']).join(', ')
     : undefined
-  const cardiac = exam?.cardiac?.altered?.trim() || undefined
-  const pulmonary = exam?.pulmonary?.altered?.trim() || undefined
-  const abdomen = exam?.abdomen?.altered?.trim() || undefined
-  const extremities = exam?.extremities?.altered?.trim() || undefined
+  const cardiac = exam ? (exam.cardiac?.altered?.trim() || 'Ritmo regular, bulhas normofonéticas e sem sopros') : undefined
+  const pulmonary = exam ? (exam.pulmonary?.altered?.trim() || 'Murmúrio vesicular presente bilateralmente, sem ruídos adventícios') : undefined
+  const abdomen = exam ? (exam.abdomen?.altered?.trim() || 'Plano, normotenso, ruídos hidroaéreos presentes, indolor, sem sinais de irritação peritoneal') : undefined
+  const extremities = exam ? (exam.extremities?.altered?.trim() || 'Pulsos periféricos simétricos, sem edemas, perfusão preservada') : undefined
   const skin = exam ? (exam.skin?.altered?.trim() || 'Pele íntegra, sem lesões cutâneas aparentes') : undefined
   return { generalAppearance, neuro, cardiac, pulmonary, abdomen, extremities, skin }
 }
@@ -620,7 +620,7 @@ const buildTVPClinicalSummary = (
     exam: {
       generalAppearance: vitalLines.length > 0 ? formatClinicalListText(vitalLines) : undefined,
       extremities: extremitiesExamLine,
-      skin: exam?.skin?.altered?.trim() || undefined
+      skin: exam ? (exam.skin?.altered?.trim() || 'Pele íntegra, sem lesões cutâneas aparentes') : undefined
     },
     hd,
     conduct,
@@ -1486,14 +1486,15 @@ const buildTEPClinicalSummary = (
   const finalTitle = current?.title || flowchart.name
   const finalDescription = current?.description || flowchart.description
   const durationText = patient.admission?.complaintDuration?.trim()
-  const findAltered = (keys: string[]) => {
+  const findAltered = (keys: string[], normalDefault: string) => {
     for (const key of keys) {
       const record = physical[key]
-      if (record && typeof record === 'object' && typeof (record as Record<string, unknown>).altered === 'string' && ((record as Record<string, unknown>).altered as string).trim()) {
-        return ((record as Record<string, unknown>).altered as string).trim()
+      if (record && typeof record === 'object' && typeof (record as Record<string, unknown>).altered === 'string') {
+        const altered = ((record as Record<string, unknown>).altered as string).trim()
+        return altered || normalDefault
       }
     }
-    return undefined
+    return Object.keys(physical).length ? normalDefault : undefined
   }
   const hpma = uniqueTextItems([
     `Paciente avaliado por ${chiefComplaint}.`,
@@ -1522,12 +1523,12 @@ const buildTEPClinicalSummary = (
     muc,
     exam: {
       generalAppearance: vitalLines.length > 0 ? formatClinicalListText(vitalLines) : undefined,
-      neuro: findAltered(['neuro', 'neurological']),
-      cardiac: findAltered(['cardiac', 'cardiovascular']),
-      pulmonary: findAltered(['pulmonary', 'respiratory']),
-      abdomen: findAltered(['abdomen', 'abdominal']),
-      extremities: findAltered(['extremities']),
-      skin: findAltered(['skin']) || (Object.keys(physical).length ? 'Pele íntegra, sem lesões cutâneas aparentes' : undefined)
+      neuro: findAltered(['neuro', 'neurological'], 'Consciente, contactuante, pupilas isofotorreagentes'),
+      cardiac: findAltered(['cardiac', 'cardiovascular'], 'Ritmo regular, bulhas normofonéticas e sem sopros'),
+      pulmonary: findAltered(['pulmonary', 'respiratory'], 'Murmúrio vesicular presente bilateralmente, sem ruídos adventícios'),
+      abdomen: findAltered(['abdomen', 'abdominal'], 'Plano, normotenso, ruídos hidroaéreos presentes, indolor, sem sinais de irritação peritoneal'),
+      extremities: findAltered(['extremities'], 'Pulsos periféricos simétricos, sem edemas, perfusão preservada'),
+      skin: findAltered(['skin'], 'Pele íntegra, sem lesões cutâneas aparentes')
     },
     hd: [impression],
     conduct: [dispositionLine],

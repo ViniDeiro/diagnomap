@@ -563,6 +563,15 @@ export const gecaFlowchart: EmergencyFlowchart = {
       type: 'result',
       content: `
         <div class="space-y-3 text-sm">
+          <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p class="font-bold">Receita de alta assistida</p>
+            <p class="mt-1">Escolha o modelo correspondente ao paciente. O texto copiado é editável e deve ser revisado antes da assinatura.</p>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <button type="button" data-geca-copy-adult="true" class="rounded-xl bg-blue-700 px-4 py-3 font-bold text-white hover:bg-blue-800">Copiar prescrição adulta</button>
+              <button type="button" data-geca-copy-pediatric="true" class="rounded-xl border border-blue-300 bg-white px-4 py-3 font-bold text-blue-900 hover:bg-blue-100">Copiar prescrição pediátrica</button>
+            </div>
+            <p class="mt-3 text-xs">A hidratação oral e a alimentação são o tratamento central. Sintomáticos dependem de idade, peso, alergias, gestação, comorbidades e contraindicações.</p>
+          </div>
           <div class="rounded-lg border-l-4 border-green-600 bg-green-50 p-4 text-green-950">
             <p class="font-bold">Plano domiciliar</p>
             <ul class="mt-2 list-disc space-y-1 pl-5">

@@ -335,6 +335,9 @@ assert.equal(pepHivFlowchart.steps.pep_avaliacao_inicial.options[0].nextStep, 'p
 for (const marker of ['PEP_BASELINE_ASSESSMENT_KEY', 'PEP_EXPOSED_SITES', 'PEP_HBV_VACCINE_STATUS', 'PEP_ASSOCIATED_CARE', 'PEP_FOLLOW_UP', 'Exames ainda pendentes não bloqueiam o início da PEP', 'Referência rápida · sífilis em adultos']) {
   assert.match(emergencyComponentSource, new RegExp(marker), `PEP HIV: avaliação interativa ausente (${marker})`)
 }
+for (const marker of ['GECA_ADULT_DISCHARGE_PRESCRIPTION', 'GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION', 'data-geca-copy-adult', 'data-geca-copy-pediatric']) {
+  assert.match(`${emergencyComponentSource}\n${gecaSource}`, new RegExp(marker), `GECA: receita de alta ausente (${marker})`)
+}
 assert.match(clinicalSummarySource, /parsePepBaselineForSummary/, 'PEP HIV: avaliação basal precisa aparecer no resumo clínico')
 assert.equal(ituFlowchart.steps.itu_bacteriuria_excecoes.options.find(option => option.value === 'grupo_especial')?.nextStep, 'itu_bacteriuria_grupo_especial', 'ITU: bacteriúria em grupo especial deve passar pela orientação específica')
 const ituReachable = reachable(ituFlowchart)
@@ -498,6 +501,9 @@ const tvpReachable = reachable(tvpFlowchart)
 assert.equal(tvpFlowchart.steps.tvp_exame_fisico, undefined, 'TVP: tela duplicada de sinais vitais e exame físico deve ser removida')
 assert.equal(tvpFlowchart.steps.start.options[0]?.nextStep, 'avaliacao_clinica', 'TVP: após selecionar o membro deve seguir para avaliação específica')
 assert.match(emergencyComponentSource, /handleAnswer\('avaliacao_clinica', selectedTVPLeg\)/, 'TVP: seletor do membro não pode reabrir exame físico duplicado')
+assert.match(emergencyComponentSource, /\{ id: 'hnf', group: 'Parenteral'/, 'TVP: HNF deve permanecer entre as opções terapêuticas')
+assert.doesNotMatch(emergencyComponentSource, /item\.id !== 'hnf' \|\| hasTVPICUDisposition/, 'TVP: HNF não pode ficar restrita ao caminho de UTI')
+assert.doesNotMatch(emergencyComponentSource, /therapyId !== 'hnf' \|\| hasTVPICUDisposition/, 'TVP: seleção de HNF não pode ser descartada fora da UTI')
 assert.match(emergencyComponentSource, /step === 'tvp_exame_fisico'[\s\S]*return 'avaliacao_clinica'/, 'TVP: atendimentos antigos devem migrar a etapa duplicada')
 assert.equal(tvpFlowchart.steps.wells_score.options.find(option => option.value === 'wells_up_to_2')?.nextStep, 'd_dimero_elegibilidade', 'TVP: Wells até 2 pontos deve avaliar a utilidade do D-dímero')
 assert.equal(tvpFlowchart.steps.wells_score.options.find(option => option.value === 'wells_above_2')?.nextStep, 'moderada_probabilidade', 'TVP: Wells acima de 2 pontos deve seguir ao Doppler')
