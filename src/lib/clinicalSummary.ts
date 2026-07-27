@@ -1122,12 +1122,11 @@ const buildInfluenzaClinicalSummary = (
     || 'quadro respiratório agudo compatível com síndrome gripal'
   const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
   const durationText = patient.admission?.complaintDuration?.trim()
-  const historySentence = [
+  const historySentence = `${[
     `Na história da moléstia atual, consta quadro respiratório agudo com queixa de ${chiefComplaint.replace(/[.]+$/, '')}`,
     durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
-    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `associado a ${symptomText.replace(/[.]+$/, '')}` : null,
-    patient.generalObservations?.trim() ? `Observações adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}` : null
-  ].filter(Boolean).join(', ') + '.'
+    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `associado a ${symptomText.replace(/[.]+$/, '')}` : null
+  ].filter(Boolean).join(', ')}.${patient.generalObservations?.trim() ? ` Observações adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''}`
   const examinationSentence = examinationLines.length
     ? `Na avaliação clínica e semiológica, foram registrados: ${examinationLines.join('; ')}.`
     : 'Sinais vitais e exame físico estruturado não foram registrados neste caminho, devendo ser complementados na avaliação presencial.'
@@ -1305,12 +1304,11 @@ const buildPneumoniaClinicalSummary = (
     || 'quadro respiratório sugestivo de pneumonia adquirida na comunidade'
   const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
   const durationText = patient.admission?.complaintDuration?.trim()
-  const historyNarrative = [
+  const historyNarrative = `${[
     `Paciente em avaliação por ${chiefComplaint.replace(/[.]+$/, '')}`,
     durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
-    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `apresentando ${symptomText.replace(/[.]+$/, '')}` : null,
-    patient.generalObservations?.trim() ? `Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}` : null
-  ].filter(Boolean).join(', ') + '.'
+    symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `apresentando ${symptomText.replace(/[.]+$/, '')}` : null
+  ].filter(Boolean).join(', ')}.${patient.generalObservations?.trim() ? ` Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''}`
 
   const generalLabels: Record<string, string> = { bom: 'bom estado geral', regular: 'regular estado geral', mal: 'mal estado geral', grave: 'grave estado geral', pessimo: 'péssimo estado geral' }
   const grade = (value: unknown) => numeric(value) ? ` ${numeric(value)}/4+` : ''
