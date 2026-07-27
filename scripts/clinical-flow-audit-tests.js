@@ -325,6 +325,17 @@ assert.match(flowSource, /Destino correto: alta com encaminhamento ambulatorial/
 assert.match(flowSource, /Não é transferência hospitalar/, 'PEP HIV positivo: encaminhamento deve ser explicitamente ambulatorial')
 assert.match(emergencyComponentSource, /HIV — teste rápido\/algoritmo diagnóstico/, 'PEP HIV: campo de exames precisa sugerir testagem basal de HIV')
 assert.match(emergencyComponentSource, /ZoomableImageModal[\s\S]*src="\/pephiv\.jpeg"/, 'PEP HIV: imagem de referência deve abrir com ampliação')
+assert.equal(pepHivFlowchart.steps.pep_fonte_hiv.options[0].nextStep, 'pep_avaliacao_inicial', 'PEP HIV: indicação deve passar pela avaliação inicial antes da prescrição')
+assert.equal(pepHivFlowchart.steps.pep_fonte_hiv.options[1].nextStep, 'pep_fonte_desconhecida_risco', 'PEP HIV: fonte desconhecida deve passar por estratificação de risco')
+assert.equal(pepHivFlowchart.steps.pep_exposta_hiv.options[0].nextStep, 'pep_hiv_confirmado_avaliacao', 'PEP HIV: teste reagente deve sair do caminho de profilaxia')
+assert.equal(pepHivFlowchart.steps.pep_janela_72h.options[1].nextStep, 'pep_fora_janela', 'PEP HIV: exposição após 72 h deve seguir para investigação')
+assert.equal(pepHivFlowchart.steps.pep_fora_janela.options[0].nextStep, 'pep_pos_72_seguimento', 'PEP HIV: perda da janela não deve encerrar o cuidado')
+assert.equal(pepHivFlowchart.steps.pep_fonte_risco_30d.options[0].nextStep, 'pep_avaliacao_inicial', 'PEP HIV: risco recente da fonte deve passar pela avaliação inicial')
+assert.equal(pepHivFlowchart.steps.pep_avaliacao_inicial.options[0].nextStep, 'pep_iniciar', 'PEP HIV: avaliação inicial deve conduzir ao início imediato da PEP')
+for (const marker of ['PEP_BASELINE_ASSESSMENT_KEY', 'PEP_EXPOSED_SITES', 'PEP_HBV_VACCINE_STATUS', 'PEP_ASSOCIATED_CARE', 'PEP_FOLLOW_UP', 'Exames ainda pendentes não bloqueiam o início da PEP', 'Referência rápida · sífilis em adultos']) {
+  assert.match(emergencyComponentSource, new RegExp(marker), `PEP HIV: avaliação interativa ausente (${marker})`)
+}
+assert.match(clinicalSummarySource, /parsePepBaselineForSummary/, 'PEP HIV: avaliação basal precisa aparecer no resumo clínico')
 assert.equal(ituFlowchart.steps.itu_bacteriuria_excecoes.options.find(option => option.value === 'grupo_especial')?.nextStep, 'itu_bacteriuria_grupo_especial', 'ITU: bacteriúria em grupo especial deve passar pela orientação específica')
 const ituReachable = reachable(ituFlowchart)
 for (const required of [
@@ -464,6 +475,11 @@ const narrativeCases = [
     id: 'hipertensao', flow: hypertensionFlowchart, step: 'hipertensao_emergencia_plano', history: ['hipertensao_confirmacao', 'hipertensao_lesao_orgao', 'hipertensao_emergencia_cenario'],
     answers: { __avaliacao_clinica_inicial: universalAnswer, hipertensao_caso_estruturado: JSON.stringify({ systolic: 220, diastolic: 130, symptoms: ['dyspnea'], organDamage: ['pulmonary_edema'], route: 'emergency', scenario: 'pulmonary_edema', selectedIVAgent: 'nitroglycerin', disposition: 'CTI' }) },
     expected: [/emergência hipertensiva/i, /edema agudo de pulmão/, /CTI/]
+  },
+  {
+    id: 'pep_hiv', flow: pepHivFlowchart, step: 'pep_iniciar', history: ['pep_material_risco', 'pep_tipo_exposicao', 'pep_janela_72h', 'pep_exposta_hiv', 'pep_fonte_hiv', 'pep_avaliacao_inicial'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, pep_material_risco: 'material_risco', pep_tipo_exposicao: 'risco', pep_janela_72h: 'ate_72h', pep_exposta_hiv: 'exposta_negativo', pep_fonte_hiv: 'fonte_positiva', __pep_baseline_assessment: JSON.stringify({ exposureContext: 'sexual_consentida', baselineTests: ['hiv', 'hbsag', 'anti_hcv', 'sifilis'], conditionalTests: ['creatinina', 'beta_hcg'], exposedSites: ['retal', 'orofaringeo'], hbvVaccineStatus: 'desconhecida', hbvSourceStatus: 'reagente', hbvActions: ['vacina', 'ighahb'], associatedCare: ['naat'], followUp: ['retorno_4_sem', 'hiv_30d', 'prep'], noDelayConfirmed: true, notes: 'Coleta orofaríngea pendente.' }) },
+    expected: [/exposição sexual consentida/, /mucosa retal/, /orofaringe/, /vacina contra hepatite B/, /imunoglobulina anti-hepatite B/, /não deveriam atrasar o início da PEP/]
   },
   {
     id: 'geca', flow: gecaFlowchart, step: 'geca_alta_plano_a', history: ['geca_inicio', 'geca_perfil_diarreia', 'geca_classificacao_hidratacao', 'geca_plano_a', 'geca_destino'],

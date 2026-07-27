@@ -2236,6 +2236,138 @@ const parseAnsiedadeRouteAlerts = (rawAnswer?: string): AnsiedadeRouteAlertId[] 
   }
 }
 
+export const PEP_BASELINE_ASSESSMENT_KEY = '__pep_baseline_assessment'
+
+type PepBaselineAssessment = {
+  exposureContext: string
+  baselineTests: string[]
+  conditionalTests: string[]
+  exposedSites: string[]
+  hbvVaccineStatus: string
+  hbvSourceStatus: string
+  hbvActions: string[]
+  associatedCare: string[]
+  followUp: string[]
+  noDelayConfirmed: boolean
+  notes: string
+}
+
+const emptyPepBaselineAssessment = (): PepBaselineAssessment => ({
+  exposureContext: '',
+  baselineTests: [],
+  conditionalTests: [],
+  exposedSites: [],
+  hbvVaccineStatus: '',
+  hbvSourceStatus: '',
+  hbvActions: [],
+  associatedCare: [],
+  followUp: [],
+  noDelayConfirmed: false,
+  notes: ''
+})
+
+export const parsePepBaselineAssessment = (raw?: string | null): PepBaselineAssessment => {
+  if (!raw) return emptyPepBaselineAssessment()
+  try {
+    const parsed = JSON.parse(raw) as Partial<PepBaselineAssessment>
+    const array = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+    return {
+      exposureContext: typeof parsed.exposureContext === 'string' ? parsed.exposureContext : '',
+      baselineTests: array(parsed.baselineTests),
+      conditionalTests: array(parsed.conditionalTests),
+      exposedSites: array(parsed.exposedSites),
+      hbvVaccineStatus: typeof parsed.hbvVaccineStatus === 'string' ? parsed.hbvVaccineStatus : '',
+      hbvSourceStatus: typeof parsed.hbvSourceStatus === 'string' ? parsed.hbvSourceStatus : '',
+      hbvActions: array(parsed.hbvActions),
+      associatedCare: array(parsed.associatedCare),
+      followUp: array(parsed.followUp),
+      noDelayConfirmed: parsed.noDelayConfirmed === true,
+      notes: typeof parsed.notes === 'string' ? parsed.notes : ''
+    }
+  } catch {
+    return emptyPepBaselineAssessment()
+  }
+}
+
+const PEP_EXPOSURE_CONTEXTS = [
+  ['sexual_consentida', 'Exposição sexual consentida'],
+  ['violencia_sexual', 'Violência sexual'],
+  ['ocupacional', 'Acidente ocupacional/perfurocortante'],
+  ['nao_sexual', 'Outra exposição não sexual']
+] as const
+
+const PEP_BASELINE_TESTS = [
+  ['hiv', 'HIV — teste rápido/algoritmo diagnóstico'],
+  ['hbsag', 'HBsAg'],
+  ['anti_hbs', 'Anti-HBs'],
+  ['anti_hbc', 'Anti-HBc total, conforme protocolo/contexto'],
+  ['anti_hcv', 'Anti-HCV'],
+  ['sifilis', 'Sífilis — teste rápido ou VDRL/RPR']
+] as const
+
+const PEP_CONDITIONAL_TESTS = [
+  ['creatinina', 'Creatinina com depuração/eTFG se risco ou doença renal'],
+  ['ureia', 'Ureia conforme avaliação renal/local'],
+  ['tgo_tgp', 'TGO/TGP conforme esquema e condição clínica'],
+  ['hepatico_ampliado', 'Bilirrubinas/FA/GGT se doença hepática ou indicação clínica'],
+  ['hemograma', 'Hemograma se anemia suspeita ou uso de zidovudina'],
+  ['beta_hcg', 'β-hCG quando houver possibilidade de gestação'],
+  ['glicemia', 'Glicemia se diabetes ou indicação clínica']
+] as const
+
+const PEP_EXPOSED_SITES = [
+  ['urina_uretral', 'Urina de primeiro jato/uretral'],
+  ['vaginal', 'Vaginal'],
+  ['endocervical', 'Endocervical'],
+  ['retal', 'Retal'],
+  ['orofaringeo', 'Orofaríngeo'],
+  ['conjuntival', 'Conjuntival, se pertinente']
+] as const
+
+const PEP_HBV_VACCINE_STATUS = [
+  ['adequada', 'Esquema completo com resposta documentada'],
+  ['completa_resposta_desconhecida', 'Esquema completo, resposta desconhecida'],
+  ['incompleta', 'Vacinação incompleta'],
+  ['nao_vacinado', 'Não vacinado'],
+  ['desconhecida', 'Situação vacinal desconhecida']
+] as const
+
+const PEP_HBV_SOURCE_STATUS = [
+  ['reagente', 'Fonte HBsAg reagente'],
+  ['nao_reagente', 'Fonte HBsAg não reagente'],
+  ['desconhecida', 'Fonte desconhecida/resultado indisponível']
+] as const
+
+const PEP_HBV_ACTIONS = [
+  ['vacina', 'Iniciar ou completar vacina contra hepatite B'],
+  ['anti_hbs', 'Solicitar/consultar Anti-HBs'],
+  ['ighahb', 'Avaliar imunoglobulina anti-hepatite B'],
+  ['nenhuma', 'Nenhuma medida específica após confirmar imunidade']
+] as const
+
+const PEP_ASSOCIATED_CARE = [
+  ['naat', 'NAAT/PCR para gonococo e clamídia nos sítios selecionados'],
+  ['tricomonas', 'Investigar tricomoníase se corrimento vaginal/suspeita clínica'],
+  ['sifilis_estagio', 'Sífilis reagente: tratar conforme estágio e acompanhar VDRL'],
+  ['hcv_rna', 'Anti-HCV reagente: confirmar infecção ativa com HCV-RNA'],
+  ['parcerias', 'Orientar avaliação e manejo das parcerias sexuais quando indicado'],
+  ['violencia_profilaxia', 'Profilaxia preemptiva de ISTs conforme protocolo de violência sexual'],
+  ['contracepcao', 'Avaliar contracepção de emergência'],
+  ['tetano', 'Revisar profilaxia para tétano se ferimento justificar'],
+  ['hpv', 'Revisar indicação de vacinação contra HPV'],
+  ['notificacao', 'Notificação e rede de proteção, quando aplicável']
+] as const
+
+const PEP_FOLLOW_UP = [
+  ['rede', 'Definir seguimento: UBS, CTA, SAE ou infectologia conforme a rede e os resultados'],
+  ['retorno_4_sem', 'Retorno em quatro semanas: adesão e efeitos adversos'],
+  ['hiv_30d', 'Repetir testagem para HIV em 30 dias'],
+  ['sifilis', 'Seguimento de sífilis conforme resultado e risco'],
+  ['hepatites', 'Seguimento de hepatites B/C conforme baseline e pessoa-fonte'],
+  ['toxicidade', 'Reavaliar função renal/hepática quando indicado'],
+  ['prep', 'Avaliar transição para PrEP após 28 dias, se exposição recorrente']
+] as const
+
 interface EmergencyFlowchartProps {
   patient: EmergencyPatient
   flowchart: EmergencyFlowchartType
@@ -3768,6 +3900,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const currentStepData = flowchart.steps[currentStep]
+  const isPepBaselineAssessmentStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_avaliacao_inicial'
+  const isPepPost72AssessmentStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_fora_janela'
+  const isPepInteractiveAssessmentStep = isPepBaselineAssessmentStep || isPepPost72AssessmentStep
+  const pepBaselineAssessment = useMemo(
+    () => parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY]),
+    [answers]
+  )
+  const pepBaselinePending = [
+    !pepBaselineAssessment.exposureContext ? 'classificar o contexto da exposição' : '',
+    !pepBaselineAssessment.hbvVaccineStatus ? 'registrar a situação vacinal para hepatite B (inclusive “desconhecida”)' : '',
+    !pepBaselineAssessment.hbvSourceStatus ? 'registrar o HBsAg da pessoa-fonte (inclusive “desconhecido”)' : '',
+    isPepBaselineAssessmentStep && !pepBaselineAssessment.noDelayConfirmed ? 'confirmar que exames pendentes não atrasarão a PEP' : ''
+  ].filter(Boolean)
   const shouldShowUniversalLabNotebook = Boolean(currentStepData && (
     currentStepData.requiresLabs || currentStepData.type === 'lab_wait' ||
     /(exames_dirigidos|resultados_exames|laboratorio|investigacao_dirigida)/i.test(currentStepData.id)
@@ -3775,7 +3920,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const universalSuggestedLabs = flowchart.id === 'geca'
     ? ['Hemograma', 'Ureia', 'Creatinina', 'Sódio', 'Potássio', 'Magnésio', 'Glicemia', 'PCR', 'Lactato', 'Coprocultura/painel', 'Toxina Shiga/STEC', 'C. difficile']
     : flowchart.id === 'pep_hiv'
-      ? ['HIV — teste rápido/algoritmo diagnóstico', 'HBsAg', 'Anti-HBs', 'Anti-HCV', 'Sífilis — teste treponêmico', 'Gonococo — teste molecular', 'Clamídia — teste molecular', 'Teste de gravidez', 'Creatinina', 'TGO/TGP']
+      ? ['HIV — teste rápido/algoritmo diagnóstico', 'HBsAg', 'Anti-HBs', 'Anti-HBc total', 'Anti-HCV', 'Sífilis — teste rápido ou VDRL/RPR', 'Gonococo — NAAT/PCR por sítio', 'Clamídia — NAAT/PCR por sítio', 'β-hCG', 'Creatinina', 'Ureia', 'TGO/TGP', 'Bilirrubinas/FA/GGT', 'Hemograma']
     : flowchart.id === 'edema_agudo_pulmao'
       ? ['Gasometria', 'Troponina', 'BNP/NT-proBNP', 'Ureia', 'Creatinina', 'Sódio', 'Potássio']
       : []
@@ -3796,6 +3941,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setAnswers(updatedAnswers)
     onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
   }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
+  const persistPepBaselineAssessment = useCallback((patch: Partial<PepBaselineAssessment>) => {
+    const current = parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY])
+    const next = { ...current, ...patch }
+    const updatedAnswers = { ...answers, [PEP_BASELINE_ASSESSMENT_KEY]: JSON.stringify(next) }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
+  const togglePepBaselineItem = useCallback((field: 'baselineTests' | 'conditionalTests' | 'exposedSites' | 'hbvActions' | 'associatedCare' | 'followUp', value: string) => {
+    const selected = pepBaselineAssessment[field]
+    persistPepBaselineAssessment({
+      [field]: selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]
+    })
+  }, [pepBaselineAssessment, persistPepBaselineAssessment])
   useEffect(() => {
     let mounted = true
     getCurrentDoctor()
@@ -11431,6 +11589,112 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </section>
               )}
 
+              {isPepInteractiveAssessmentStep && (
+                <div className="mb-6 space-y-5">
+                  <section className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
+                    <div className="border-b border-red-100 bg-gradient-to-r from-red-700 to-orange-600 p-5 text-white">
+                      <p className="text-xs font-black uppercase tracking-[0.18em] text-red-100">{isPepPost72AssessmentStep ? 'Continuidade do cuidado' : 'Conduta paralela e tempo-dependente'}</p>
+                      <h3 className="mt-1 text-xl font-extrabold">{isPepPost72AssessmentStep ? 'Investigar, tratar e organizar seguimento' : 'Avaliação basal sem atrasar a primeira dose'}</h3>
+                      <p className="mt-2 text-sm text-red-50">{isPepPost72AssessmentStep ? 'A janela da PEP para HIV terminou, mas a investigação de infecções, a prevenção e o vínculo com a rede devem continuar.' : 'Registre o cuidado indicado e os resultados disponíveis. Exames ainda pendentes não bloqueiam o início da PEP.'}</p>
+                    </div>
+                    {isPepBaselineAssessmentStep ? <label className="flex cursor-pointer items-start gap-3 p-5 text-sm font-bold text-red-950">
+                      <input
+                        type="checkbox"
+                        checked={pepBaselineAssessment.noDelayConfirmed}
+                        onChange={(event) => persistPepBaselineAssessment({ noDelayConfirmed: event.target.checked })}
+                        className="mt-0.5 h-5 w-5 rounded border-red-300 text-red-700 focus:ring-red-600"
+                      />
+                      <span>Confirmo que a coleta ou a liberação dos exames não atrasará a PEP quando indicada.</span>
+                    </label> : <div className="p-5 text-sm font-bold text-red-950">PEP para HIV não indicada após 72 horas. Não utilizar essa conclusão como encerramento automático do atendimento.</div>}
+                  </section>
+
+                  <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div className="mb-4">
+                      <p className="text-xs font-black uppercase tracking-wider text-slate-500">1. Contexto</p>
+                      <h3 className="mt-1 font-extrabold text-slate-950">Como ocorreu a exposição?</h3>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {PEP_EXPOSURE_CONTEXTS.map(([value, label]) => {
+                        const selected = pepBaselineAssessment.exposureContext === value
+                        return <button key={value} type="button" aria-pressed={selected} onClick={() => persistPepBaselineAssessment({ exposureContext: value })} className={clsx('rounded-xl border-2 p-4 text-left text-sm font-bold transition-colors', selected ? 'border-cyan-600 bg-cyan-50 text-cyan-950' : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300')}><span className="mr-2">{selected ? '●' : '○'}</span>{label}</button>
+                      })}
+                    </div>
+                    {pepBaselineAssessment.exposureContext === 'violencia_sexual' && (
+                      <div className="mt-4 rounded-xl border border-violet-300 bg-violet-50 p-4 text-sm text-violet-950">
+                        <strong>Abordagem específica:</strong> considerar profilaxia preemptiva para ISTs não virais, contracepção de emergência, imunizações, cuidado clínico/psicossocial, notificação e rede de proteção conforme protocolo local. Esta conduta não deve ser aplicada automaticamente às exposições consentidas.
+                      </div>
+                    )}
+                  </section>
+
+                  <section className="grid gap-5 xl:grid-cols-2">
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/45 p-5">
+                      <p className="text-xs font-black uppercase tracking-wider text-emerald-700">2. Painel inicial</p>
+                      <h3 className="mt-1 font-extrabold text-emerald-950">Testagens relacionadas à exposição</h3>
+                      <div className="mt-4 space-y-2">
+                        {PEP_BASELINE_TESTS.map(([value, label]) => {
+                          const selected = pepBaselineAssessment.baselineTests.includes(value)
+                          return <button key={value} type="button" aria-pressed={selected} onClick={() => togglePepBaselineItem('baselineTests', value)} className={clsx('flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors', selected ? 'border-emerald-500 bg-white text-emerald-950' : 'border-emerald-200 bg-emerald-50 text-slate-700 hover:bg-white')}><span className={clsx('mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-black', selected ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 bg-white text-transparent')}>✓</span><span>{label}</span></button>
+                        })}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/45 p-5">
+                      <p className="text-xs font-black uppercase tracking-wider text-amber-700">3. Conforme o caso</p>
+                      <h3 className="mt-1 font-extrabold text-amber-950">Segurança do esquema e condições clínicas</h3>
+                      <div className="mt-4 space-y-2">
+                        {PEP_CONDITIONAL_TESTS.map(([value, label]) => {
+                          const selected = pepBaselineAssessment.conditionalTests.includes(value)
+                          return <button key={value} type="button" aria-pressed={selected} onClick={() => togglePepBaselineItem('conditionalTests', value)} className={clsx('flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors', selected ? 'border-amber-500 bg-white text-amber-950' : 'border-amber-200 bg-amber-50 text-slate-700 hover:bg-white')}><span className={clsx('mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border text-xs font-black', selected ? 'border-amber-600 bg-amber-600 text-white' : 'border-slate-300 bg-white text-transparent')}>✓</span><span>{label}</span></button>
+                        })}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-blue-200 bg-blue-50/40 p-5">
+                    <p className="text-xs font-black uppercase tracking-wider text-blue-700">4. Gonococo e clamídia</p>
+                    <h3 className="mt-1 font-extrabold text-blue-950">Selecione os sítios efetivamente expostos</h3>
+                    <p className="mt-2 text-sm text-blue-900">A seleção orienta NAAT/PCR em urina de primeiro jato e/ou swab das mucosas expostas.</p>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                      {PEP_EXPOSED_SITES.map(([value, label]) => {
+                        const selected = pepBaselineAssessment.exposedSites.includes(value)
+                        return <button key={value} type="button" aria-pressed={selected} onClick={() => togglePepBaselineItem('exposedSites', value)} className={clsx('rounded-xl border-2 p-3 text-left text-sm font-bold transition-colors', selected ? 'border-blue-600 bg-white text-blue-950' : 'border-blue-200 bg-blue-50 text-slate-700 hover:bg-white')}>{selected ? '✓ ' : '+ '}{label}</button>
+                      })}
+                    </div>
+                  </section>
+
+                  <section className="rounded-2xl border border-indigo-200 bg-white p-5 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-wider text-indigo-700">5. Hepatite B</p>
+                    <div className="mt-4 grid gap-5 lg:grid-cols-2">
+                      <div><h3 className="font-extrabold text-slate-950">Situação vacinal da pessoa exposta</h3><div className="mt-3 space-y-2">{PEP_HBV_VACCINE_STATUS.map(([value, label]) => { const selected = pepBaselineAssessment.hbvVaccineStatus === value; return <button key={value} type="button" aria-pressed={selected} onClick={() => persistPepBaselineAssessment({ hbvVaccineStatus: value })} className={clsx('w-full rounded-xl border p-3 text-left text-sm font-bold', selected ? 'border-indigo-600 bg-indigo-50 text-indigo-950' : 'border-slate-200 text-slate-700 hover:border-indigo-300')}>{selected ? '● ' : '○ '}{label}</button> })}</div></div>
+                      <div><h3 className="font-extrabold text-slate-950">HBsAg da pessoa-fonte</h3><div className="mt-3 space-y-2">{PEP_HBV_SOURCE_STATUS.map(([value, label]) => { const selected = pepBaselineAssessment.hbvSourceStatus === value; return <button key={value} type="button" aria-pressed={selected} onClick={() => persistPepBaselineAssessment({ hbvSourceStatus: value })} className={clsx('w-full rounded-xl border p-3 text-left text-sm font-bold', selected ? 'border-indigo-600 bg-indigo-50 text-indigo-950' : 'border-slate-200 text-slate-700 hover:border-indigo-300')}>{selected ? '● ' : '○ '}{label}</button> })}</div></div>
+                    </div>
+                    <div className="mt-5 border-t border-indigo-100 pt-5"><h3 className="font-extrabold text-slate-950">Medidas avaliadas</h3><div className="mt-3 grid gap-3 md:grid-cols-2">{PEP_HBV_ACTIONS.map(([value, label]) => { const selected = pepBaselineAssessment.hbvActions.includes(value); return <button key={value} type="button" aria-pressed={selected} onClick={() => togglePepBaselineItem('hbvActions', value)} className={clsx('rounded-xl border-2 p-3 text-left text-sm font-bold', selected ? 'border-indigo-600 bg-indigo-50 text-indigo-950' : 'border-slate-200 text-slate-700 hover:border-indigo-300')}>{selected ? '✓ ' : '+ '}{label}</button> })}</div></div>
+                  </section>
+
+                  <section className="grid gap-5 xl:grid-cols-2">
+                    <div className="rounded-2xl border border-violet-200 bg-violet-50/40 p-5"><p className="text-xs font-black uppercase tracking-wider text-violet-700">6. Cuidados associados</p><div className="mt-4 space-y-2">{PEP_ASSOCIATED_CARE.map(([value, label]) => { const selected = pepBaselineAssessment.associatedCare.includes(value); const disabled = value === 'violencia_profilaxia' && pepBaselineAssessment.exposureContext !== 'violencia_sexual'; return <button key={value} type="button" disabled={disabled} aria-pressed={selected} onClick={() => togglePepBaselineItem('associatedCare', value)} className={clsx('flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors disabled:cursor-not-allowed disabled:opacity-45', selected ? 'border-violet-500 bg-white text-violet-950' : 'border-violet-200 bg-violet-50 text-slate-700 hover:bg-white')}><span>{selected ? '✓' : '+'}</span><span>{label}</span></button> })}</div></div>
+                    <div className="rounded-2xl border border-cyan-200 bg-cyan-50/40 p-5"><p className="text-xs font-black uppercase tracking-wider text-cyan-700">7. Plano de seguimento</p><div className="mt-4 space-y-2">{PEP_FOLLOW_UP.map(([value, label]) => { const selected = pepBaselineAssessment.followUp.includes(value); return <button key={value} type="button" aria-pressed={selected} onClick={() => togglePepBaselineItem('followUp', value)} className={clsx('flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors', selected ? 'border-cyan-500 bg-white text-cyan-950' : 'border-cyan-200 bg-cyan-50 text-slate-700 hover:bg-white')}><span>{selected ? '✓' : '+'}</span><span>{label}</span></button> })}</div></div>
+                  </section>
+
+                  {isPepPost72AssessmentStep && (
+                    <section className="rounded-2xl border border-rose-200 bg-rose-50/50 p-5 shadow-sm">
+                      <p className="text-xs font-black uppercase tracking-wider text-rose-700">Referência rápida · sífilis em adultos</p>
+                      <h3 className="mt-1 font-extrabold text-rose-950">Definir a conduta pelo estágio clínico</h3>
+                      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <div className="rounded-xl border border-rose-200 bg-white p-4 text-sm text-slate-800"><strong className="text-rose-950">Recente</strong><p className="mt-2">Penicilina G benzatina 2,4 milhões UI IM, em dose única.</p></div>
+                        <div className="rounded-xl border border-rose-200 bg-white p-4 text-sm text-slate-800"><strong className="text-rose-950">Tardia, duração ignorada ou terciária sem neurossífilis</strong><p className="mt-2">2,4 milhões UI IM uma vez por semana, durante três semanas; total de 7,2 milhões UI.</p></div>
+                        <div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"><strong>Neuro, ocular ou otológica</strong><p className="mt-2">Avaliação especializada e penicilina G cristalina 18–24 milhões UI/dia EV, fracionada a cada quatro horas ou em infusão contínua, por 14 dias, conforme PCDT.</p></div>
+                      </div>
+                      <p className="mt-4 text-xs leading-relaxed text-rose-900">Registrar VDRL quantitativo para seguimento, manejar parcerias quando indicado e confirmar o protocolo vigente, alergias, gestação e particularidades clínicas antes da prescrição.</p>
+                    </section>
+                  )}
+
+                  <label className="block rounded-2xl border border-slate-200 bg-white p-5 text-sm font-bold text-slate-800 shadow-sm">Observações clínicas e pendências<textarea value={pepBaselineAssessment.notes} onChange={(event) => persistPepBaselineAssessment({ notes: event.target.value })} rows={3} placeholder="Ex.: pessoa-fonte indisponível; vacinação não comprovada; coleta orofaríngea indisponível na unidade..." className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 font-medium" /></label>
+
+                  {pepBaselinePending.length > 0 && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Para avançar, falta:</strong><ul className="mt-2 list-disc space-y-1 pl-5">{pepBaselinePending.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+                  <button type="button" disabled={pepBaselinePending.length > 0 || !currentStepData.options?.[0]} onClick={() => { const option = currentStepData.options?.[0]; if (option) handleOptionSelect(option) }} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white shadow-sm transition-colors hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-slate-300">{isPepPost72AssessmentStep ? 'Registrar investigação e organizar seguimento' : 'Registrar avaliação e iniciar PEP agora'} <ChevronRight className="h-5 w-5" /></button>
+                </div>
+              )}
+
               {shouldShowUniversalLabNotebook && (
                 <div className="mb-6">
                   <UniversalLabNotebook
@@ -11442,7 +11706,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && !isAnaphylaxisAirwayStep && (
+              {currentStepData.content && !isPepInteractiveAssessmentStep && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && !isAnaphylaxisAirwayStep && (
                 <div className={clsx(
                   'mb-6',
                   isAsthmaFlow
@@ -18141,7 +18405,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isPepInteractiveAssessmentStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

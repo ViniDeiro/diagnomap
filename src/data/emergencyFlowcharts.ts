@@ -6981,10 +6981,11 @@ export const pepHivFlowchart: EmergencyFlowchart = {
   finalSteps: [
     'pep_sem_material_risco',
     'pep_sem_exposicao_risco',
-    'pep_fora_janela',
+    'pep_pos_72_seguimento',
     'pep_exposta_hiv_positivo',
     'pep_iniciar',
-    'pep_nao_indicada_fonte_sem_risco'
+    'pep_nao_indicada_fonte_sem_risco',
+    'pep_nao_indicada_fonte_desconhecida_baixo_risco'
   ],
   steps: {
     pep_inicio: {
@@ -7113,24 +7114,56 @@ export const pepHivFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Sim - positivo/reagente', nextStep: 'pep_exposta_hiv_positivo', value: 'exposta_positivo', critical: true },
+        { text: 'Sim - positivo/reagente', nextStep: 'pep_hiv_confirmado_avaliacao', value: 'exposta_positivo', critical: true },
         { text: 'Não - negativo/não reagente', nextStep: 'pep_fonte_hiv', value: 'exposta_negativo' }
       ]
     },
+    pep_hiv_confirmado_avaliacao: {
+      id: 'pep_hiv_confirmado_avaliacao',
+      title: 'Teste para HIV reagente — mudar o objetivo do atendimento',
+      description: 'PEP não é indicada; confirmar o diagnóstico, avaliar condições associadas e organizar início rápido do cuidado.',
+      type: 'question',
+      critical: true,
+      requiresLabs: true,
+      content: `
+        <div class="space-y-4 text-sm">
+          <div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><p class="font-extrabold">Não iniciar PEP como profilaxia.</p><p class="mt-1">Confirmar o diagnóstico pelo algoritmo nacional com segundo teste de metodologia diferente. Suspeita de infecção aguda com sorologia inconclusiva pode exigir investigação molecular dirigida.</p></div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><p class="font-bold">Avaliação inicial do HIV</p><ul class="mt-2 list-disc space-y-1 pl-5"><li>Carga viral e contagem de CD4.</li><li>Hemograma, creatinina/eTFG, função hepática, glicemia, perfil lipídico e urina conforme protocolo.</li><li>Rastreamento clínico de tuberculose e investigação complementar quando indicada.</li></ul></div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4 text-violet-950"><p class="font-bold">Coinfecções e ISTs</p><ul class="mt-2 list-disc space-y-1 pl-5"><li>Sífilis, hepatites B e C.</li><li>Gonococo e clamídia por sítio exposto.</li><li>Tricomoníase quando houver indicação clínica.</li></ul></div>
+          </div>
+          <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><p><strong>Destino:</strong> vincular ao SAE ou ambulatório de infectologia para início de TARV o mais precocemente possível. O esquema deve ser escolhido e prescrito conforme PCDT vigente, função renal, coinfecções, gestação, interações e avaliação especializada.</p></div>
+        </div>
+      `,
+      options: [{ text: 'Registrar avaliação e organizar vinculação ao cuidado', nextStep: 'pep_exposta_hiv_positivo', value: 'hiv_cuidado_organizado', critical: true }]
+    },
     pep_fonte_hiv: {
       id: 'pep_fonte_hiv',
-      title: 'Pessoa fonte: HIV positivo, reagente ou desconhecido?',
-      description: 'Fonte positiva, reagente ou desconhecida indica iniciar PEP.',
+      title: 'Qual é a situação da pessoa-fonte?',
+      description: 'Fonte positiva indica PEP; fonte desconhecida exige avaliação individual do risco.',
       type: 'question',
       critical: true,
       content: `
         <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p><strong>Indicar PEP:</strong> fonte com HIV positivo, teste reagente ou status desconhecido no contexto de exposição de risco dentro da janela de 72 horas.</p>
+          <p><strong>Decisão:</strong> fonte positiva sustenta indicação. Se a fonte for desconhecida, não automatize a resposta: avalie material, via, intensidade da exposição e contexto epidemiológico.</p>
         </div>
       `,
       options: [
-        { text: 'Sim - positiva/reagente/desconhecida', nextStep: 'pep_iniciar', value: 'fonte_indica', critical: true, requiresImmediateAction: true },
-        { text: 'Não - fonte HIV negativa', nextStep: 'pep_fonte_risco_30d', value: 'fonte_negativa' }
+        { text: 'Fonte HIV positiva ou reagente', nextStep: 'pep_avaliacao_inicial', value: 'fonte_positiva', critical: true, requiresImmediateAction: true },
+        { text: 'Fonte desconhecida ou indisponível', nextStep: 'pep_fonte_desconhecida_risco', value: 'fonte_desconhecida', critical: true },
+        { text: 'Fonte HIV negativa', nextStep: 'pep_fonte_risco_30d', value: 'fonte_negativa' }
+      ]
+    },
+    pep_fonte_desconhecida_risco: {
+      id: 'pep_fonte_desconhecida_risco',
+      title: 'Fonte desconhecida — qual é o risco da exposição?',
+      description: 'A decisão é individual e combina material, via, intensidade e contexto epidemiológico.',
+      type: 'question',
+      critical: true,
+      content: `<div class="grid gap-3 text-sm md:grid-cols-2"><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950"><p class="font-bold">Risco significativo</p><p class="mt-2">Exposição percutânea com agulha oca/sangue, compartilhamento de seringa, mucosa ou relação sexual com fatores que aumentem a inoculação, em contexto epidemiológico relevante.</p></div><div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-800"><p class="font-bold text-slate-950">Risco baixo ou desprezível</p><p class="mt-2">Ausência de material infectante, via sem risco ou contato cuja intensidade não sustente benefício esperado da profilaxia após avaliação clínica.</p></div></div>`,
+      options: [
+        { text: 'Risco significativo — indicar PEP', nextStep: 'pep_avaliacao_inicial', value: 'fonte_desconhecida_alto_risco', critical: true, requiresImmediateAction: true },
+        { text: 'Risco baixo/desprezível — não indicar PEP', nextStep: 'pep_nao_indicada_fonte_desconhecida_baixo_risco', value: 'fonte_desconhecida_baixo_risco' }
       ]
     },
     pep_fonte_risco_30d: {
@@ -7145,8 +7178,26 @@ export const pepHivFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Sim - risco nos últimos 30 dias', nextStep: 'pep_iniciar', value: 'risco_30d', critical: true, requiresImmediateAction: true },
+        { text: 'Sim - risco nos últimos 30 dias', nextStep: 'pep_avaliacao_inicial', value: 'risco_30d', critical: true, requiresImmediateAction: true },
         { text: 'Não - sem risco recente', nextStep: 'pep_nao_indicada_fonte_sem_risco', value: 'sem_risco_30d' }
+      ]
+    },
+    pep_avaliacao_inicial: {
+      id: 'pep_avaliacao_inicial',
+      title: 'Avaliação inicial e cuidados associados',
+      description: 'Registrar exames basais, sítios expostos, hepatite B, vacinas e seguimento sem atrasar a primeira dose.',
+      type: 'question',
+      critical: true,
+      timeSensitive: true,
+      requiresLabs: true,
+      content: `
+        <div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950">
+          <p class="font-extrabold">A PEP não deve aguardar resultados laboratoriais.</p>
+          <p class="mt-1">Colete e registre o que estiver indicado, mas inicie a profilaxia imediatamente dentro da janela terapêutica.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Registrar avaliação e iniciar PEP', nextStep: 'pep_iniciar', value: 'avaliacao_registrada', critical: true, requiresImmediateAction: true }
       ]
     },
     pep_iniciar: {
@@ -7218,15 +7269,24 @@ export const pepHivFlowchart: EmergencyFlowchart = {
     },
     pep_fora_janela: {
       id: 'pep_fora_janela',
-      title: 'PEP não indicada: fora da janela',
-      description: 'Atendimento após 72 horas da exposição.',
-      type: 'result',
+      title: 'Após 72 horas — continuar o atendimento',
+      description: 'PEP para HIV não está indicada, mas investigação, prevenção, tratamento e seguimento permanecem necessários.',
+      type: 'question',
       requiresLabs: true,
       content: `
         <div class="bg-red-50 p-3 rounded border-l-4 border-red-500 text-sm">
-          <p><strong>Conduta:</strong> não iniciar PEP após 72 horas. Realizar avaliação basal, definir o cronograma de testagem e encaminhar para seguimento ambulatorial conforme o tipo de exposição.</p>
+          <p><strong>Conduta:</strong> não iniciar PEP para HIV após 72 horas. Realizar investigação dirigida, tratar diagnósticos identificados, atualizar medidas preventivas e organizar seguimento na rede.</p>
         </div>
       `,
+      options: [{ text: 'Registrar investigação e plano de seguimento', nextStep: 'pep_pos_72_seguimento', value: 'pos_72_cuidado_organizado' }]
+    },
+    pep_pos_72_seguimento: {
+      id: 'pep_pos_72_seguimento',
+      title: 'Seguimento pós-exposição organizado',
+      description: 'Investigação e continuidade do cuidado após perda da janela da PEP para HIV.',
+      type: 'result',
+      requiresLabs: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><p class="font-extrabold">Não encerrar o cuidado pela perda da janela.</p><p class="mt-1">Encaminhar para UBS, CTA ou SAE conforme a rede local, resultados e complexidade clínica.</p></div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><p><strong>Encaminhamento especializado:</strong> HIV reagente para SAE/infectologia; hepatites B ou C ativas para infectologia/hepatologia; suspeita de neurossífilis, sífilis ocular/otológica ou outro caso complexo para avaliação especializada.</p></div><div class="rounded-xl border border-slate-200 bg-white p-4 text-slate-800"><p><strong>Na atenção primária:</strong> repetir sorologias conforme protocolo, atualizar vacinação, tratar ISTs diagnosticadas, acompanhar resposta do VDRL, orientar parcerias e avaliar PrEP se houver risco contínuo.</p></div></div>`,
       options: []
     },
     pep_exposta_hiv_positivo: {
@@ -7255,6 +7315,15 @@ export const pepHivFlowchart: EmergencyFlowchart = {
           <p><strong>Conduta:</strong> PEP não está indicada com os dados atuais. Registrar a testagem da fonte e da pessoa exposta e revisar outras ISTs, hepatites e necessidades preventivas conforme o contexto.</p>
         </div>
       `,
+      options: []
+    },
+    pep_nao_indicada_fonte_desconhecida_baixo_risco: {
+      id: 'pep_nao_indicada_fonte_desconhecida_baixo_risco',
+      title: 'Fonte desconhecida com risco baixo ou desprezível',
+      description: 'PEP não indicada após avaliação individual da exposição.',
+      type: 'result',
+      requiresLabs: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><p><strong>Conduta:</strong> registrar os elementos que sustentaram risco baixo ou desprezível e não prescrever PEP.</p></div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><p>Manter investigação de ISTs e hepatites conforme o tipo de exposição, revisar vacinação, orientar prevenção e considerar PrEP se houver risco recorrente.</p></div></div>`,
       options: []
     }
   }

@@ -639,8 +639,11 @@ const pepHivDecisionLabels: Record<string, string> = {
   fora_72h: 'o atendimento ocorreu após 72 horas da exposição',
   exposta_positivo: 'a pessoa exposta apresentou teste de HIV positivo ou reagente',
   exposta_negativo: 'a pessoa exposta apresentou teste de HIV negativo ou não reagente',
-  fonte_indica: 'a pessoa fonte foi classificada como HIV positiva, reagente ou de status desconhecido',
+  fonte_positiva: 'a pessoa fonte foi classificada como HIV positiva ou reagente',
+  fonte_desconhecida: 'a pessoa fonte estava indisponível ou com status desconhecido',
   fonte_negativa: 'a pessoa fonte foi classificada como HIV negativa',
+  fonte_desconhecida_alto_risco: 'a exposição com fonte desconhecida foi individualmente classificada como risco significativo',
+  fonte_desconhecida_baixo_risco: 'a exposição com fonte desconhecida foi individualmente classificada como risco baixo ou desprezível',
   risco_30d: 'a pessoa fonte teve exposição de risco nos últimos 30 dias',
   sem_risco_30d: 'não houve exposição de risco recente da pessoa fonte nos últimos 30 dias'
 }
@@ -650,6 +653,37 @@ const getPepHivDecision = (answers: Record<string, string>, stepId: string) => {
   const decision = typeof parsed?.decision === 'string' ? parsed.decision : answers[stepId]
   return decision ? pepHivDecisionLabels[decision] || formatClinicalValue(decision) : ''
 }
+
+const PEP_BASELINE_ASSESSMENT_KEY = '__pep_baseline_assessment'
+const pepBaselineLabels: Record<string, string> = {
+  sexual_consentida: 'exposição sexual consentida', violencia_sexual: 'violência sexual', ocupacional: 'acidente ocupacional/perfurocortante', nao_sexual: 'outra exposição não sexual',
+  hiv: 'teste para HIV', hbsag: 'HBsAg', anti_hbs: 'Anti-HBs', anti_hbc: 'Anti-HBc total conforme contexto', anti_hcv: 'Anti-HCV', sifilis: 'testagem para sífilis',
+  creatinina: 'creatinina com depuração/eTFG conforme risco renal', ureia: 'ureia conforme contexto', tgo_tgp: 'TGO/TGP', hepatico_ampliado: 'bilirrubinas, fosfatase alcalina e GGT conforme condição hepática', hemograma: 'hemograma quando indicado', beta_hcg: 'β-hCG quando aplicável', glicemia: 'glicemia quando indicada',
+  urina_uretral: 'urina de primeiro jato/uretral', vaginal: 'mucosa vaginal', endocervical: 'colo uterino', retal: 'mucosa retal', orofaringeo: 'orofaringe', conjuntival: 'conjuntiva',
+  adequada: 'esquema completo com resposta vacinal documentada', completa_resposta_desconhecida: 'esquema completo com resposta vacinal desconhecida', incompleta: 'vacinação incompleta', nao_vacinado: 'não vacinado', desconhecida: 'situação vacinal desconhecida',
+  reagente: 'pessoa-fonte com HBsAg reagente', nao_reagente: 'pessoa-fonte com HBsAg não reagente',
+  vacina: 'iniciar ou completar vacina contra hepatite B', ighahb: 'avaliar imunoglobulina anti-hepatite B', nenhuma: 'nenhuma medida específica após confirmação de imunidade',
+  naat: 'NAAT/PCR para gonococo e clamídia nos sítios expostos', tricomonas: 'investigação de tricomoníase quando sintomática', sifilis_estagio: 'tratamento da sífilis conforme estágio e seguimento quantitativo com VDRL', hcv_rna: 'confirmação de Anti-HCV reagente com HCV-RNA', parcerias: 'avaliação e manejo das parcerias sexuais quando indicado', violencia_profilaxia: 'profilaxia preemptiva de ISTs conforme protocolo de violência sexual', contracepcao: 'contracepção de emergência', tetano: 'revisão da profilaxia para tétano', hpv: 'revisão da vacinação para HPV', notificacao: 'notificação e acionamento da rede de proteção',
+  rede: 'seguimento pela UBS, CTA, SAE ou infectologia conforme a rede e os resultados', retorno_4_sem: 'retorno em quatro semanas para adesão e efeitos adversos', hiv_30d: 'repetição da testagem para HIV em 30 dias', hepatites: 'seguimento das hepatites B e C conforme baseline e pessoa-fonte', toxicidade: 'reavaliação renal/hepática quando indicada', prep: 'avaliação de PrEP após a conclusão da PEP'
+}
+
+const parsePepBaselineForSummary = (raw?: string) => {
+  if (!raw) return null
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>
+    const list = (key: string) => Array.isArray(parsed[key]) ? (parsed[key] as unknown[]).filter((item): item is string => typeof item === 'string') : []
+    return {
+      exposureContext: typeof parsed.exposureContext === 'string' ? parsed.exposureContext : '',
+      baselineTests: list('baselineTests'), conditionalTests: list('conditionalTests'), exposedSites: list('exposedSites'),
+      hbvVaccineStatus: typeof parsed.hbvVaccineStatus === 'string' ? parsed.hbvVaccineStatus : '',
+      hbvSourceStatus: typeof parsed.hbvSourceStatus === 'string' ? parsed.hbvSourceStatus : '',
+      hbvActions: list('hbvActions'), associatedCare: list('associatedCare'), followUp: list('followUp'),
+      noDelayConfirmed: parsed.noDelayConfirmed === true, notes: typeof parsed.notes === 'string' ? parsed.notes : ''
+    }
+  } catch { return null }
+}
+
+const labelPepBaselineList = (values: string[]) => values.map((value) => pepBaselineLabels[value] || formatClinicalValue(value))
 
 const buildPepHivClinicalSummary = (
   patient: Patient,
@@ -667,6 +701,8 @@ const buildPepHivClinicalSummary = (
   const exposedDecision = getPepHivDecision(answers, 'pep_exposta_hiv')
   const sourceDecision = getPepHivDecision(answers, 'pep_fonte_hiv')
   const sourceRiskDecision = getPepHivDecision(answers, 'pep_fonte_risco_30d')
+  const unknownSourceRiskDecision = getPepHivDecision(answers, 'pep_fonte_desconhecida_risco')
+  const baselineAssessment = parsePepBaselineForSummary(answers[PEP_BASELINE_ASSESSMENT_KEY])
   const laboratoryNotebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
   const laboratoryLines = laboratoryNotebook.entries
     .filter((entry) => entry.test.trim() && entry.value.trim())
@@ -678,9 +714,10 @@ const buildPepHivClinicalSummary = (
   const isPepIndicated = currentStep === 'pep_iniciar'
   const isNoRiskMaterial = currentStep === 'pep_sem_material_risco'
   const isNoRiskExposure = currentStep === 'pep_sem_exposicao_risco'
-  const isOutsideWindow = currentStep === 'pep_fora_janela'
+  const isOutsideWindow = currentStep === 'pep_pos_72_seguimento' || currentStep === 'pep_fora_janela'
   const isExposedPositive = currentStep === 'pep_exposta_hiv_positivo'
   const isSourceLowRisk = currentStep === 'pep_nao_indicada_fonte_sem_risco'
+  const isUnknownSourceLowRisk = currentStep === 'pep_nao_indicada_fonte_desconhecida_baixo_risco'
 
   const decisionLines = uniqueTextItems([
     materialDecision,
@@ -688,7 +725,8 @@ const buildPepHivClinicalSummary = (
     windowDecision,
     exposedDecision,
     sourceDecision,
-    sourceRiskDecision
+    sourceRiskDecision,
+    unknownSourceRiskDecision
   ])
 
   const indicationSentence = isPepIndicated
@@ -703,22 +741,24 @@ const buildPepHivClinicalSummary = (
             ? 'A PEP ao HIV não foi indicada porque a pessoa exposta apresentou teste positivo ou reagente, devendo ser encaminhada para cuidado clínico especializado em HIV.'
             : isSourceLowRisk
               ? 'A PEP ao HIV não foi indicada porque a pessoa fonte foi classificada como HIV negativa e sem exposição de risco recente nos últimos 30 dias.'
+              : isUnknownSourceLowRisk
+                ? 'A PEP ao HIV não foi indicada após avaliação individual de uma exposição com fonte desconhecida, classificada como risco baixo ou desprezível.'
               : 'A decisão final seguiu a estratificação do fluxograma de PEP ao HIV, considerando risco biológico, tipo de exposição, janela temporal e status sorológico disponível.'
 
   const conductSentence = isPepIndicated
     ? 'Foi orientado iniciar profilaxia imediatamente, preferencialmente com tenofovir/lamivudina associado a dolutegravir por 28 dias, além de avaliação basal para HIV, hepatites e outras ISTs, orientação de adesão e alta com seguimento ambulatorial em serviço de referência ou Atenção Primária conforme a rede local.'
     : isOutsideWindow
-      ? 'Foi orientado manter acompanhamento sorológico da pessoa exposta, avaliar outras ISTs/hepatites conforme contexto e registrar orientações de retorno.'
+      ? 'Embora a PEP para HIV não tenha sido iniciada após 72 horas, foi mantida a investigação de HIV, sífilis, hepatites e outras ISTs conforme a exposição, com tratamento dos diagnósticos identificados, revisão vacinal e seguimento pela UBS, CTA, SAE ou infectologia conforme a rede e os resultados.'
       : isExposedPositive
         ? 'Foi indicada confirmação diagnóstica e vinculação ambulatorial ao cuidado especializado em HIV, sem uso de PEP como profilaxia e sem caracterizar transferência hospitalar na ausência de outra indicação clínica.'
-        : 'Foi orientado que a PEP não é necessária para HIV neste cenário, mantendo aconselhamento, prevenção combinada e reavaliação se surgirem novas informações sobre a exposição.'
+        : 'Foi orientado que a PEP não é necessária para HIV neste cenário, mantendo investigação dirigida, aconselhamento, prevenção combinada e reavaliação se surgirem novas informações sobre a exposição.'
 
   const title = isPepIndicated
     ? 'RELATÓRIO MÉDICO - PROFILAXIA PÓS-EXPOSIÇÃO AO HIV'
     : 'RELATÓRIO MÉDICO - AVALIAÇÃO DE EXPOSIÇÃO AO HIV'
   const examinationLine = 'Não há necessidade de exame físico específico para definir PEP ao HIV quando a decisão depende principalmente da caracterização da exposição; eventuais lesões, violência sexual, ferimentos ou sinais de IST devem ser avaliados e documentados no atendimento presencial.'
   const hpma = decisionLines.length > 0
-    ? `Atendimento por possível exposição ao HIV. Na história da exposição e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}. ${indicationSentence}`
+    ? `Atendimento por possível exposição ao HIV. Na história da exposição e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.${baselineAssessment?.exposureContext ? ` O contexto foi classificado como ${pepBaselineLabels[baselineAssessment.exposureContext] || formatClinicalValue(baselineAssessment.exposureContext)}.` : ''} ${indicationSentence}`
     : `Atendimento por possível exposição ao HIV. Ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório. ${indicationSentence}`
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
@@ -736,6 +776,20 @@ const buildPepHivClinicalSummary = (
     conduct: [conductSentence],
     therapeuticPlan: [
       conductSentence,
+      baselineAssessment
+        ? `Na avaliação inicial, foram selecionados ${baselineAssessment.baselineTests.length ? formatClinicalListText(labelPepBaselineList(baselineAssessment.baselineTests)) : 'nenhum teste basal estruturado'}${baselineAssessment.conditionalTests.length ? `; conforme o perfil clínico, ${formatClinicalListText(labelPepBaselineList(baselineAssessment.conditionalTests))}` : ''}.${baselineAssessment.exposedSites.length ? ` Para gonococo e clamídia, foram identificados os seguintes sítios expostos: ${formatClinicalListText(labelPepBaselineList(baselineAssessment.exposedSites))}.` : ''}`
+        : 'A avaliação inicial estruturada não foi registrada neste atendimento.',
+      baselineAssessment?.hbvVaccineStatus
+        ? `Hepatite B: ${pepBaselineLabels[baselineAssessment.hbvVaccineStatus] || formatClinicalValue(baselineAssessment.hbvVaccineStatus)}; ${pepBaselineLabels[baselineAssessment.hbvSourceStatus] || formatClinicalValue(baselineAssessment.hbvSourceStatus)}${baselineAssessment.hbvActions.length ? `; medidas avaliadas: ${formatClinicalListText(labelPepBaselineList(baselineAssessment.hbvActions))}` : ''}.`
+        : '',
+      baselineAssessment?.associatedCare.length
+        ? `Cuidados associados registrados: ${formatClinicalListText(labelPepBaselineList(baselineAssessment.associatedCare))}.`
+        : '',
+      baselineAssessment?.followUp.length
+        ? `Seguimento programado: ${formatClinicalListText(labelPepBaselineList(baselineAssessment.followUp))}.`
+        : '',
+      baselineAssessment?.noDelayConfirmed ? 'Foi registrado que a coleta e a liberação dos exames não deveriam atrasar o início da PEP.' : '',
+      baselineAssessment?.notes ? `Observações da avaliação inicial: ${baselineAssessment.notes}` : '',
       laboratoryLines.length > 0
         ? `Resultados basais registrados: ${formatClinicalListText(laboratoryLines)}.${laboratoryNotebook.notes ? ` Observações: ${laboratoryNotebook.notes}` : ''}`
         : 'Resultados basais de HIV, hepatites e outras ISTs não foram preenchidos no campo estruturado.'
