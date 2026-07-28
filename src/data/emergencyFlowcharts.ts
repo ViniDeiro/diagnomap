@@ -8853,7 +8853,6 @@ export const ituFlowchart: EmergencyFlowchart = {
     'itu_diferencial_ist',
     'itu_ambulatorial_concluido',
     'itu_transferencia_enfermaria_concluida',
-    'itu_alta_hospitalar',
     'itu_sepse_encaminhada'
   ],
   steps: {
