@@ -95,47 +95,73 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
   },
   ceftriaxona_ev: {
     medication: 'Ceftriaxona',
-    dosage: '1–2 g',
+    dosage: '1 g',
     frequency: 'EV uma vez ao dia',
-    duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Preparo EV de referência: reconstituir o frasco de 1 g com 9,6 mL de diluente IV compatível (aproximadamente 100 mg/mL), retirar a dose e diluir em 50–100 mL de SF 0,9% ou SG 5%; infundir em 30 minutos. Não usar soluções contendo cálcio, como Ringer lactato. Confirmar a bula da apresentação padronizada e reavaliar diariamente para ajuste ou descalonamento.',
+    duration: '7 dias',
+    instructions: 'Preparo EV de referência: reconstituir o frasco de 1 g com 9,6 mL de diluente IV compatível (aproximadamente 100 mg/mL), retirar a dose e diluir em 50–100 mL de SF 0,9% ou SG 5%; infundir em 30 minutos. Não usar soluções contendo cálcio, como Ringer lactato. Confirmar a bula da apresentação padronizada, ajustar a duração conforme evolução clínica e urocultura/TSA, e reavaliar diariamente para ajuste ou descalonamento.',
     prescribedBy: ITU_PRESCRIBER
   },
   ciprofloxacino_ev: {
     medication: 'Ciprofloxacino',
     dosage: '400 mg',
     frequency: 'EV de 12/12 horas',
-    duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Apresentação pronta de referência: 400 mg/200 mL (2 mg/mL), sem diluição adicional, em infusão EV durante 60 minutos. Se o serviço utilizar concentrado ou outra apresentação, preparar conforme a bula. Ajustar à função renal e revisar contraindicações e interações.',
+    duration: '7 dias',
+    instructions: 'Apresentação pronta de referência: 400 mg/200 mL (2 mg/mL), sem diluição adicional, em infusão EV durante 60 minutos. Se o serviço utilizar concentrado ou outra apresentação, preparar conforme a bula. Ajustar à função renal, revisar contraindicações e interações, e ajustar a duração conforme evolução clínica e urocultura/TSA.',
     prescribedBy: ITU_PRESCRIBER
   },
   cefepime_ev: {
     medication: 'Cefepime',
     dosage: '2 g',
     frequency: 'EV de 8/8 a 12/12 horas, conforme gravidade e função renal',
-    duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Preparo EV de referência: reconstituir o frasco conforme a apresentação, diluir a dose em 50–100 mL de SF 0,9% ou SG 5% e infundir em aproximadamente 30 minutos. Ajustar obrigatoriamente à função renal e vigiar neurotoxicidade; confirmar bula e protocolo institucional.',
+    duration: '7 dias',
+    instructions: 'Preparo EV de referência: reconstituir o frasco conforme a apresentação, diluir a dose em 50–100 mL de SF 0,9% ou SG 5% e infundir em aproximadamente 30 minutos. Ajustar obrigatoriamente à função renal e vigiar neurotoxicidade; confirmar bula e protocolo institucional, e ajustar a duração conforme evolução clínica e urocultura/TSA.',
     prescribedBy: ITU_PRESCRIBER
   },
   piperacilina_tazobactam: {
     medication: 'Piperacilina-tazobactam',
     dosage: '4,5 g',
     frequency: 'EV de 6/6 horas',
-    duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Preparo EV de referência: reconstituir o frasco de 4,5 g com 20 mL de água para injetáveis, SF 0,9% ou SG 5%; depois diluir em 50–150 mL de solução compatível e infundir por pelo menos 30 minutos. Confirmar a bula e o protocolo institucional, ajustar à função renal e descalonar conforme culturas e resposta.',
+    duration: '7 dias',
+    instructions: 'Preparo EV de referência: reconstituir o frasco de 4,5 g com 20 mL de água para injetáveis, SF 0,9% ou SG 5%; depois diluir em 50–150 mL de solução compatível e infundir por pelo menos 30 minutos. Confirmar a bula e o protocolo institucional, ajustar à função renal e descalonar conforme culturas, resposta e duração clínica.',
     prescribedBy: ITU_PRESCRIBER
   },
   meropenem: {
     medication: 'Meropenem',
     dosage: '1 g',
     frequency: 'EV de 8/8 horas',
-    duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Preparo EV de referência: reconstituir 1 g com 20 mL de água para injetáveis, diluir em 50–100 mL de SF 0,9% e infundir em 15–30 minutos. Confirmar a bula da apresentação e a estabilidade após preparo. Reservar para quadro grave ou alto risco de resistência, ajustar à função renal e descalonar quando possível.',
+    duration: '7 dias',
+    instructions: 'Preparo EV de referência: reconstituir 1 g com 20 mL de água para injetáveis, diluir em 50–100 mL de SF 0,9% e infundir em 15–30 minutos. Confirmar a bula da apresentação e a estabilidade após preparo. Reservar para quadro grave ou alto risco de resistência, ajustar à função renal e descalonar conforme culturas, resposta e duração clínica.',
     prescribedBy: ITU_PRESCRIBER
   }
 }
 
+const ituCistiteSymptomaticPrescriptions: PrescriptionDraft[] = [
+  {
+    medication: 'Fenazopiridina',
+    dosage: '200 mg',
+    frequency: 'VO de 8/8 horas',
+    duration: 'Máximo 2 dias',
+    instructions: 'Analgésico urinário sintomático. Orientar que pode deixar a urina com coloração avermelhada/alaranjada durante o uso.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  {
+    medication: 'Dipirona 1 g ou Paracetamol 500 mg',
+    dosage: '1 g ou 500 mg',
+    frequency: 'VO de 6/6 horas',
+    duration: 'Se dor ou febre',
+    instructions: 'Utilizar conforme necessidade para dor ou febre, respeitando contraindicações.',
+    prescribedBy: ITU_PRESCRIBER
+  }
+]
+
+const ituCistiteChoices = new Set(['fosfomicina', 'nitrofurantoina', 'cefuroxima', 'sulfametoxazol_trimetoprim'])
+
 export const buildItuPrescriptionItems = (choice?: string): PrescriptionDraft[] => {
   const prescription = choice ? ituAntibioticPrescriptions[choice] : undefined
-  return prescription ? [{ ...prescription }] : []
+  if (!prescription) return []
+  const items = [{ ...prescription }]
+  if (choice && ituCistiteChoices.has(choice)) {
+    items.push(...ituCistiteSymptomaticPrescriptions.map((item) => ({ ...item })))
+  }
+  return items
 }
