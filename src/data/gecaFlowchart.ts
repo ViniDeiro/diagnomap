@@ -565,7 +565,7 @@ export const gecaFlowchart: EmergencyFlowchart = {
         <div class="space-y-3 text-sm">
           <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
             <p class="font-bold">Receita de alta assistida</p>
-            <p class="mt-1">Escolha o modelo correspondente ao paciente. O texto copiado é editável e deve ser revisado antes da assinatura.</p>
+            <p class="mt-1">Escolha o modelo correspondente ao paciente. Se um antibiótico foi selecionado durante o fluxo, ele será acrescentado automaticamente à receita copiada.</p>
             <div class="mt-3 grid gap-2 sm:grid-cols-2">
               <button type="button" data-geca-copy-adult="true" class="rounded-xl bg-blue-700 px-4 py-3 font-bold text-white hover:bg-blue-800">Copiar prescrição adulta</button>
               <button type="button" data-geca-copy-pediatric="true" class="rounded-xl border border-blue-300 bg-white px-4 py-3 font-bold text-blue-900 hover:bg-blue-100">Copiar prescrição pediátrica</button>

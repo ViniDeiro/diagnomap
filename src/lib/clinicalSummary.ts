@@ -2109,7 +2109,10 @@ const buildHypertensionClinicalSummary = (
     : symptoms.length
       ? ` Os sintomas associados foram ${formatClinicalListText(symptoms)}.`
       : ' Não foram documentados sintomas agudos específicos no formulário estruturado.'
-  const historyNarrative = `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}, com pressão arterial inicial de ${pressure}.${symptomNarrative}`
+  const obstetricNarrative = data.obstetricContext === true
+    ? ` Contexto de gestação com 20 semanas ou mais/puerpério registrado${data.obstetricPressureConfirmed ? ', com hipertensão grave confirmada como persistente por aproximadamente 15 minutos' : ''}.`
+    : ''
+  const historyNarrative = `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}, com pressão arterial inicial de ${pressure}.${symptomNarrative}${obstetricNarrative}`
   const examLines = uniqueTextItems([
     universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null,
     ...universal.examItems,
@@ -2146,6 +2149,56 @@ const buildHypertensionClinicalSummary = (
     route === 'chronic' ? 'Revisão do tratamento anti-hipertensivo habitual, adesão e fatores associados.' : null
   ])
   return buildNarrativeSummary({ patient, title: 'RELATÓRIO MÉDICO - AVALIAÇÃO HIPERTENSIVA', chiefComplaint, historyNarrative, examinationLines: examLines, scoreLines, finalTitle: current?.title || flowchart.name, finalDescription: current?.description || flowchart.description, impression, conductLines: conduct, therapeuticPlanLines: therapeuticPlan, doctor })
+}
+
+const buildAcsClinicalSummary = (
+  patient: Patient, flowchart: EmergencyFlowchart, currentStep: string, answers: Record<string, string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+) => {
+  const data = parseFlowAnswerForSummary(answers.sca_caso_estruturado) || {}
+  const universal = getUniversalAssessmentNarrative(answers)
+  const classificationLabels: Record<string,string> = { stemi:'infarto agudo do miocárdio com supradesnivelamento de ST', nstemi:'infarto agudo do miocárdio sem supradesnivelamento de ST', unstable_angina:'angina instável', alternative:'síndrome coronariana aguda não confirmada' }
+  const reperfusionLabels: Record<string,string> = { primary_pci:'intervenção coronária percutânea primária/transferência imediata para hemodinâmica', fibrinolysis:'fibrinólise após checklist de elegibilidade', transfer:'transferência monitorizada para centro com cardiologia intervencionista', early_invasive:'estratégia invasiva conforme estratificação de risco', conservative:'estratégia conservadora documentada', alternative:'investigação de diagnóstico alternativo' }
+  const contraindications = uniqueTextItems([...(Array.isArray(data.nitrateContraindications)?data.nitrateContraindications:[]), ...(Array.isArray(data.betaBlockerContraindications)?data.betaBlockerContraindications:[])].map(String))
+  const classification = classificationLabels[String(data.classification)] || 'síndrome coronariana aguda ainda em classificação'
+  return buildNarrativeSummary({
+    patient,
+    title:'RELATÓRIO MÉDICO - SÍNDROME CORONARIANA AGUDA',
+    chiefComplaint:patient.admission?.chiefComplaint || 'suspeita de síndrome coronariana aguda',
+    historyNarrative:`Paciente avaliado por apresentação clínica compatível com isquemia miocárdica. O ECG foi ${data.ecgWithinTenMinutes ? 'obtido ou solicitado dentro da meta de 10 minutos' : 'registrado sem confirmação da meta temporal'}${data.ecgFinding ? `, com os seguintes achados: ${String(data.ecgFinding)}` : ''}. A integração entre traçado, troponina e evolução clínica resultou em ${classification}.`,
+    examinationLines:uniqueTextItems([universal.vitalItems.length?`sinais vitais: ${universal.vitalItems.join(', ')}`:null,...universal.examItems]),
+    scoreLines:uniqueTextItems([data.troponinStatus?`situação da troponina: ${String(data.troponinStatus).replaceAll('_',' ')}`:null, contraindications.length?`contraindicações/alertas farmacológicos selecionados: ${formatClinicalListText(contraindications)}`:null]),
+    finalTitle:flowchart.steps[currentStep]?.title || flowchart.name,
+    finalDescription:flowchart.steps[currentStep]?.description || flowchart.description,
+    impression:`Quadro classificado como ${classification}.`,
+    conductLines:uniqueTextItems([data.reperfusionPlan?`Estratégia definitiva registrada: ${reperfusionLabels[String(data.reperfusionPlan)] || String(data.reperfusionPlan)}.`:'Manter classificação e definição da estratégia definitiva em andamento.',data.disposition?`Destino assistencial: ${String(data.disposition)}.`:null]),
+    therapeuticPlanLines:uniqueTextItems([data.nitratePlan?`Plano para nitrato: ${String(data.nitratePlan)==='iv'?'nitroglicerina EV titulável':String(data.nitratePlan)==='sublingual'?'nitroglicerina sublingual':'não administrar após avaliação de segurança'}.`:null,data.betaBlockerPlan?`Plano para betabloqueador: ${String(data.betaBlockerPlan)==='metoprolol'?'metoprolol EV com vigilância hemodinâmica e de condução':'não administrar após avaliação de segurança'}.`:null,data.antiplateletPlan?`Antiagregação inicial: ${String(data.antiplateletPlan)==='aspirin'?'AAS de ataque após exclusão de contraindicações':'AAS contraindicado, com necessidade de documentar motivo e alternativa'}.`:null,'O segundo antiagregante e a anticoagulação devem respeitar tipo de SCA, reperfusão, peso, função renal e risco hemorrágico.']),
+    doctor
+  })
+}
+
+const buildHsaClinicalSummary = (
+  patient: Patient, flowchart: EmergencyFlowchart, currentStep: string, answers: Record<string,string>,
+  doctor?: { name?: string | null; crm?: string | null } | null
+) => {
+  const data = parseFlowAnswerForSummary(answers.hsa_caso_estruturado) || {}
+  const universal = getUniversalAssessmentNarrative(answers)
+  const ctLabels: Record<string,string> = { confirmed:'sangramento subaracnoide confirmado na neuroimagem', negative_high_suspicion:'TC inicial sem sangue, com suspeita clínica ainda elevada', alternative:'HSA afastada e hipótese alternativa predominante' }
+  const planLabels: Record<string,string> = { endovascular:'tratamento endovascular', surgical:'clipagem cirúrgica', transfer:'transferência neurovascular por indisponibilidade local' }
+  return buildNarrativeSummary({
+    patient,
+    title:'RELATÓRIO MÉDICO - HEMORRAGIA SUBARACNOIDE',
+    chiefComplaint:patient.admission?.chiefComplaint || 'cefaleia súbita ou suspeita de hemorragia subaracnoide',
+    historyNarrative:`Paciente submetido a avaliação neurológica urgente por quadro compatível com hemorragia subaracnoide. A investigação por TC sem contraste resultou em ${ctLabels[String(data.ctResult)] || 'resultado ainda não definido'}, com investigação vascular/adicional registrada conforme a persistência da suspeita.`,
+    examinationLines:uniqueTextItems([universal.vitalItems.length?`sinais vitais: ${universal.vitalItems.join(', ')}`:null,...universal.examItems,data.currentPressure?`pressão na estabilização: ${String(data.currentPressure)}`:null]),
+    scoreLines:uniqueTextItems([data.pressureTarget?`meta pressórica individual: ${String(data.pressureTarget)}`:null,data.pressureAgent?`agente pressórico titulável: ${String(data.pressureAgent)}`:null]),
+    finalTitle:flowchart.steps[currentStep]?.title || flowchart.name,
+    finalDescription:flowchart.steps[currentStep]?.description || flowchart.description,
+    impression:ctLabels[String(data.ctResult)] ? `${ctLabels[String(data.ctResult)][0].toUpperCase()}${ctLabels[String(data.ctResult)].slice(1)}.` : 'Suspeita de hemorragia subaracnoide em investigação.',
+    conductLines:uniqueTextItems([data.aneurysmPlan?`Plano neurovascular: ${planLabels[String(data.aneurysmPlan)] || String(data.aneurysmPlan)}.`:null,data.definitiveTiming?'Tratamento do aneurisma organizado precocemente, preferencialmente em até 24 horas.':null,data.disposition?`Destino: ${String(data.disposition)}.`:'Manter regulação e cuidado neurocrítico até transferência formal.']),
+    therapeuticPlanLines:['Controlar hipertensão grave e variabilidade com agente titulável, preservando perfusão cerebral e evitando hipotensão.','Nimodipino enteral precoce e euvolemia conforme protocolo neurocrítico, com vigilância de ressangramento, hidrocefalia e isquemia cerebral tardia.'],
+    doctor
+  })
 }
 
 const buildAorticClinicalSummary = (
@@ -2414,6 +2467,14 @@ export function buildClinicalSummary(
 
   if (flowchart.id === 'avc') {
     return buildAVCClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'iam') {
+    return buildAcsClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+  }
+
+  if (flowchart.id === 'hsa') {
+    return buildHsaClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
   }
 
   if (flowchart.id === 'anafilaxia') {

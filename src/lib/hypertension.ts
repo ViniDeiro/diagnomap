@@ -13,23 +13,28 @@ export type HypertensionEmergencyScenario =
 
 export type HypertensionRoute = 'chronic' | 'emergency' | 'important_elevation' | 'pseudocrisis'
 
-export const isMarkedBloodPressureElevation = (systolic?: number, diastolic?: number) =>
-  (systolic != null && systolic >= 180) || (diastolic != null && diastolic >= 110)
+export const isMarkedBloodPressureElevation = (systolic?: number, diastolic?: number, obstetricContext = false) =>
+  obstetricContext
+    ? (systolic != null && systolic >= 160) || (diastolic != null && diastolic >= 110)
+    : (systolic != null && systolic >= 180) || (diastolic != null && diastolic >= 110)
 
 export const classifyHypertensionRoute = ({
   systolic,
   diastolic,
   hasSymptoms,
   hasAcuteOrganDamage,
-  hasSituationalTrigger
+  hasSituationalTrigger,
+  obstetricContext = false
 }: {
   systolic?: number
   diastolic?: number
   hasSymptoms: boolean
   hasAcuteOrganDamage: boolean
   hasSituationalTrigger: boolean
+  obstetricContext?: boolean
 }): HypertensionRoute => {
-  if (!isMarkedBloodPressureElevation(systolic, diastolic) || !hasSymptoms) return 'chronic'
+  void hasSymptoms
+  if (!isMarkedBloodPressureElevation(systolic, diastolic, obstetricContext)) return 'chronic'
   if (hasAcuteOrganDamage) return 'emergency'
   if (hasSituationalTrigger) return 'pseudocrisis'
   return 'important_elevation'
@@ -54,32 +59,31 @@ export const HYPERTENSION_SCENARIO_TARGETS: Record<HypertensionEmergencyScenario
     'Tratar antes desse limite apenas quando outra emergência simultânea exigir redução.'
   ],
   intracerebral_hemorrhage: [
-    'Quando a sistólica estiver acima de 220 mmHg, usar infusão titulável e vigilância frequente.',
-    'Considerar alvo de pressão sistólica ao redor de 180 mmHg, individualizado com neurologia.'
+    'Se a PAS estiver entre 150–220 mmHg e o quadro for leve a moderado, considerar alvo em torno de 140 mmHg, mantendo 130–150 mmHg.',
+    'Se a PAS exceder 220 mmHg ou houver hipertensão intracraniana/quadro grave, usar infusão titulável e meta individualizada com neurologia; evitar PAS abaixo de 130 mmHg.'
   ],
   subarachnoid_hemorrhage: [
-    'Se a sistólica exceder 180 mmHg, promover queda gradual ao longo de 24–72 horas.',
-    'Alinhar a meta com neurologia/neurocirurgia e o risco de ressangramento.'
+    'Controlar prontamente hipertensão grave e variabilidade pressórica com agente titulável, evitando hipotensão e hipoperfusão cerebral.',
+    'Definir a meta com neurologia/neurocirurgia conforme pressão habitual, estado neurológico, aneurisma tratado ou não e perfusão cerebral.'
   ],
   catecholamine_crisis: [
     'Buscar pressão sistólica abaixo de 140 mmHg durante a primeira hora.',
     'Controlar o estímulo adrenérgico e discutir agente específico com toxicologia/especialista.'
   ],
   acute_coronary_syndrome: [
-    'Reduzir a pressão sem comprometer perfusão coronariana e tratar a síndrome isquêmica em paralelo.',
-    'Preferir agente titulável compatível com dor/isquemia e monitorização contínua.'
+    'Reduzir a pressão de forma titulada, tratando a isquemia em paralelo e evitando PAS abaixo de 100 mmHg ou perda de perfusão coronariana.',
+    'Priorizar nitroglicerina quando não houver contraindicação; avaliar betabloqueador somente sem choque, insuficiência cardíaca aguda, bradicardia ou bloqueio.'
   ],
   pulmonary_edema: [
     'Reduzir pós-carga e congestão com terapia intravenosa titulável, oxigenação e suporte ventilatório conforme necessidade.',
     'Reavaliar perfusão, diurese e esforço respiratório em intervalos curtos.'
   ],
   pregnancy_emergency: [
-    'Acionar imediatamente obstetrícia; tratar pressão grave e prevenir/tratar convulsões conforme protocolo obstétrico.',
-    'Evitar fármacos contraindicados na gestação e avaliar pré-eclâmpsia, eclâmpsia ou HELLP.'
+    'Se PAS ≥160 mmHg ou PAD ≥110 mmHg persistir por 15 minutos, iniciar tratamento urgente e acionar obstetrícia.',
+    'Buscar PAS de 140–150 mmHg e PAD de 90–100 mmHg, prevenindo/tratando convulsões e preservando perfusão uteroplacentária.'
   ],
   other: [
     'Na maioria das demais emergências, reduzir aproximadamente 20–25% na primeira hora.',
     'Nas 2–6 horas seguintes, aproximar-se de 160/100 mmHg; depois, normalizar gradualmente em 24–48 horas.'
   ]
 }
-

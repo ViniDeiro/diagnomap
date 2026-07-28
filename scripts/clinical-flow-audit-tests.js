@@ -16,6 +16,9 @@ const avcComponentSource = fs.readFileSync(path.join(root, 'src/components/AVCFl
 const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewer.tsx'), 'utf8')
 const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8')
 const hypertensionComponentSource = fs.readFileSync(path.join(root, 'src/components/HypertensionFlowchartInteractive.tsx'), 'utf8')
+const aorticComponentSource = fs.readFileSync(path.join(root, 'src/components/AcuteAorticSyndromeFlowchartInteractive.tsx'), 'utf8')
+const acsComponentSource = fs.readFileSync(path.join(root, 'src/components/AcuteCoronarySyndromeFlowchartInteractive.tsx'), 'utf8')
+const hsaComponentSource = fs.readFileSync(path.join(root, 'src/components/SubarachnoidHemorrhageFlowchartInteractive.tsx'), 'utf8')
 const rabiesComponentSource = fs.readFileSync(path.join(root, 'src/components/RabiesExposureFlowchartInteractive.tsx'), 'utf8')
 const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components/RabiesNotificationForm.tsx'), 'utf8')
 const rabiesSinanPdfSource = fs.readFileSync(path.join(root, 'src/lib/rabiesSinanPdf.ts'), 'utf8')
@@ -82,7 +85,7 @@ vm.runInNewContext(compiled, {
   console
 }, { filename: 'emergencyFlowcharts.compiled.js' })
 
-const { anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, hellpFlowchart, acuteAorticSyndromeFlowchart, acutePulmonaryEdemaFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart, pepHivFlowchart } = moduleBox.exports
+const { iamFlowchart, subarachnoidHemorrhageFlowchart, anaphylaxisFlowchart, asthmaFlowchart, avcFlowchart, hypertensionFlowchart, hellpFlowchart, acuteAorticSyndromeFlowchart, acutePulmonaryEdemaFlowchart, tvpFlowchart, influenzaFlowchart, pneumoniaFlowchart, ituFlowchart, atendimentoAntirrabicoFlowchart, pepHivFlowchart } = moduleBox.exports
 
 const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -127,6 +130,8 @@ validateLinks(anaphylaxisFlowchart)
 validateLinks(asthmaFlowchart)
 validateLinks(tvpFlowchart)
 validateLinks(avcFlowchart)
+validateLinks(iamFlowchart)
+validateLinks(subarachnoidHemorrhageFlowchart)
 validateLinks(pepHivFlowchart)
 validateLinks(hypertensionFlowchart)
 validateLinks(hellpFlowchart)
@@ -183,15 +188,38 @@ for (const marker of [
   'Sulfato de magnésio: ataque 4 g EV em 5–15 min', 'Planejar resolução da gestação após estabilização materna',
   'UniversalCareTransition destination="icu"', 'Plano HELLP registrado'
 ]) assert.ok(hellpComponentSource.includes(marker), `HELLP: etapa interativa ausente (${marker})`)
+for (const marker of ['Hipertensão grave confirmada', 'gluconato de cálcio 10%, 10 mL EV lentamente', 'Cardiotocografia', 'Ultrassonografia obstétrica', 'Doppler fetal', 'Indicações de resolução sem postergação']) {
+  assert.ok(hellpComponentSource.includes(marker), `HELLP: complemento obstétrico ausente (${marker})`)
+}
 assert.match(emergencyComponentSource, /flowchart\.id === 'hellp'[\s\S]*HELLPFlowchartInteractive/)
 assert.match(clinicalSummarySource, /buildHellpClinicalSummary[\s\S]*RELATÓRIO MÉDICO — SÍNDROME HELLP/)
 for (const marker of ['Resultado crítico', 'Interpretação, tendência e pendências', 'overflow-y-auto', 'UNIVERSAL_LAB_RESULTS_KEY']) {
   assert.ok(labNotebookSource.includes(marker), `Exames universais: recurso ausente (${marker})`)
 }
-for (const marker of ['sindrome_aortica_aguda', 'edema_agudo_pulmao', "id: 'hellp' as EmergencyType", "id: 'avc' as EmergencyType"]) {
+for (const marker of ['sindrome_aortica_aguda', 'edema_agudo_pulmao', "id: 'iam' as EmergencyType", "id: 'hellp' as EmergencyType", "id: 'avc' as EmergencyType"]) {
   assert.ok(hypertensionComponentSource.includes(marker), `Hipertensão: interlink ausente (${marker})`)
 }
+assert.match(
+  hypertensionComponentSource,
+  /data\.scenario === 'acute_coronary_syndrome'\s*\?\s*\{ id: 'iam' as EmergencyType, label: 'Abrir Síndrome Coronariana Aguda \(IAM\/SCA\)' \}/,
+  'Hipertensão: cenário de síndrome coronariana aguda deve abrir o fluxo de IAM/SCA'
+)
 assert.match(patientServiceSource, /__linkedFlowOrigin[\s\S]*__avaliacao_clinica_inicial/)
+for (const marker of ['Esmolol — opção preferencial', 'Seloken® (tartarato de metoprolol)', 'Betabloqueador primeiro', 'Vasodilatador somente depois', 'Angio-TC da aorta', 'Ecocardiograma transesofágico', 'POCUS / ecocardiograma focado', 'Resultado negativo não exclui síndrome aórtica', 'UniversalCareTransition']) {
+  assert.ok(aorticComponentSource.includes(marker), `Síndrome aórtica: etapa interativa ausente (${marker})`)
+}
+assert.match(emergencyComponentSource, /flowchart\.id === 'sindrome_aortica_aguda'[\s\S]*AcuteAorticSyndromeFlowchartInteractive/)
+assert.match(clinicalSummarySource, /buildAorticClinicalSummary[\s\S]*RELATÓRIO MÉDICO - SÍNDROME AÓRTICA AGUDA/)
+for (const marker of ['ACS_CASE_ANSWER_KEY', 'ECG obtido ou solicitado para execução em até 10 minutos', 'Segurança para nitrato', 'Segurança para betabloqueador', 'Estratégia antitrombótica segura', 'UniversalCareTransition']) {
+  assert.ok(acsComponentSource.includes(marker), `SCA: etapa interativa ausente (${marker})`)
+}
+assert.match(emergencyComponentSource, /flowchart\.id === 'iam'[\s\S]*AcuteCoronarySyndromeFlowchartInteractive/)
+assert.match(clinicalSummarySource, /buildAcsClinicalSummary[\s\S]*RELATÓRIO MÉDICO - SÍNDROME CORONARIANA AGUDA/)
+for (const marker of ['HSA_CASE_ANSWER_KEY', 'TC de crânio sem contraste', 'Nimodipino enteral precoce', 'preferencialmente em até 24 horas', 'UniversalCareTransition']) {
+  assert.ok(hsaComponentSource.includes(marker), `HSA: etapa interativa ausente (${marker})`)
+}
+assert.match(emergencyComponentSource, /flowchart\.id === 'hsa'[\s\S]*SubarachnoidHemorrhageFlowchartInteractive/)
+assert.match(clinicalSummarySource, /buildHsaClinicalSummary[\s\S]*RELATÓRIO MÉDICO - HEMORRAGIA SUBARACNOIDE/)
 for (const marker of [
   'Via EV: após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5%',
   'Se houver administração IM, reconstituir e diluir conforme a bula',
@@ -335,7 +363,7 @@ assert.equal(pepHivFlowchart.steps.pep_avaliacao_inicial.options[0].nextStep, 'p
 for (const marker of ['PEP_BASELINE_ASSESSMENT_KEY', 'PEP_EXPOSED_SITES', 'PEP_HBV_VACCINE_STATUS', 'PEP_ASSOCIATED_CARE', 'PEP_FOLLOW_UP', 'Exames ainda pendentes não bloqueiam o início da PEP', 'Referência rápida · sífilis em adultos']) {
   assert.match(emergencyComponentSource, new RegExp(marker), `PEP HIV: avaliação interativa ausente (${marker})`)
 }
-for (const marker of ['GECA_ADULT_DISCHARGE_PRESCRIPTION', 'GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION', 'data-geca-copy-adult', 'data-geca-copy-pediatric']) {
+for (const marker of ['GECA_ADULT_DISCHARGE_PRESCRIPTION', 'GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION', 'buildGecaDischargePrescription', 'answers.geca_antibioticos', 'ANTIBIOTICOTERAPIA SELECIONADA NO FLUXO', 'data-geca-copy-adult', 'data-geca-copy-pediatric']) {
   assert.match(`${emergencyComponentSource}\n${gecaSource}`, new RegExp(marker), `GECA: receita de alta ausente (${marker})`)
 }
 assert.match(clinicalSummarySource, /parsePepBaselineForSummary/, 'PEP HIV: avaliação basal precisa aparecer no resumo clínico')
@@ -362,7 +390,9 @@ const hypertensionCases = [
   [{ systolic: 180, diastolic: 110, hasSymptoms: true, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'important_elevation'],
   [{ systolic: 180, diastolic: 110, hasSymptoms: true, hasAcuteOrganDamage: false, hasSituationalTrigger: true }, 'pseudocrisis'],
   [{ systolic: 179, diastolic: 109, hasSymptoms: true, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'chronic'],
-  [{ systolic: 200, diastolic: 120, hasSymptoms: false, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'chronic']
+  [{ systolic: 200, diastolic: 120, hasSymptoms: false, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'important_elevation'],
+  [{ systolic: 165, diastolic: 105, hasSymptoms: false, hasAcuteOrganDamage: false, hasSituationalTrigger: false, obstetricContext: true }, 'important_elevation'],
+  [{ systolic: 165, diastolic: 105, hasSymptoms: false, hasAcuteOrganDamage: false, hasSituationalTrigger: false }, 'chronic']
 ]
 for (const [input, expected] of hypertensionCases) {
   assert.equal(classifyHypertensionRoute(input), expected, `Hipertensão: classificação divergente para ${JSON.stringify(input)}`)
@@ -370,7 +400,7 @@ for (const [input, expected] of hypertensionCases) {
 for (const scenario of ['aortic_syndrome', 'encephalopathy', 'ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage', 'catecholamine_crisis', 'acute_coronary_syndrome', 'pulmonary_edema', 'pregnancy_emergency', 'other']) {
   assert.ok(HYPERTENSION_SCENARIO_TARGETS[scenario]?.length, `Hipertensão: meta ausente para ${scenario}`)
 }
-for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY']) {
+for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY', 'parseUniversalClinicalAssessment', '24–72 horas', 'Captopril VO', 'Anlodipino VO', 'Clonidina VO', 'Sulfato de magnésio', 'Esquema de Zuspan', '1 g/h', 'Gluconato de cálcio', 'Nitroprussiato de sódio', 'Nitroglicerina', 'Nicardipina', 'Labetalol', 'Hidralazina', 'Esmolol', 'Metoprolol', 'Fentolamina', 'scenarioMedicationGuidance']) {
   assert.match(hypertensionComponentSource, new RegExp(marker), `Hipertensão: implementação interativa sem marcador obrigatório (${marker})`)
 }
 assert.match(hypertensionComponentSource, /'asymptomatic', 'Assintomático/, 'Hipertensão: opção assintomático ausente')
@@ -467,7 +497,7 @@ const narrativeCases = [
   {
     id: 'anafilaxia', flow: anaphylaxisFlowchart, step: 'ana_observacao_alta', history: ['ana_inicio', 'ana_criterios_wao', 'ana_adrenalina_im', 'ana_estratificar_observacao'],
     answers: { __avaliacao_clinica_inicial: universalAnswer, ana_inicio: JSON.stringify({ achadosSelecionados: ['urticária', 'dispneia'], sistemasAcometidos: ['pele', 'respiratorio'] }), ana_criterios_wao: JSON.stringify({ criteriosSelecionados: ['criterio_1'], diagnosticoProvavel: true }), ana_preparo_imediato: JSON.stringify({ medidasSelecionadas: ['ajuda', 'monitorizacao'], abcdeSelecionado: ['airway', 'breathing', 'circulation'] }) },
-    expected: [/Anafilaxia clinicamente provável/, /adrenalina intramuscular/, /alta após período de observação/]
+    expected: [/Anafilaxia clinicamente provável/, /adrenalina intramuscular/i, /alta após período de observação/]
   },
   {
     id: 'asthma', flow: asthmaFlowchart, step: 'asma_alta_final', history: ['asma_avaliacao_inicial', 'asma_tratamento_1h_leve_moderada', 'asma_saba_leve_moderada', 'asma_corticoide_leve_moderada', 'asma_resposta_boa'],
@@ -476,8 +506,8 @@ const narrativeCases = [
   },
   {
     id: 'hipertensao', flow: hypertensionFlowchart, step: 'hipertensao_emergencia_plano', history: ['hipertensao_confirmacao', 'hipertensao_lesao_orgao', 'hipertensao_emergencia_cenario'],
-    answers: { __avaliacao_clinica_inicial: universalAnswer, hipertensao_caso_estruturado: JSON.stringify({ systolic: 220, diastolic: 130, symptoms: ['dyspnea'], organDamage: ['pulmonary_edema'], route: 'emergency', scenario: 'pulmonary_edema', selectedIVAgent: 'nitroglycerin', disposition: 'CTI' }) },
-    expected: [/emergência hipertensiva/i, /edema agudo de pulmão/, /CTI/]
+    answers: { __avaliacao_clinica_inicial: universalAnswer, hipertensao_caso_estruturado: JSON.stringify({ systolic: 220, diastolic: 130, symptoms: ['dyspnea'], organDamage: ['pulmonary_edema'], route: 'emergency', scenario: 'pulmonary_edema', selectedIVAgent: 'nitroglycerin', disposition: 'UTI' }) },
+    expected: [/emergência hipertensiva/i, /edema agudo de pulmão/, /UTI/]
   },
   {
     id: 'pep_hiv', flow: pepHivFlowchart, step: 'pep_iniciar', history: ['pep_material_risco', 'pep_tipo_exposicao', 'pep_janela_72h', 'pep_exposta_hiv', 'pep_fonte_hiv', 'pep_avaliacao_inicial'],

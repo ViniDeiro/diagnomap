@@ -42,6 +42,9 @@ import HypertensionFlowchartInteractive from './HypertensionFlowchartInteractive
 import RabiesExposureFlowchartInteractive from './RabiesExposureFlowchartInteractive'
 import ITUFlowchartInteractive from './ITUFlowchartInteractive'
 import HELLPFlowchartInteractive from './HELLPFlowchartInteractive'
+import AcuteAorticSyndromeFlowchartInteractive from './AcuteAorticSyndromeFlowchartInteractive'
+import AcuteCoronarySyndromeFlowchartInteractive from './AcuteCoronarySyndromeFlowchartInteractive'
+import SubarachnoidHemorrhageFlowchartInteractive from './SubarachnoidHemorrhageFlowchartInteractive'
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
@@ -1686,6 +1689,38 @@ ORIENTAÇÕES
 Não oferecer refrigerantes, energéticos ou soluções concentradas. Retornar imediatamente se houver piora, sangue nas fezes, vômitos repetidos, recusa de líquidos/alimentos, muita sede, redução da urina, sonolência/prostração, febre alta persistente ou dor abdominal intensa. Reavaliar se não houver melhora em até 48 horas.
 
 Modelo de apoio à prescrição: registrar peso e calcular qualquer medicamento individualmente antes de assinar.`
+
+const buildGecaDischargePrescription = (
+  basePrescription: string,
+  savedAntibioticAnswer: string | undefined,
+  patient: Pick<EmergencyPatient, 'age' | 'weight'>
+) => {
+  if (!savedAntibioticAnswer) return basePrescription
+  try {
+    const saved = JSON.parse(savedAntibioticAnswer) as {
+      esquemaSelecionado?: string
+      esquemaSelecionadoLabel?: string
+      posologia?: string
+    }
+    if (!saved.esquemaSelecionado) return basePrescription
+
+    let regimen = saved.posologia || 'Revisar dose, via e duração conforme o esquema selecionado.'
+    if (patient.weight) {
+      if (saved.esquemaSelecionado === 'azitromicina_pediatrica') {
+        regimen = `${Math.round(patient.weight * 10)} mg VO no dia 1; depois ${Math.round(patient.weight * 5)} mg VO uma vez ao dia, do dia 2 ao dia 5.`
+      } else if (saved.esquemaSelecionado === 'ceftriaxona_pediatrica') {
+        regimen = `${Math.round(patient.weight * 50)} mg IM uma vez ao dia por 3 a 5 dias.`
+      } else if (saved.esquemaSelecionado === 'ceftriaxona_alto_risco_hospitalar') {
+        regimen = `${Math.round(patient.weight * 50)} a ${Math.round(patient.weight * 100)} mg por dia, conforme protocolo hospitalar e avaliação especializada.`
+      }
+    }
+
+    const antibioticBlock = `\n\nANTIBIOTICOTERAPIA SELECIONADA NO FLUXO\n${saved.esquemaSelecionadoLabel || 'Esquema antimicrobiano selecionado'}\n${regimen}\n\nConfirmar indicação, alergias, função renal/hepática, gestação, interações, resistência local e disponibilidade da apresentação antes de assinar.`
+    return `${basePrescription}${antibioticBlock}`
+  } catch {
+    return basePrescription
+  }
+}
 
 const tvpAnticoagContraindications = [
   { id: 'abs_sangramento_ativo', text: 'Sangramento ativo maior (GI, intracraniano ou hemoptise significativa)', severity: 'absoluta' },
@@ -7912,6 +7947,36 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     )
   }
 
+  if (flowchart.id === 'iam') {
+    return (
+      <AcuteCoronarySyndromeFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
+      />
+    )
+  }
+
+  if (flowchart.id === 'hsa') {
+    return (
+      <SubarachnoidHemorrhageFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
+      />
+    )
+  }
+
   if (flowchart.id === 'hipertensao') {
     return (
       <HypertensionFlowchartInteractive
@@ -7931,6 +7996,21 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   if (flowchart.id === 'hellp') {
     return (
       <HELLPFlowchartInteractive
+        patient={patient}
+        initialStep={currentStep}
+        initialHistory={history}
+        initialAnswers={answers}
+        onUpdate={onUpdate}
+        onComplete={onComplete}
+        onBack={onBack}
+        onOpenReport={onOpenReport}
+      />
+    )
+  }
+
+  if (flowchart.id === 'sindrome_aortica_aguda') {
+    return (
+      <AcuteAorticSyndromeFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
         initialHistory={history}
@@ -11846,7 +11926,12 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       if (gecaAdultCopyButton) {
                         event.preventDefault()
                         event.stopPropagation()
-                        void navigator.clipboard.writeText(GECA_ADULT_DISCHARGE_PRESCRIPTION).then(() => {
+                        const prescription = buildGecaDischargePrescription(
+                          GECA_ADULT_DISCHARGE_PRESCRIPTION,
+                          answers.geca_antibioticos,
+                          patient
+                        )
+                        void navigator.clipboard.writeText(prescription).then(() => {
                           const previousText = gecaAdultCopyButton.textContent
                           gecaAdultCopyButton.textContent = 'Prescrição adulta copiada'
                           window.setTimeout(() => { gecaAdultCopyButton.textContent = previousText }, 1800)
@@ -11856,7 +11941,12 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       if (gecaPediatricCopyButton) {
                         event.preventDefault()
                         event.stopPropagation()
-                        void navigator.clipboard.writeText(GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION).then(() => {
+                        const prescription = buildGecaDischargePrescription(
+                          GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION,
+                          answers.geca_antibioticos,
+                          patient
+                        )
+                        void navigator.clipboard.writeText(prescription).then(() => {
                           const previousText = gecaPediatricCopyButton.textContent
                           gecaPediatricCopyButton.textContent = 'Prescrição pediátrica copiada'
                           window.setTimeout(() => { gecaPediatricCopyButton.textContent = previousText }, 1800)

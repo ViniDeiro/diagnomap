@@ -6,120 +6,31 @@ export { gecaFlowchart } from './gecaFlowchart'
 // Fluxograma de Infarto Agudo do Miocárdio (IAM)
 export const iamFlowchart: EmergencyFlowchart = {
   id: 'iam',
-  name: 'Infarto Agudo do Miocárdio (IAM)',
-  description: 'Protocolo de manejo do IAM com supradesnivelamento do segmento ST',
+  name: 'Síndrome Coronariana Aguda (SCA/IAM)',
+  description: 'Avaliação interativa de SCA com ECG, biomarcadores, controle da isquemia, reperfusão e destino monitorizado.',
   category: 'cardiovascular',
   priority: 'high',
   icon: 'heart',
   color: 'from-red-600 to-red-800',
-  initialStep: 'start',
-  finalSteps: ['discharge', 'transfer'],
+  initialStep: 'sca_reconhecimento',
+  finalSteps: ['sca_destino'],
   steps: {
-    start: {
-      id: 'start',
-      title: 'Avaliação Inicial - IAM',
-      description: 'Paciente com dor torácica suspeita de IAM',
-      type: 'question',
-      options: [
-        { text: 'Dor típica + ECG alterado', nextStep: 'ecg_analysis', value: 'typical' },
-        { text: 'Dor atípica', nextStep: 'atypical_pain', value: 'atypical' }
-      ]
-    },
-    ecg_analysis: {
-      id: 'ecg_analysis',
-      title: 'Análise do ECG',
-      description: 'Verificar presença de supradesnivelamento do segmento ST',
-      type: 'question',
-      critical: true,
-      options: [
-        { text: 'ST elevado ≥ 2mm', nextStep: 'stemi_confirmed', value: 'stemi', critical: true },
-        { text: 'ST normal ou deprimido', nextStep: 'nstemi_evaluation', value: 'nstemi' }
-      ]
-    },
-    stemi_confirmed: {
-      id: 'stemi_confirmed',
-      title: 'IAM com Supra-ST Confirmado',
-      description: 'Iniciar protocolo de reperfusão imediata',
-      type: 'action',
-      critical: true,
-      timeSensitive: true,
-      content: `
-        <div class="space-y-3">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-500">
-            <strong>URGENTE:</strong> Tempo porta-balão ≤ 90 minutos
-          </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Monitorização cardíaca contínua</li>
-            <li>Oxigenação se SpO2 < 90%</li>
-            <li>Acesso venoso periférico</li>
-            <li>Preparar para cateterismo</li>
-          </ul>
-        </div>
-      `,
-      options: [
-        { text: 'Iniciar Medicações', nextStep: 'medications', value: 'meds', critical: true }
-      ]
-    },
-    medications: {
-      id: 'medications',
-      title: 'Medicações do IAM',
-      description: 'Administrar medicações conforme protocolo',
-      type: 'medication',
-      critical: true,
-      content: `
-        <div class="space-y-3">
-          <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
-            <strong>Medicações Essenciais:</strong>
-          </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li><strong>AAS:</strong> 300mg mastigável</li>
-            <li><strong>Clopidogrel:</strong> 600mg</li>
-            <li><strong>Heparina:</strong> 60UI/kg (máx 4000UI)</li>
-            <li><strong>Nitrato:</strong> SL se PA > 90mmHg</li>
-          </ul>
-        </div>
-      `,
-      options: [
-        { text: 'Preparar Cateterismo', nextStep: 'catheterization', value: 'cath', critical: true }
-      ]
-    },
-    catheterization: {
-      id: 'catheterization',
-      title: 'Cateterismo Cardíaco',
-      description: 'Encaminhar para laboratório de hemodinâmica',
-      type: 'procedure',
-      critical: true,
-      requiresSpecialist: true,
-      content: `
-        <div class="space-y-3">
-          <div class="bg-purple-50 p-3 rounded border-l-4 border-purple-500">
-            <strong>Preparativos:</strong>
-          </div>
-          <ul class="list-disc pl-5 space-y-1">
-            <li>Jejum de 6 horas</li>
-            <li>Exames pré-operatórios</li>
-            <li>Consentimento informado</li>
-            <li>Preparar sala de hemodinâmica</li>
-          </ul>
-        </div>
-      `,
-      options: [
-        { text: 'Transferir para Hemodinâmica', nextStep: 'transfer', value: 'transfer' }
-      ]
-    },
-    transfer: {
-      id: 'transfer',
-      title: 'Transferência Realizada',
-      description: 'Paciente encaminhado para cateterismo',
-      type: 'result',
-      content: `
-        <div class="bg-green-50 p-4 rounded border-l-4 border-green-500">
-          <h4 class="font-bold text-green-800">Protocolo IAM Concluído</h4>
-          <p class="text-green-700">Paciente transferido para hemodinâmica dentro do tempo recomendado</p>
-        </div>
-      `,
-      options: []
-    }
+    sca_reconhecimento: { id: 'sca_reconhecimento', title: 'Suspeita de síndrome coronariana aguda', description: 'Reconhecer sintomas isquêmicos e iniciar avaliação tempo-dependente.', type: 'question', critical: true, options: [{ text: 'Iniciar ECG e investigação', nextStep: 'sca_diagnostico', value: 'suspeita', critical: true }] },
+    sca_diagnostico: { id: 'sca_diagnostico', title: 'ECG, troponina e classificação', description: 'Distinguir IAM com supra, IAM sem supra, angina instável e diagnósticos alternativos.', type: 'question', critical: true, requiresLabs: true, options: [{ text: 'Definir estratégia', nextStep: 'sca_tratamento', value: 'classificado', critical: true }] },
+    sca_tratamento: { id: 'sca_tratamento', title: 'Controle da isquemia e da pressão', description: 'Selecionar nitrato, betabloqueador e antitrombóticos somente após revisar contraindicações e estratégia de reperfusão.', type: 'medication', critical: true, options: [{ text: 'Organizar reperfusão/estratégia invasiva', nextStep: 'sca_reperfusao', value: 'tratamento', critical: true }] },
+    sca_reperfusao: { id: 'sca_reperfusao', title: 'Reperfusão ou estratégia invasiva', description: 'ICP primária, fibrinólise ou estratificação invasiva conforme o tipo de SCA e os recursos disponíveis.', type: 'procedure', critical: true, timeSensitive: true, requiresSpecialist: true, options: [{ text: 'Solicitar unidade coronariana', nextStep: 'sca_destino', value: 'destino', critical: true }] },
+    sca_destino: { id: 'sca_destino', title: 'Transição para cuidado coronariano', description: 'Manter monitorização e tratamento até a entrega formal à hemodinâmica ou UTI/unidade coronariana.', type: 'result', critical: true, options: [] }
+  }
+}
+
+export const subarachnoidHemorrhageFlowchart: EmergencyFlowchart = {
+  id: 'hsa', name: 'Hemorragia Subaracnoide', description: 'Reconhecimento, neuroimagem, estabilização, tratamento do aneurisma e vigilância neurocrítica.', category: 'neurological', priority: 'high', icon: 'brain', color: 'from-rose-800 to-violet-950', initialStep: 'hsa_reconhecimento', finalSteps: ['hsa_destino'],
+  steps: {
+    hsa_reconhecimento: { id: 'hsa_reconhecimento', title: 'Suspeita de hemorragia subaracnoide', description: 'Cefaleia explosiva, meningismo, convulsão, déficit ou alteração da consciência.', type: 'question', critical: true, options: [{ text: 'Iniciar investigação imediata', nextStep: 'hsa_imagem', value: 'suspeita', critical: true }] },
+    hsa_imagem: { id: 'hsa_imagem', title: 'Confirmação por neuroimagem', description: 'TC sem contraste e investigação vascular; manter investigação se a suspeita persistir.', type: 'procedure', critical: true, timeSensitive: true, options: [{ text: 'Definir estabilização', nextStep: 'hsa_estabilizacao', value: 'imagem', critical: true }] },
+    hsa_estabilizacao: { id: 'hsa_estabilizacao', title: 'Estabilização neurocrítica', description: 'Controlar pressão e variabilidade, iniciar medidas específicas e acionar centro especializado.', type: 'action', critical: true, options: [{ text: 'Planejar tratamento definitivo', nextStep: 'hsa_tratamento_aneurisma', value: 'estabilizada', critical: true }] },
+    hsa_tratamento_aneurisma: { id: 'hsa_tratamento_aneurisma', title: 'Tratamento do aneurisma e complicações', description: 'Organizar terapia endovascular/cirúrgica e vigilância de ressangramento, hidrocefalia e isquemia tardia.', type: 'procedure', critical: true, requiresSpecialist: true, options: [{ text: 'Solicitar UTI neurocrítica', nextStep: 'hsa_destino', value: 'destino', critical: true }] },
+    hsa_destino: { id: 'hsa_destino', title: 'Transição para UTI neurocrítica', description: 'Manter neuroproteção e monitorização até a passagem formal do cuidado.', type: 'result', critical: true, options: [] }
   }
 }
 
@@ -8209,7 +8120,7 @@ export const cholangitisFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>Conduta:</strong> antibióticos, suporte intensivo em CTI, estabilização hemodinâmica e ventilatória.</p>
+            <p><strong>Conduta:</strong> antibióticos, suporte intensivo em UTI, estabilização hemodinâmica e ventilatória.</p>
           </div>
           <ul class="list-disc pl-5 space-y-1">
             <li>Drenagem biliar urgente, idealmente em 12-24 horas.</li>
@@ -9486,9 +9397,9 @@ export const hypertensionFlowchart: EmergencyFlowchart = {
     hipertensao_lesao_orgao: { id: 'hipertensao_lesao_orgao', title: 'Pesquisar lesão aguda', description: 'Diferenciar emergência de elevação importante sem dano progressivo.', type: 'question', critical: true, options: [{ text: 'Lesão aguda presente', nextStep: 'hipertensao_emergencia_preparo', value: 'emergencia', critical: true }, { text: 'Sem lesão aguda', nextStep: 'hipertensao_observacao', value: 'sem_loa' }] },
     hipertensao_observacao: { id: 'hipertensao_observacao', title: 'Repouso e reavaliação', description: 'Observar em ambiente calmo e repetir pressão e sintomas.', type: 'action', options: [{ text: 'Reavaliar classificação', nextStep: 'hipertensao_classificacao_sem_loa', value: 'reavaliado' }] },
     hipertensao_classificacao_sem_loa: { id: 'hipertensao_classificacao_sem_loa', title: 'Elevação sem lesão ou pseudocrise', description: 'Identificar fator situacional e evitar redução brusca.', type: 'question', options: [{ text: 'Planejar alta segura', nextStep: 'hipertensao_alta_sem_loa', value: 'alta' }] },
-    hipertensao_emergencia_preparo: { id: 'hipertensao_emergencia_preparo', title: 'Preparação da emergência', description: 'Monitorização, acessos, exames e CTI.', type: 'action', critical: true, timeSensitive: true, options: [{ text: 'Definir cenário', nextStep: 'hipertensao_emergencia_cenario', value: 'preparado', critical: true }] },
+    hipertensao_emergencia_preparo: { id: 'hipertensao_emergencia_preparo', title: 'Preparação da emergência', description: 'Monitorização, acessos, exames e UTI.', type: 'action', critical: true, timeSensitive: true, options: [{ text: 'Definir cenário', nextStep: 'hipertensao_emergencia_cenario', value: 'preparado', critical: true }] },
     hipertensao_emergencia_cenario: { id: 'hipertensao_emergencia_cenario', title: 'Lesão predominante', description: 'O órgão acometido determina meta e velocidade de redução.', type: 'question', critical: true, options: [{ text: 'Aplicar meta específica', nextStep: 'hipertensao_emergencia_plano', value: 'meta', critical: true }] },
-    hipertensao_emergencia_plano: { id: 'hipertensao_emergencia_plano', title: 'Tratamento intravenoso e CTI', description: 'Titular terapia conforme o órgão-alvo e monitorar continuamente.', type: 'result', critical: true, requiresSpecialist: true, options: [] },
+    hipertensao_emergencia_plano: { id: 'hipertensao_emergencia_plano', title: 'Tratamento intravenoso e UTI', description: 'Titular terapia conforme o órgão-alvo e monitorar continuamente.', type: 'result', critical: true, requiresSpecialist: true, options: [] },
     hipertensao_alta_sem_loa: { id: 'hipertensao_alta_sem_loa', title: 'Alta sem lesão aguda', description: 'Ajuste gradual, tratamento da causa e reavaliação ambulatorial.', type: 'result', options: [] },
     hipertensao_cronica_alta: { id: 'hipertensao_cronica_alta', title: 'Hipertensão crônica descompensada', description: 'Revisar adesão e organizar seguimento sem redução agressiva.', type: 'result', options: [] }
   }
@@ -9537,6 +9448,7 @@ export const acutePulmonaryEdemaFlowchart: EmergencyFlowchart = {
 
 export const emergencyFlowcharts: Record<string, EmergencyFlowchart> = {
   iam: iamFlowchart,
+  hsa: subarachnoidHemorrhageFlowchart,
   avc: avcFlowchart,
   hipertensao: hypertensionFlowchart,
   hellp: hellpFlowchart,
@@ -9611,6 +9523,7 @@ export const allFlowcharts = [
 
   // Neurológicos
   { id: 'avc', name: 'AVC (Agudo)', category: 'neurological', implemented: true },
+  { id: 'hsa', name: 'Hemorragia Subaracnoide', category: 'neurological', implemented: true },
   { id: 'avc_hemorragico', name: 'AVC hemorrágico', category: 'neurological', implemented: false },
   { id: 'avci', name: 'AVCi', category: 'neurological', implemented: false },
   { id: 'cefaleia', name: 'Cefaleias', category: 'neurological', implemented: true },

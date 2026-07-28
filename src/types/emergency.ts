@@ -6,6 +6,7 @@ export type EmergencyType =
   | 'geca'
   | 'covid19'
   | 'iam' // Infarto Agudo do Miocárdio
+  | 'hsa' // Hemorragia subaracnoide
   | 'avc' // Acidente Vascular Cerebral
   | 'hipertensao' // Crise hipertensiva
   | 'sepsis'

@@ -21,7 +21,7 @@ import {
 import { clsx } from 'clsx'
 import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
-import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
+import { parseUniversalClinicalAssessment, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import type { EmergencyPatient, EmergencyType } from '@/types/emergency'
 import {
   classifyHypertensionRoute,
@@ -51,6 +51,8 @@ export type HypertensionCaseData = {
   updatedAt?: string
   systolic?: number
   diastolic?: number
+  obstetricContext?: boolean
+  obstetricPressureConfirmed?: boolean
   symptoms?: string[]
   measurementChecks?: string[]
   organDamage?: string[]
@@ -64,6 +66,8 @@ export type HypertensionCaseData = {
   scenario?: HypertensionEmergencyScenario
   selectedIVAgent?: string
   selectedOralPlan?: string
+  magnesiumRegimen?: string
+  magnesiumSafety?: string[]
   disposition?: string
   completedAt?: string
 }
@@ -129,7 +133,7 @@ const emergencyMeasureOptions = [
   ['access', 'Acessos venosos e material para infusão titulável'],
   ['oxygen', 'Oxigênio apenas se houver hipoxemia ou insuficiência respiratória'],
   ['urine', 'Diurese e balanço hídrico acompanhados'],
-  ['icu', 'CTI/equipe de referência acionados']
+  ['icu', 'UTI/equipe de referência acionadas']
 ] as const
 
 const examOptions = [
@@ -155,23 +159,68 @@ const scenarioOptions: Array<[HypertensionEmergencyScenario, string, string]> = 
 ]
 
 const ivAgentOptions = [
-  ['nitroprusside', 'Nitroprussiato de sódio', 'Vasodilatador titulável; evitar uso indiscriminado e considerar toxicidade/contraindicações.'],
-  ['nitroglycerin', 'Nitroglicerina', 'Especialmente útil quando há isquemia coronariana ou edema pulmonar.'],
-  ['esmolol', 'Esmolol', 'Controle rápido de frequência/força de ejeção, sobretudo em síndrome aórtica.'],
+  ['nitroprusside', 'Nitroprussiato de sódio', '50 mg em 250 mL de SG 5% (200 mcg/mL), protegido da luz. Iniciar em 0,3 mcg/kg/min e titular; máximo 10 mcg/kg/min. Considerar toxicidade e evitar na gestação, salvo exceção crítica.'],
+  ['nitroglycerin', 'Nitroglicerina', '50 mg em 250 mL de SG 5% ou SF 0,9% (200 mcg/mL). Iniciar em 5 mcg/min e aumentar 5–10 mcg/min a cada 3–5 minutos; máximo usual 200 mcg/min.'],
+  ['nicardipine', 'Nicardipina', '25 mg em aproximadamente 250 mL de SF 0,9% ou SG 5% (~100 mcg/mL). Iniciar em 5 mg/h e aumentar 2,5 mg/h a cada 5–15 minutos; máximo 15 mg/h.'],
+  ['labetalol', 'Labetalol', '20 mg EV; depois 40 mg e 80 mg a cada 10 minutos conforme resposta, máximo usual 220 mg. Verificar disponibilidade local, asma grave, bradicardia, bloqueio AV e insuficiência cardíaca.'],
+  ['hydralazine', 'Hidralazina', 'Ampola de 20 mg diluída em 19 mL de diluente (1 mg/mL). Administrar 5 mg EV e repetir a cada 20 minutos se necessário; máximo 30 mg.'],
+  ['esmolol', 'Esmolol', 'Bolus opcional de 500 mcg/kg, seguido de 50–100 mcg/kg/min em bomba; titular até 300 mcg/kg/min, sobretudo em síndrome aórtica.'],
+  ['metoprolol', 'Metoprolol', '5 mg EV lentamente; repetir a cada 5 minutos até 15 mg, após avaliar frequência, condução e função ventricular.'],
+  ['phentolamine', 'Fentolamina, se disponível', 'Opção para feocromocitoma/crise adrenérgica conforme toxicologia e protocolo institucional; não usar betabloqueador isolado antes do bloqueio alfa.'],
   ['protocol_specific', 'Agente específico do protocolo institucional', 'Escolha guiada pela lesão, gestação, função renal e disponibilidade local.']
 ] as const
 
+const pregnancyPressureOptions = [
+  ['nifedipine_pregnancy', 'Nifedipino na hipertensão grave da gestação', '10 mg VO; se a pressão permanecer grave, repetir a cada 30 minutos, até o máximo de 40 mg, conforme protocolo obstétrico.'],
+  ['hydralazine', 'Hidralazina EV na gestação', 'Diluir 20 mg em 19 mL de diluente (1 mg/mL). Administrar 5 mg EV e repetir a cada 20 minutos se necessário; máximo 30 mg.'],
+  ['labetalol', 'Labetalol EV, se disponível e protocolado', '20 mg EV, depois 40 mg e 80 mg a cada 10 minutos, máximo usual 220 mg. Evitar em asma grave, bradicardia, bloqueio AV e insuficiência cardíaca descompensada.'],
+  ['protocol_specific', 'Outro anti-hipertensivo do protocolo obstétrico', 'Registrar o fármaco, dose, contraindicações e resposta pressórica conforme a rotina institucional.']
+] as const
+
+const scenarioMedicationGuidance: Record<HypertensionEmergencyScenario, { preferred: string; alternatives: string; avoid: string }> = {
+  aortic_syndrome: { preferred: 'Esmolol ou labetalol antes do vasodilatador', alternatives: 'Nitroprussiato somente após controle da frequência e da força de ejeção', avoid: 'Vasodilatador isolado' },
+  encephalopathy: { preferred: 'Nicardipina', alternatives: 'Labetalol conforme disponibilidade e contraindicações', avoid: 'Nifedipino de ação imediata para queda não controlada' },
+  ischemic_stroke_lysis: { preferred: 'Labetalol ou nicardipina conforme protocolo de AVC', alternatives: 'Agente titulável do protocolo institucional', avoid: 'Redução abaixo da meta ou queda excessiva' },
+  ischemic_stroke_no_lysis: { preferred: 'Tratar somente quando indicado pelo limiar e pelo contexto neurológico', alternatives: 'Labetalol ou nicardipina se houver indicação', avoid: 'Redução rotineira que comprometa a perfusão cerebral' },
+  intracerebral_hemorrhage: { preferred: 'Nicardipina', alternatives: 'Labetalol', avoid: 'Nitroprussiato quando houver preocupação com pressão intracraniana' },
+  subarachnoid_hemorrhage: { preferred: 'Agente titulável definido com neurologia/neurocirurgia', alternatives: 'Nicardipina ou labetalol conforme protocolo', avoid: 'Hipotensão e redução não monitorizada' },
+  catecholamine_crisis: { preferred: 'Fentolamina, se disponível', alternatives: 'Nitroprussiato com apoio de toxicologia/especialista', avoid: 'Betabloqueador isolado antes do bloqueio alfa' },
+  acute_coronary_syndrome: { preferred: 'Nitroglicerina', alternatives: 'Labetalol em pacientes selecionados', avoid: 'Hidralazina isolada e hipotensão que reduza perfusão coronariana' },
+  pulmonary_edema: { preferred: 'Nitroglicerina', alternatives: 'Nitroprussiato em ambiente monitorizado', avoid: 'Betabloqueador na fase aguda descompensada' },
+  pregnancy_emergency: { preferred: 'Nifedipino VO ou hidralazina EV; labetalol apenas se disponível e protocolado', alternatives: 'Associar sulfato de magnésio quando indicado para prevenção/tratamento de convulsões', avoid: 'IECA, BRA e nitroprussiato, salvo situação excepcional' },
+  other: { preferred: 'Agente intravenoso titulável compatível com o órgão-alvo', alternatives: 'Nicardipina, labetalol ou nitroprussiato conforme contexto e disponibilidade', avoid: 'Normalização abrupta e tratamento sem monitorização' }
+}
+
 const oralOptions = [
-  ['adjust_chronic', 'Retomar ou ajustar o esquema anti-hipertensivo habitual'],
-  ['long_acting', 'Introduzir opção oral de ação prolongada após revisão de contraindicações'],
-  ['cause_only', 'Tratar apenas o fator precipitante e reavaliar a pressão'],
-  ['no_medication', 'Sem medicação imediata; acompanhamento precoce e plano de adesão']
+  ['adjust_chronic', 'Retomar o esquema habitual interrompido', 'Se houve interrupção recente, administrar a dose habitual, observar por 3–6 horas e reavaliar antes da alta.'],
+  ['captopril', 'Captopril VO', '6,25–50 mg por via oral, após revisar gestação, função renal, potássio, estenose de artéria renal e demais contraindicações. Não usar por via sublingual.'],
+  ['amlodipine', 'Anlodipino VO', '2,5–10 mg por via oral; opção de ação mais prolongada, individualizada conforme tratamento prévio, idade e comorbidades.'],
+  ['clonidine', 'Clonidina VO', '0,1–0,2 mg inicialmente; se necessário, 0,1 mg a cada hora até 0,8 mg, com vigilância de sedação, bradicardia e risco de rebote.'],
+  ['cause_only', 'Tratar o fator precipitante e reavaliar', 'Opção para pseudocrise por dor, ansiedade ou outro gatilho, sem lesão aguda demonstrada.'],
+  ['no_medication', 'Sem medicação imediata', 'Organizar adesão, monitorização domiciliar e seguimento em até 7 dias quando a avaliação clínica permitir.']
+] as const
+
+const magnesiumRegimens = [
+  ['zuspan', 'Esquema de Zuspan', 'Ataque: 4 g EV lentamente em 15–20 minutos. Manutenção: 1 g/h em infusão contínua; pode aumentar para 2 g/h se persistirem sintomas, conforme protocolo. Manter por 24 horas após o parto ou a última convulsão.'],
+  ['pritchard', 'Esquema de Pritchard', 'Ataque: 4 g EV lentamente + 10 g IM, sendo 5 g em cada glúteo. Manutenção: 5 g IM profunda a cada 4 horas, após conferir reflexo patelar, respiração e diurese. Preferível para transferência ou ausência de bomba.']
+] as const
+
+const magnesiumSafetyOptions = [
+  ['patellar_reflex', 'Reflexo patelar presente'],
+  ['respiratory_rate', 'Frequência respiratória igual ou superior a 16 irpm'],
+  ['urine_output', 'Diurese igual ou superior a 25 mL/h'],
+  ['renal_function', 'Função renal revisada; reduzir manutenção pela metade se creatinina ≥1,2 mg/dL'],
+  ['calcium', 'Gluconato de cálcio disponível para toxicidade pelo magnésio']
 ] as const
 
 const labels = Object.fromEntries([
   ...symptomOptions, ...measurementOptions, ...organDamageOptions, ...triggerOptions,
-  ...observationOptions, ...emergencyMeasureOptions, ...examOptions, ...oralOptions,
-  ...ivAgentOptions.map(([id, label]) => [id, label])
+  ...observationOptions, ...emergencyMeasureOptions, ...examOptions,
+  ...oralOptions.map(([id, label]) => [id, label]),
+  ...ivAgentOptions.map(([id, label]) => [id, label]),
+  ...pregnancyPressureOptions.map(([id, label]) => [id, label]),
+  ...magnesiumRegimens.map(([id, label]) => [id, label]),
+  ...magnesiumSafetyOptions
 ]) as Record<string, string>
 
 export const HYPERTENSION_LABELS = labels
@@ -179,6 +228,20 @@ export const HYPERTENSION_LABELS = labels
 const toggle = (values: string[] = [], value: string) => values.includes(value)
   ? values.filter(item => item !== value)
   : [...values, value]
+
+const parseBloodPressure = (raw?: string | null) => {
+  const match = raw?.match(/(\d{2,3})\s*(?:\/|x)\s*(\d{2,3})/i)
+  if (!match) return {}
+  return { systolic: Number(match[1]), diastolic: Number(match[2]) }
+}
+
+const initialHypertensionData = (initialAnswers: Record<string, string>, patient: EmergencyPatient): HypertensionCaseData => {
+  const saved = parseHypertensionCase(initialAnswers[HYPERTENSION_CASE_ANSWER_KEY])
+  if (saved.systolic != null && saved.diastolic != null) return saved
+  const universal = parseUniversalClinicalAssessment(initialAnswers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+  const imported = parseBloodPressure(universal?.sinaisVitais.bloodPressure || patient.admission?.vitalSigns?.bloodPressure)
+  return { ...imported, ...saved }
+}
 
 const Option = ({ selected, title, description, danger, onClick }: { selected: boolean; title: string; description?: string; danger?: boolean; onClick: () => void }) => (
   <button type="button" aria-pressed={selected} onClick={onClick} className={clsx(
@@ -219,7 +282,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const [stage, setStage] = useState<HypertensionStage>(initialStage)
   const [history, setHistory] = useState<string[]>(initialHistory.filter(item => HYPERTENSION_STAGES.includes(item as HypertensionStage)))
   const [answers, setAnswers] = useState(initialAnswers)
-  const [data, setData] = useState<HypertensionCaseData>(() => parseHypertensionCase(initialAnswers[HYPERTENSION_CASE_ANSWER_KEY]))
+  const [data, setData] = useState<HypertensionCaseData>(() => initialHypertensionData(initialAnswers, patient))
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(() => Boolean(parseHypertensionCase(initialAnswers[HYPERTENSION_CASE_ANSWER_KEY]).completedAt))
   const [criticalTransition, setCriticalTransition] = useState<CareTransitionData | null>(() => {
@@ -228,19 +291,36 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const [title, subtitle] = stageTitles[stage]
   const finalStage = ['hipertensao_emergencia_plano', 'hipertensao_alta_sem_loa', 'hipertensao_cronica_alta'].includes(stage)
   const progress = finalStage ? 100 : Math.max(8, Math.round(((HYPERTENSION_STAGES.indexOf(stage) + 1) / HYPERTENSION_STAGES.length) * 100))
-  const markedElevation = isMarkedBloodPressureElevation(data.systolic, data.diastolic)
+  const markedElevation = isMarkedBloodPressureElevation(data.systolic, data.diastolic, Boolean(data.obstetricContext))
   const symptomChoiceMade = (data.symptoms || []).length > 0
   const hasSymptoms = (data.symptoms || []).some(item => item !== 'asymptomatic')
   const hasOrganDamage = (data.organDamage || []).length > 0
   const hasTrigger = (data.triggers || []).length > 0
-  const target = useMemo(() => data.scenario ? HYPERTENSION_SCENARIO_TARGETS[data.scenario] : [], [data.scenario])
+  const target = useMemo(() => {
+    if (!data.scenario) return []
+    const guidance = scenarioMedicationGuidance[data.scenario]
+    return [
+      ...HYPERTENSION_SCENARIO_TARGETS[data.scenario],
+      `Preferir: ${guidance.preferred}.`,
+      `Alternativas: ${guidance.alternatives}.`,
+      `Evitar: ${guidance.avoid}.`
+    ]
+  }, [data.scenario])
   const linkedFlow = data.scenario === 'aortic_syndrome' ? { id: 'sindrome_aortica_aguda' as EmergencyType, label: 'Abrir Síndrome Aórtica Aguda' }
     : data.scenario === 'pulmonary_edema' ? { id: 'edema_agudo_pulmao' as EmergencyType, label: 'Abrir Edema Agudo de Pulmão' }
+      : data.scenario === 'acute_coronary_syndrome' ? { id: 'iam' as EmergencyType, label: 'Abrir Síndrome Coronariana Aguda (IAM/SCA)' }
       : data.scenario === 'pregnancy_emergency' ? { id: 'hellp' as EmergencyType, label: 'Abrir Pré-eclâmpsia grave / HELLP' }
-        : data.scenario && ['ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage', 'encephalopathy'].includes(data.scenario) ? { id: 'avc' as EmergencyType, label: 'Abrir protocolo neurológico / AVC' } : null
+        : data.scenario === 'subarachnoid_hemorrhage' ? { id: 'hsa' as EmergencyType, label: 'Abrir Hemorragia Subaracnoide' }
+        : data.scenario && ['ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'encephalopathy'].includes(data.scenario) ? { id: 'avc' as EmergencyType, label: 'Abrir protocolo neurológico / AVC' } : null
+  const allowedIVAgents = data.scenario === 'subarachnoid_hemorrhage' || data.scenario === 'intracerebral_hemorrhage'
+    ? new Set(['nicardipine', 'labetalol', 'protocol_specific'])
+    : data.scenario === 'acute_coronary_syndrome'
+      ? new Set(['nitroglycerin', 'metoprolol', 'protocol_specific'])
+      : null
+  const contextualIVAgentOptions = allowedIVAgents ? ivAgentOptions.filter(([id]) => allowedIVAgents.has(id)) : ivAgentOptions
 
   const update = (patch: Partial<HypertensionCaseData>) => setData(previous => ({ ...previous, ...patch }))
-  const selectMany = (key: 'symptoms' | 'measurementChecks' | 'organDamage' | 'triggers' | 'observationMeasures' | 'emergencyMeasures' | 'exams', value: string) =>
+  const selectMany = (key: 'symptoms' | 'measurementChecks' | 'organDamage' | 'triggers' | 'observationMeasures' | 'emergencyMeasures' | 'exams' | 'magnesiumSafety', value: string) =>
     setData(previous => ({ ...previous, [key]: toggle(previous[key], value) }))
   const selectHypertensionSymptom = (value: string) => setData(previous => {
     const current = previous.symptoms || []
@@ -304,22 +384,24 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
     setStage('hipertensao_confirmacao')
     setHistory([])
     setAnswers(preservedAnswers)
-    setData({})
+    const restartedData = initialHypertensionData(preservedAnswers, patient)
+    setData(restartedData)
     setCriticalTransition(null)
     setNotice('')
     setShowCompletion(false)
-    onUpdate(patient.id, 'hipertensao_confirmacao', [], preservedAnswers, 8, 'Crise hipertensiva')
+    onUpdate(patient.id, 'hipertensao_confirmacao', [], { ...preservedAnswers, [HYPERTENSION_CASE_ANSWER_KEY]: JSON.stringify(restartedData) }, 8, 'Crise hipertensiva')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const continueFromConfirmation = () => {
     if (data.systolic == null || data.diastolic == null || !symptomChoiceMade) { setNotice('Registre a pressão e selecione os sintomas presentes ou marque Assintomático.'); return }
-    const route = classifyHypertensionRoute({ systolic: data.systolic, diastolic: data.diastolic, hasSymptoms, hasAcuteOrganDamage: false, hasSituationalTrigger: false })
+    if (data.obstetricContext && markedElevation && !data.obstetricPressureConfirmed) { setNotice('Na gestação ou no puerpério, confirme se a PA grave persistiu por aproximadamente 15 minutos.'); return }
+    const route = classifyHypertensionRoute({ systolic: data.systolic, diastolic: data.diastolic, hasSymptoms, hasAcuteOrganDamage: false, hasSituationalTrigger: false, obstetricContext: data.obstetricContext })
     persist(route === 'chronic' ? 'hipertensao_cronica_alta' : 'hipertensao_lesao_orgao', { route })
   }
 
   const continueFromDamage = () => {
-    const route = classifyHypertensionRoute({ systolic: data.systolic, diastolic: data.diastolic, hasSymptoms, hasAcuteOrganDamage: hasOrganDamage, hasSituationalTrigger: false })
+    const route = classifyHypertensionRoute({ systolic: data.systolic, diastolic: data.diastolic, hasSymptoms, hasAcuteOrganDamage: hasOrganDamage, hasSituationalTrigger: false, obstetricContext: data.obstetricContext })
     persist(route === 'emergency' ? 'hipertensao_emergencia_preparo' : 'hipertensao_observacao', { route })
   }
 
@@ -361,6 +443,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
         <motion.section key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className={clsx('rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7', showCompletion && 'hidden')}>
           {stage === 'hipertensao_confirmacao' && <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2"><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão sistólica (mmHg)<input aria-label="Pressão sistólica" type="number" value={data.systolic ?? ''} onChange={event => update({ systolic: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-xl" /></label><label className="rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão diastólica (mmHg)<input aria-label="Pressão diastólica" type="number" value={data.diastolic ?? ''} onChange={event => update({ diastolic: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-xl" /></label></div>
+            <section className="rounded-2xl border border-violet-200 bg-violet-50 p-4"><Option selected={Boolean(data.obstetricContext)} title="Gestante com 20 semanas ou mais, ou paciente no puerpério" description="Ativa o limiar obstétrico: PAS ≥160 mmHg ou PAD ≥110 mmHg exige avaliação urgente quando persistente." danger onClick={() => update({ obstetricContext: !data.obstetricContext, obstetricPressureConfirmed: false })} />{data.obstetricContext && markedElevation && <div className="mt-3"><Option selected={Boolean(data.obstetricPressureConfirmed)} title="PA grave confirmada como persistente por aproximadamente 15 minutos" description="Não atrasar tratamento se houver deterioração materna, eclâmpsia ou outra ameaça imediata." danger onClick={() => update({ obstetricPressureConfirmed: !data.obstetricPressureConfirmed })} /></div>}</section>
             {data.systolic != null && data.diastolic != null && <div className={clsx('rounded-2xl border p-4 font-bold', markedElevation ? 'border-red-300 bg-red-50 text-red-950' : 'border-amber-300 bg-amber-50 text-amber-950')}>{markedElevation ? 'Elevação acentuada registrada. A próxima decisão procura lesão aguda de órgão-alvo.' : 'A medida está abaixo do limiar operacional do documento. O fluxo direcionará para hipertensão crônica/descompensada e avaliação longitudinal.'}</div>}
             <section><h2 className="mb-3 font-black text-slate-950">Sintomas associados</h2><p className="mb-3 text-sm text-slate-600">Selecione os achados presentes ou marque Assintomático. As opções são mutuamente exclusivas.</p><div className="grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <Option key={id} selected={(data.symptoms || []).includes(id)} title={label} danger={id !== 'nonspecific' && id !== 'asymptomatic'} onClick={() => selectHypertensionSymptom(id)} />)}</div></section>
             <section><h2 className="mb-3 font-black text-slate-950">Conferência da aferição</h2><div className="grid gap-3 md:grid-cols-2">{measurementOptions.map(([id, label]) => <Option key={id} selected={(data.measurementChecks || []).includes(id)} title={label} onClick={() => selectMany('measurementChecks', id)} />)}</div></section>
@@ -369,7 +452,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
 
           {stage === 'hipertensao_lesao_orgao' && <div className="space-y-5"><div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-red-950"><div className="flex gap-3"><ShieldAlert className="h-6 w-6 shrink-0" /><p><strong>Emergência é uma definição clínica:</strong> selecione somente lesão nova ou em progressão. Sintomas inespecíficos isolados não bastam.</p></div></div><div className="grid gap-3 md:grid-cols-2">{organDamageOptions.map(([id, label]) => <Option key={id} selected={(data.organDamage || []).includes(id)} title={label} danger onClick={() => selectMany('organDamage', id)} />)}</div><div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={!hasOrganDamage} onClick={continueFromDamage} className="rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Há lesão aguda: emergência</button><button type="button" disabled={hasOrganDamage} onClick={continueFromDamage} className="rounded-xl border border-blue-300 bg-blue-50 px-5 py-4 font-extrabold text-blue-950 disabled:opacity-40">Sem lesão aguda demonstrada</button></div></div>}
 
-          {stage === 'hipertensao_observacao' && <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{observationOptions.map(([id, label]) => <Option key={id} selected={(data.observationMeasures || []).includes(id)} title={label} onClick={() => selectMany('observationMeasures', id)} />)}</div><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Pressão após repouso<input value={data.pressureAfterRest || ''} onChange={event => update({ pressureAfterRest: event.target.value })} placeholder="Ex.: 172/104 mmHg" className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3" /></label><div className="grid gap-3 sm:grid-cols-2"><Option selected={data.symptomsImproved === true} title="Pressão reduziu ou sintomas melhoraram" onClick={() => update({ symptomsImproved: true })} /><Option selected={data.symptomsImproved === false} title="Permanece elevada e/ou sintomática" danger onClick={() => update({ symptomsImproved: false })} /></div><button type="button" disabled={(data.observationMeasures || []).length < 3 || data.symptomsImproved == null || !data.pressureAfterRest} onClick={() => persist('hipertensao_classificacao_sem_loa')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Interpretar reavaliação <ChevronRight /></button></div>}
+          {stage === 'hipertensao_observacao' && <div className="space-y-5"><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><span className="text-xs font-black uppercase tracking-wider text-blue-600">Pressão trazida da avaliação inicial</span><strong className="mt-1 block text-2xl">{data.systolic}/{data.diastolic} mmHg</strong></div><div className="grid gap-3 md:grid-cols-2">{observationOptions.map(([id, label]) => <Option key={id} selected={(data.observationMeasures || []).includes(id)} title={label} onClick={() => selectMany('observationMeasures', id)} />)}</div><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Nova pressão após repouso<input value={data.pressureAfterRest || ''} onChange={event => update({ pressureAfterRest: event.target.value })} placeholder={`PA inicial ${data.systolic}/${data.diastolic}; registre a nova medida`} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3" /></label><div className="grid gap-3 sm:grid-cols-2"><Option selected={data.symptomsImproved === true} title="Pressão reduziu ou sintomas melhoraram" onClick={() => update({ symptomsImproved: true })} /><Option selected={data.symptomsImproved === false} title="Permanece elevada e/ou sintomática" danger onClick={() => update({ symptomsImproved: false })} /></div><button type="button" disabled={(data.observationMeasures || []).length < 3 || data.symptomsImproved == null || !data.pressureAfterRest} onClick={() => persist('hipertensao_classificacao_sem_loa')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Interpretar reavaliação <ChevronRight /></button></div>}
 
           {stage === 'hipertensao_classificacao_sem_loa' && <div className="space-y-5"><div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><h2 className="font-black">Há um fator transitório que explica a elevação?</h2><p className="mt-1 text-sm">Sem lesão progressiva, dor, ansiedade e outros gatilhos podem produzir uma pseudocrise. Trate a causa, não o número isolado.</p></div><div className="grid gap-3 md:grid-cols-2">{triggerOptions.map(([id, label]) => <Option key={id} selected={(data.triggers || []).includes(id)} title={label} onClick={() => selectMany('triggers', id)} />)}</div><div className="grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => persist('hipertensao_alta_sem_loa', { route: hasTrigger ? 'pseudocrisis' : 'important_elevation' })} className="rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white">{hasTrigger ? 'Classificar como pseudocrise' : 'Classificar como elevação sem lesão'}</button><button type="button" onClick={() => setData(previous => ({ ...previous, triggers: [] }))} className="rounded-xl border border-slate-300 px-5 py-4 font-bold text-slate-700">Limpar gatilhos</button></div></div>}
 
@@ -377,9 +460,9 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
 
           {stage === 'hipertensao_emergencia_cenario' && <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{scenarioOptions.map(([id, label, description]) => <Option key={id} selected={data.scenario === id} title={label} description={description} danger onClick={() => update({ scenario: id })} />)}</div><button type="button" disabled={!data.scenario} onClick={() => persist('hipertensao_emergencia_plano')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar meta específica <ChevronRight /></button></div>}
 
-          {stage === 'hipertensao_emergencia_plano' && <div className="space-y-6"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Alvo pressórico do cenário</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{target.map(item => <li key={item}>{item}</li>)}</ul></div>{linkedFlow && onSwitchFlowchart && <section className="rounded-2xl border border-violet-300 bg-gradient-to-r from-violet-50 to-blue-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-violet-700">Interlink clínico disponível</p><h3 className="mt-1 text-lg font-black text-slate-950">Continuar no protocolo específico do órgão-alvo</h3><p className="mt-2 text-sm text-slate-600">O atendimento atual será preservado no histórico e o novo fluxograma continuará com os dados do mesmo paciente.</p><button type="button" onClick={() => onSwitchFlowchart(linkedFlow.id)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-800 px-5 py-4 font-extrabold text-white">{linkedFlow.label}<ChevronRight className="h-5 w-5" /></button></section>}<section><h2 className="mb-3 font-black">Estratégia intravenosa registrada</h2><div className="grid gap-3 md:grid-cols-2">{ivAgentOptions.map(([id, label, description]) => <Option key={id} selected={data.selectedIVAgent === id} title={label} description={description} danger onClick={() => update({ selectedIVAgent: id })} />)}</div></section><div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Dupla checagem obrigatória:</strong> a escolha e a dose dependem do órgão acometido, perfusão, gestação, função renal, contraindicações e protocolo institucional.</div>{data.selectedIVAgent ? <UniversalCareTransition destination="icu" context="hipertensao:emergencia" value={criticalTransition} onChange={persistCriticalTransition} onConfirmed={(transition) => finish('Internação em CTI/unidade monitorizada com anti-hipertensivo intravenoso titulável', transition)} /> : <p className="rounded-xl bg-slate-100 p-4 text-center text-sm font-bold text-slate-600">Selecione o anti-hipertensivo intravenoso para iniciar a transição à unidade crítica.</p>}</div>}
+          {stage === 'hipertensao_emergencia_plano' && <div className="space-y-6"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Alvo pressórico do cenário</h2><p className="mt-1 text-sm font-bold">PA inicial: {data.systolic}/{data.diastolic} mmHg</p><ul className="mt-3 list-disc space-y-2 pl-5 text-sm">{target.map(item => <li key={item}>{item}</li>)}</ul></div>{linkedFlow && onSwitchFlowchart && <section className="rounded-2xl border border-violet-300 bg-gradient-to-r from-violet-50 to-blue-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-violet-700">Interlink clínico disponível</p><h3 className="mt-1 text-lg font-black text-slate-950">Continuar no protocolo específico do órgão-alvo</h3><p className="mt-2 text-sm text-slate-600">O atendimento atual será preservado no histórico e o novo fluxograma continuará com os dados do mesmo paciente.</p><button type="button" onClick={() => onSwitchFlowchart(linkedFlow.id)} className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-violet-800 px-5 py-4 font-extrabold text-white">{linkedFlow.label}<ChevronRight className="h-5 w-5" /></button></section>}{data.scenario === 'pregnancy_emergency' && <section className="space-y-4 rounded-3xl border-2 border-violet-300 bg-violet-50 p-5"><div><p className="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Pré-eclâmpsia grave / eclâmpsia</p><h2 className="mt-1 text-xl font-black text-violet-950">Sulfato de magnésio sem atrasar o controle pressórico</h2><p className="mt-2 text-sm leading-relaxed text-violet-900">O magnésio previne ou trata convulsões; ele não substitui o anti-hipertensivo. Prepare em paralelo com obstetrícia e vigilância materno-fetal.</p></div><div className="grid gap-3 md:grid-cols-2">{magnesiumRegimens.map(([id, label, description]) => <Option key={id} selected={data.magnesiumRegimen === id} title={label} description={description} danger onClick={() => update({ magnesiumRegimen: id })} />)}</div>{data.magnesiumRegimen === 'zuspan' && <div className="rounded-2xl border border-violet-200 bg-white p-4 text-sm leading-relaxed text-slate-700"><strong className="text-slate-950">Preparo prático:</strong> para o ataque, 8 mL de MgSO₄ 50% correspondem a 4 g; completar para 20 mL e infundir lentamente em 15–20 minutos. Para manutenção, 10 mL de MgSO₄ 50% (5 g) em 490 mL de SF 0,9%, infundindo 100 mL/h para administrar 1 g/h. Em toxicidade, suspender o magnésio e administrar gluconato de cálcio 10%, 10 mL EV lentamente, conforme protocolo e monitorização.</div>}<div className="grid gap-3 md:grid-cols-2">{magnesiumSafetyOptions.map(([id, label]) => <Option key={id} selected={(data.magnesiumSafety || []).includes(id)} title={label} danger onClick={() => selectMany('magnesiumSafety', id)} />)}</div></section>}<section><h2 className="mb-3 font-black">{data.scenario === 'pregnancy_emergency' ? 'Estratégia para controle da pressão na gestação' : 'Estratégia intravenosa compatível com o cenário'}</h2><div className="grid gap-3 md:grid-cols-2">{(data.scenario === 'pregnancy_emergency' ? pregnancyPressureOptions : contextualIVAgentOptions).map(([id, label, description]) => <Option key={id} selected={data.selectedIVAgent === id} title={label} description={description} danger onClick={() => update({ selectedIVAgent: id })} />)}</div></section><div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Dupla checagem obrigatória:</strong> a escolha e a dose dependem do órgão acometido, perfusão, gestação, função renal, contraindicações e protocolo institucional.</div>{data.selectedIVAgent && (data.scenario !== 'pregnancy_emergency' || Boolean(data.magnesiumRegimen) && (data.magnesiumSafety || []).length >= 4) ? <UniversalCareTransition destination="icu" context="hipertensao:emergencia" value={criticalTransition} onChange={persistCriticalTransition} onConfirmed={(transition) => finish('Internação em UTI/unidade monitorizada com tratamento específico e vigilância contínua', transition)} /> : <p className="rounded-xl bg-slate-100 p-4 text-center text-sm font-bold text-slate-600">{data.scenario === 'pregnancy_emergency' ? 'Selecione o esquema de magnésio, confirme ao menos quatro itens de segurança e registre o controle pressórico para iniciar a transição à UTI.' : 'Selecione o anti-hipertensivo intravenoso para iniciar a transição à unidade crítica.'}</p>}</div>}
 
-          {stage === 'hipertensao_alta_sem_loa' && <div className="space-y-6"><div className={clsx('rounded-2xl border p-5', data.route === 'pseudocrisis' ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-emerald-300 bg-emerald-50 text-emerald-950')}><h2 className="text-xl font-black">{data.route === 'pseudocrisis' ? 'Pseudocrise provável' : 'Elevação importante sem lesão aguda'}</h2><p className="mt-2 text-sm">{data.route === 'pseudocrisis' ? 'Direcione a conduta ao fator precipitante e repita a pressão. Evite tratamento agressivo apenas pelo número.' : 'Não há indicação de redução rápida ou medicação intravenosa. Planeje controle gradual e seguimento breve.'}</p></div><div className="grid gap-3 md:grid-cols-2">{oralOptions.map(([id, label]) => <Option key={id} selected={data.selectedOralPlan === id} title={label} onClick={() => update({ selectedOralPlan: id })} />)}</div><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Antes da alta:</strong> confirmar estabilidade, ausência de lesão aguda, orientação sobre sinais de alarme e retorno ambulatorial precoce. Fármacos de curta duração não devem ser usados para normalizar a pressão rapidamente.</div><button type="button" disabled={!data.selectedOralPlan} onClick={() => finish(data.route === 'pseudocrisis' ? 'Alta após tratamento do fator precipitante e reavaliação' : 'Alta com ajuste gradual e reavaliação ambulatorial precoce')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300"><Pill /> Registrar alta segura e finalizar</button></div>}
+          {stage === 'hipertensao_alta_sem_loa' && <div className="space-y-6"><div className={clsx('rounded-2xl border p-5', data.route === 'pseudocrisis' ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-emerald-300 bg-emerald-50 text-emerald-950')}><h2 className="text-xl font-black">{data.route === 'pseudocrisis' ? 'Pseudocrise provável' : 'Elevação importante sem lesão aguda'}</h2><p className="mt-2 text-sm">{data.route === 'pseudocrisis' ? 'Direcione a conduta ao fator precipitante e repita a pressão. Evite tratamento agressivo apenas pelo número.' : 'Mesmo assintomático, o paciente precisa de reconciliação terapêutica e seguimento. Sem lesão aguda, a redução deve ser gradual em 24–72 horas; não aplicar a meta de queda de 25% da emergência hipertensiva.'}</p><p className="mt-3 text-sm font-black">PA inicial: {data.systolic}/{data.diastolic} mmHg · PA após repouso: {data.pressureAfterRest || 'não registrada'}</p></div><section><h2 className="mb-1 text-lg font-black">Definir conduta oral individualizada</h2><p className="mb-3 text-sm text-slate-600">Escolha após revisar medicação prévia, gestação, função renal, eletrólitos, idade, fragilidade e contraindicações.</p><div className="grid gap-3 md:grid-cols-2">{oralOptions.map(([id, label, description]) => <Option key={id} selected={data.selectedOralPlan === id} title={label} description={description} onClick={() => update({ selectedOralPlan: id })} />)}</div></section><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-relaxed text-blue-950"><strong>Meta segura sem lesão aguda:</strong> reduzir gradualmente, em geral ao longo de 24–72 horas, com retorno em até 7 dias. Não usar fármaco intravenoso nem tentar normalizar a pressão rapidamente apenas pelo valor medido.</div><button type="button" disabled={!data.selectedOralPlan} onClick={() => finish(data.route === 'pseudocrisis' ? 'Alta após tratamento do fator precipitante e reavaliação' : `Alta com redução gradual em 24–72 horas e plano oral: ${labels[data.selectedOralPlan || ''] || 'individualizado'}`)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300"><Pill /> Registrar alta segura e finalizar</button></div>}
 
           {stage === 'hipertensao_cronica_alta' && <div className="space-y-6"><div className="rounded-2xl border border-blue-300 bg-blue-50 p-5 text-blue-950"><h2 className="text-xl font-black">Sem critério operacional de crise no caminho atual</h2><p className="mt-2 text-sm">A aferição e os sintomas registrados não preencheram simultaneamente o ponto de entrada do fluxograma. Avalie causas crônicas, adesão, drogas que elevam a pressão e risco cardiovascular global.</p></div><div className="grid gap-3 md:grid-cols-3"><div className="rounded-2xl border border-slate-200 p-4"><Stethoscope className="text-blue-700" /><strong className="mt-3 block">Reavaliar</strong><p className="mt-1 text-sm text-slate-600">Repetir a medida e examinar sinais que mudem a classificação.</p></div><div className="rounded-2xl border border-slate-200 p-4"><Pill className="text-blue-700" /><strong className="mt-3 block">Reconciliar</strong><p className="mt-1 text-sm text-slate-600">Checar adesão, interrupções, automedicação e interações.</p></div><div className="rounded-2xl border border-slate-200 p-4"><Clock3 className="text-blue-700" /><strong className="mt-3 block">Acompanhar</strong><p className="mt-1 text-sm text-slate-600">Garantir seguimento e retorno diante de sinais de alarme.</p></div></div><button type="button" onClick={() => finish('Alta/encaminhamento por hipertensão crônica mal controlada, sem emergência demonstrada')} className="w-full rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white">Registrar orientação e finalizar</button></div>}
 
