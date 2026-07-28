@@ -397,9 +397,10 @@ const buildTVPClinicalSummary = (
   const respiratoryAlertPattern = /dispneia|dor torácica|hemoptise|síncope|embolia pulmonar|tromboembolismo pulmonar/i
   const limbThreatPattern = /flegmasia|cianose|palidez|ameaça ao membro|déficit sensitivo|déficit motor|iliofemoral|progressão rápida/i
   const riskFactorPattern = /imobilização|cirurgia|trauma|câncer|gravidez|puerpério|estrogênios|trombofilia|TVP\/TEV|prévia/i
+  const tvpChiefComplaintText = patient.admission?.chiefComplaint?.trim()
   const allReportedFindings = uniqueTextItems([
-    patient.admission?.chiefComplaint,
-    ...(patient.admission?.symptoms || []),
+    tvpChiefComplaintText,
+    ...(patient.admission?.symptoms || []).filter((item) => !tvpChiefComplaintText || !tvpChiefComplaintText.toLowerCase().includes(item.toLowerCase())),
     ...selectedFindings,
     otherFindings
   ])
@@ -577,10 +578,12 @@ const buildTVPClinicalSummary = (
     : isUrgentVascular
       ? 'A gravidade clínica registrada motivou abordagem vascular em caráter de urgência.'
       : ''
+  const tvpDurationText = patient.admission?.complaintDuration?.trim()
+  const tvpDurationAlreadyMentioned = Boolean(tvpDurationText) && symptoms.some((item) => item.toLowerCase().includes(tvpDurationText!.toLowerCase()))
   const historyNarrative = [
     symptoms.length > 0
-      ? `Paciente com queixa de ${formatClinicalListText(symptoms)} em ${selectedLegLabel}, quadro compatível com doença tromboembólica venosa.`
-      : `A investigação foi motivada por suspeita clínica de trombose venosa profunda em ${selectedLegLabel}.`,
+      ? `Paciente com queixa de ${formatClinicalListText(symptoms)} em ${selectedLegLabel}${tvpDurationText && !tvpDurationAlreadyMentioned ? `, com evolução há ${tvpDurationText}` : ''}, quadro compatível com doença tromboembólica venosa.`
+      : `A investigação foi motivada por suspeita clínica de trombose venosa profunda em ${selectedLegLabel}${tvpDurationText ? `, com evolução há ${tvpDurationText}` : ''}.`,
     riskFactors.length > 0
       ? `Como fatores predisponentes, foram identificados ${formatClinicalListText(riskFactors)}.`
       : '',
@@ -1118,9 +1121,10 @@ const buildInfluenzaClinicalSummary = (
     || 'quadro respiratório agudo compatível com síndrome gripal'
   const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
   const durationText = patient.admission?.complaintDuration?.trim()
+  const durationAlreadyMentioned = Boolean(durationText) && chiefComplaint.toLowerCase().includes(durationText!.toLowerCase())
   const historySentence = `${[
     `Na história da moléstia atual, consta quadro respiratório agudo com queixa de ${chiefComplaint.replace(/[.]+$/, '')}`,
-    durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
+    durationText && !durationAlreadyMentioned ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
     symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `associado a ${symptomText.replace(/[.]+$/, '')}` : null
   ].filter(Boolean).join(', ')}.${patient.generalObservations?.trim() ? ` Observações adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''}`
   const examinationSentence = examinationLines.length
@@ -1300,9 +1304,10 @@ const buildPneumoniaClinicalSummary = (
     || 'quadro respiratório sugestivo de pneumonia adquirida na comunidade'
   const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
   const durationText = patient.admission?.complaintDuration?.trim()
+  const durationAlreadyMentioned = Boolean(durationText) && chiefComplaint.toLowerCase().includes(durationText!.toLowerCase())
   const historyNarrative = `${[
     `Paciente em avaliação por ${chiefComplaint.replace(/[.]+$/, '')}`,
-    durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
+    durationText && !durationAlreadyMentioned ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
     symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `apresentando ${symptomText.replace(/[.]+$/, '')}` : null
   ].filter(Boolean).join(', ')}.${patient.generalObservations?.trim() ? ` Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''}`
 
@@ -1500,9 +1505,10 @@ const buildTEPClinicalSummary = (
     return Object.keys(physical).length ? normalDefault : undefined
   }
   const symptomText = patient.admission?.symptoms?.filter(Boolean).join(', ')
+  const tepDurationAlreadyMentioned = Boolean(durationText) && chiefComplaint.toLowerCase().includes(durationText!.toLowerCase())
   const hpma = `${[
     `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}`,
-    durationText ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
+    durationText && !tepDurationAlreadyMentioned ? `com evolução há ${durationText.replace(/[.]+$/, '')}` : null,
     symptomText && symptomText.toLowerCase() !== chiefComplaint.toLowerCase() ? `associado a ${symptomText.replace(/[.]+$/, '')}` : null
   ].filter(Boolean).join(', ')}.${patient.generalObservations?.trim() ? ` Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''}`
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
@@ -1689,13 +1695,11 @@ const buildGecaClinicalSummary = (
   const profile = profileLabels[answers.geca_perfil_diarreia] || 'padrão das fezes ainda não classificado'
   const hydration = hydrationLabels[answers.geca_classificacao_hidratacao]
     || (alarmDecision === 'com_sinal_alarme' ? 'com sinal de alarme, conduzido pelo Plano C' : 'estado de hidratação ainda não classificado')
-  const symptoms = uniqueTextItems([
-    patient.admission?.chiefComplaint,
-    ...(patient.admission?.symptoms || [])
-  ])
-  const chiefComplaint = symptoms.length > 0
-    ? formatClinicalListText(symptoms)
-    : profile
+  const recordedChiefComplaint = patient.admission?.chiefComplaint?.trim()
+  const otherSymptoms = uniqueTextItems(
+    (patient.admission?.symptoms || []).filter((item) => !recordedChiefComplaint || !recordedChiefComplaint.toLowerCase().includes(item.toLowerCase()))
+  )
+  const chiefComplaint = recordedChiefComplaint || (otherSymptoms.length > 0 ? formatClinicalListText(otherSymptoms) : profile)
 
   const universalAssessment = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
   const vitalSigns = { ...(patient.admission?.vitalSigns || {}), ...(universalAssessment?.sinaisVitais || {}) }
@@ -1722,11 +1726,11 @@ const buildGecaClinicalSummary = (
         : null
   ])
 
+  const entryHistoryNarrative = entryEvacuations != null || entryDurationDays != null
+    ? `Relatou ${entryEvacuations != null ? `${entryEvacuations} evacuação(ões) em 24 horas` : 'frequência evacuatória não quantificada'}, com ${entryDurationDays != null ? `${entryDurationDays} dia(s) de duração` : 'duração não informada'}, ${entryConsistency === 'amolecidas_liquidas' ? 'fezes amolecidas/líquidas' : 'sem alteração relevante da consistência relatada'}${entryRelevantIncrease ? ' e aumento relevante em relação ao hábito intestinal habitual' : ''}.`
+    : ''
+  const entryCriticalNarrative = entryCriticalLabels.length > 0 ? ` Já na porta de entrada, foram identificados sinais críticos: ${entryCriticalLabels.join('; ')}.` : ''
   const scoreLines = uniqueTextItems([
-    entryEvacuations != null || entryDurationDays != null
-      ? `Porta de entrada: ${entryEvacuations != null ? `${entryEvacuations} evacuação(ões) em 24 horas` : 'frequência não informada'}; ${entryDurationDays != null ? `${entryDurationDays} dia(s) de duração` : 'duração não informada'}; ${entryConsistency === 'amolecidas_liquidas' ? 'fezes amolecidas/líquidas' : 'sem alteração relevante da consistência'}${entryRelevantIncrease ? '; aumento relevante em relação ao hábito' : ''}.`
-      : null,
-    entryCriticalLabels.length > 0 ? `Sinais críticos identificados na porta de entrada: ${entryCriticalLabels.join('; ')}.` : null,
     `Padrão clínico: ${profile}.`,
     `Classificação hídrica: ${hydration}.`,
     typeof planCAnswer?.cristaloideLabel === 'string' && planCAnswer.cristaloideLabel
@@ -1821,7 +1825,10 @@ const buildGecaClinicalSummary = (
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
   const durationText = patient.admission?.complaintDuration?.trim()
-  const hpma = `Apresentou ${chiefComplaint}, com classificação clínica compatível com ${profile}.`
+  const associatedSymptomsNarrative = recordedChiefComplaint && otherSymptoms.length > 0
+    ? ` Associado a ${formatClinicalListText(otherSymptoms)}.`
+    : ''
+  const hpma = `Apresentou ${chiefComplaint}${durationText ? `, com evolução há ${durationText}` : ''}.${associatedSymptomsNarrative} ${entryHistoryNarrative}${entryCriticalNarrative}`.trim()
   const ap = patient.allergies?.length ? `alergias: ${formatClinicalListText(patient.allergies)}` : 'sem antecedentes relevantes registrados neste atendimento'
   const muc = 'não informado no formulário deste atendimento'
   const safetyText = 'Orientou-se reavaliação imediata diante de piora das perdas, vômitos repetidos, sangue nas fezes, febre alta persistente, muita sede, redução da diurese, prostração, síncope, dor abdominal intensa ou incapacidade de ingerir líquidos.'
@@ -2001,7 +2008,9 @@ const buildAsthmaClinicalSummary = (
     : path.has('asma_tratamento_1h_leve_moderada')
       ? 'moderada'
       : 'leve'
-  const historyNarrative = `Paciente com ${chiefComplaint.replace(/[.]+$/, '')}, avaliado no pronto-socorro como exacerbação asmática ${severity}.${selectedFlags.length ? ` Na chegada, apresentava ${formatClinicalListText(selectedFlags)}.` : ''}`
+  const asthmaDurationText = patient.admission?.complaintDuration?.trim()
+  const asthmaDurationAlreadyMentioned = Boolean(asthmaDurationText) && chiefComplaint.toLowerCase().includes(asthmaDurationText!.toLowerCase())
+  const historyNarrative = `Paciente com ${chiefComplaint.replace(/[.]+$/, '')}${asthmaDurationText && !asthmaDurationAlreadyMentioned ? `, com evolução há ${asthmaDurationText}` : ''}, avaliado no pronto-socorro como exacerbação asmática ${severity}.${selectedFlags.length ? ` Na chegada, apresentava ${formatClinicalListText(selectedFlags)}.` : ''}`
   const initialMeasures = uniqueTextItems([
     values.sato2 != null ? `SpO₂ inicial ${values.sato2}%` : null, values.fr != null ? `FR inicial ${values.fr} irpm` : null,
     values.fc != null ? `FC inicial ${values.fc} bpm` : null, values.pfe != null ? `PFE inicial ${values.pfe}% do previsto/melhor pessoal` : null,
@@ -2117,7 +2126,13 @@ const buildHypertensionClinicalSummary = (
   const obstetricNarrative = data.obstetricContext === true
     ? ` Contexto de gestação com 20 semanas ou mais/puerpério registrado${data.obstetricPressureConfirmed ? ', com hipertensão grave confirmada como persistente por aproximadamente 15 minutos' : ''}.`
     : ''
-  const historyNarrative = `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}, com pressão arterial inicial de ${pressure}.${symptomNarrative}${obstetricNarrative}`
+  const triggerLabels: Record<string, string> = { pain: 'dor aguda ou insuficientemente controlada', anxiety: 'ansiedade, pânico ou estresse emocional intenso', withdrawal: 'abstinência ou retirada recente de medicamento', stimulant: 'exposição a estimulante/simpaticomimético sem lesão aguda demonstrada', other: 'outro fator transitório plausível' }
+  const triggers = Array.isArray(data.triggers) ? data.triggers.map((item) => triggerLabels[String(item)] || String(item)) : []
+  const durationText = patient.admission?.complaintDuration?.trim()
+  const triggerNarrative = triggers.length ? ` Como possível fator precipitante, foi identificado ${formatClinicalListText(triggers)}.` : ''
+  const observationsNarrative = patient.generalObservations?.trim() ? ` Observações clínicas adicionais: ${patient.generalObservations.trim().replace(/[.]+$/, '')}.` : ''
+  const durationAlreadyMentioned = Boolean(durationText) && chiefComplaint.toLowerCase().includes(durationText!.toLowerCase())
+  const historyNarrative = `Paciente avaliado por ${chiefComplaint.replace(/[.]+$/, '')}${durationText && !durationAlreadyMentioned ? `, com evolução há ${durationText}` : ''}, com pressão arterial inicial de ${pressure}.${symptomNarrative}${obstetricNarrative}${triggerNarrative}${observationsNarrative}`
   const examLines = uniqueTextItems([
     universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null,
     ...universal.examItems,
