@@ -9078,7 +9078,7 @@ export const ituFlowchart: EmergencyFlowchart = {
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Sulfametoxazol-trimetoprim 800/160 mg:</strong> tomar 1 comprimido VO de 12/12 horas por 3 dias.</div><p>Evitar quando a resistência local for elevada, houver uso recente, gestação, alergia a sulfa ou interação relevante. Ajustar à função renal.</p></div>`, options: []
     },
     itu_pielo_sepse: {
-      id: 'itu_pielo_sepse', title: 'Pielonefrite: sinais clínicos de sepse?', description: 'Identificar instabilidade antes de prosseguir à investigação habitual.', type: 'question', critical: true,
+      id: 'itu_pielo_sepse', title: 'ITU complicada: sinais clínicos de sepse?', description: 'Triagem de instabilidade comum à pielonefrite, cistite complicada, prostatite complicada e ITU associada a cateter, antes de prosseguir à investigação habitual.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"><strong>Avaliar:</strong> hipotensão, alteração do nível de consciência, hipoperfusão, lactato elevado, oligúria, taquipneia, hipoxemia, choque ou disfunção orgânica. Não atrasar estabilização para completar o restante do fluxo.</div>`,
       options: [
         { text: 'Sim: suspeita de sepse/instabilidade', nextStep: 'itu_estabilizacao_sepse', value: 'sepse', critical: true, requiresImmediateAction: true },
@@ -9176,7 +9176,7 @@ export const ituFlowchart: EmergencyFlowchart = {
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Destino assistencial:</strong> paciente transferido para UTI após estabilização inicial, antimicrobiano EV e avaliação do controle do foco urinário.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Passagem do cuidado:</strong> foram comunicados gravidade, evolução, culturas e exames pendentes, primeira dose efetiva, suporte em curso, diurese, imagem e necessidade de urologia/drenagem.</div></div>`, options: []
     },
     itu_exames_pielonefrite: {
-      id: 'itu_exames_pielonefrite', title: 'Investigação inicial da pielonefrite', description: 'Coletar exames sem atrasar o antibiótico quando houver gravidade.', type: 'action', critical: true,
+      id: 'itu_exames_pielonefrite', title: 'Investigação inicial da ITU complicada', description: 'Aplica-se a pielonefrite, cistite complicada, prostatite complicada e ITU associada a cateter. Coletar exames sem atrasar o antibiótico quando houver gravidade.', type: 'action', critical: true,
       content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><h4 class="font-bold text-blue-950">Exames laboratoriais</h4><ul class="mt-2 list-disc space-y-1 pl-5"><li>EAS.</li><li>Urocultura com TSA em todos os casos, preferencialmente antes do antibiótico.</li><li>Hemograma, ureia, creatinina e eletrólitos.</li><li>Hemoculturas se internação, sepse ou quadro grave.</li></ul></div><div class="rounded-xl border border-violet-300 bg-violet-50 p-4"><h4 class="font-bold text-violet-950">Tomografia de abdome e pelve</h4><p class="mt-2"><strong>Solicitar TC, geralmente com contraste,</strong> se houver pielonefrite complicada, suspeita de obstrução, cálculo infectado, abscesso, disfunção renal, imunossupressão, recorrência, deterioração clínica, dúvida diagnóstica ou persistência de febre/ausência de melhora após 48–72 horas.</p><p class="mt-2">Na suspeita predominante de cálculo, considerar protocolo sem contraste. Em gestantes, crianças ou quando radiação/contraste forem inadequados, priorizar ultrassonografia e considerar RM conforme avaliação especializada.</p><p class="mt-2 font-semibold">Primeiro episódio não complicado e com boa evolução não exige TC inicial rotineira.</p></div></div>`,
       options: [{ text: 'Exames solicitados e plano de imagem definido', description: 'Registrar TC de abdome e pelve quando houver critério; documentar ultrassom/RM ou ausência de imagem inicial no caso não complicado.', nextStep: 'itu_criterios_internacao', value: 'exames_e_imagem_definidos' }]
     },
@@ -9189,7 +9189,7 @@ export const ituFlowchart: EmergencyFlowchart = {
       ]
     },
     itu_antibiotico_ambulatorial: {
-      id: 'itu_antibiotico_ambulatorial', title: 'Pielonefrite: tratamento ambulatorial', description: 'Selecionar esquema e programar reavaliação em 48–72 horas.', type: 'question', critical: true,
+      id: 'itu_antibiotico_ambulatorial', title: 'ITU complicada: tratamento ambulatorial', description: 'Pielonefrite, cistite complicada, prostatite complicada ou ITU associada a cateter. Selecionar esquema e programar reavaliação em 48–72 horas.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><p>Considerar primeira dose de antibiótico parenteral no pronto-socorro quando indicado pela resistência local ou perfil clínico. Garantir tolerância oral, seguimento e acesso a retorno.</p><p class="mt-2"><strong>Não utilizar nitrofurantoína ou fosfomicina para pielonefrite.</strong></p></div>`,
       options: [
         { text: 'Ciprofloxacino 500 mg VO 12/12h por 7 dias', nextStep: 'itu_ambulatorial_concluido', value: 'ciprofloxacino_vo' },
@@ -9210,7 +9210,7 @@ export const ituFlowchart: EmergencyFlowchart = {
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Alta assistida:</strong> completar o antibiótico prescrito, manter hidratação e revisar urocultura/TSA para ajuste quando necessário.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Seguimento fora deste atendimento:</strong> reavaliação em 48–72 horas pela rede responsável, sem manter o fluxo do pronto-socorro aberto.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950"><strong>Retorno imediato:</strong> febre persistente, piora da dor lombar, vômitos, intolerância oral, redução da diurese, hipotensão, confusão ou piora geral.</div></div>`, options: []
     },
     itu_antibiotico_hospitalar: {
-      id: 'itu_antibiotico_hospitalar', title: 'Pielonefrite: tratamento hospitalar', description: 'Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
+      id: 'itu_antibiotico_hospitalar', title: 'ITU complicada: tratamento hospitalar', description: 'Pielonefrite, cistite complicada, prostatite complicada ou ITU associada a cateter. Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"><p>Manter internação, hidratação e sintomáticos conforme necessidade. Revisar culturas e função renal. Pesquisar obstrução/abscesso e solicitar avaliação urológica quando indicada.</p></div>`,
       options: [
         { text: 'Ceftriaxona 1–2 g EV 1x/dia', description: 'Opção para quadro comunitário sem choque e sem risco relevante de Pseudomonas/ESBL. Reconstituir e infundir conforme preparo exibido.', nextStep: 'itu_controle_foco', value: 'ceftriaxona_ev' },
@@ -9254,7 +9254,7 @@ export const ituFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-4 text-sm">
           <div class="rounded-xl border border-sky-200 bg-sky-50 p-4">
-            <h4 class="font-bold text-sky-950">Cuidados do paciente com pielonefrite enquanto aguarda leito de enfermaria</h4>
+            <h4 class="font-bold text-sky-950">Cuidados do paciente com ITU complicada (pielonefrite, cistite complicada, prostatite ou associada a cateter) enquanto aguarda leito de enfermaria</h4>
             <p class="mt-2">Após definida a necessidade de internação e selecionado o antimicrobiano, o paciente deve permanecer em observação, receber o tratamento prescrito e ser reavaliado até a transferência efetiva.</p>
           </div>
 
