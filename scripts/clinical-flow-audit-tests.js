@@ -389,6 +389,10 @@ for (const marker of ['GECA_ADULT_DISCHARGE_PRESCRIPTION', 'GECA_PEDIATRIC_DISCH
   assert.match(`${emergencyComponentSource}\n${gecaSource}`, new RegExp(marker), `GECA: receita de alta ausente (${marker})`)
 }
 assert.match(clinicalSummarySource, /parsePepBaselineForSummary/, 'PEP HIV: avaliação basal precisa aparecer no resumo clínico')
+assert.equal(pepHivFlowchart.steps.pep_inicio.options[0]?.nextStep, 'pep_material_risco', 'PEP HIV: contexto e material de risco devem ser registrados na mesma tela, sem etapa intermediária')
+for (const marker of ['isPepMaterialRiskStep', 'Grupo do tipo de exposição', 'persistPepExposureContext', 'Selecione primeiro o grupo do tipo de exposição']) {
+  assert.ok(emergencyComponentSource.includes(marker), `PEP HIV: tela unificada de contexto e material incompleta (${marker})`)
+}
 assert.equal(ituFlowchart.steps.itu_bacteriuria_excecoes.options.find(option => option.value === 'grupo_especial')?.nextStep, 'itu_bacteriuria_grupo_especial', 'ITU: bacteriúria em grupo especial deve passar pela orientação específica')
 const ituReachable = reachable(ituFlowchart)
 for (const required of [
@@ -400,7 +404,7 @@ for (const required of [
   'itu_masculino_prostatite', 'itu_prostatite_antibiotico', 'itu_prostatite_ambulatorial',
   'itu_cateter_sintomas', 'itu_cateter_manejo', 'itu_cateter_assintomatico',
   'itu_recorrente_avaliacao', 'itu_recorrente_plano', 'itu_candiduria_avaliacao',
-  'itu_diferencial_ist', 'itu_pediatrico_encaminhado',
+  'itu_diferencial_ist',
   'itu_cuidados_aguarda_enfermaria', 'itu_transferencia_enfermaria_concluida', 'itu_cuidados_aguarda_internacao', 'itu_sepse_encaminhada'
 ]) assert.ok(ituReachable.has(required), `ITU: caminho clínico obrigatório não alcançável (${required})`)
 assert.equal(ituFlowchart.steps.itu_estabilizacao_sepse.options[0].nextStep, 'itu_risco_resistencia_hospitalar', 'ITU: sepse não pode chegar à espera de UTI sem seleção antimicrobiana')
@@ -414,6 +418,7 @@ assert.equal(ituFlowchart.steps.itu_cuidados_aguarda_internacao.options[0]?.next
 for (const legacyInpatientStep of ['itu_reavaliacao_ambulatorial', 'itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar']) {
   assert.ok(!ituReachable.has(legacyInpatientStep), `ITU: etapa posterior ao destino não deve permanecer no fluxo do pronto-socorro (${legacyInpatientStep})`)
 }
+assert.ok(!ituFlowchart.steps.itu_apresentacao.options.some(option => option.value === 'pediatrico'), 'ITU adulto: seleção inicial não deve oferecer ramo pediátrico')
 for (const marker of ['cefepime_ev', 'cefalexina_gestacao', 'amoxicilina_clavulanato_gestacao']) {
   assert.ok(ituLogicSource.includes(marker), `ITU: prescrição estruturada ausente (${marker})`)
 }
@@ -577,12 +582,19 @@ const narrativeCases = [
     id: 'geca', flow: gecaFlowchart, step: 'geca_alta_plano_a', history: ['geca_inicio', 'geca_perfil_diarreia', 'geca_classificacao_hidratacao', 'geca_plano_a', 'geca_destino'],
     answers: { __avaliacao_clinica_inicial: universalAnswer, geca_perfil_diarreia: 'aguda_aquosa', geca_classificacao_hidratacao: 'plano_a_sem_desidratacao', geca_destino: JSON.stringify({ decision: 'alta_segura', criteriosAltaLabels: ['hidratado', 'tolerando via oral'] }) },
     expected: [/diarreia aguda aquosa/, /sem sinais de desidratação/, /Plano A/]
+  },
+  {
+    id: 'atendimento_antirrabico', flow: atendimentoAntirrabicoFlowchart, step: 'raiva_vacina_soro', history: ['raiva_tipo_contato', 'raiva_especie', 'raiva_cao_gato_observavel', 'raiva_gravidade'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, raiva_tipo_contato: 'contato_direto', raiva_especie: 'cao_gato', raiva_cao_gato_observavel: 'nao_observavel_suspeito', raiva_gravidade: 'grave' },
+    expected: [/exposição envolvendo cão ou gato/i, /acidente grave/i, /vacina e imunização passiva/i],
+    forbidden: [/morcego/i, /animal silvestre/i]
   }
 ]
 for (const testCase of narrativeCases) {
   const patient = narrativePatient(testCase.id, testCase.step, testCase.history, testCase.answers)
   const summary = buildClinicalSummary(patient, { flowchart: testCase.flow, currentStep: testCase.step, history: testCase.history, answers: testCase.answers })
   for (const pattern of testCase.expected) assert.match(summary.continuousText, pattern, `${testCase.id}: narrativa não contextualizou ${pattern}`)
+  for (const pattern of testCase.forbidden || []) assert.doesNotMatch(summary.continuousText, pattern, `${testCase.id}: narrativa mencionou animal incompatível com o caminho (${pattern})`)
   assert.doesNotMatch(summary.continuousText, /avc_caso_estruturado|hipertensao_caso_estruturado|sato2Re|usoMusculatura|decision:/, `${testCase.id}: resumo expôs chave técnica`)
 }
 

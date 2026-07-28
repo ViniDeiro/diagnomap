@@ -4001,6 +4001,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPepBaselineAssessmentStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_avaliacao_inicial'
   const isPepPost72AssessmentStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_fora_janela'
   const isPepInteractiveAssessmentStep = isPepBaselineAssessmentStep || isPepPost72AssessmentStep
+  const isPepMaterialRiskStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_material_risco'
   const pepBaselineAssessment = useMemo(
     () => {
       const parsed = parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY])
@@ -4054,6 +4055,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       ...patch
     }
     const updatedAnswers = { ...answers, [PEP_BASELINE_ASSESSMENT_KEY]: JSON.stringify(next) }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
+  const persistPepExposureContext = useCallback((exposureContext: string) => {
+    const updatedAnswers = { ...answers, pep_contexto_exposicao: exposureContext }
     setAnswers(updatedAnswers)
     onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
   }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
@@ -11825,14 +11831,24 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                     <div className="mb-4">
                       <p className="text-xs font-black uppercase tracking-wider text-slate-500">1. Contexto</p>
-                      <h3 className="mt-1 font-extrabold text-slate-950">Como ocorreu a exposição?</h3>
+                      <h3 className="mt-1 font-extrabold text-slate-950">Contexto registrado da exposição</h3>
                     </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      {PEP_EXPOSURE_CONTEXTS.map(([value, label]) => {
-                        const selected = pepBaselineAssessment.exposureContext === value
-                        return <button key={value} type="button" aria-pressed={selected} onClick={() => persistPepBaselineAssessment({ exposureContext: value })} className={clsx('rounded-xl border-2 p-4 text-left text-sm font-bold transition-colors', selected ? 'border-cyan-600 bg-cyan-50 text-cyan-950' : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300')}><span className="mr-2">{selected ? '●' : '○'}</span>{label}</button>
-                      })}
-                    </div>
+                    {answers.pep_contexto_exposicao ? (
+                      <div className="flex items-start gap-3 rounded-xl border-2 border-cyan-600 bg-cyan-50 p-4 text-cyan-950">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-cyan-700 text-sm font-black text-white">✓</span>
+                        <div>
+                          <p className="text-sm font-extrabold">{PEP_EXPOSURE_CONTEXTS.find(([value]) => value === answers.pep_contexto_exposicao)?.[1] || 'Contexto informado'}</p>
+                          <p className="mt-1 text-xs font-semibold text-cyan-800">Escolha recuperada da etapa anterior e mantida no relatório clínico.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 md:grid-cols-2">
+                        {PEP_EXPOSURE_CONTEXTS.map(([value, label]) => {
+                          const selected = pepBaselineAssessment.exposureContext === value
+                          return <button key={value} type="button" aria-pressed={selected} onClick={() => persistPepBaselineAssessment({ exposureContext: value })} className={clsx('rounded-xl border-2 p-4 text-left text-sm font-bold transition-colors', selected ? 'border-cyan-600 bg-cyan-50 text-cyan-950' : 'border-slate-200 bg-white text-slate-700 hover:border-cyan-300')}><span className="mr-2">{selected ? '●' : '○'}</span>{label}</button>
+                        })}
+                      </div>
+                    )}
                     {pepBaselineAssessment.exposureContext === 'violencia_sexual' && (
                       <div className="mt-4 rounded-xl border border-violet-300 bg-violet-50 p-4 text-sm text-violet-950">
                         <strong>Abordagem específica:</strong> considerar profilaxia preemptiva para ISTs não virais, contracepção de emergência, imunizações, cuidado clínico/psicossocial, notificação e rede de proteção conforme protocolo local. Esta conduta não deve ser aplicada automaticamente às exposições consentidas.
@@ -11920,7 +11936,34 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 </div>
               )}
 
-              {currentStepData.content && !isPepInteractiveAssessmentStep && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && !isAnaphylaxisAirwayStep && (
+              {isPepMaterialRiskStep && (
+                <div className="mb-6 space-y-5">
+                  <section className="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-blue-50 p-5 shadow-sm">
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Grupo do tipo de exposição</p>
+                    <h3 className="mt-1 text-lg font-extrabold text-slate-950">Como ocorreu a exposição?</h3>
+                    <p className="mt-2 text-sm text-slate-700">Esta classificação organiza a anamnese e ficará registrada no prontuário; isoladamente, ela não define a indicação de PEP.</p>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {PEP_EXPOSURE_CONTEXTS.map(([value, label]) => {
+                        const selected = answers.pep_contexto_exposicao === value
+                        return <button key={value} type="button" aria-pressed={selected} onClick={() => persistPepExposureContext(value)} className={clsx('rounded-xl border-2 p-4 text-left text-sm font-bold transition-all', selected ? 'border-cyan-600 bg-white text-cyan-950 shadow-sm ring-2 ring-cyan-100' : 'border-cyan-200 bg-white/70 text-slate-700 hover:border-cyan-400 hover:bg-white')}><span className="mr-2">{selected ? '●' : '○'}</span>{label}</button>
+                      })}
+                    </div>
+                    {answers.pep_contexto_exposicao === 'violencia_sexual' && <div className="mt-4 rounded-xl border border-violet-300 bg-violet-50 p-4 text-sm text-violet-950"><strong>Cuidado associado:</strong> organizar acolhimento clínico e psicossocial, rede de proteção, notificação e demais medidas previstas no protocolo local.</div>}
+                  </section>
+
+                  <section className="grid gap-3 text-sm md:grid-cols-2">
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950"><p className="font-bold">Materiais biológicos com risco</p><ul className="mt-2 list-disc space-y-1 pl-5"><li>Sangue</li><li>Sêmen</li><li>Fluidos vaginais</li><li>Líquidos de serosas: peritoneal, pleural ou pericárdico</li><li>Líquido amniótico</li><li>Líquor</li></ul></div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-800"><p className="font-bold text-slate-950">Em geral, sem risco para HIV</p><p className="mt-2">Saliva, suor, lágrima, urina, fezes, vômitos ou secreções nasais sem sangue visível não indicam PEP para HIV.</p></div>
+                  </section>
+
+                  {!answers.pep_contexto_exposicao && <div className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-950">Selecione primeiro o grupo do tipo de exposição para liberar a decisão clínica.</div>}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {(currentStepData.options || []).map((option) => <button key={option.value || option.text} type="button" disabled={!answers.pep_contexto_exposicao} onClick={() => handleOptionSelect(option)} className={clsx('flex items-center justify-between rounded-2xl border-2 p-5 text-left font-extrabold transition-all disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400', option.critical ? 'border-red-300 bg-red-50 text-red-950 hover:border-red-500' : 'border-cyan-300 bg-white text-slate-900 hover:border-cyan-500')}><span>{option.text}</span><ChevronRight className="h-5 w-5" /></button>)}
+                  </div>
+                </div>
+              )}
+
+              {currentStepData.content && !isPepInteractiveAssessmentStep && !isPepMaterialRiskStep && !isGecaPlanCReassessmentStep && !isGecaPlanCStep && !isGecaEntryStep && !isGecaDiarrheaProfileStep && !isGecaImmediateAlarmStep && !isGecaHydrationClassificationStep && !isGecaExamIndicationStep && !isGecaDirectedExamsStep && !isGecaDiarrheaDurationStep && !isGecaAntibioticIndicationStep && !isGecaStecScreeningStep && !isGecaAntibioticSelectionStep && !isGecaSupportStep && !isGecaDispositionStep && !isBellSideSelection && !isBellPhysicalExamStep && !isBellCriteriaStep && !isBellSupportStep && !isBellRedFlagsStep && !isBellHouseStep && !isBellTreatmentStep && !isBellDynamicDocumentStep && !isTVPPhysicalExamStep && !isTEPPhysicalExamStep && !isTVPClinicalEvaluation && !isTVPWellsScore && !isTVPContraCheck && !isTVPTreatmentInitial && !isAVCCincinnatiStep && !isDpocSinaisGravidade && !isDpocAnthonisen && !isInfluenzaPhysicalExamStep && !isPneumoniaPhysicalExamStep && !isPneumoniaPsiStep && !isPneumoniaCurbStep && !isAnaphylaxisObservationStratificationStep && !isAnaphylaxisAirwayStep && (
                 <div className={clsx(
                   'mb-6',
                   isAsthmaFlow
@@ -18649,7 +18692,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isPepInteractiveAssessmentStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isPepInteractiveAssessmentStep || isPepMaterialRiskStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

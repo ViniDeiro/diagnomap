@@ -6937,7 +6937,7 @@ export const pepHivFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Iniciar avaliação da exposição', nextStep: 'pep_contexto_exposicao', value: 'iniciar' }
+        { text: 'Iniciar avaliação da exposição', nextStep: 'pep_material_risco', value: 'iniciar' }
       ]
     },
     pep_contexto_exposicao: {
@@ -8848,7 +8848,6 @@ export const ituFlowchart: EmergencyFlowchart = {
     'itu_gestacao_alta',
     'itu_prostatite_ambulatorial',
     'itu_cateter_assintomatico',
-    'itu_pediatrico_encaminhado',
     'itu_recorrente_plano',
     'itu_candiduria_nao_tratar',
     'itu_diferencial_ist',
@@ -8886,8 +8885,7 @@ export const ituFlowchart: EmergencyFlowchart = {
         { text: 'Paciente com cateter urinário', nextStep: 'itu_cateter_sintomas', value: 'cateter_urinario' },
         { text: 'ITU recorrente, recaída ou quadro atípico', nextStep: 'itu_recorrente_avaliacao', value: 'recorrente_atipica' },
         { text: 'Candidúria ou levedura identificada na urina', nextStep: 'itu_candiduria_avaliacao', value: 'candiduria' },
-        { text: 'Corrimento, úlcera, dor pélvica ou exposição sexual relevante', nextStep: 'itu_diferencial_ist', value: 'diferencial_ist' },
-        { text: 'Criança ou adolescente', nextStep: 'itu_pediatrico_encaminhado', value: 'pediatrico' }
+        { text: 'Corrimento, úlcera, dor pélvica ou exposição sexual relevante', nextStep: 'itu_diferencial_ist', value: 'diferencial_ist' }
       ]
     },
     itu_candiduria_avaliacao: {
@@ -9044,10 +9042,6 @@ export const ituFlowchart: EmergencyFlowchart = {
     itu_recorrente_plano: {
       id: 'itu_recorrente_plano', title: 'Plano para ITU recorrente', description: 'Prevenção individualizada após confirmar episódios por cultura.', type: 'result',
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">Orientar hidratação habitual, evitar espermicidas quando relacionados e considerar estrogênio vaginal na pós-menopausa quando não contraindicado. Estratégias de autotratamento ou profilaxia exigem confirmação diagnóstica e seguimento.</div><div class="rounded-xl border border-violet-200 bg-violet-50 p-4">Encaminhar para urologia se hematúria persistente, cálculo, resíduo elevado, recaídas pelo mesmo agente, pielonefrite repetida ou suspeita anatômica.</div></div>`, options: []
-    },
-    itu_pediatrico_encaminhado: {
-      id: 'itu_pediatrico_encaminhado', title: 'Paciente pediátrico: utilizar protocolo específico', description: 'Idade modifica coleta, diagnóstico, dose, imagem e destino.', type: 'result', critical: true,
-      content: `<div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">Este fluxo adulto não deve calcular tratamento pediátrico. Crianças, especialmente lactentes febris, precisam de coleta apropriada, doses por peso, avaliação de sepse e critérios próprios de imagem e internação. Encaminhar ao protocolo pediátrico/avaliação especializada.</div>`, options: []
     },
     itu_cistite_antibiotico: {
       id: 'itu_cistite_antibiotico',

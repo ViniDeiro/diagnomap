@@ -2698,7 +2698,36 @@ export function buildClinicalSummary(
   })
 
   const finalTitle = currentStepData?.title || flowchart.name
-  const finalDescription = currentStepData?.description || flowchart.description
+  const rabiesSpeciesLabels: Record<string, string> = {
+    cao_gato: 'cão ou gato',
+    mamifero_domestico: 'mamífero doméstico de interesse econômico',
+    animal_silvestre: 'animal silvestre'
+  }
+  const rabiesExposureContext = flowchart.id !== 'atendimento_antirrabico'
+    ? ''
+    : answers.raiva_tipo_contato === 'contato_indireto'
+      ? answers.raiva_indireto_morcego === 'morcego'
+        ? 'contato indireto envolvendo morcego'
+        : 'contato indireto sem envolvimento de morcego'
+      : answers.raiva_especie
+        ? `exposição envolvendo ${rabiesSpeciesLabels[answers.raiva_especie] || 'animal identificado'}`
+        : 'exposição animal avaliada no protocolo'
+  const rabiesRiskContext = flowchart.id !== 'atendimento_antirrabico'
+    ? ''
+    : answers.raiva_gravidade === 'grave'
+      ? `${rabiesExposureContext}, classificada como acidente grave`
+      : answers.raiva_gravidade === 'leve'
+        ? `${rabiesExposureContext}, classificada como acidente leve`
+        : rabiesExposureContext
+  const finalDescription = flowchart.id === 'atendimento_antirrabico'
+    ? currentStep === 'raiva_vacina_soro'
+      ? `Indicadas vacina e imunização passiva após ${rabiesRiskContext}.`
+      : currentStep === 'raiva_vacina'
+        ? `Indicada vacinação antirrábica após ${rabiesRiskContext}.`
+        : currentStep === 'raiva_sem_profilaxia'
+          ? `Profilaxia antirrábica não indicada após ${rabiesRiskContext}.`
+          : currentStepData?.description || flowchart.description
+    : currentStepData?.description || flowchart.description
   const finalAnswer = answerEntries.at(-1)?.answerLabel
   const anaphylaxisAirwayConduct = answerEntries.flatMap((entry) => {
     if (entry.step.id !== 'ana_via_aerea_avancada') return []
