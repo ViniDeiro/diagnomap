@@ -157,6 +157,19 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
   const [pdfError, setPdfError] = useState('')
   const [title, subtitle] = stageCopy[stage]
   const finalStage = ['raiva_sem_profilaxia', 'raiva_vacina', 'raiva_vacina_soro'].includes(stage)
+  const journeySteps = [
+    ['Cuidado local', 'Ferida, tétano e registro'],
+    ['Tipo de contato', 'Pele, mucosa e exposição'],
+    ['Animal envolvido', 'Espécie e observação'],
+    ['Classificação', 'Gravidade e conduta']
+  ] as const
+  const journeyIndex = stage === 'raiva_cuidados_iniciais'
+    ? 0
+    : ['raiva_tipo_contato', 'raiva_indireto_morcego'].includes(stage)
+      ? 1
+      : ['raiva_especie', 'raiva_cao_gato_observavel', 'raiva_observacao_10_dias'].includes(stage)
+        ? 2
+        : 3
   const progress = finalStage ? 94 : Math.max(10, Math.round(((RABIES_STAGES.indexOf(stage) + 1) / 8) * 82))
   const severeSelected = useMemo(() => (data.accidentCriteria || []).some(value => value.startsWith('severe_')), [data.accidentCriteria])
   const weight = typeof patient.weight === 'number' && patient.weight > 0 ? patient.weight : undefined
@@ -332,6 +345,7 @@ const RabiesExposureFlowchartInteractive: React.FC<Props> = ({ patient, initialS
     </header>
 
     <main className="mx-auto mt-7 max-w-6xl px-4 sm:px-6">
+      {!showCompletion && !finalStage && <section className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white p-4 shadow-lg shadow-slate-200/40 sm:p-5"><div className="mb-4 flex items-center justify-between gap-3"><div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">Percurso da avaliação</p><h2 className="mt-1 text-lg font-black text-slate-950">Da porta de entrada à conduta antirrábica</h2></div><span className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black text-blue-800">Etapa {journeyIndex + 1} de 4</span></div><div className="grid gap-2 sm:grid-cols-4">{journeySteps.map(([label, description], index) => <div key={label} className={clsx('rounded-2xl border p-3 transition-all', index < journeyIndex ? 'border-emerald-200 bg-emerald-50' : index === journeyIndex ? 'border-blue-500 bg-gradient-to-br from-blue-600 to-indigo-700 text-white shadow-md' : 'border-slate-200 bg-slate-50')}><div className="flex items-center gap-2"><span className={clsx('flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-black', index < journeyIndex ? 'bg-emerald-600 text-white' : index === journeyIndex ? 'bg-white/20 text-white' : 'bg-white text-slate-400')}>{index < journeyIndex ? <CheckCircle2 className="h-4 w-4" /> : index + 1}</span><strong className={clsx('text-sm', index === journeyIndex ? 'text-white' : 'text-slate-800')}>{label}</strong></div><p className={clsx('mt-2 text-xs leading-relaxed', index === journeyIndex ? 'text-blue-50' : 'text-slate-500')}>{description}</p></div>)}</div></section>}
       {!showCompletion && (stage === 'raiva_vacina' || stage === 'raiva_vacina_soro') && <div className="mb-6"><RabiesNotificationForm patient={patient} outcome={stage === 'raiva_vacina_soro' ? 'vaccine_serum' : 'vaccine'} value={data.notification} onChange={updateNotification} /></div>}
       {showCompletion ? <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
         <section className="overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl sm:p-8"><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15"><CheckCircle2 className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Avaliação registrada</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Fluxo de mordedura concluído</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50">Exposição, animal, gravidade e conduta foram preservados para compor o relatório clínico.</p></div></div><span className="w-fit rounded-full bg-white/15 px-4 py-2 text-sm font-extrabold">100% concluído</span></div></section>
