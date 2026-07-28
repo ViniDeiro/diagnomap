@@ -33,6 +33,7 @@ import {
   calculateAVCThrombolyticDose,
   evaluateAVCThrombectomy,
   isAVCBloodPressureWithinThrombolysisLimit,
+  isAVCTimeWindowBeyondSixHours,
   parseAVCBloodPressure,
   type AVCTimeWindow,
   type AVCThrombectomyRecommendation,
@@ -356,12 +357,22 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   )
 
   const update = (patch: Partial<AVCCaseData>) => setData(previous => ({ ...previous, ...patch }))
-  const persist = (nextStage: AVCStage, patch: Partial<AVCCaseData> = {}) => {
-    const nextData = { ...data, ...patch, updatedAt: new Date().toISOString() }
+  const persist = (requestedStage: AVCStage, patch: Partial<AVCCaseData> = {}) => {
+    const effectiveTimeWindow = patch.timeWindow ?? data.timeWindow
+    const requiresDirectIcu = requestedStage === 'avc_cuidados_sem_reperfusao' && isAVCTimeWindowBeyondSixHours(effectiveTimeWindow)
+    const nextStage: AVCStage = requiresDirectIcu ? 'avc_aguardo_uti' : requestedStage
+    const resolvedPatch: Partial<AVCCaseData> = requiresDirectIcu
+      ? {
+          ...patch,
+          outcome: 'AVC com mais de 6 horas, sem trombectomia indicada ou realizada; encaminhamento imediato para UTI.',
+          utiRequestedAt: data.utiRequestedAt || new Date().toISOString()
+        }
+      : patch
+    const nextData = { ...data, ...resolvedPatch, updatedAt: new Date().toISOString() }
     const nextHistory = [...history, stage]
     const nextAnswers = {
       ...answers,
-      [stage]: JSON.stringify(patch),
+      [stage]: JSON.stringify(resolvedPatch),
       [AVC_CASE_ANSWER_KEY]: JSON.stringify(nextData)
     }
     setData(nextData)
@@ -419,7 +430,8 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const finishWithTransition = (outcome: string, transition: CareTransitionData) => {
     finalizeCase(outcome, transition)
   }
-  const proceedToIcu = (outcome: string) => persist('avc_aguardo_uti', {
+  const proceedToIcu = (outcome: string, patch: Partial<AVCCaseData> = {}) => persist('avc_aguardo_uti', {
+    ...patch,
     outcome,
     utiRequestedAt: data.utiRequestedAt || new Date().toISOString()
   })
@@ -458,9 +470,9 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const nextFromWindow = (windowValue: AVCCaseData['timeWindow']) => {
     if (!windowValue) return
     if (windowValue === 'ate_45h') persist('avc_trombolise_seguranca', { timeWindow: windowValue })
-    else if (windowValue === '45_6h' || windowValue === '6_9h' || windowValue === 'desconhecida') persist('avc_imagem_avancada', { timeWindow: windowValue })
-    else if (windowValue === '9_24h') persist('avc_vaso', { timeWindow: windowValue })
-    else persist('avc_cuidados_sem_reperfusao', { timeWindow: windowValue })
+    else if (windowValue === '45_6h' || windowValue === 'desconhecida') persist('avc_imagem_avancada', { timeWindow: windowValue })
+    else if (windowValue === '6_9h' || windowValue === '9_24h') persist('avc_vaso', { timeWindow: windowValue })
+    else proceedToIcu('AVC com mais de 24 horas, fora da janela rotineira de reperfusão; encaminhamento para UTI e manejo especializado.', { timeWindow: windowValue })
   }
 
   return (
@@ -667,7 +679,11 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_janela' && (
-            <div className="grid gap-3 md:grid-cols-2">{([['ate_45h','Até 4 horas e 30 minutos','Avaliar trombólise IV e, em paralelo, oclusão de grande vaso.'],['45_6h','Entre 4 horas e 30 minutos e 6 horas','Imagem avançada pode selecionar trombólise; grande vaso ainda está na janela precoce da trombectomia.'],['6_9h','Entre 6 e 9 horas','Usar imagem avançada para reperfusão em pacientes selecionados.'],['9_24h','Entre 9 e 24 horas','Priorizar seleção para trombectomia conforme território e imagem.'],['mais_24h','Mais de 24 horas','Sem reperfusão rotineira pelo tempo; instituir cuidados e prevenção secundária.'],['desconhecida','Horário desconhecido ou wake-up stroke','Usar protocolo de imagem avançada quando disponível.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.timeWindow === id} title={title} description={description} danger={id === 'mais_24h'} onClick={() => nextFromWindow(id)} />)}</div>
+            <div className="space-y-4">
+              <div className="grid gap-3 md:grid-cols-2">{([['ate_45h','Até 4 horas e 30 minutos','Avaliar trombólise IV e, em paralelo, oclusão de grande vaso.'],['45_6h','Entre 4 horas e 30 minutos e 6 horas','Imagem avançada pode selecionar trombólise; grande vaso ainda está na janela precoce da trombectomia.'],['6_9h','Entre 6 e 9 horas','Pesquisar oclusão tratável e selecionar trombectomia; sem indicação, encaminhar diretamente para UTI.'],['9_24h','Entre 9 e 24 horas','Manter o caminho de reperfusão apenas para candidato selecionado à trombectomia; caso contrário, UTI.'],['mais_24h','Mais de 24 horas','Fora da janela rotineira de reperfusão: encaminhar diretamente para UTI e manejo especializado.'],['desconhecida','Horário desconhecido ou wake-up stroke','Usar protocolo de imagem avançada quando disponível.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.timeWindow === id} title={title} description={description} danger={id === 'mais_24h'} onClick={() => update({ timeWindow: id, advancedImaging: undefined, vesselTerritory: undefined, aspects: undefined, pcAspects: undefined, thrombectomyRecommendation: undefined })} />)}</div>
+              {isAVCTimeWindowBeyondSixHours(data.timeWindow) && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950"><strong>Regra de destino:</strong> acima de 6 horas, somente a indicação de trombectomia mantém o percurso de reperfusão. Se ela não for indicada ou realizada, o fluxo solicitará UTI sem exigir etapas intermediárias.</div>}
+              <button type="button" disabled={!data.timeWindow} onClick={() => nextFromWindow(data.timeWindow)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Confirmar janela e continuar <ChevronRight /></button>
+            </div>
           )}
 
           {stage === 'avc_imagem_avancada' && (

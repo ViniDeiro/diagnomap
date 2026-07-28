@@ -66,7 +66,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '1 g',
     frequency: 'EV uma vez ao dia',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Via EV: após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5%. Se houver administração IM, reconstituir e diluir conforme a bula da apresentação utilizada. Reavaliar diariamente para ajuste ou descalonamento do antimicrobiano.',
+    instructions: 'Preparo EV de referência: reconstituir o frasco de 1 g com 9,6 mL de diluente IV compatível (aproximadamente 100 mg/mL), retirar a dose e diluir em 50–100 mL de SF 0,9% ou SG 5%; infundir em 30 minutos. Não usar soluções contendo cálcio, como Ringer lactato. Confirmar a bula da apresentação padronizada e reavaliar diariamente para ajuste ou descalonamento.',
     prescribedBy: ITU_PRESCRIBER
   },
   ciprofloxacino_ev: {
@@ -74,7 +74,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '400 mg',
     frequency: 'EV de 12/12 horas',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Ajustar à função renal e reavaliar contraindicações e interações.',
+    instructions: 'Apresentação pronta de referência: 400 mg/200 mL (2 mg/mL), sem diluição adicional, em infusão EV durante 60 minutos. Se o serviço utilizar concentrado ou outra apresentação, preparar conforme a bula. Ajustar à função renal e revisar contraindicações e interações.',
     prescribedBy: ITU_PRESCRIBER
   },
   piperacilina_tazobactam: {
@@ -82,7 +82,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '4,5 g',
     frequency: 'EV de 6/6 horas',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5% e administrar por infusão conforme a bula e o protocolo institucional. Ajustar à função renal e descalonar conforme culturas e resposta clínica.',
+    instructions: 'Preparo EV de referência: reconstituir o frasco de 4,5 g com 20 mL de água para injetáveis, SF 0,9% ou SG 5%; depois diluir em 50–150 mL de solução compatível e infundir por pelo menos 30 minutos. Confirmar a bula e o protocolo institucional, ajustar à função renal e descalonar conforme culturas e resposta.',
     prescribedBy: ITU_PRESCRIBER
   },
   meropenem: {
@@ -90,7 +90,7 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     dosage: '1 g',
     frequency: 'EV de 8/8 horas',
     duration: 'Conforme evolução clínica e urocultura/TSA',
-    instructions: 'Após reconstituição, diluir em 100 mL de SF 0,9% e administrar por infusão conforme a bula e o protocolo institucional. Reservar para quadro grave ou alto risco de resistência; ajustar à função renal e descalonar quando possível.',
+    instructions: 'Preparo EV de referência: reconstituir 1 g com 20 mL de água para injetáveis, diluir em 50–100 mL de SF 0,9% e infundir em 15–30 minutos. Confirmar a bula da apresentação e a estabilidade após preparo. Reservar para quadro grave ou alto risco de resistência, ajustar à função renal e descalonar quando possível.',
     prescribedBy: ITU_PRESCRIBER
   }
 }

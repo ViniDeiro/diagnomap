@@ -3,6 +3,9 @@ export type AVCVesselTerritory = 'grande_anterior' | 'm2_dominante' | 'medio_dis
 export type AVCThrombectomyRecommendation = 'forte' | 'considerar' | 'sem_beneficio' | 'dados_insuficientes'
 export type AVCThrombolytic = 'tenecteplase' | 'alteplase'
 
+export const isAVCTimeWindowBeyondSixHours = (value?: AVCTimeWindow) =>
+  value === '6_9h' || value === '9_24h' || value === 'mais_24h'
+
 export const parseAVCBloodPressure = (value?: string | null) => {
   if (!value) return null
   const match = value.trim().match(/^(\d{2,3})\s*[\/xX]\s*(\d{2,3})$/)

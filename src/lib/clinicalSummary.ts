@@ -1552,6 +1552,8 @@ const buildGecaClinicalSummary = (
 ): ClinicalSummaryData => {
   const currentStepData = flowchart.steps[currentStep]
   const path = new Set([...history, currentStep])
+  const reassessmentState = parseFlowAnswerForSummary(answers.__geca_reassessment_state)
+  const reassessmentCount = typeof reassessmentState?.count === 'number' ? reassessmentState.count : 0
   const decisionLines = history.reduce<string[]>((lines, stepId) => {
     const step = flowchart.steps[stepId]
     if (!step) return lines
@@ -1810,7 +1812,9 @@ const buildGecaClinicalSummary = (
       ? 'Foi indicada observação/internação para reposição, monitorização, investigação e progressão para via oral conforme resposta.'
       : null,
     path.has('geca_transferencia_emergencia')
-      ? 'Foi indicada transferência imediata para serviço de maior complexidade, mantendo estabilização e reavaliações até a passagem formal do cuidado.'
+      ? reassessmentCount >= 2
+        ? 'Após duas reavaliações sem resposta clínica adequada, o ciclo de reposição foi encerrado e foi indicada transferência imediata para UTI/serviço de maior complexidade, mantendo estabilização até a passagem formal do cuidado.'
+        : 'Foi indicada transferência imediata para serviço de maior complexidade, mantendo estabilização e reavaliações até a passagem formal do cuidado.'
       : null
   ])
 
@@ -2096,6 +2100,7 @@ const buildHypertensionClinicalSummary = (
   const scenarioLabels: Record<string, string> = { aortic_syndrome: 'síndrome aórtica aguda', encephalopathy: 'encefalopatia hipertensiva', ischemic_stroke_lysis: 'AVC isquêmico candidato à trombólise', ischemic_stroke_no_lysis: 'AVC isquêmico sem trombólise', intracerebral_hemorrhage: 'hemorragia intracerebral', subarachnoid_hemorrhage: 'hemorragia subaracnoide', catecholamine_crisis: 'crise catecolaminérgica', acute_coronary_syndrome: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', pregnancy_emergency: 'emergência hipertensiva na gestação', other: 'outra lesão aguda de órgão-alvo' }
   const routeLabels: Record<string, string> = { chronic: 'hipertensão crônica descompensada, sem quadro agudo tempo-dependente', emergency: 'emergência hipertensiva com lesão aguda de órgão-alvo', important_elevation: 'elevação pressórica importante sem lesão aguda demonstrada', pseudocrisis: 'pseudocrise hipertensiva associada a fator precipitante' }
   const pressureStrategyLabels: Record<string, string> = { nitroprusside: 'nitroprussiato de sódio', nitroglycerin: 'nitroglicerina', nicardipine: 'nicardipina', labetalol: 'labetalol', hydralazine: 'hidralazina', esmolol: 'esmolol', metoprolol: 'metoprolol', phentolamine: 'fentolamina', nifedipine_pregnancy: 'nifedipino no protocolo obstétrico', protocol_specific: 'agente definido pelo protocolo institucional' }
+  const aorticVasodilatorLabels: Record<string, string> = { not_needed: 'não foi necessário associar vasodilatador após atingir a meta', nitroprusside: 'nitroprussiato associado somente após o betabloqueio', nicardipine: 'nicardipina associada somente após o betabloqueio' }
   const oralPlanLabels: Record<string, string> = { adjust_chronic: 'retomada do esquema habitual', captopril: 'captopril por via oral', amlodipine: 'anlodipino por via oral', clonidine: 'clonidina por via oral', cause_only: 'tratamento do fator precipitante', no_medication: 'sem medicação imediata, com seguimento programado' }
   const magnesiumLabels: Record<string, string> = { zuspan: 'Zuspan (ataque de 4 g EV e manutenção de 1 g/h)', pritchard: 'Pritchard conforme protocolo obstétrico' }
   const recordedSymptoms = Array.isArray(data.symptoms) ? data.symptoms.map(String) : []
@@ -2141,6 +2146,9 @@ const buildHypertensionClinicalSummary = (
   ])
   const therapeuticPlan = uniqueTextItems([
     route === 'emergency' ? `Tratamento intravenoso titulável orientado pelo cenário de ${scenario || 'lesão de órgão-alvo'}, com metas específicas e redução controlada da pressão.` : null,
+    route === 'emergency' && data.scenario === 'aortic_syndrome' ? 'Meta anti-impulso registrada: PAS abaixo de 120 mmHg, ou o menor valor que preserve a perfusão dos órgãos, e frequência cardíaca entre 60–80 bpm.' : null,
+    route === 'emergency' && data.scenario === 'aortic_syndrome' && data.aorticBetaBlocker ? `Betabloqueio realizado antes de qualquer vasodilatador: ${pressureStrategyLabels[String(data.aorticBetaBlocker)] || String(data.aorticBetaBlocker)}${String(data.aorticBetaBlocker) === 'esmolol' ? ' (opção preferencial)' : ''}.` : null,
+    route === 'emergency' && data.scenario === 'aortic_syndrome' && data.aorticVasodilator ? `Reavaliação após terapia anti-impulso: ${aorticVasodilatorLabels[String(data.aorticVasodilator)] || String(data.aorticVasodilator)}.` : null,
     data.selectedIVAgent ? `Estratégia pressórica selecionada: ${pressureStrategyLabels[String(data.selectedIVAgent)] || String(data.selectedIVAgent)}.` : null,
     route === 'emergency' && data.scenario === 'pregnancy_emergency' && data.magnesiumRegimen ? `Sulfato de magnésio (esquema ${magnesiumLabels[String(data.magnesiumRegimen)] || String(data.magnesiumRegimen)}) para prevenção ou tratamento de convulsões, associado ao controle pressórico e à vigilância de reflexo patelar, respiração, diurese e função renal.` : null,
     route === 'important_elevation' ? `Ajuste cauteloso do tratamento oral, com redução gradual em 24–72 horas, sem aplicar a meta aguda de 25%.` : null,

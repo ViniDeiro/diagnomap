@@ -92,7 +92,7 @@ const compiledAVCLogic = ts.transpileModule(avcLogicSource, {
 }).outputText
 const avcLogicModule = { exports: {} }
 vm.runInNewContext(compiledAVCLogic, { module: avcLogicModule, exports: avcLogicModule.exports }, { filename: 'avc.compiled.js' })
-const { evaluateAVCThrombectomy, calculateAVCThrombolyticDose, parseAVCBloodPressure, isAVCBloodPressureWithinThrombolysisLimit } = avcLogicModule.exports
+const { evaluateAVCThrombectomy, calculateAVCThrombolyticDose, parseAVCBloodPressure, isAVCBloodPressureWithinThrombolysisLimit, isAVCTimeWindowBeyondSixHours } = avcLogicModule.exports
 
 const compiledHypertensionLogic = ts.transpileModule(hypertensionLogicSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -221,11 +221,14 @@ for (const marker of ['HSA_CASE_ANSWER_KEY', 'TC de crânio sem contraste', 'Nim
 assert.match(emergencyComponentSource, /flowchart\.id === 'hsa'[\s\S]*SubarachnoidHemorrhageFlowchartInteractive/)
 assert.match(clinicalSummarySource, /buildHsaClinicalSummary[\s\S]*RELATÓRIO MÉDICO - HEMORRAGIA SUBARACNOIDE/)
 for (const marker of [
-  'Via EV: após reconstituição, diluir em 100 mL de SF 0,9% ou SG 5%',
-  'Se houver administração IM, reconstituir e diluir conforme a bula',
-  'Piperacilina-tazobactam', 'diluir em 100 mL de SF 0,9% ou SG 5%',
-  'Meropenem', 'diluir em 100 mL de SF 0,9%'
+  'reconstituir o frasco de 1 g com 9,6 mL', 'Não usar soluções contendo cálcio',
+  '400 mg/200 mL (2 mg/mL)', 'infusão EV durante 60 minutos',
+  'Piperacilina-tazobactam', 'reconstituir o frasco de 4,5 g com 20 mL',
+  'Meropenem', 'reconstituir 1 g com 20 mL de água para injetáveis'
 ]) assert.ok(ituLogicSource.includes(marker), `ITU: orientação de preparo ausente (${marker})`)
+for (const marker of ['Tomografia de abdome e pelve', 'TC de abdome e pelve — quando indicada', 'Preparo e administração da opção selecionada']) {
+  assert.ok(ituComponentSource.includes(marker) || flowSource.includes(marker), `ITU: investigação/preparo visual ausente (${marker})`)
+}
 
 for (const marker of [
   'Crise de ansiedade · {phase}', 'Reconheça as manifestações do episódio',
@@ -337,6 +340,13 @@ assert.equal(isAVCBloodPressureWithinThrombolysisLimit('185/110'), true, 'AVC: p
 assert.equal(isAVCBloodPressureWithinThrombolysisLimit('186/100'), false, 'AVC: sistólica acima do limite deve bloquear confirmação')
 assert.equal(isAVCBloodPressureWithinThrombolysisLimit('180/111'), false, 'AVC: diastólica acima do limite deve bloquear confirmação')
 assert.equal(isAVCBloodPressureWithinThrombolysisLimit('pressão normal'), false, 'AVC: formato inválido deve bloquear confirmação')
+assert.equal(isAVCTimeWindowBeyondSixHours('45_6h'), false, 'AVC: janela até 6 horas não deve acionar destino direto para UTI')
+for (const timeWindow of ['6_9h', '9_24h', 'mais_24h']) {
+  assert.equal(isAVCTimeWindowBeyondSixHours(timeWindow), true, `AVC: janela ${timeWindow} deve acionar a regra de UTI quando não houver trombectomia`)
+}
+assert.match(avcComponentSource, /Confirmar janela e continuar/, 'AVC: janela temporal deve separar seleção e avanço para evitar travamento da transição')
+assert.doesNotMatch(avcComponentSource, /onClick=\{\(\) => nextFromWindow\(id\)\}/, 'AVC: cartão de horário ainda tenta selecionar e navegar no mesmo clique')
+assert.match(avcComponentSource, /requestedStage === 'avc_cuidados_sem_reperfusao' && isAVCTimeWindowBeyondSixHours/, 'AVC: ausência de trombectomia após 6 horas deve redirecionar diretamente para UTI')
 assert.match(avcComponentSource, /disabled={!pressureWithinThrombolysisLimit}/, 'AVC: confirmação da meta pressórica deve ser bloqueada pelo valor digitado')
 for (const marker of ['postThrombolysisBloodPressure', 'postThrombolysisBPManagement', 'PA acima da meta pós-trombólise', 'Plano terapêutico — apresentação acima de 24 horas']) {
   assert.match(avcComponentSource, new RegExp(marker), `AVC: orientação solicitada pelo revisor ausente (${marker})`)
@@ -400,7 +410,7 @@ for (const [input, expected] of hypertensionCases) {
 for (const scenario of ['aortic_syndrome', 'encephalopathy', 'ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage', 'catecholamine_crisis', 'acute_coronary_syndrome', 'pulmonary_edema', 'pregnancy_emergency', 'other']) {
   assert.ok(HYPERTENSION_SCENARIO_TARGETS[scenario]?.length, `Hipertensão: meta ausente para ${scenario}`)
 }
-for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY', 'parseUniversalClinicalAssessment', '24–72 horas', 'Captopril VO', 'Anlodipino VO', 'Clonidina VO', 'Sulfato de magnésio', 'Esquema de Zuspan', '1 g/h', 'Gluconato de cálcio', 'Nitroprussiato de sódio', 'Nitroglicerina', 'Nicardipina', 'Labetalol', 'Hidralazina', 'Esmolol', 'Metoprolol', 'Fentolamina', 'scenarioMedicationGuidance']) {
+for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY', 'parseUniversalClinicalAssessment', '24–72 horas', 'Captopril VO', 'Anlodipino VO', 'Clonidina VO', 'Sulfato de magnésio', 'Esquema de Zuspan', '1 g/h', 'Gluconato de cálcio', 'Nitroprussiato de sódio', 'Nitroglicerina', 'Nicardipina', 'Labetalol', 'Hidralazina', 'Esmolol', 'Metoprolol', 'Fentolamina', 'scenarioMedicationGuidance', 'Meta pressórica deste tratamento', 'Esmolol — opção preferencial', 'aorticBetaBlocker', 'aorticVasodilator', 'Vasodilatador isolado']) {
   assert.match(hypertensionComponentSource, new RegExp(marker), `Hipertensão: implementação interativa sem marcador obrigatório (${marker})`)
 }
 assert.match(hypertensionComponentSource, /'asymptomatic', 'Assintomático/, 'Hipertensão: opção assintomático ausente')
@@ -578,9 +588,25 @@ assert.deepEqual(
 for (const marker of [
   'Gastroenterite aguda · percurso assistencial',
   "['Confirmação', 'Avaliação', 'Hidratação', 'Investigação', 'Tratamento', 'Destino']",
-  'Decisão clínica guiada'
+  'Decisão clínica guiada',
+  'Atendimento de GECA finalizado',
+  "flowchart.id === 'geca' && 'rounded-3xl border border-slate-200 bg-white shadow-xl",
+  'GECA · {gecaJourney?.labels',
+  'GECA_REASSESSMENT_STATE_KEY',
+  'Reavaliação {gecaReassessmentNumber} de 2',
+  'Duas reavaliações sem resposta adequada'
 ]) {
   assert.ok(emergencyComponentSource.includes(marker), `GECA: experiência fluida ausente: ${marker}`)
 }
+assert.equal(
+  gecaFlowchart.steps.geca_falha_plano_b.options.find(option => option.value === 'gastroclise')?.nextStep,
+  'geca_reavaliacao_plano_b_segunda',
+  'GECA: falha do Plano B não pode retornar indefinidamente à primeira reavaliação'
+)
+assert.equal(
+  gecaFlowchart.steps.geca_reavaliacao_plano_b_segunda.options.find(option => option.value === 'uti_apos_segunda_reavaliacao_sem_resposta')?.nextStep,
+  'geca_transferencia_emergencia',
+  'GECA: segunda reavaliação inadequada deve direcionar diretamente para UTI/transferência crítica'
+)
 
 console.log('Clinical flow audit tests passed: universal assessment, anaphylaxis, dengue, asthma, AVC, hypertension, GECA and TVP routes.')

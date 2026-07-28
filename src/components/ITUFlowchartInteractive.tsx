@@ -77,6 +77,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   const progress = isFinal ? 100 : Math.min(94, 12 + history.length * 8)
   const StepIcon = iconForStep(step)
   const phase = phaseByStep(stage)
+  const selectedPrescription = useMemo(() => buildItuPrescriptionItems(selectedValue)[0], [selectedValue])
 
   const riskLabel = (nextStep: string) => /sepse|internacao|hospitalar|aguarda/.test(nextStep) ? 'ITU hospitalar' : /pielo/.test(nextStep) ? 'Pielonefrite' : 'ITU'
 
@@ -163,7 +164,9 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950"><Droplets className="mt-0.5 h-5 w-5 shrink-0" /><p className="text-sm"><strong>Decisão clínica guiada:</strong> selecione o cenário que corresponde ao paciente. A escolha ficará registrada no relatório e determinará somente o próximo ramo previsto.</p></div>
         {step.content && <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: step.content }} />}
 
-        {phase === 'Investigação' && <div className="mt-6"><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados da investigação urinária" suggestedTests={['Urina tipo 1','Urocultura','Hemograma','Creatinina','Ureia','Lactato','Hemoculturas']} /></div>}
+        {phase === 'Investigação' && <div className="mt-6"><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados da investigação urinária" suggestedTests={['Urina tipo 1','Urocultura','Hemograma','Creatinina','Ureia','Lactato','Hemoculturas','TC de abdome e pelve — quando indicada']} /></div>}
+
+        {stage === 'itu_antibiotico_hospitalar' && selectedPrescription && <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Preparo e administração da opção selecionada</p><h3 className="mt-2 text-lg font-black">{selectedPrescription.medication} · {selectedPrescription.dosage}</h3><p className="mt-1 text-sm font-bold">{selectedPrescription.frequency}</p><p className="mt-3 text-sm leading-relaxed">{selectedPrescription.instructions}</p><p className="mt-3 text-xs font-semibold">A apresentação comercial e o protocolo da farmácia institucional devem ser conferidos antes do preparo.</p></div>}
 
         {isTransition && <div className="mt-6"><UniversalCareTransition destination="ward" context={stage === 'itu_cuidados_aguarda_internacao' ? 'itu sepse urinária com internação solicitada' : 'itu pielonefrite hospitalar'} value={storedTransition} onChange={persistTransition} onConfirmed={confirmTransition} /></div>}
 

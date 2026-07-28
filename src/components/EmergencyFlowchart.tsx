@@ -26,6 +26,7 @@ import {
   ScanLine,
   Clipboard,
   ClipboardCheck,
+  Droplets,
   ZoomIn,
   ZoomOut,
   X
@@ -1690,6 +1691,17 @@ Não oferecer refrigerantes, energéticos ou soluções concentradas. Retornar i
 
 Modelo de apoio à prescrição: registrar peso e calcular qualquer medicamento individualmente antes de assinar.`
 
+const GECA_REASSESSMENT_STATE_KEY = '__geca_reassessment_state'
+
+const parseGecaReassessmentCount = (raw?: string) => {
+  try {
+    const parsed = raw ? JSON.parse(raw) as { count?: number } : {}
+    return Number.isFinite(parsed.count) ? Math.max(0, Number(parsed.count)) : 0
+  } catch {
+    return 0
+  }
+}
+
 const buildGecaDischargePrescription = (
   basePrescription: string,
   savedAntibioticAnswer: string | undefined,
@@ -2053,6 +2065,12 @@ const GECA_DIRECTED_EXAM_GROUPS = [
     ]
   }
 ] as const
+
+const GECA_DIRECTED_EXAM_ITEMS: ReadonlyArray<{ id: string; label: string }> =
+  GECA_DIRECTED_EXAM_GROUPS.reduce<Array<{ id: string; label: string }>>(
+    (items, group) => [...items, ...group.items],
+    []
+  )
 
 const GECA_ANTIBIOTIC_CRITERIA = [
   { id: 'disenteria_comprometimento_geral', label: 'Disenteria com comprometimento do estado geral' },
@@ -2963,6 +2981,18 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   const handleAnswer = (nextStep: string, value?: string) => {
+    let updatedGecaReassessmentCount: number | null = null
+    if (flowchart.id === 'geca' && ['geca_reavaliacao_plano_b', 'geca_reavaliacao_plano_b_segunda', 'geca_reavaliacao_plano_c'].includes(currentStep)) {
+      const previousCount = parseGecaReassessmentCount(answers[GECA_REASSESSMENT_STATE_KEY])
+      const inadequateResponse = ['falha_plano_b', 'evoluiu_plano_c', 'instabilidade_persistente', 'uti_apos_segunda_reavaliacao_sem_resposta'].includes(value || '')
+      updatedGecaReassessmentCount = inadequateResponse ? previousCount + 1 : 0
+
+      if (inadequateResponse && updatedGecaReassessmentCount >= 2) {
+        nextStep = 'geca_transferencia_emergencia'
+        value = 'uti_apos_segunda_reavaliacao_sem_resposta'
+      }
+    }
+
     if (flowchart.id === 'itu') {
       const ituPrescriptionItems = buildItuPrescriptionItems(value)
       if (ituPrescriptionItems.length > 0) {
@@ -3316,8 +3346,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     const gecaDirectedExamsAnswer = JSON.stringify({
       decision: value || nextStep,
       examesSelecionados: selectedGecaDirectedExams,
-      examesSelecionadosLabels: GECA_DIRECTED_EXAM_GROUPS
-        .flatMap((group) => group.items)
+      examesSelecionadosLabels: GECA_DIRECTED_EXAM_ITEMS
         .filter((item) => selectedGecaDirectedExams.includes(item.id))
         .map((item) => item.label),
       grupos: Object.fromEntries(
@@ -3450,6 +3479,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     })
     const newAnswers = {
       ...answers,
+      ...(updatedGecaReassessmentCount !== null
+        ? { [GECA_REASSESSMENT_STATE_KEY]: JSON.stringify({ count: updatedGecaReassessmentCount, lastAssessmentAt: new Date().toISOString() }) }
+        : {}),
       [currentStep]: isTVPLegSelection
         ? legSelectionAnswer
         : isBellSideSelection
@@ -3982,6 +4014,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     currentStepData.requiresLabs || currentStepData.type === 'lab_wait' ||
     /(exames_dirigidos|resultados_exames|laboratorio|investigacao_dirigida)/i.test(currentStepData.id)
   ))
+  const isGecaReassessmentScreen = flowchart.id === 'geca' && ['geca_reavaliacao_plano_b', 'geca_reavaliacao_plano_b_segunda', 'geca_reavaliacao_plano_c'].includes(currentStep)
+  const gecaReassessmentNumber = Math.min(2, parseGecaReassessmentCount(answers[GECA_REASSESSMENT_STATE_KEY]) + 1)
   const universalSuggestedLabs = flowchart.id === 'geca'
     ? ['Hemograma', 'Ureia', 'Creatinina', 'Sódio', 'Potássio', 'Magnésio', 'Glicemia', 'PCR', 'Lactato', 'Coprocultura/painel', 'Toxina Shiga/STEC', 'C. difficile']
     : flowchart.id === 'pep_hiv'
@@ -8070,9 +8104,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   return (
-    <div className="min-h-screen pb-12">
+    <div className={clsx('min-h-screen pb-12', flowchart.id === 'geca' && 'bg-gradient-to-b from-slate-50 via-white to-cyan-50/40')}>
       {/* Premium Medical Header */}
-      <div className="relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8">
+      <div className={clsx("relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8", flowchart.id === 'geca' && 'hidden')}>
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/5 via-slate-50/5 to-indigo-600/5"></div>
 
         <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-6">
@@ -8148,14 +8182,45 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-4 lg:px-8">
+      {flowchart.id === 'geca' && (
+        <nav className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
+            <div className="min-w-0">
+              <p className="truncate text-lg font-black text-slate-950">{patient.name || 'Paciente sem nome'}</p>
+              <p className="text-xs font-semibold text-slate-500">{patient.age ? `${patient.age} anos` : 'Idade não informada'} · GECA · {gecaJourney?.labels[(gecaJourney?.phase || 1) - 1] || 'Avaliação'}</p>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              {onBack && <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-bold text-slate-700"><ChevronLeft className="h-4 w-4" /><span className="hidden sm:inline">Dashboard</span></button>}
+              <button type="button" onClick={goBack} className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-bold text-amber-950"><ArrowLeft className="h-4 w-4" /><span className="hidden sm:inline">Voltar</span></button>
+              <button type="button" onClick={restart} className="inline-flex items-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-bold text-cyan-950"><RotateCcw className="h-4 w-4" /><span className="hidden sm:inline">Reiniciar</span></button>
+            </div>
+          </div>
+        </nav>
+      )}
+
+      {flowchart.id === 'geca' && (
+        <header className={clsx('relative overflow-hidden px-5 py-7 text-white shadow-lg sm:px-8', currentStepData.critical ? 'bg-gradient-to-r from-red-700 via-rose-700 to-orange-600' : 'bg-gradient-to-r from-cyan-800 via-blue-700 to-indigo-700')}>
+          <div className="mx-auto flex max-w-6xl items-center gap-4">
+            <span className="rounded-2xl bg-white/15 p-3 ring-1 ring-white/25">{currentStepData.critical ? <AlertTriangle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}</span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-white/75">GECA · {gecaJourney?.labels[(gecaJourney?.phase || 1) - 1] || 'Avaliação'}</p>
+              <h1 className="mt-1 text-2xl font-black sm:text-3xl">{currentStepData.title}</h1>
+              <p className="mt-1 max-w-4xl text-sm text-white/85 sm:text-base">{currentStepData.description}</p>
+            </div>
+            <div className="hidden text-right sm:block"><strong className="text-2xl">{Math.round(progress)}%</strong><p className="text-xs text-white/70">do protocolo</p></div>
+          </div>
+          <div className="absolute bottom-0 left-0 h-1.5 bg-white/35 transition-all" style={{ width: `${progress}%` }} />
+        </header>
+      )}
+
+      <div className={clsx('max-w-6xl mx-auto px-4 lg:px-8', flowchart.id === 'geca' && 'mt-7 sm:px-6')}>
         
         {/* Progress Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flowchart-card p-6 mb-8"
+          className={clsx('flowchart-card p-6 mb-8', flowchart.id === 'geca' && 'hidden')}
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-4">
             <div className="flex items-center space-x-3">
@@ -8206,12 +8271,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className="flowchart-card overflow-hidden"
+            className={clsx('flowchart-card overflow-hidden', flowchart.id === 'geca' && 'rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50')}
           >
             {/* Header do Step */}
             <div className={clsx(
               "p-6 text-white",
-              `bg-gradient-to-r ${getStepColor(currentStepData)}`
+              `bg-gradient-to-r ${getStepColor(currentStepData)}`,
+              flowchart.id === 'geca' && 'hidden'
             )}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -8275,7 +8341,34 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             </div>
 
             {/* Conteúdo do Step */}
-            <div className="p-6">
+            <div className={clsx('p-6', flowchart.id === 'geca' && 'p-5 sm:p-7')}>
+              {flowchart.id === 'geca' && !flowchart.finalSteps.includes(currentStep) && (
+                <div className="mb-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
+                  <Droplets className="mt-0.5 h-5 w-5 shrink-0" />
+                  <p className="text-sm"><strong>Decisão clínica guiada:</strong> registre os achados desta etapa e escolha somente a opção correspondente ao paciente. Hidratação, exames, tratamento e destino permanecem vinculados ao resumo clínico.</p>
+                </div>
+              )}
+              {isGecaReassessmentScreen && (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-amber-300 bg-amber-50 shadow-sm">
+                  <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Limite de segurança</p>
+                      <h3 className="mt-1 text-xl font-black text-amber-950">Reavaliação {gecaReassessmentNumber} de 2</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-amber-900">Se a resposta continuar inadequada na segunda reavaliação, o fluxo bloqueia nova repetição e direciona o paciente para UTI/transferência crítica.</p>
+                    </div>
+                    <div className="flex gap-2" aria-label={`Reavaliação ${gecaReassessmentNumber} de 2`}>
+                      {[1, 2].map((attempt) => <span key={attempt} className={clsx('h-3 w-12 rounded-full', attempt <= gecaReassessmentNumber ? 'bg-amber-600' : 'bg-amber-200')} />)}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {flowchart.id === 'geca' && currentStep === 'geca_transferencia_emergencia' && parseGecaReassessmentCount(answers[GECA_REASSESSMENT_STATE_KEY]) >= 2 && (
+                <div className="mb-6 rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950 shadow-sm">
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-red-700">Escalonamento automático</p>
+                  <h3 className="mt-1 text-xl font-black">Duas reavaliações sem resposta adequada</h3>
+                  <p className="mt-2 text-sm leading-relaxed">Não repetir o mesmo ciclo terapêutico. Manter estabilização e monitorização contínuas, solicitar UTI e organizar transferência medicalizada até a passagem formal do cuidado.</p>
+                </div>
+              )}
               {isBellSideSelection && (
                 <div className="mb-8 overflow-hidden rounded-2xl border border-blue-100 bg-white shadow-sm">
                   <div className="grid gap-0 lg:grid-cols-[0.78fr_1.22fr]">
@@ -19598,6 +19691,17 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     onConfirmed={() => undefined}
                   />
                 </motion.div>
+              )}
+
+              {flowchart.finalSteps.includes(currentStep) && (!careDestination || careTransitionData?.transferConfirmed) && (
+                flowchart.id === 'geca' && (
+                  <motion.section initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="mt-6 overflow-hidden rounded-[1.75rem] bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 p-6 text-white shadow-xl shadow-emerald-900/15 sm:p-8">
+                    <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-start gap-4"><span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25"><CheckCircle className="h-8 w-8" /></span><div><p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-100">Protocolo registrado</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">Atendimento de GECA finalizado</h2><p className="mt-2 max-w-2xl text-sm leading-relaxed text-emerald-50">Avaliação, hidratação, investigação, tratamento, reavaliações e destino foram preservados no relatório clínico.</p></div></div>
+                      <span className="w-fit rounded-full bg-white/15 px-4 py-2 text-sm font-extrabold ring-1 ring-white/25">100% concluído</span>
+                    </div>
+                  </motion.section>
+                )
               )}
 
               {flowchart.finalSteps.includes(currentStep) && (!careDestination || careTransitionData?.transferConfirmed) && (

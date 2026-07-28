@@ -254,8 +254,30 @@ export const gecaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Tentar gastróclise e reavaliar', nextStep: 'geca_reavaliacao_plano_b', value: 'gastroclise' },
+        { text: 'Tentar gastróclise e realizar segunda reavaliação', nextStep: 'geca_reavaliacao_plano_b_segunda', value: 'gastroclise' },
         { text: 'Encaminhar para internação', nextStep: 'geca_internacao_observacao', value: 'internacao_falha_tro', critical: true }
+      ]
+    },
+    geca_reavaliacao_plano_b_segunda: {
+      id: 'geca_reavaliacao_plano_b_segunda',
+      title: 'Segunda e Última Reavaliação do Plano B',
+      description: 'A ausência de resposta adequada encerra a repetição do ciclo e determina escalonamento para UTI/transferência crítica.',
+      type: 'question',
+      critical: true,
+      content: `
+        <div class="space-y-3 text-sm">
+          <div class="rounded-lg border-l-4 border-amber-600 bg-amber-50 p-4 text-amber-950">
+            <p class="font-bold">Limite de duas reavaliações atingido</p>
+            <p class="mt-1">Confirmar hidratação, perfusão, estado mental, diurese, tolerância à reposição e perdas contínuas.</p>
+          </div>
+          <div class="rounded-lg border-l-4 border-red-700 bg-red-50 p-4 text-red-950">
+            <p><strong>Se ainda houver desidratação, intolerância ou deterioração:</strong> não repetir gastróclise/TRO no mesmo ciclo. Manter estabilização e encaminhar diretamente para UTI ou unidade de referência com transporte monitorizado.</p>
+          </div>
+        </div>
+      `,
+      options: [
+        { text: 'Resposta adequada — seguir Plano A', nextStep: 'geca_plano_a', value: 'reidratado_plano_a' },
+        { text: 'Resposta inadequada — UTI / transferência crítica', nextStep: 'geca_transferencia_emergencia', value: 'uti_apos_segunda_reavaliacao_sem_resposta', critical: true, requiresImmediateAction: true }
       ]
     },
     geca_plano_c: {

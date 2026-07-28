@@ -42,9 +42,9 @@ export const classifyHypertensionRoute = ({
 
 export const HYPERTENSION_SCENARIO_TARGETS: Record<HypertensionEmergencyScenario, string[]> = {
   aortic_syndrome: [
-    'Reduzir rapidamente a pressão sistólica para a faixa de 90–120 mmHg, se perfusão permitir.',
-    'Buscar frequência cardíaca abaixo de 60 bpm e acionar cirurgia vascular/cardiotorácica.',
-    'O objetivo deve ser atingido, idealmente, nos primeiros 20 minutos.'
+    'Reduzir rapidamente a PAS para menos de 120 mmHg ou para o menor valor que preserve a perfusão dos órgãos.',
+    'Buscar frequência cardíaca entre 60–80 bpm e acionar cirurgia vascular/cardiotorácica.',
+    'Iniciar terapia anti-impulso imediatamente, com monitorização contínua e reavaliação frequente.'
   ],
   encephalopathy: [
     'Reduzir a pressão de forma controlada, em torno de 20–25% na primeira hora.',
