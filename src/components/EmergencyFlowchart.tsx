@@ -49,6 +49,7 @@ import SubarachnoidHemorrhageFlowchartInteractive from './SubarachnoidHemorrhage
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
+import UniversalConductCopyScope from './UniversalConductCopyScope'
 import TEPAssessment from './TEPAssessment'
 import {
   INFLUENZA_SEVERITY_SIGNS,
@@ -7966,8 +7967,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     )
   }
 
+  const renderWithConductCopy = (content: React.ReactNode) => (
+    <UniversalConductCopyScope title={`${flowchart.name} · ${currentStepData.title}`}>
+      {content}
+    </UniversalConductCopyScope>
+  )
+
   if (flowchart.id === 'avc') {
-    return (
+    return renderWithConductCopy(
       <AVCFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -7982,7 +7989,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'iam') {
-    return (
+    return renderWithConductCopy(
       <AcuteCoronarySyndromeFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -7997,7 +8004,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'hsa') {
-    return (
+    return renderWithConductCopy(
       <SubarachnoidHemorrhageFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8012,7 +8019,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'hipertensao') {
-    return (
+    return renderWithConductCopy(
       <HypertensionFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8028,7 +8035,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'hellp') {
-    return (
+    return renderWithConductCopy(
       <HELLPFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8043,7 +8050,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'sindrome_aortica_aguda') {
-    return (
+    return renderWithConductCopy(
       <AcuteAorticSyndromeFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8058,7 +8065,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'atendimento_antirrabico') {
-    return (
+    return renderWithConductCopy(
       <RabiesExposureFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8073,7 +8080,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'itu') {
-    return (
+    return renderWithConductCopy(
       <ITUFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8088,7 +8095,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'crise_ansiedade') {
-    return (
+    return renderWithConductCopy(
       <AnxietyFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8103,7 +8110,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     )
   }
 
-  return (
+  return renderWithConductCopy(
     <div className={clsx('min-h-screen pb-12', flowchart.id === 'geca' && 'bg-gradient-to-b from-slate-50 via-white to-cyan-50/40')}>
       {/* Premium Medical Header */}
       <div className={clsx("relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8", flowchart.id === 'geca' && 'hidden')}>
@@ -8213,7 +8220,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         </header>
       )}
 
-      <div className={clsx('max-w-6xl mx-auto px-4 lg:px-8', flowchart.id === 'geca' && 'mt-7 sm:px-6')}>
+      <div data-conduct-copy-source className={clsx('max-w-6xl mx-auto px-4 lg:px-8', flowchart.id === 'geca' && 'mt-7 sm:px-6')}>
         
         {/* Progress Card */}
         <motion.div

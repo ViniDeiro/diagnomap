@@ -8825,6 +8825,15 @@ export const ituFlowchart: EmergencyFlowchart = {
     'itu_cistite_cefuroxima',
     'itu_cistite_sulfametoxazol',
     'itu_bacteriuria_nao_tratar',
+    'itu_bacteriuria_procedimento',
+    'itu_bacteriuria_especialista',
+    'itu_gestacao_alta',
+    'itu_prostatite_ambulatorial',
+    'itu_cateter_assintomatico',
+    'itu_pediatrico_encaminhado',
+    'itu_recorrente_plano',
+    'itu_candiduria_nao_tratar',
+    'itu_diferencial_ist',
     'itu_ambulatorial_concluido',
     'itu_alta_hospitalar',
     'itu_sepse_encaminhada'
@@ -8854,8 +8863,29 @@ export const ituFlowchart: EmergencyFlowchart = {
       options: [
         { text: 'Sintomas compatíveis com cistite', nextStep: 'itu_cistite_complicadores', value: 'cistite' },
         { text: 'Sinais e sintomas de pielonefrite', nextStep: 'itu_pielo_sepse', value: 'pielonefrite', critical: true },
-        { text: 'Bacteriúria sem sintomas urinários', nextStep: 'itu_bacteriuria_excecoes', value: 'bacteriuria_assintomatica' }
+        { text: 'Bacteriúria sem sintomas urinários', nextStep: 'itu_bacteriuria_excecoes', value: 'bacteriuria_assintomatica' },
+        { text: 'Paciente com cateter urinário', nextStep: 'itu_cateter_sintomas', value: 'cateter_urinario' },
+        { text: 'ITU recorrente, recaída ou quadro atípico', nextStep: 'itu_recorrente_avaliacao', value: 'recorrente_atipica' },
+        { text: 'Candidúria ou levedura identificada na urina', nextStep: 'itu_candiduria_avaliacao', value: 'candiduria' },
+        { text: 'Corrimento, úlcera, dor pélvica ou exposição sexual relevante', nextStep: 'itu_diferencial_ist', value: 'diferencial_ist' },
+        { text: 'Criança ou adolescente', nextStep: 'itu_pediatrico_encaminhado', value: 'pediatrico' }
       ]
+    },
+    itu_candiduria_avaliacao: {
+      id: 'itu_candiduria_avaliacao', title: 'Candidúria: colonização ou infecção?', description: 'Levedura na urina não implica tratamento automático.', type: 'question',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-slate-200 bg-slate-50 p-4">Repetir coleta adequada quando necessário, remover ou trocar cateter evitável e procurar sintomas, obstrução, neutropenia, procedimento urológico e sinais sistêmicos.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">Candidemia, pielonefrite fúngica, fungus ball ou paciente instável exigem infectologia/urologia e tratamento sistêmico dirigido à espécie e sensibilidade.</div></div>`,
+      options: [
+        { text: 'Assintomático, sem neutropenia e sem procedimento urológico', nextStep: 'itu_candiduria_nao_tratar', value: 'candiduria_colonizacao' },
+        { text: 'Sintomático ou grupo de alto risco', nextStep: 'itu_bacteriuria_especialista', value: 'candiduria_alto_risco', critical: true }
+      ]
+    },
+    itu_candiduria_nao_tratar: {
+      id: 'itu_candiduria_nao_tratar', title: 'Candidúria assintomática: antifúngico não indicado', description: 'Corrigir fatores predisponentes e observar.', type: 'result',
+      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Não prescrever antifúngico rotineiramente. Remover ou substituir cateter desnecessário, otimizar controle glicêmico quando aplicável e reavaliar se surgirem febre, dor lombar, obstrução ou sinais sistêmicos.</div>`, options: []
+    },
+    itu_diferencial_ist: {
+      id: 'itu_diferencial_ist', title: 'Sintomas urinários com possível diagnóstico alternativo', description: 'Não presumir cistite diante de manifestações genitais ou pélvicas.', type: 'result',
+      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><strong>Investigar:</strong> uretrite, cervicite, vaginite, doença inflamatória pélvica, herpes, prostatite e irritação não infecciosa. Realizar exame genital/pélvico quando indicado e testar gonorreia/clamídia e outras IST conforme exposição.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4">Piúria com urocultura negativa pode ocorrer em IST. Direcionar o tratamento ao diagnóstico confirmado ou altamente provável e evitar antibiótico urinário inadequado.</div></div>`, options: []
     },
     itu_bacteriuria_excecoes: {
       id: 'itu_bacteriuria_excecoes',
@@ -8885,10 +8915,20 @@ export const ituFlowchart: EmergencyFlowchart = {
       title: 'Bacteriúria em grupo especial',
       description: 'Tratamento guiado pela condição clínica e pela urocultura com TSA.',
       type: 'action',
-      content: `<div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Conduta:</strong> coletar/revisar urocultura com antibiograma e seguir protocolo específico para gestação, procedimento urológico ou condição imunológica. Não extrapolar automaticamente os esquemas de cistite simples.</div>`,
+      content: `<div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Defina primeiro o contexto.</strong> Gestação e procedimento urológico com trauma de mucosa são indicações clássicas de rastreamento/tratamento. Transplante, neutropenia e outras imunodeficiências exigem decisão individual; não devem cair automaticamente no esquema de cistite simples.</div>`,
       options: [
-        { text: 'Seguir para seleção de antibioticoterapia', nextStep: 'itu_cistite_antibiotico', value: 'selecionar_antibiotico' }
+        { text: 'Gestante', nextStep: 'itu_gestacao_tipo', value: 'gestante' },
+        { text: 'Procedimento urológico com trauma de mucosa programado', nextStep: 'itu_bacteriuria_procedimento', value: 'procedimento_urologico' },
+        { text: 'Transplante, neutropenia ou outra condição imunológica', nextStep: 'itu_bacteriuria_especialista', value: 'imunologico' }
       ]
+    },
+    itu_bacteriuria_procedimento: {
+      id: 'itu_bacteriuria_procedimento', title: 'Bacteriúria antes de procedimento urológico', description: 'Reduzir risco infeccioso perioperatório com terapia dirigida.', type: 'result',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><strong>Conduta:</strong> colher urocultura antes do procedimento e selecionar antimicrobiano dirigido pelo TSA, em articulação com urologia. Programar a administração para o período perioperatório e evitar prolongamento sem indicação.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4">Se houver sintomas sistêmicos, suspender a classificação como bacteriúria assintomática e retornar ao caminho de ITU sistêmica.</div></div>`, options: []
+    },
+    itu_bacteriuria_especialista: {
+      id: 'itu_bacteriuria_especialista', title: 'Bacteriúria em condição imunológica especial', description: 'Evitar tratamento automático e individualizar com especialista.', type: 'result',
+      content: `<div class="rounded-xl border border-violet-200 bg-violet-50 p-4 text-sm text-violet-950">Revisar tempo do transplante, neutropenia, sintomas, dispositivos, função renal, culturas anteriores e procedimento previsto. Discutir com infectologia/urologia; bacteriúria isolada não significa obrigatoriamente infecção tratável.</div>`, options: []
     },
     itu_cistite_complicadores: {
       id: 'itu_cistite_complicadores',
@@ -8903,8 +8943,92 @@ export const ituFlowchart: EmergencyFlowchart = {
       `,
       options: [
         { text: 'Sem complicadores: cistite não complicada', nextStep: 'itu_cistite_antibiotico', value: 'nao_complicada' },
-        { text: 'Há febre, dor lombar ou outro complicador', nextStep: 'itu_pielo_sepse', value: 'possivel_pielonefrite', critical: true }
+        { text: 'Gestante', nextStep: 'itu_gestacao_tipo', value: 'gestante' },
+        { text: 'Homem ou sintomas perineais/prostáticos', nextStep: 'itu_masculino_prostatite', value: 'masculino_prostata' },
+        { text: 'Cateter urinário atual ou retirado nas últimas 48 horas', nextStep: 'itu_cateter_sintomas', value: 'cateter' },
+        { text: 'Febre, dor lombar, imunossupressão, transplante, obstrução ou disfunção renal', nextStep: 'itu_pielo_sepse', value: 'itu_sistemica_complicada', critical: true }
       ]
+    },
+    itu_gestacao_tipo: {
+      id: 'itu_gestacao_tipo', title: 'ITU durante a gestação', description: 'Separar bacteriúria/cistite de pielonefrite e proteger mãe e feto.', type: 'question', critical: true,
+      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><strong>Bacteriúria ou cistite:</strong> colher urocultura, tratar com opção compatível com a gestação e realizar cultura de controle conforme protocolo obstétrico.</div><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Pielonefrite:</strong> requer avaliação obstétrica e hospitalar, exames, antibiótico EV, hidratação e vigilância para sepse e trabalho de parto prematuro.</div></div>`,
+      options: [
+        { text: 'Bacteriúria assintomática ou cistite sem sinais sistêmicos', nextStep: 'itu_gestacao_antibiotico', value: 'gestacao_ba_cistite' },
+        { text: 'Febre, dor lombar ou suspeita de pielonefrite', nextStep: 'itu_gestacao_pielonefrite', value: 'gestacao_pielo', critical: true }
+      ]
+    },
+    itu_gestacao_antibiotico: {
+      id: 'itu_gestacao_antibiotico', title: 'Gestação: tratamento dirigido', description: 'Selecionar após revisar trimestre, alergias, função renal e urocultura.', type: 'question',
+      content: `<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">Não usar fluoroquinolona de rotina. Evitar nitrofurantoína próxima ao termo e em deficiência de G6PD. Confirmar protocolo obstétrico local e programar urocultura de controle.</div>`,
+      options: [
+        { text: 'Fosfomicina trometamol 3 g VO, dose única', nextStep: 'itu_gestacao_alta', value: 'fosfomicina' },
+        { text: 'Cefalexina 500 mg VO 6/6h por 5–7 dias', nextStep: 'itu_gestacao_alta', value: 'cefalexina_gestacao' },
+        { text: 'Amoxicilina-clavulanato 875/125 mg VO 12/12h por 5–7 dias, se sensível', nextStep: 'itu_gestacao_alta', value: 'amoxicilina_clavulanato_gestacao' }
+      ]
+    },
+    itu_gestacao_alta: {
+      id: 'itu_gestacao_alta', title: 'Gestação: tratamento e seguimento registrados', description: 'Manter integração com pré-natal e vigilância de recorrência.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">Completar o esquema selecionado, revisar o TSA e organizar urocultura de controle conforme o protocolo obstétrico.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">Retorno imediato se febre, calafrios, dor lombar, vômitos, contrações, perda de líquido ou redução de movimentos fetais.</div></div>`, options: []
+    },
+    itu_gestacao_pielonefrite: {
+      id: 'itu_gestacao_pielonefrite', title: 'Pielonefrite na gestação', description: 'Internação, obstetrícia e terapia EV sem demora.', type: 'action', critical: true, timeSensitive: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Conduta imediata:</strong> solicitar internação e avaliação obstétrica, monitorizar sinais vitais e bem-estar fetal conforme idade gestacional, colher hemograma, eletrólitos, creatinina, urocultura e culturas adicionais conforme gravidade.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">Iniciar ceftriaxona EV se compatível com alergias e epidemiologia local; hidratar de forma individualizada. Usar USG para investigar obstrução e reservar RM/TC para decisão especializada quando necessário.</div></div>`,
+      options: [{ text: 'Internação e obstetrícia acionadas: iniciar ceftriaxona EV', nextStep: 'itu_controle_foco', value: 'ceftriaxona_ev', critical: true }]
+    },
+    itu_masculino_prostatite: {
+      id: 'itu_masculino_prostatite', title: 'Homem: avaliar prostatite e retenção', description: 'Distinguir ITU localizada de infecção prostática ou sistêmica.', type: 'question', critical: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><strong>Sugere prostatite:</strong> febre, dor perineal/pélvica, disúria intensa, retenção ou próstata dolorosa ao toque suave. Não realizar massagem prostática.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4">Colher urina e urocultura antes do antibiótico quando possível. Avaliar resíduo pós-miccional, retenção e necessidade de urologia.</div></div>`,
+      options: [
+        { text: 'Estável, tolera via oral e sem retenção/sepse', nextStep: 'itu_prostatite_antibiotico', value: 'prostatite_estavel' },
+        { text: 'Febre importante, retenção, vômitos, instabilidade ou imunossupressão', nextStep: 'itu_pielo_sepse', value: 'prostatite_complicada', critical: true }
+      ]
+    },
+    itu_prostatite_antibiotico: {
+      id: 'itu_prostatite_antibiotico', title: 'Prostatite provável: selecionar terapia oral', description: 'Registrar um esquema com penetração prostática e revisão precoce do TSA.', type: 'question',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">A escolha depende de cultura, resistência local, função renal, interações e contraindicações. Rever clinicamente em 48–72 horas e ajustar assim que o TSA estiver disponível.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">A duração costuma ser maior que a da cistite. Suspeita de abscesso, retenção, bacteremia ou ausência de resposta exige urologia e investigação por imagem.</div></div>`,
+      options: [
+        { text: 'Ciprofloxacino 500 mg VO 12/12h por 2–4 semanas', nextStep: 'itu_prostatite_ambulatorial', value: 'ciprofloxacino_prostatite' },
+        { text: 'Sulfametoxazol-trimetoprim 800/160 mg VO 12/12h por 2–4 semanas, se sensível', nextStep: 'itu_prostatite_ambulatorial', value: 'sulfametoxazol_trimetoprim_prostatite' }
+      ]
+    },
+    itu_prostatite_ambulatorial: {
+      id: 'itu_prostatite_ambulatorial', title: 'Prostatite bacteriana provável: plano ambulatorial', description: 'Tratamento mais prolongado e revisão obrigatória da cultura.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">O esquema selecionado foi registrado. Confirmar o resultado da cultura, adequar a duração à resposta e ao protocolo local e reavaliar em 48–72 horas.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">Encaminhar imediatamente se retenção, piora sistêmica, abscesso suspeito ou ausência de resposta. Organizar seguimento com urologia.</div></div>`, options: []
+    },
+    itu_cateter_sintomas: {
+      id: 'itu_cateter_sintomas', title: 'Paciente com cateter: há sintomas de infecção?', description: 'Piúria, urina turva ou odor isolados não diagnosticam ITU.', type: 'question',
+      content: `<div class="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">Considerar ITU associada a cateter diante de febre sem outro foco, dor em flanco/pelve, alteração hemodinâmica ou sintomas urinários após retirada. Não cultivar nem tratar rotineiramente paciente assintomático apenas por piúria, odor ou turvação.</div>`,
+      options: [
+        { text: 'Sem sintomas ou sinais sistêmicos', nextStep: 'itu_cateter_assintomatico', value: 'cateter_assintomatico' },
+        { text: 'Sintomas localizados, paciente estável', nextStep: 'itu_cateter_manejo', value: 'cateter_sintomatico' },
+        { text: 'Febre, disfunção orgânica ou instabilidade', nextStep: 'itu_pielo_sepse', value: 'cateter_sistemico', critical: true }
+      ]
+    },
+    itu_cateter_assintomatico: {
+      id: 'itu_cateter_assintomatico', title: 'Cateter sem infecção sintomática', description: 'Evitar cultura e antibiótico desnecessários.', type: 'result',
+      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Não tratar bacteriúria/piúria isolada. Revisar diariamente a indicação do cateter e removê-lo assim que possível, mantendo técnica e cuidados institucionais.</div>`, options: []
+    },
+    itu_cateter_manejo: {
+      id: 'itu_cateter_manejo', title: 'ITU associada a cateter: coleta e controle do dispositivo', description: 'Obter cultura adequada antes de definir o esquema.', type: 'action', critical: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">Remover o cateter se não for necessário. Se permanecer indicado e estiver há tempo prolongado, substituir antes da coleta e colher urocultura do novo dispositivo, nunca da bolsa coletora.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4">Revisar culturas anteriores, antibiótico recente, função renal e risco de resistência. Investigar obstrução se houver baixa drenagem, dor ou deterioração.</div></div>`,
+      options: [{ text: 'Dispositivo manejado e cultura coletada: estratificar tratamento', nextStep: 'itu_risco_resistencia_hospitalar', value: 'cateter_coleta_adequada' }]
+    },
+    itu_recorrente_avaliacao: {
+      id: 'itu_recorrente_avaliacao', title: 'ITU recorrente, recaída ou quadro atípico', description: 'Confirmar infecção e procurar fatores corrigíveis.', type: 'question',
+      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><strong>Investigar:</strong> culturas anteriores, relação com atividade sexual, menopausa, espermicida, cálculo, resíduo pós-miccional, prolapso, anormalidade anatômica e exposição antimicrobiana.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Recaída precoce pelo mesmo agente</strong> sugere foco persistente, cálculo, obstrução, abscesso ou prostatite e exige investigação dirigida.</div></div>`,
+      options: [
+        { text: 'Sintomas atuais de cistite, estável e sem sinais sistêmicos', nextStep: 'itu_cistite_antibiotico', value: 'recorrente_localizada' },
+        { text: 'Recaída precoce, hematúria persistente ou suspeita estrutural', nextStep: 'itu_exames_pielonefrite', value: 'recorrente_investigar' },
+        { text: 'Sem infecção ativa: organizar prevenção e seguimento', nextStep: 'itu_recorrente_plano', value: 'recorrente_prevencao' }
+      ]
+    },
+    itu_recorrente_plano: {
+      id: 'itu_recorrente_plano', title: 'Plano para ITU recorrente', description: 'Prevenção individualizada após confirmar episódios por cultura.', type: 'result',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">Orientar hidratação habitual, evitar espermicidas quando relacionados e considerar estrogênio vaginal na pós-menopausa quando não contraindicado. Estratégias de autotratamento ou profilaxia exigem confirmação diagnóstica e seguimento.</div><div class="rounded-xl border border-violet-200 bg-violet-50 p-4">Encaminhar para urologia se hematúria persistente, cálculo, resíduo elevado, recaídas pelo mesmo agente, pielonefrite repetida ou suspeita anatômica.</div></div>`, options: []
+    },
+    itu_pediatrico_encaminhado: {
+      id: 'itu_pediatrico_encaminhado', title: 'Paciente pediátrico: utilizar protocolo específico', description: 'Idade modifica coleta, diagnóstico, dose, imagem e destino.', type: 'result', critical: true,
+      content: `<div class="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">Este fluxo adulto não deve calcular tratamento pediátrico. Crianças, especialmente lactentes febris, precisam de coleta apropriada, doses por peso, avaliação de sepse e critérios próprios de imagem e internação. Encaminhar ao protocolo pediátrico/avaliação especializada.</div>`, options: []
     },
     itu_cistite_antibiotico: {
       id: 'itu_cistite_antibiotico',
@@ -8951,7 +9075,7 @@ export const ituFlowchart: EmergencyFlowchart = {
     itu_estabilizacao_sepse: {
       id: 'itu_estabilizacao_sepse', title: 'Estabilização clínica imediata', description: 'Seguir protocolo institucional de sepse e garantir controle do foco urinário.', type: 'action', critical: true, timeSensitive: true,
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-100 p-4 text-red-950"><strong>Prioridade:</strong> monitorização contínua, acessos venosos, lactato, culturas quando não atrasarem, antibioticoterapia EV precoce, reposição volêmica individualizada e vasopressor se choque persistente.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Controle do foco:</strong> pesquisar obstrução urinária, cálculo infectado, abscesso ou necessidade de drenagem; acionar urologia com urgência quando houver obstrução associada à infecção.</div></div>`,
-      options: [{ text: 'Estabilização iniciada e internação solicitada', nextStep: 'itu_cuidados_aguarda_internacao', value: 'sepse_estabilizada', critical: true }]
+      options: [{ text: 'Estabilização iniciada: selecionar antimicrobiano sem demora', nextStep: 'itu_risco_resistencia_hospitalar', value: 'sepse_estabilizada', critical: true }]
     },
     itu_cuidados_aguarda_internacao: {
       id: 'itu_cuidados_aguarda_internacao',
@@ -9047,7 +9171,7 @@ export const ituFlowchart: EmergencyFlowchart = {
       id: 'itu_criterios_internacao', title: 'Há indicação de internação?', description: 'Decisão clínica individual, sem escore único validado.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><ul class="grid list-disc gap-x-6 gap-y-1 pl-5 md:grid-cols-2"><li>Obstrução do trato urinário.</li><li>Sepse ou instabilidade.</li><li>Gestação.</li><li>Vulnerabilidade social.</li><li>Sintomas refratários ou intolerância oral.</li><li>Alto risco de organismo multirresistente.</li><li>Comorbidades significativas ou imunossupressão.</li><li>Falha do tratamento ambulatorial.</li></ul></div>`,
       options: [
-        { text: 'Sim: tratamento hospitalar', nextStep: 'itu_antibiotico_hospitalar', value: 'internar', critical: true },
+        { text: 'Sim: tratamento hospitalar', nextStep: 'itu_risco_resistencia_hospitalar', value: 'internar', critical: true },
         { text: 'Não: tratamento ambulatorial', nextStep: 'itu_antibiotico_ambulatorial', value: 'ambulatorial' }
       ]
     },
@@ -9076,11 +9200,36 @@ export const ituFlowchart: EmergencyFlowchart = {
       id: 'itu_antibiotico_hospitalar', title: 'Pielonefrite: tratamento hospitalar', description: 'Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"><p>Manter internação, hidratação e sintomáticos conforme necessidade. Revisar culturas e função renal. Pesquisar obstrução/abscesso e solicitar avaliação urológica quando indicada.</p></div>`,
       options: [
-        { text: 'Ceftriaxona 1 g EV 1x/dia', description: 'Reconstituir 1 g com 9,6 mL de diluente IV, diluir em 50–100 mL de SF 0,9% ou SG 5% e infundir em 30 minutos. Não usar solução com cálcio.', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'ceftriaxona_ev' },
-        { text: 'Ciprofloxacino 400 mg EV 12/12h', description: 'Apresentação pronta de referência: 400 mg/200 mL, infundir em 60 minutos sem diluição adicional.', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'ciprofloxacino_ev' },
-        { text: 'Piperacilina-tazobactam 4,5 g EV 6/6h', description: 'Reconstituir com 20 mL, diluir em 50–150 mL de solução compatível e infundir por pelo menos 30 minutos.', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'piperacilina_tazobactam' },
-        { text: 'Meropenem 1 g EV 8/8h para quadro grave/alto risco MDR', description: 'Reconstituir 1 g com 20 mL de água para injetáveis, diluir em 50–100 mL de SF 0,9% e infundir em 15–30 minutos.', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'meropenem', critical: true }
+        { text: 'Ceftriaxona 1–2 g EV 1x/dia', description: 'Opção para quadro comunitário sem choque e sem risco relevante de Pseudomonas/ESBL. Reconstituir e infundir conforme preparo exibido.', nextStep: 'itu_controle_foco', value: 'ceftriaxona_ev' },
+        { text: 'Ciprofloxacino 400 mg EV 12/12h', description: 'Usar somente se epidemiologia, culturas prévias, contraindicações e resistência local forem compatíveis.', nextStep: 'itu_controle_foco', value: 'ciprofloxacino_ev' },
+        { text: 'Cefepime 2 g EV 8/8–12/12h', description: 'Considerar risco de Pseudomonas conforme gravidade e função renal; confirmar protocolo institucional.', nextStep: 'itu_controle_foco', value: 'cefepime_ev' },
+        { text: 'Piperacilina-tazobactam 4,5 g EV 6/6h', description: 'Considerar risco de Pseudomonas ou infecção grave sem forte suspeita de ESBL; ajustar à função renal.', nextStep: 'itu_controle_foco', value: 'piperacilina_tazobactam' },
+        { text: 'Meropenem 1 g EV 8/8h', description: 'Reservar para choque, alto risco ou histórico de ESBL/MDR quando o perfil clínico e microbiológico sustentarem.', nextStep: 'itu_controle_foco', value: 'meropenem', critical: true }
       ]
+    },
+    itu_risco_resistencia_hospitalar: {
+      id: 'itu_risco_resistencia_hospitalar', title: 'Escolha empírica: gravidade e risco microbiológico', description: 'Registrar os fatores que orientam o espectro antes de prescrever.', type: 'question', critical: true,
+      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Gravidade:</strong> sepse, choque, disfunção orgânica ou obstrução infectada exigem terapia EV imediata e controle urgente do foco.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Risco de resistência:</strong> cultura prévia com ESBL/Pseudomonas, antibiótico ou internação recente, dispositivo urinário, procedimento urológico, colonização MDR, exposição institucional e epidemiologia local.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><strong>Segurança:</strong> alergia imediata, gestação, eTFG, interações e prolongamento de QT modificam a escolha.</div><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><strong>Stewardship:</strong> colher culturas sem atrasar a primeira dose e estreitar o espectro assim que o TSA estiver disponível.</div></div>`,
+      options: [
+        { text: 'Comunitária, sem sepse e sem risco relevante de MDR', nextStep: 'itu_antibiotico_hospitalar', value: 'baixo_risco_mdr' },
+        { text: 'Risco de Pseudomonas ou exposição institucional', nextStep: 'itu_antibiotico_hospitalar', value: 'risco_pseudomonas', critical: true },
+        { text: 'Choque, ESBL/MDR prévio ou alto risco de resistência', nextStep: 'itu_antibiotico_hospitalar', value: 'alto_risco_esbl_mdr', critical: true },
+        { text: 'Alergia grave ou opções usuais incompatíveis', nextStep: 'itu_antibiotico_hospitalar', value: 'alergia_grave', critical: true }
+      ]
+    },
+    itu_controle_foco: {
+      id: 'itu_controle_foco', title: 'Controle do foco e destino inicial', description: 'Antibiótico isolado não resolve obstrução infectada.', type: 'question', critical: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Acionar urologia imediatamente</strong> se houver obstrução, pionefrose, cálculo infectado, abscesso, anúria ou deterioração apesar do antibiótico. Drenagem não deve aguardar resposta medicamentosa.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">Registrar TC/USG, diurese, lactato quando indicado, primeira dose efetiva, culturas e necessidade de cateter ureteral ou nefrostomia.</div></div>`,
+      options: [
+        { text: 'Sem obstrução/abscesso e estável: aguardar enfermaria', nextStep: 'itu_cuidados_aguarda_enfermaria', value: 'foco_sem_complicacao' },
+        { text: 'Sepse, choque ou disfunção orgânica: solicitar UTI', nextStep: 'itu_cuidados_aguarda_internacao', value: 'foco_sepse_uti', critical: true },
+        { text: 'Obstrução, pionefrose ou abscesso: urologia/drenagem urgente', nextStep: 'itu_urologia_urgente', value: 'foco_obstruido', critical: true }
+      ]
+    },
+    itu_urologia_urgente: {
+      id: 'itu_urologia_urgente', title: 'Foco urinário obstruído: drenagem urgente', description: 'Organizar intervenção e unidade monitorizada em paralelo.', type: 'action', critical: true, timeSensitive: true,
+      content: `<div class="rounded-xl border border-red-300 bg-red-100 p-4 text-sm text-red-950"><strong>Não aguardar melhora clínica apenas com antibiótico.</strong> Acionar urologia, definir cateter ureteral ou nefrostomia conforme anatomia e disponibilidade, manter antimicrobiano EV, culturas, suporte hemodinâmico e providenciar transferência se o recurso não existir localmente.</div>`,
+      options: [{ text: 'Urologia/transferência acionada: manter em unidade crítica', nextStep: 'itu_cuidados_aguarda_internacao', value: 'drenagem_acionada', critical: true }]
     },
     itu_cuidados_aguarda_enfermaria: {
       id: 'itu_cuidados_aguarda_enfermaria',
@@ -9166,7 +9315,7 @@ export const ituFlowchart: EmergencyFlowchart = {
     },
     itu_criterios_alta: {
       id: 'itu_criterios_alta', title: 'Critérios de alta hospitalar', description: 'Confirmar estabilidade antes da transição para tratamento oral.', type: 'question',
-      content: `<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><ul class="list-disc space-y-1 pl-5"><li>Bom estado geral e sinais vitais estáveis.</li><li>Afebril há pelo menos 48 horas.</li><li>Capaz de hidratar-se e alimentar-se por via oral.</li><li>Possibilidade de antibiótico oral ambulatorial guiado pelo TSA.</li><li>Obstrução e complicações controladas ou afastadas.</li></ul></div>`,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950"><ul class="list-disc space-y-1 pl-5"><li>Melhora clínica e estabilidade hemodinâmica, sem nova disfunção orgânica.</li><li>Tolerância oral e opção VO efetiva demonstrada pelo TSA.</li><li>Obstrução, abscesso e demais complicações controlados ou afastados.</li><li>Plano de adesão, retorno, revisão da cultura e acesso ao medicamento definidos.</li></ul></div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Transição EV–VO:</strong> não exige aguardar rigidamente 48 horas afebril quando há melhora consistente, estabilidade, absorção adequada e controle do foco. Registrar a data/hora da primeira terapia efetiva.</div></div>`,
       options: [
         { text: 'Critérios preenchidos: alta hospitalar', nextStep: 'itu_alta_hospitalar', value: 'alta' },
         { text: 'Critérios não preenchidos: manter internação', nextStep: 'itu_manutencao_hospitalar', value: 'manter_internacao', critical: true }
@@ -9179,7 +9328,7 @@ export const ituFlowchart: EmergencyFlowchart = {
     },
     itu_alta_hospitalar: {
       id: 'itu_alta_hospitalar', title: 'Alta hospitalar segura', description: 'Transição para via oral e seguimento.', type: 'result',
-      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Completar antibioticoterapia oral conforme urocultura/TSA, função renal e evolução clínica. Orientar retorno diante de febre, dor lombar, vômitos, redução da diurese, hipotensão, confusão ou piora geral.</div>`, options: []
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Duração total:</strong> em paciente com boa resposta e terapia efetiva, considerar 5–7 dias quando utilizada fluoroquinolona ou 7 dias para outro antimicrobiano, contando a partir do primeiro agente efetivo. Individualizar se houver prostatite, abscesso, obstrução não resolvida, imunossupressão, gestação ou resposta lenta.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">Completar a opção oral guiada pelo TSA e documentar descalonamento. Não solicitar EAS/urocultura de controle rotineira em adulto não gestante que esteja assintomático.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950">Retorno imediato diante de febre, dor lombar, vômitos, redução da diurese, hipotensão, confusão ou piora geral.</div></div>`, options: []
     }
   }
 }

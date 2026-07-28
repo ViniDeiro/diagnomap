@@ -45,6 +45,22 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     instructions: 'Revisar interações, função renal, contraindicações e ajustar conforme urocultura/TSA.',
     prescribedBy: ITU_PRESCRIBER
   },
+  ciprofloxacino_prostatite: {
+    medication: 'Ciprofloxacino',
+    dosage: '500 mg',
+    frequency: 'VO de 12/12 horas',
+    duration: '2–4 semanas, conforme resposta, cultura e protocolo local',
+    instructions: 'Reavaliar em 48–72 horas. Revisar função renal, interações, contraindicações, risco de resistência e resultado da urocultura/TSA.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  sulfametoxazol_trimetoprim_prostatite: {
+    medication: 'Sulfametoxazol-trimetoprim',
+    dosage: '800/160 mg',
+    frequency: 'VO de 12/12 horas',
+    duration: '2–4 semanas, conforme resposta, cultura e protocolo local',
+    instructions: 'Utilizar se houver sensibilidade provável ou confirmada. Reavaliar em 48–72 horas e ajustar à função renal, interações, alergias e urocultura/TSA.',
+    prescribedBy: ITU_PRESCRIBER
+  },
   levofloxacino_vo: {
     medication: 'Levofloxacino',
     dosage: '750 mg',
@@ -61,9 +77,25 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     instructions: 'Revisar alergias e ajustar conforme função renal e urocultura/TSA.',
     prescribedBy: ITU_PRESCRIBER
   },
+  cefalexina_gestacao: {
+    medication: 'Cefalexina',
+    dosage: '500 mg',
+    frequency: 'VO de 6/6 horas',
+    duration: '5–7 dias',
+    instructions: 'Uso na gestação após revisar alergias, função renal, urocultura/TSA e protocolo obstétrico. Programar cultura de controle conforme a linha de cuidado.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  amoxicilina_clavulanato_gestacao: {
+    medication: 'Amoxicilina-clavulanato',
+    dosage: '875/125 mg',
+    frequency: 'VO de 12/12 horas',
+    duration: '5–7 dias',
+    instructions: 'Utilizar quando o agente for sensível ou o protocolo local sustentar a escolha. Revisar alergias, função renal e organizar cultura de controle na gestação.',
+    prescribedBy: ITU_PRESCRIBER
+  },
   ceftriaxona_ev: {
     medication: 'Ceftriaxona',
-    dosage: '1 g',
+    dosage: '1–2 g',
     frequency: 'EV uma vez ao dia',
     duration: 'Conforme evolução clínica e urocultura/TSA',
     instructions: 'Preparo EV de referência: reconstituir o frasco de 1 g com 9,6 mL de diluente IV compatível (aproximadamente 100 mg/mL), retirar a dose e diluir em 50–100 mL de SF 0,9% ou SG 5%; infundir em 30 minutos. Não usar soluções contendo cálcio, como Ringer lactato. Confirmar a bula da apresentação padronizada e reavaliar diariamente para ajuste ou descalonamento.',
@@ -75,6 +107,14 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     frequency: 'EV de 12/12 horas',
     duration: 'Conforme evolução clínica e urocultura/TSA',
     instructions: 'Apresentação pronta de referência: 400 mg/200 mL (2 mg/mL), sem diluição adicional, em infusão EV durante 60 minutos. Se o serviço utilizar concentrado ou outra apresentação, preparar conforme a bula. Ajustar à função renal e revisar contraindicações e interações.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  cefepime_ev: {
+    medication: 'Cefepime',
+    dosage: '2 g',
+    frequency: 'EV de 8/8 a 12/12 horas, conforme gravidade e função renal',
+    duration: 'Conforme evolução clínica e urocultura/TSA',
+    instructions: 'Preparo EV de referência: reconstituir o frasco conforme a apresentação, diluir a dose em 50–100 mL de SF 0,9% ou SG 5% e infundir em aproximadamente 30 minutos. Ajustar obrigatoriamente à função renal e vigiar neurotoxicidade; confirmar bula e protocolo institucional.',
     prescribedBy: ITU_PRESCRIBER
   },
   piperacilina_tazobactam: {

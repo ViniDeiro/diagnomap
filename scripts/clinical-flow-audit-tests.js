@@ -24,6 +24,7 @@ const rabiesNotificationSource = fs.readFileSync(path.join(root, 'src/components
 const rabiesSinanPdfSource = fs.readFileSync(path.join(root, 'src/lib/rabiesSinanPdf.ts'), 'utf8')
 const rabiesConductSource = fs.readFileSync(path.join(root, 'src/lib/rabiesConduct.ts'), 'utf8')
 const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFlowchartInteractive.tsx'), 'utf8')
+const universalConductCopySource = fs.readFileSync(path.join(root, 'src/components/UniversalConductCopyScope.tsx'), 'utf8')
 const hellpComponentSource = fs.readFileSync(path.join(root, 'src/components/HELLPFlowchartInteractive.tsx'), 'utf8')
 const labNotebookSource = fs.readFileSync(path.join(root, 'src/components/UniversalLabNotebook.tsx'), 'utf8')
 const patientServiceSource = fs.readFileSync(path.join(root, 'src/services/patientService.ts'), 'utf8')
@@ -177,11 +178,15 @@ assert.match(reportSource, /Ficha de investigação antirrábica/)
 
 for (const marker of [
   'ITU · {phase}', 'Dashboard', 'Reiniciar', 'Decisão clínica guiada',
-  'UniversalCareTransition', 'destination="ward"',
+  'UniversalCareTransition', "? 'icu' : 'ward'",
   'Atendimento de ITU finalizado', 'Abrir relatório completo', 'Registrar desfecho e concluir',
   'buildItuPrescriptionItems', 'ITU_PRESCRIBER'
 ]) assert.ok(ituComponentSource.includes(marker), `ITU: experiência interativa nova ausente (${marker})`)
 assert.match(emergencyComponentSource, /flowchart\.id === 'itu'[\s\S]*ITUFlowchartInteractive/)
+assert.match(emergencyComponentSource, /renderWithConductCopy[\s\S]*UniversalConductCopyScope/, 'Todos os fluxogramas devem receber o controle universal de copiar conduta')
+for (const marker of ['Copiar conduta', 'Conduta copiada', 'data-conduct-copy-source', 'aria-pressed', 'writeClipboard']) {
+  assert.ok(universalConductCopySource.includes(marker) || emergencyComponentSource.includes(marker), `Cópia universal de conduta sem marcador obrigatório (${marker})`)
+}
 
 for (const marker of [
   'Síndrome HELLP', 'Contexto obstétrico', 'Ameaças imediatas', 'UniversalLabNotebook',
@@ -383,8 +388,23 @@ for (const required of [
   'itu_cistite_complicadores', 'itu_cistite_antibiotico', 'itu_bacteriuria_excecoes', 'itu_bacteriuria_grupo_especial',
   'itu_pielo_sepse', 'itu_estabilizacao_sepse', 'itu_exames_pielonefrite', 'itu_criterios_internacao',
   'itu_antibiotico_ambulatorial', 'itu_reavaliacao_ambulatorial', 'itu_antibiotico_hospitalar',
-  'itu_cuidados_aguarda_enfermaria', 'itu_criterios_alta'
+  'itu_risco_resistencia_hospitalar', 'itu_controle_foco', 'itu_urologia_urgente',
+  'itu_gestacao_tipo', 'itu_gestacao_antibiotico', 'itu_gestacao_pielonefrite',
+  'itu_masculino_prostatite', 'itu_prostatite_antibiotico', 'itu_prostatite_ambulatorial',
+  'itu_cateter_sintomas', 'itu_cateter_manejo', 'itu_cateter_assintomatico',
+  'itu_recorrente_avaliacao', 'itu_recorrente_plano', 'itu_candiduria_avaliacao',
+  'itu_diferencial_ist', 'itu_pediatrico_encaminhado',
+  'itu_cuidados_aguarda_enfermaria', 'itu_cuidados_aguarda_internacao', 'itu_criterios_alta'
 ]) assert.ok(ituReachable.has(required), `ITU: caminho clínico obrigatório não alcançável (${required})`)
+assert.equal(ituFlowchart.steps.itu_estabilizacao_sepse.options[0].nextStep, 'itu_risco_resistencia_hospitalar', 'ITU: sepse não pode chegar à espera de UTI sem seleção antimicrobiana')
+for (const option of ituFlowchart.steps.itu_antibiotico_hospitalar.options) {
+  assert.equal(option.nextStep, 'itu_controle_foco', `ITU: antibiótico hospitalar deve conduzir ao controle do foco (${option.value})`)
+}
+assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_sepse_uti')?.nextStep, 'itu_cuidados_aguarda_internacao', 'ITU: sepse/disfunção orgânica deve solicitar UTI')
+assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_obstruido')?.nextStep, 'itu_urologia_urgente', 'ITU: foco obstruído deve exigir drenagem/urologia')
+for (const marker of ['cefepime_ev', 'cefalexina_gestacao', 'amoxicilina_clavulanato_gestacao']) {
+  assert.ok(ituLogicSource.includes(marker), `ITU: prescrição estruturada ausente (${marker})`)
+}
 
 const hypertensionReachable = reachable(hypertensionFlowchart)
 for (const required of [
