@@ -20,6 +20,7 @@ import { clsx } from 'clsx'
 import type { EmergencyFlowchart } from '@/types/emergency'
 import { allFlowcharts, getFlowchartById } from '@/data/emergencyFlowcharts'
 import { INTAKE_SYMPTOMS, recommendClinicalRoutes } from '@/lib/clinicalRouting'
+import { formatChiefComplaintWithDuration } from '@/lib/clinicalText'
 
 interface Props {
   chiefComplaint: string
@@ -75,6 +76,9 @@ const ClinicalIntakeNavigator: React.FC<Props> = ({
     [chiefComplaint, selectedSymptoms]
   )
   const hasInput = chiefComplaint.trim().length >= 3 || selectedSymptoms.length > 0
+  const evolutionComplaint = chiefComplaint.trim()
+    ? formatChiefComplaintWithDuration(chiefComplaint, complaintDuration)
+    : ''
   const hasCriticalFinding = selectedSymptoms.some(id => INTAKE_SYMPTOMS.find(item => item.id === id)?.critical)
   const implemented = useMemo(() => {
     const normalizedSearch = manualSearch.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -106,6 +110,8 @@ const ClinicalIntakeNavigator: React.FC<Props> = ({
         <label className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-700"><MessageSquareText className="h-5 w-5 text-blue-600" /> Queixa principal</span><textarea value={chiefComplaint} onChange={event => onComplaintChange(event.target.value)} rows={4} placeholder="Ex.: começou há duas horas com dor forte no peito, suor frio e falta de ar..." className="mt-4 w-full resize-none rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-base leading-relaxed text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" /><span className="mt-2 block text-xs text-slate-500">Quanto mais específico o relato, melhores serão as sugestões.</span></label>
         <label className="block rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="flex items-center gap-2 text-sm font-black uppercase tracking-wider text-slate-700"><Clock3 className="h-5 w-5 text-blue-600" /> Início e duração</span><input value={complaintDuration} onChange={event => onDurationChange(event.target.value)} placeholder="Ex.: início súbito há 2 horas" className="mt-4 w-full rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100" /><p className="mt-3 text-xs leading-relaxed text-slate-500">Registre início súbito ou progressivo e o tempo desde o primeiro sintoma.</p></label>
       </div>
+
+      {evolutionComplaint && <div className="rounded-2xl border border-cyan-200 bg-cyan-50 px-5 py-4 text-sm text-cyan-950"><span className="font-black uppercase tracking-wider text-cyan-700">Como será registrado na evolução</span><p className="mt-2 text-base font-semibold">Queixa principal: {evolutionComplaint}.</p></div>}
 
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6"><div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between"><div><h3 className="text-xl font-black text-slate-950">Sintomas e sinais percebidos</h3><p className="mt-1 text-sm text-slate-600">Selecione tudo que estiver presente na avaliação inicial.</p></div>{selectedSymptoms.length > 0 && <button type="button" onClick={() => onSymptomsChange([])} className="text-sm font-bold text-slate-500 hover:text-red-600">Limpar seleção ({selectedSymptoms.length})</button>}</div>
         <div className="mt-5 space-y-3">{Object.entries(groupMeta).map(([group, meta]) => {

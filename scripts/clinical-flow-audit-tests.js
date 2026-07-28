@@ -37,6 +37,7 @@ const universalCareTransitionSource = fs.readFileSync(path.join(root, 'src/compo
 const clinicalScalesSource = fs.readFileSync(path.join(root, 'src/components/ClinicalScaleCalculators.tsx'), 'utf8')
 const anaphylaxisLogicSource = fs.readFileSync(path.join(root, 'src/lib/anaphylaxis.ts'), 'utf8')
 const clinicalSummarySource = fs.readFileSync(path.join(root, 'src/lib/clinicalSummary.ts'), 'utf8')
+const clinicalTextSource = fs.readFileSync(path.join(root, 'src/lib/clinicalText.ts'), 'utf8')
 
 const compiledGeca = ts.transpileModule(gecaSource, {
   compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
@@ -64,6 +65,12 @@ vm.runInNewContext(compiledClinicalSummary, {
     if (request.includes('UniversalLabNotebook')) return {
       UNIVERSAL_LAB_RESULTS_KEY: '__universal_lab_results',
       parseUniversalLabNotebook: raw => raw ? JSON.parse(raw) : { entries: [], notes: '' }
+    }
+    if (request.includes('clinicalText')) return {
+      formatChiefComplaintWithDuration: (complaint, duration, fallback = 'motivo do atendimento não informado') => {
+        const base = complaint?.trim() || fallback
+        return duration?.trim() ? `${base} há ${duration.trim()}` : base
+      }
     }
     return {}
   },
@@ -404,6 +411,23 @@ assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.
 assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_obstruido')?.nextStep, 'itu_urologia_urgente', 'ITU: foco obstruído deve exigir drenagem/urologia')
 for (const marker of ['cefepime_ev', 'cefalexina_gestacao', 'amoxicilina_clavulanato_gestacao']) {
   assert.ok(ituLogicSource.includes(marker), `ITU: prescrição estruturada ausente (${marker})`)
+}
+
+for (const marker of ['formatChiefComplaintWithDuration', 'return `${cleanComplaint} há ${cleanDuration}`']) {
+  assert.ok(clinicalTextSource.includes(marker), `Avaliação universal: composição da queixa e duração ausente (${marker})`)
+}
+for (const marker of ['pupilas isofotorreagentes', 'ACV em ritmo cardíaco regular em dois tempos', 'sem massas ou visceromegalias', 'pulsos radiais, braquiais, femorais']) {
+  assert.ok(universalAssessmentSource.includes(marker), `Avaliação universal: texto padronizado ausente na evolução (${marker})`)
+}
+for (const marker of ['ACV: ritmo cardíaco regular em dois tempos', 'indolor à palpação', 'tibiais posteriores e pediosos']) {
+  assert.ok(physicalExamSource.includes(marker), `Exame físico universal: padrão visual/textual ausente (${marker})`)
+}
+for (const flowId of ['tvp', 'influenza', 'pneumonia', 'tep', 'pep_hiv', 'crise_ansiedade', 'geca', 'dengue', 'avc', 'iam', 'hsa', 'anafilaxia', 'asthma', 'hipertensao', 'sindrome_aortica_aguda', 'hellp']) {
+  const routePattern = new RegExp(`flowchart\\.id === '${flowId}'[\\s\\S]{0,350}return standardizeUniversalEvolution\\(`)
+  assert.match(clinicalSummarySource, routePattern, `Resumo clínico: ${flowId} deve usar a evolução universal padronizada`)
+}
+for (const marker of ['QUEIXA PRINCIPAL', 'SINAIS VITAIS', 'EXAME FÍSICO', "vitalItems.join(' / ')", 'Sem medidas registradas.']) {
+  assert.ok(clinicalSummarySource.includes(marker), `Resumo clínico universal: seção obrigatória ausente (${marker})`)
 }
 
 const hypertensionReachable = reachable(hypertensionFlowchart)

@@ -1,0 +1,43 @@
+ESTRUTUTAÇÃO DA QUEIXA PRINCIPAL / SINAIS VITAIS E EXAME FÍSICO DO PACIENTE
+
+
+
+Queixa Principal: Relação desprotegida há 01 dia.
+
+Sinais Vitais:
+
+Tax: 36°C / PA:120x80mmHg / FC:90bpm / FR:18 irpm / Sto2: 98%
+
+Glicemia: 95mg/dl / Escala de dor: / Enchimento capilar:
+
+   •   Se não tiver registro deixa em branco o que não registrou
+
+Exame Físico:
+
+Estado Geral: Bom estado geral, corado, hidratado, acianótico, anictérico, afebril e
+eupneico.
+
+Exame Neurológico: Consciente,contactuante,pupilas isso-foto reagentes.
+Glasgow 15.
+
+Exame Cardíaco: ACV: Ritmo cardíaco regular 2T, bulhas normofonéticas, sem
+sopros audíveis. (esse é o exame físico normal no exame cardíaco, tem que
+corrigir inclusive na plataforma que está errado.
+
+Exame Pulmonar: AP: Murmúrio vesicular audível, sem ruídos adventícios.
+
+Abdôme: Plano, normotenso, ruídos hidroaéreos presentes, sem dor a palpação,
+sem massas ou visceromegalias, sem sinais de irritação peritoneal. (esse é o
+exame físico normal no exame abdominal, tem que corrigir inclusive na
+plataforma que está errado.
+
+Extremidades: Simétricas, sem deformidades. Pele íntegra, sem lesões, sem
+alterações tróﬁcas. Ausência de edema. Pulsos radial, braquial, femoral, poplíteo,
+tibial posterior e pedioso palpáveis, normais e simétricos. (esse é o exame físico
+normal das extremidades, tem que corrigir inclusive na plataforma que está
+errado.
+
+Pele: Pele íntegra, sem lesões cutâneas aparentes.
+
+Informações adicionais:
+

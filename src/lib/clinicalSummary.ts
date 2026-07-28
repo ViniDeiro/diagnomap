@@ -5,6 +5,7 @@ import { getOseltamivirDoseText } from '@/lib/influenza'
 import { getPneumoniaSmartCopRisk } from '@/lib/pneumonia'
 import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from '@/components/UniversalClinicalAssessment'
 import { parseUniversalLabNotebook, UNIVERSAL_LAB_RESULTS_KEY } from '@/components/UniversalLabNotebook'
+import { formatChiefComplaintWithDuration } from '@/lib/clinicalText'
 
 export type ClinicalSummaryData = {
   chiefComplaint: string
@@ -206,7 +207,6 @@ type StructuredExamFields = {
 }
 
 const formatStructuredExamBlock = (exam: StructuredExamFields) => [
-  'SINAIS VITAIS',
   exam.generalAppearance?.trim() || `Estado geral e sinais vitais: ${NOT_RECORDED}.`,
   exam.neuro?.trim() || `Neurológico: ${NOT_RECORDED}.`,
   exam.cardiac?.trim() || `Cardiovascular: ${NOT_RECORDED}.`,
@@ -313,10 +313,10 @@ const formatRichExamFields = (exam: PneumoniaExamSummary | null, vitalItems: str
   const neuro = exam
     ? uniqueTextItems([glasgow != null ? `Consciente, Glasgow ${glasgow}` : 'Consciente', neuroAltered || 'contactuante, pupilas isofotorreagentes']).join(', ')
     : undefined
-  const cardiac = exam ? (exam.cardiac?.altered?.trim() || 'Ritmo regular, bulhas normofonéticas e sem sopros') : undefined
-  const pulmonary = exam ? (exam.pulmonary?.altered?.trim() || 'Murmúrio vesicular presente bilateralmente, sem ruídos adventícios') : undefined
-  const abdomen = exam ? (exam.abdomen?.altered?.trim() || 'Plano, normotenso, ruídos hidroaéreos presentes, indolor, sem sinais de irritação peritoneal') : undefined
-  const extremities = exam ? (exam.extremities?.altered?.trim() || 'Pulsos periféricos simétricos, sem edemas, perfusão preservada') : undefined
+  const cardiac = exam ? (exam.cardiac?.altered?.trim() || 'ACV em ritmo cardíaco regular em dois tempos, bulhas normofonéticas, sem sopros audíveis') : undefined
+  const pulmonary = exam ? (exam.pulmonary?.altered?.trim() || 'AP com murmúrio vesicular audível bilateralmente, sem ruídos adventícios') : undefined
+  const abdomen = exam ? (exam.abdomen?.altered?.trim() || 'Plano, normotenso, ruídos hidroaéreos presentes, indolor à palpação, sem massas ou visceromegalias e sem sinais de irritação peritoneal') : undefined
+  const extremities = exam ? (exam.extremities?.altered?.trim() || 'Simétricas, sem deformidades, pele íntegra, sem lesões ou alterações tróficas, sem edema e com pulsos periféricos palpáveis, normais e simétricos') : undefined
   const skin = exam ? (exam.skin?.altered?.trim() || 'Pele íntegra, sem lesões cutâneas aparentes') : undefined
   return { generalAppearance, neuro, cardiac, pulmonary, abdomen, extremities, skin }
 }
@@ -326,21 +326,12 @@ const splitUniversalExamLines = (examLines: string[], vitalItems: string[]): Str
     const line = examLines.find((item) => item.startsWith(`${label}:`))
     return line ? line.slice(label.length + 1).trim() : undefined
   }
-  const cianose = get('Cianose')
-  const icter = get('Icterícia')
-  const generalParts = uniqueTextItems([
-    get('Estado geral'),
-    get('Coloração'),
-    get('Hidratação'),
-    cianose ? (cianose === 'ausente' ? 'acianótico' : `cianose ${cianose}`) : undefined,
-    icter ? (icter === 'ausente' ? 'anictérico' : `icterícia ${icter}`) : undefined,
-    get('Respiração')
-  ])
+  const generalParts = uniqueTextItems([get('Estado geral')])
   const generalAppearance = [generalParts.join(', ') || null, vitalItems.length ? vitalItems.join(', ') : null].filter(Boolean).join(' – ') || undefined
   return {
     generalAppearance,
     neuro: get('Neurológico'),
-    cardiac: get('Cardiovascular'),
+    cardiac: get('Cardíaco') || get('Cardiovascular'),
     pulmonary: get('Pulmonar'),
     abdomen: get('Abdome'),
     extremities: get('Extremidades'),
@@ -349,7 +340,7 @@ const splitUniversalExamLines = (examLines: string[], vitalItems: string[]): Str
 }
 
 const splitNarrativeExamLines = (examLines: string[]): StructuredExamFields => {
-  const knownLabels = new Set(['Estado geral', 'Coloração', 'Hidratação', 'Cianose', 'Icterícia', 'Respiração', 'Neurológico', 'Cardiovascular', 'Pulmonar', 'Abdome', 'Extremidades', 'Pele', 'Informações adicionais'])
+  const knownLabels = new Set(['Estado geral', 'Coloração', 'Hidratação', 'Cianose', 'Icterícia', 'Respiração', 'Neurológico', 'Cardíaco', 'Cardiovascular', 'Pulmonar', 'Abdome', 'Extremidades', 'Pele', 'Informações adicionais'])
   const base = splitUniversalExamLines(examLines, [])
   const leftovers = examLines.filter((line) => !knownLabels.has(line.split(':')[0]))
   return {
@@ -703,6 +694,21 @@ const buildPepHivClinicalSummary = (
   const sourceRiskDecision = getPepHivDecision(answers, 'pep_fonte_risco_30d')
   const unknownSourceRiskDecision = getPepHivDecision(answers, 'pep_fonte_desconhecida_risco')
   const baselineAssessment = parsePepBaselineForSummary(answers[PEP_BASELINE_ASSESSMENT_KEY])
+  const universalAssessment = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+  const universalVitals = universalAssessment?.sinaisVitais
+  const pepVitalItems = uniqueTextItems([
+    universalVitals?.temperature != null ? `Tax: ${universalVitals.temperature} °C` : null,
+    universalVitals?.bloodPressure ? `PA: ${universalVitals.bloodPressure} mmHg` : null,
+    universalVitals?.heartRate != null ? `FC: ${universalVitals.heartRate} bpm` : null,
+    universalVitals?.respiratoryRate != null ? `FR: ${universalVitals.respiratoryRate} irpm` : null,
+    universalVitals?.oxygenSaturation != null ? `SpO2: ${universalVitals.oxygenSaturation}%` : null,
+    universalVitals?.glucose ? `Glicemia: ${universalVitals.glucose} mg/dL` : null,
+    universalVitals?.painLevel != null ? `Dor: ${universalVitals.painLevel}/10` : null,
+    universalVitals?.capillaryRefill != null ? `Enchimento capilar: ${universalVitals.capillaryRefill} s` : null
+  ])
+  const pepExam = universalAssessment
+    ? splitUniversalExamLines(summarizeUniversalPhysicalExam(universalAssessment.exameFisico), pepVitalItems)
+    : null
   const laboratoryNotebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
   const laboratoryLines = laboratoryNotebook.entries
     .filter((entry) => entry.test.trim() && entry.value.trim())
@@ -710,7 +716,11 @@ const buildPepHivClinicalSummary = (
 
   const finalTitle = currentStepData?.title || flowchart.name
   const finalDescription = currentStepData?.description || flowchart.description
-  const chiefComplaint = patient.admission?.symptoms?.join('; ') || 'exposição potencial ao HIV com necessidade de avaliação para profilaxia pós-exposição'
+  const chiefComplaint = formatChiefComplaintWithDuration(
+    patient.admission?.chiefComplaint || patient.admission?.symptoms?.join('; '),
+    patient.admission?.complaintDuration,
+    'exposição potencial ao HIV com necessidade de avaliação para profilaxia pós-exposição'
+  )
   const isPepIndicated = currentStep === 'pep_iniciar'
   const isNoRiskMaterial = currentStep === 'pep_sem_material_risco'
   const isNoRiskExposure = currentStep === 'pep_sem_exposicao_risco'
@@ -756,7 +766,7 @@ const buildPepHivClinicalSummary = (
   const title = isPepIndicated
     ? 'RELATÓRIO MÉDICO - PROFILAXIA PÓS-EXPOSIÇÃO AO HIV'
     : 'RELATÓRIO MÉDICO - AVALIAÇÃO DE EXPOSIÇÃO AO HIV'
-  const examinationLine = 'Não há necessidade de exame físico específico para definir PEP ao HIV quando a decisão depende principalmente da caracterização da exposição; eventuais lesões, violência sexual, ferimentos ou sinais de IST devem ser avaliados e documentados no atendimento presencial.'
+  const examinationLine = 'A decisão sobre PEP depende principalmente da caracterização da exposição; lesões, violência sexual, ferimentos e sinais de IST também devem ser examinados e documentados quando presentes.'
   const hpma = decisionLines.length > 0
     ? `Atendimento por possível exposição ao HIV. Na história da exposição e no raciocínio do fluxo, foi registrado que ${formatClinicalListText(decisionLines)}.${baselineAssessment?.exposureContext ? ` O contexto foi classificado como ${pepBaselineLabels[baselineAssessment.exposureContext] || formatClinicalValue(baselineAssessment.exposureContext)}.` : ''} ${indicationSentence}`
     : `Atendimento por possível exposição ao HIV. Ainda não há respostas estruturadas suficientes para reconstruir todo o caminho decisório. ${indicationSentence}`
@@ -771,7 +781,7 @@ const buildPepHivClinicalSummary = (
     hpma,
     ap,
     muc,
-    exam: { generalAppearance: examinationLine },
+    exam: pepExam || { generalAppearance: examinationLine },
     hd: [indicationSentence],
     conduct: [conductSentence],
     therapeuticPlan: [
@@ -2423,6 +2433,75 @@ function buildHellpClinicalSummary(patient: Patient, flowchart: EmergencyFlowcha
   return { chiefComplaint: 'Suspeita de síndrome HELLP', historyLines: [narrative], examinationLines: examLines, scoreLines: [interpretation, ...laboratory], finalTitle: flowchart.steps[currentStep]?.title || 'Síndrome HELLP', finalDescription: interpretation, finalNarrative: narrative, doctorSignature, conductLines: [...measures.map(item => labels[item] || item), ...plan.map(item => labels[item] || item)], continuousText, text: continuousText }
 }
 
+const standardizeUniversalEvolution = (
+  summary: ClinicalSummaryData,
+  patient: Patient,
+  answers: Record<string, string>,
+  flowchartName: string
+): ClinicalSummaryData => {
+  const assessment = parseUniversalClinicalAssessment(answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY])
+  const vitalSigns = { ...(patient.admission?.vitalSigns || {}), ...(assessment?.sinaisVitais || {}) }
+  const vitalItems = uniqueTextItems([
+    vitalSigns.temperature != null ? `Tax: ${vitalSigns.temperature} °C` : null,
+    vitalSigns.bloodPressure ? `PA: ${vitalSigns.bloodPressure} mmHg` : null,
+    vitalSigns.heartRate != null ? `FC: ${vitalSigns.heartRate} bpm` : null,
+    vitalSigns.respiratoryRate != null ? `FR: ${vitalSigns.respiratoryRate} irpm` : null,
+    vitalSigns.oxygenSaturation != null ? `SpO2: ${vitalSigns.oxygenSaturation}%` : null,
+    vitalSigns.glucose != null && String(vitalSigns.glucose).trim() ? `Glicemia: ${vitalSigns.glucose} mg/dL` : null,
+    vitalSigns.painLevel != null ? `Escala de dor: ${vitalSigns.painLevel}/10` : null,
+    vitalSigns.capillaryRefill != null ? `Enchimento capilar: ${vitalSigns.capillaryRefill} s` : null
+  ])
+  const physicalExamItems = summarizeUniversalPhysicalExam(assessment?.exameFisico)
+  const standardizedExamination = uniqueTextItems([
+    vitalItems.length ? `Sinais vitais: ${vitalItems.join(' / ')}` : null,
+    ...physicalExamItems.map(item => `Exame físico - ${item}`)
+  ])
+  const chiefComplaint = formatChiefComplaintWithDuration(
+    patient.admission?.chiefComplaint || summary.chiefComplaint,
+    patient.admission?.complaintDuration,
+    summary.chiefComplaint
+  )
+  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma: ${flowchartName}.`
+  const canonicalText = [
+    'RELATÓRIO MÉDICO',
+    '',
+    'IDENTIFICAÇÃO',
+    identification,
+    '',
+    'QUEIXA PRINCIPAL',
+    `${chiefComplaint}.`,
+    '',
+    'SINAIS VITAIS',
+    vitalItems.length ? vitalItems.join(' / ') : 'Sem medidas registradas.',
+    '',
+    'EXAME FÍSICO',
+    physicalExamItems.length ? physicalExamItems.join('\n') : 'Exame físico estruturado não registrado.',
+    '',
+    'HISTÓRIA E EVOLUÇÃO CLÍNICA',
+    summary.historyLines.length ? summary.historyLines.join('\n') : 'Evolução clínica ainda sem informações estruturadas suficientes.',
+    '',
+    'EXAMES, CRITÉRIOS E ESTRATIFICAÇÃO',
+    summary.scoreLines.length ? summary.scoreLines.join('\n') : 'Sem resultados ou critérios complementares registrados.',
+    '',
+    'IMPRESSÃO CLÍNICA',
+    `${summary.finalTitle}. ${summary.finalDescription}`,
+    '',
+    'CONDUTA E PLANO TERAPÊUTICO',
+    summary.conductLines.length ? summary.conductLines.join('\n') : summary.finalNarrative,
+    '',
+    'MÉDICO RESPONSÁVEL',
+    summary.doctorSignature
+  ].join('\n')
+
+  return {
+    ...summary,
+    chiefComplaint,
+    examinationLines: standardizedExamination,
+    continuousText: canonicalText,
+    text: canonicalText
+  }
+}
+
 export function buildClinicalSummary(
   patient: Patient,
   options?: {
@@ -2457,67 +2536,67 @@ export function buildClinicalSummary(
   }
 
   if (flowchart.id === 'tvp') {
-    return buildTVPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildTVPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'influenza') {
-    return buildInfluenzaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildInfluenzaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'pneumonia') {
-    return buildPneumoniaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildPneumoniaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'tep') {
-    return buildTEPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildTEPClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'pep_hiv') {
-    return buildPepHivClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildPepHivClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'crise_ansiedade') {
-    return buildAnsiedadeClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildAnsiedadeClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'geca') {
-    return buildGecaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildGecaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'dengue') {
-    return buildDengueClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildDengueClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'avc') {
-    return buildAVCClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildAVCClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'iam') {
-    return buildAcsClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildAcsClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'hsa') {
-    return buildHsaClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildHsaClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'anafilaxia') {
-    return buildAnaphylaxisClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildAnaphylaxisClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'asthma') {
-    return buildAsthmaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildAsthmaClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'hipertensao') {
-    return buildHypertensionClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildHypertensionClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'sindrome_aortica_aguda') {
-    return buildAorticClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildAorticClinicalSummary(patient, flowchart, currentStep, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   if (flowchart.id === 'hellp') {
-    return buildHellpClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor)
+    return standardizeUniversalEvolution(buildHellpClinicalSummary(patient, flowchart, currentStep, history, answers, options?.doctor), patient, answers, flowchart.name)
   }
 
   const answerEntries = history.reduce<FlowSummaryEntry[]>((entries, stepId) => {
@@ -2530,12 +2609,14 @@ export function buildClinicalSummary(
     return entries
   }, [])
 
-  const chiefComplaint = answerEntries
+  const chiefComplaintBase = answerEntries
     .map((entry) => formatClinicalValue(entry.parsed?.queixaPrincipal))
     .find(Boolean)
+    || patient.admission?.chiefComplaint?.trim()
     || patient.admission?.symptoms?.join('; ')
     || currentStepData?.description
     || flowchart.description
+  const chiefComplaint = formatChiefComplaintWithDuration(chiefComplaintBase, patient.admission?.complaintDuration)
 
   const historyLines = answerEntries
     .filter((entry) => entry.answerLabel)
@@ -2684,7 +2765,7 @@ export function buildClinicalSummary(
     doctorSignature
   ]
 
-  return {
+  return standardizeUniversalEvolution({
     chiefComplaint,
     historyLines,
     examinationLines: Array.from(new Set(examinationLines)),
@@ -2696,5 +2777,5 @@ export function buildClinicalSummary(
     conductLines,
     continuousText: continuousSections.join('\n'),
     text: textSections.join('\n')
-  }
+  }, patient, answers, flowchart.name)
 }

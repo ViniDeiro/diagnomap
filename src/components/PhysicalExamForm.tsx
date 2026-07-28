@@ -460,7 +460,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
         <ExamSection
           icon={<Heart className="w-5 h-5" />}
           title="Cardíaco"
-          standardText="Bulhas rítmicas, normofonéticas, sem sopros audíveis."
+          standardText="ACV: ritmo cardíaco regular em dois tempos, bulhas normofonéticas, sem sopros audíveis."
           value={value.cardiac.altered}
           onChange={(v) => update('cardiac', { altered: v })}
           placeholder="Descreva alterações cardíacas (sopros, arritmias, etc.)"
@@ -469,7 +469,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
         <ExamSection
           icon={<Activity className="w-5 h-5" />}
           title="Pulmonar"
-          standardText="Murmúrio vesicular presente, sem ruídos adventícios."
+          standardText="AP: murmúrio vesicular audível bilateralmente, sem ruídos adventícios."
           value={value.pulmonary.altered}
           onChange={(v) => update('pulmonary', { altered: v })}
           placeholder="Descreva alterações pulmonares (sibilos, estertores, etc.)"
@@ -478,7 +478,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
         <ExamSection
           icon={<Stethoscope className="w-5 h-5" />}
           title="Abdome"
-          standardText="Plano, normotenso, ruídos hidro-aéreos presentes, sem alterações, sem sinais de irritação peritoneal."
+          standardText="Plano, normotenso, ruídos hidroaéreos presentes, indolor à palpação, sem massas ou visceromegalias e sem sinais de irritação peritoneal."
           value={value.abdomen.altered}
           onChange={(v) => update('abdomen', { altered: v })}
           placeholder="Descreva alterações abdominais"
@@ -487,7 +487,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
         <ExamSection
           icon={<Activity className="w-5 h-5" />}
           title="Extremidades"
-          standardText="Pulsos periféricos simétricos, sem alterações. Sem empastamentos. Enchimento capilar normal, perfusão periférica preservada."
+          standardText="Simétricas, sem deformidades. Pele íntegra, sem lesões ou alterações tróficas. Ausência de edema. Pulsos radiais, braquiais, femorais, poplíteos, tibiais posteriores e pediosos palpáveis, normais e simétricos."
           value={value.extremities.altered}
           onChange={(v) => update('extremities', { altered: v })}
           placeholder="Descreva alterações em extremidades"

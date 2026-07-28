@@ -68,17 +68,20 @@ export const summarizeUniversalPhysicalExam = (exam?: PhysicalExamData | null): 
   }
   const grade = (value?: number) => value ? ` ${value}/4+` : ''
   return [
-    `Estado geral: ${generalState[exam.generalState]}`,
-    `Coloração: ${exam.coloration.status === 'corado' ? 'corado' : `descorado${grade(exam.coloration.grade)}`}`,
-    `Hidratação: ${exam.hydration.status === 'hidratado' ? 'hidratado' : `desidratado${grade(exam.hydration.grade)}`}`,
-    `Cianose: ${exam.cyanosis.status === 'acianotico' ? 'ausente' : `presente${grade(exam.cyanosis.grade)}`}`,
-    `Icterícia: ${exam.jaundice.status === 'anicterico' ? 'ausente' : `presente${grade(exam.jaundice.grade)}`}`,
-    `Respiração: ${exam.respiration.status === 'eupneico' ? 'eupneico' : exam.respiration.status === 'taquipneico' ? 'taquipneico' : `dispneico${grade(exam.respiration.grade)}`}`,
-    `Neurológico: Glasgow ${exam.neuro.glasgow ?? 'não informado'}; ${exam.neuro.altered?.trim() || 'consciente, contactuante, pupilas isofotorreagentes'}`,
-    `Cardiovascular: ${exam.cardiac.altered?.trim() || 'ritmo regular, bulhas normofonéticas e sem sopros'}`,
-    `Pulmonar: ${exam.pulmonary.altered?.trim() || 'murmúrio vesicular presente bilateralmente, sem ruídos adventícios'}`,
-    `Abdome: ${exam.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, indolor, sem sinais de irritação peritoneal'}`,
-    `Extremidades: ${exam.extremities.altered?.trim() || 'pulsos periféricos simétricos, sem edemas, perfusão preservada'}`,
+    `Estado geral: ${[
+      generalState[exam.generalState],
+      exam.coloration.status === 'corado' ? 'corado' : `descorado${grade(exam.coloration.grade)}`,
+      exam.hydration.status === 'hidratado' ? 'hidratado' : `desidratado${grade(exam.hydration.grade)}`,
+      exam.cyanosis.status === 'acianotico' ? 'acianótico' : `cianótico${grade(exam.cyanosis.grade)}`,
+      exam.jaundice.status === 'anicterico' ? 'anictérico' : `ictérico${grade(exam.jaundice.grade)}`,
+      exam.temperature.status === 'afebril' ? 'afebril' : `febril${exam.temperature.value != null ? ` (${exam.temperature.value} °C)` : ''}`,
+      exam.respiration.status === 'eupneico' ? 'eupneico' : exam.respiration.status === 'taquipneico' ? 'taquipneico' : `dispneico${grade(exam.respiration.grade)}`
+    ].join(', ')}`,
+    `Neurológico: ${exam.neuro.altered?.trim() || 'consciente, contactuante, pupilas isofotorreagentes'}; Glasgow ${exam.neuro.glasgow ?? 'não informado'}`,
+    `Cardíaco: ${exam.cardiac.altered?.trim() || 'ACV em ritmo cardíaco regular em dois tempos, bulhas normofonéticas, sem sopros audíveis'}`,
+    `Pulmonar: ${exam.pulmonary.altered?.trim() || 'AP com murmúrio vesicular audível bilateralmente, sem ruídos adventícios'}`,
+    `Abdome: ${exam.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, indolor à palpação, sem massas ou visceromegalias e sem sinais de irritação peritoneal'}`,
+    `Extremidades: ${exam.extremities.altered?.trim() || 'simétricas, sem deformidades; pele íntegra, sem lesões ou alterações tróficas; ausência de edema; pulsos radiais, braquiais, femorais, poplíteos, tibiais posteriores e pediosos palpáveis, normais e simétricos'}`,
     `Pele: ${exam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}`,
     exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}` : null
   ].filter((item): item is string => Boolean(item))
@@ -94,7 +97,7 @@ const fromPatient = (patient: Pick<Patient, 'admission'>): UniversalVitalSigns =
     oxygenSaturation: typeof source.oxygenSaturation === 'number' ? source.oxygenSaturation : undefined,
     glucose: source.glucose != null ? String(source.glucose) : undefined,
     painLevel: typeof source.painLevel === 'number' ? source.painLevel : undefined,
-    glasgow: typeof source.glasgow === 'number' ? source.glasgow : 15,
+    glasgow: typeof source.glasgow === 'number' ? source.glasgow : undefined,
     capillaryRefill: typeof source.capillaryRefill === 'number' ? source.capillaryRefill : undefined
   }
 }
