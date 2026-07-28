@@ -6937,7 +6937,25 @@ export const pepHivFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Iniciar avaliação da exposição', nextStep: 'pep_material_risco', value: 'iniciar' }
+        { text: 'Iniciar avaliação da exposição', nextStep: 'pep_contexto_exposicao', value: 'iniciar' }
+      ]
+    },
+    pep_contexto_exposicao: {
+      id: 'pep_contexto_exposicao',
+      title: 'Qual foi o contexto da exposição?',
+      description: 'Classifique o grupo antes de avaliar material, via de contato e janela da PEP.',
+      type: 'question',
+      content: `
+        <div class="rounded-2xl border border-cyan-200 bg-gradient-to-br from-cyan-50 to-blue-50 p-5 text-sm text-cyan-950">
+          <p class="font-bold">Por que registrar o contexto?</p>
+          <p class="mt-2">A categoria organiza a anamnese e os cuidados associados. Ela não confirma indicação de PEP isoladamente: material biológico, via de exposição, tempo decorrido e situação sorológica ainda precisam ser avaliados.</p>
+        </div>
+      `,
+      options: [
+        { text: 'Exposição sexual consentida', description: 'Relação vaginal, anal ou oral; registrar barreira utilizada, ejaculação e presença de sangue ou lesão.', nextStep: 'pep_material_risco', value: 'sexual_consentida' },
+        { text: 'Exposição ocupacional', description: 'Perfurocortante, contato de mucosa ou pele não íntegra durante atividade profissional.', nextStep: 'pep_material_risco', value: 'ocupacional' },
+        { text: 'Violência sexual', description: 'Exposição não consentida, com necessidade de cuidado clínico, psicossocial e rede de proteção.', nextStep: 'pep_material_risco', value: 'violencia_sexual', critical: true },
+        { text: 'Outra exposição', description: 'Compartilhamento de seringas ou objetos e acidentes não ocupacionais com material biológico.', nextStep: 'pep_material_risco', value: 'nao_sexual' }
       ]
     },
     pep_material_risco: {
@@ -8835,6 +8853,7 @@ export const ituFlowchart: EmergencyFlowchart = {
     'itu_candiduria_nao_tratar',
     'itu_diferencial_ist',
     'itu_ambulatorial_concluido',
+    'itu_transferencia_enfermaria_concluida',
     'itu_alta_hospitalar',
     'itu_sepse_encaminhada'
   ],
@@ -9159,8 +9178,8 @@ export const ituFlowchart: EmergencyFlowchart = {
       options: [{ text: 'Cuidados mantidos: finalizar encaminhamento para internação', nextStep: 'itu_sepse_encaminhada', value: 'cuidados_sepse_urinaria_aplicados', critical: true, requiresImmediateAction: true }]
     },
     itu_sepse_encaminhada: {
-      id: 'itu_sepse_encaminhada', title: 'Sepse urinária: manejo hospitalar', description: 'Paciente encaminhado para internação após início da estabilização.', type: 'result', critical: true,
-      content: `<div class="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950">Manter monitorização, antimicrobiano EV, reavaliação hemodinâmica, controle de diurese e investigação de obstrução até transferência efetiva para unidade compatível com a gravidade.</div>`, options: []
+      id: 'itu_sepse_encaminhada', title: 'Transferência para UTI concluída', description: 'Cuidado do pronto-socorro encerrado após passagem segura para a equipe da unidade crítica.', type: 'result', critical: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Destino assistencial:</strong> paciente transferido para UTI após estabilização inicial, antimicrobiano EV e avaliação do controle do foco urinário.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Passagem do cuidado:</strong> foram comunicados gravidade, evolução, culturas e exames pendentes, primeira dose efetiva, suporte em curso, diurese, imagem e necessidade de urologia/drenagem.</div></div>`, options: []
     },
     itu_exames_pielonefrite: {
       id: 'itu_exames_pielonefrite', title: 'Investigação inicial da pielonefrite', description: 'Coletar exames sem atrasar o antibiótico quando houver gravidade.', type: 'action', critical: true,
@@ -9171,17 +9190,17 @@ export const ituFlowchart: EmergencyFlowchart = {
       id: 'itu_criterios_internacao', title: 'Há indicação de internação?', description: 'Decisão clínica individual, sem escore único validado.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950"><ul class="grid list-disc gap-x-6 gap-y-1 pl-5 md:grid-cols-2"><li>Obstrução do trato urinário.</li><li>Sepse ou instabilidade.</li><li>Gestação.</li><li>Vulnerabilidade social.</li><li>Sintomas refratários ou intolerância oral.</li><li>Alto risco de organismo multirresistente.</li><li>Comorbidades significativas ou imunossupressão.</li><li>Falha do tratamento ambulatorial.</li></ul></div>`,
       options: [
-        { text: 'Sim: tratamento hospitalar', nextStep: 'itu_risco_resistencia_hospitalar', value: 'internar', critical: true },
-        { text: 'Não: tratamento ambulatorial', nextStep: 'itu_antibiotico_ambulatorial', value: 'ambulatorial' }
+        { text: 'Internar / transferir para enfermaria ou UTI', description: 'Há instabilidade, sepse, obstrução, intolerância oral, gestação, falha terapêutica ou outro critério de cuidado hospitalar.', nextStep: 'itu_risco_resistencia_hospitalar', value: 'internar', critical: true },
+        { text: 'Dar alta do pronto-socorro com tratamento ambulatorial', description: 'Paciente estável, tolerando via oral, sem complicação que exija internação e com retorno seguro.', nextStep: 'itu_antibiotico_ambulatorial', value: 'ambulatorial' }
       ]
     },
     itu_antibiotico_ambulatorial: {
       id: 'itu_antibiotico_ambulatorial', title: 'Pielonefrite: tratamento ambulatorial', description: 'Selecionar esquema e programar reavaliação em 48–72 horas.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><p>Considerar primeira dose de antibiótico parenteral no pronto-socorro quando indicado pela resistência local ou perfil clínico. Garantir tolerância oral, seguimento e acesso a retorno.</p><p class="mt-2"><strong>Não utilizar nitrofurantoína ou fosfomicina para pielonefrite.</strong></p></div>`,
       options: [
-        { text: 'Ciprofloxacino 500 mg VO 12/12h por 7 dias', nextStep: 'itu_reavaliacao_ambulatorial', value: 'ciprofloxacino_vo' },
-        { text: 'Levofloxacino 750 mg VO 1x/dia por 5 dias', nextStep: 'itu_reavaliacao_ambulatorial', value: 'levofloxacino_vo' },
-        { text: 'Amoxicilina-clavulanato 875/125 mg VO 12/12h por 7 dias', nextStep: 'itu_reavaliacao_ambulatorial', value: 'amoxicilina_clavulanato_vo' }
+        { text: 'Ciprofloxacino 500 mg VO 12/12h por 7 dias', nextStep: 'itu_ambulatorial_concluido', value: 'ciprofloxacino_vo' },
+        { text: 'Levofloxacino 750 mg VO 1x/dia por 5 dias', nextStep: 'itu_ambulatorial_concluido', value: 'levofloxacino_vo' },
+        { text: 'Amoxicilina-clavulanato 875/125 mg VO 12/12h por 7 dias', nextStep: 'itu_ambulatorial_concluido', value: 'amoxicilina_clavulanato_vo' }
       ]
     },
     itu_reavaliacao_ambulatorial: {
@@ -9193,8 +9212,8 @@ export const ituFlowchart: EmergencyFlowchart = {
       ]
     },
     itu_ambulatorial_concluido: {
-      id: 'itu_ambulatorial_concluido', title: 'Tratamento ambulatorial mantido', description: 'Boa resposta clínica em 48–72 horas.', type: 'result',
-      content: `<div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950">Completar o antibiótico prescrito, revisar urocultura/TSA e ajustar se necessário. Não são necessários exames de controle rotineiros em paciente assintomático, salvo condição clínica específica.</div>`, options: []
+      id: 'itu_ambulatorial_concluido', title: 'Alta do pronto-socorro', description: 'Tratamento ambulatorial prescrito, retorno programado e sinais de alarme orientados.', type: 'result',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Alta assistida:</strong> completar o antibiótico prescrito, manter hidratação e revisar urocultura/TSA para ajuste quando necessário.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Seguimento fora deste atendimento:</strong> reavaliação em 48–72 horas pela rede responsável, sem manter o fluxo do pronto-socorro aberto.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950"><strong>Retorno imediato:</strong> febre persistente, piora da dor lombar, vômitos, intolerância oral, redução da diurese, hipotensão, confusão ou piora geral.</div></div>`, options: []
     },
     itu_antibiotico_hospitalar: {
       id: 'itu_antibiotico_hospitalar', title: 'Pielonefrite: tratamento hospitalar', description: 'Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
@@ -9305,13 +9324,17 @@ export const ituFlowchart: EmergencyFlowchart = {
       `,
       options: [
         {
-          text: 'Confirmar cuidados e seguir para reavaliação hospitalar',
-          description: 'Registra os cuidados mantidos enquanto aguarda leito de enfermaria.',
-          nextStep: 'itu_criterios_alta',
+          text: 'Confirmar transferência para enfermaria',
+          description: 'Registra a passagem do cuidado e encerra a atuação da equipe do pronto-socorro.',
+          nextStep: 'itu_transferencia_enfermaria_concluida',
           value: 'cuidados_aguarda_enfermaria_aplicados',
           critical: true
         }
       ]
+    },
+    itu_transferencia_enfermaria_concluida: {
+      id: 'itu_transferencia_enfermaria_concluida', title: 'Transferência para enfermaria concluída', description: 'Cuidado do pronto-socorro encerrado após passagem segura para a equipe assistencial da enfermaria.', type: 'result',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950"><strong>Destino assistencial:</strong> paciente admitido na enfermaria após tratamento inicial e definição do plano hospitalar.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Passagem do cuidado:</strong> foram comunicados hipótese diagnóstica, gravidade, antimicrobiano e horário da primeira dose, alergias, função renal, culturas e exames pendentes, necessidade de imagem e critérios de escalonamento.</div></div>`, options: []
     },
     itu_criterios_alta: {
       id: 'itu_criterios_alta', title: 'Critérios de alta hospitalar', description: 'Confirmar estabilidade antes da transição para tratamento oral.', type: 'question',

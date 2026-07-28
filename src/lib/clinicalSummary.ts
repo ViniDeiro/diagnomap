@@ -622,6 +622,10 @@ const buildTVPClinicalSummary = (
 }
 
 const pepHivDecisionLabels: Record<string, string> = {
+  sexual_consentida: 'o contexto foi classificado como exposição sexual consentida',
+  ocupacional: 'o contexto foi classificado como exposição ocupacional',
+  violencia_sexual: 'o contexto foi classificado como violência sexual, exigindo cuidados associados e rede de proteção',
+  nao_sexual: 'o contexto foi classificado como outra exposição não sexual',
   material_risco: 'houve contato com material biológico com risco de transmissão do HIV',
   sem_material: 'não houve contato com material biológico de risco para transmissão do HIV',
   risco: 'o tipo de exposição foi classificado como potencialmente transmissor',
@@ -686,6 +690,7 @@ const buildPepHivClinicalSummary = (
 ): ClinicalSummaryData => {
   const currentStepData = flowchart.steps[currentStep]
   const doctorSignature = formatDoctorSignature(doctor)
+  const contextDecision = getPepHivDecision(answers, 'pep_contexto_exposicao')
   const materialDecision = getPepHivDecision(answers, 'pep_material_risco')
   const exposureDecision = getPepHivDecision(answers, 'pep_tipo_exposicao')
   const windowDecision = getPepHivDecision(answers, 'pep_janela_72h')
@@ -730,6 +735,7 @@ const buildPepHivClinicalSummary = (
   const isUnknownSourceLowRisk = currentStep === 'pep_nao_indicada_fonte_desconhecida_baixo_risco'
 
   const decisionLines = uniqueTextItems([
+    contextDecision,
     materialDecision,
     exposureDecision,
     windowDecision,

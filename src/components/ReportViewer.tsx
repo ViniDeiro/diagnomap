@@ -950,7 +950,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         || history.includes('itu_urologia_urgente')
         || history.includes('itu_cuidados_aguarda_enfermaria')
         || history.includes('itu_cuidados_aguarda_internacao')
-        || ['itu_controle_foco', 'itu_urologia_urgente', 'itu_cuidados_aguarda_internacao', 'itu_cuidados_aguarda_enfermaria', 'itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar'].includes(currentStep)
+        || ['itu_controle_foco', 'itu_urologia_urgente', 'itu_cuidados_aguarda_internacao', 'itu_cuidados_aguarda_enfermaria', 'itu_transferencia_enfermaria_concluida', 'itu_sepse_encaminhada', 'itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar'].includes(currentStep)
       const isPyelonephritis = presentation === 'pielonefrite'
         || cystitisProfile === 'itu_sistemica_complicada'
         || pregnancyContext === 'gestacao_pielo'
@@ -1017,6 +1017,8 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
               sourceControl === 'foco_obstruido' ? 'Obstrução/pionefrose/abscesso suspeito, com urologia ou transferência acionada para drenagem urgente.' : null,
               sourceControl === 'foco_sepse_uti' ? 'Disfunção orgânica ou sepse determinou solicitação de UTI.' : null,
               answers.itu_cuidados_aguarda_enfermaria === 'cuidados_aguarda_enfermaria_aplicados' ? 'Mantidos monitorização, antibioticoterapia EV e suporte clínico enquanto aguardava leito de enfermaria.' : null,
+              currentStep === 'itu_transferencia_enfermaria_concluida' ? 'Transferência para enfermaria concluída, com passagem estruturada do cuidado e encerramento do atendimento pela equipe do pronto-socorro.' : null,
+              currentStep === 'itu_sepse_encaminhada' ? 'Transferência para UTI concluída, com passagem estruturada do cuidado e encerramento do atendimento pela equipe do pronto-socorro.' : null,
               admissionDecision === 'ambulatorial' ? 'Sem critério atual de internação, com condições para tratamento ambulatorial e retorno em 48–72 horas.' : null,
               reevaluation === 'falha_ambulatorial' ? 'Ausência de melhora ou piora em 48–72 horas, indicando escalonamento para tratamento hospitalar.' : null,
               dischargeDecision === 'alta' ? 'Critérios de alta hospitalar preenchidos.' : null,

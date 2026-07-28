@@ -394,14 +394,14 @@ const ituReachable = reachable(ituFlowchart)
 for (const required of [
   'itu_cistite_complicadores', 'itu_cistite_antibiotico', 'itu_bacteriuria_excecoes', 'itu_bacteriuria_grupo_especial',
   'itu_pielo_sepse', 'itu_estabilizacao_sepse', 'itu_exames_pielonefrite', 'itu_criterios_internacao',
-  'itu_antibiotico_ambulatorial', 'itu_reavaliacao_ambulatorial', 'itu_antibiotico_hospitalar',
+  'itu_antibiotico_ambulatorial', 'itu_ambulatorial_concluido', 'itu_antibiotico_hospitalar',
   'itu_risco_resistencia_hospitalar', 'itu_controle_foco', 'itu_urologia_urgente',
   'itu_gestacao_tipo', 'itu_gestacao_antibiotico', 'itu_gestacao_pielonefrite',
   'itu_masculino_prostatite', 'itu_prostatite_antibiotico', 'itu_prostatite_ambulatorial',
   'itu_cateter_sintomas', 'itu_cateter_manejo', 'itu_cateter_assintomatico',
   'itu_recorrente_avaliacao', 'itu_recorrente_plano', 'itu_candiduria_avaliacao',
   'itu_diferencial_ist', 'itu_pediatrico_encaminhado',
-  'itu_cuidados_aguarda_enfermaria', 'itu_cuidados_aguarda_internacao', 'itu_criterios_alta'
+  'itu_cuidados_aguarda_enfermaria', 'itu_transferencia_enfermaria_concluida', 'itu_cuidados_aguarda_internacao', 'itu_sepse_encaminhada'
 ]) assert.ok(ituReachable.has(required), `ITU: caminho clínico obrigatório não alcançável (${required})`)
 assert.equal(ituFlowchart.steps.itu_estabilizacao_sepse.options[0].nextStep, 'itu_risco_resistencia_hospitalar', 'ITU: sepse não pode chegar à espera de UTI sem seleção antimicrobiana')
 for (const option of ituFlowchart.steps.itu_antibiotico_hospitalar.options) {
@@ -409,6 +409,11 @@ for (const option of ituFlowchart.steps.itu_antibiotico_hospitalar.options) {
 }
 assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_sepse_uti')?.nextStep, 'itu_cuidados_aguarda_internacao', 'ITU: sepse/disfunção orgânica deve solicitar UTI')
 assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_obstruido')?.nextStep, 'itu_urologia_urgente', 'ITU: foco obstruído deve exigir drenagem/urologia')
+assert.equal(ituFlowchart.steps.itu_cuidados_aguarda_enfermaria.options[0]?.nextStep, 'itu_transferencia_enfermaria_concluida', 'ITU: após transferência para enfermaria o fluxo do pronto-socorro deve terminar')
+assert.equal(ituFlowchart.steps.itu_cuidados_aguarda_internacao.options[0]?.nextStep, 'itu_sepse_encaminhada', 'ITU: após transferência para UTI o fluxo do pronto-socorro deve terminar')
+for (const legacyInpatientStep of ['itu_reavaliacao_ambulatorial', 'itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar']) {
+  assert.ok(!ituReachable.has(legacyInpatientStep), `ITU: etapa posterior ao destino não deve permanecer no fluxo do pronto-socorro (${legacyInpatientStep})`)
+}
 for (const marker of ['cefepime_ev', 'cefalexina_gestacao', 'amoxicilina_clavulanato_gestacao']) {
   assert.ok(ituLogicSource.includes(marker), `ITU: prescrição estruturada ausente (${marker})`)
 }
@@ -564,8 +569,8 @@ const narrativeCases = [
     expected: [/emergência hipertensiva/i, /edema agudo de pulmão/, /UTI/]
   },
   {
-    id: 'pep_hiv', flow: pepHivFlowchart, step: 'pep_iniciar', history: ['pep_material_risco', 'pep_tipo_exposicao', 'pep_janela_72h', 'pep_exposta_hiv', 'pep_fonte_hiv', 'pep_avaliacao_inicial'],
-    answers: { __avaliacao_clinica_inicial: universalAnswer, pep_material_risco: 'material_risco', pep_tipo_exposicao: 'risco', pep_janela_72h: 'ate_72h', pep_exposta_hiv: 'exposta_negativo', pep_fonte_hiv: 'fonte_positiva', __pep_baseline_assessment: JSON.stringify({ exposureContext: 'sexual_consentida', baselineTests: ['hiv', 'hbsag', 'anti_hcv', 'sifilis'], conditionalTests: ['creatinina', 'beta_hcg'], exposedSites: ['retal', 'orofaringeo'], hbvVaccineStatus: 'desconhecida', hbvSourceStatus: 'reagente', hbvActions: ['vacina', 'ighahb'], associatedCare: ['naat'], followUp: ['retorno_4_sem', 'hiv_30d', 'prep'], noDelayConfirmed: true, notes: 'Coleta orofaríngea pendente.' }) },
+    id: 'pep_hiv', flow: pepHivFlowchart, step: 'pep_iniciar', history: ['pep_contexto_exposicao', 'pep_material_risco', 'pep_tipo_exposicao', 'pep_janela_72h', 'pep_exposta_hiv', 'pep_fonte_hiv', 'pep_avaliacao_inicial'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, pep_contexto_exposicao: 'sexual_consentida', pep_material_risco: 'material_risco', pep_tipo_exposicao: 'risco', pep_janela_72h: 'ate_72h', pep_exposta_hiv: 'exposta_negativo', pep_fonte_hiv: 'fonte_positiva', __pep_baseline_assessment: JSON.stringify({ exposureContext: 'sexual_consentida', baselineTests: ['hiv', 'hbsag', 'anti_hcv', 'sifilis'], conditionalTests: ['creatinina', 'beta_hcg'], exposedSites: ['retal', 'orofaringeo'], hbvVaccineStatus: 'desconhecida', hbvSourceStatus: 'reagente', hbvActions: ['vacina', 'ighahb'], associatedCare: ['naat'], followUp: ['retorno_4_sem', 'hiv_30d', 'prep'], noDelayConfirmed: true, notes: 'Coleta orofaríngea pendente.' }) },
     expected: [/exposição sexual consentida/, /mucosa retal/, /orofaringe/, /vacina contra hepatite B/, /imunoglobulina anti-hepatite B/, /não deveriam atrasar o início da PEP/]
   },
   {

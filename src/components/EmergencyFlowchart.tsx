@@ -4002,7 +4002,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPepPost72AssessmentStep = flowchart.id === 'pep_hiv' && currentStepData?.id === 'pep_fora_janela'
   const isPepInteractiveAssessmentStep = isPepBaselineAssessmentStep || isPepPost72AssessmentStep
   const pepBaselineAssessment = useMemo(
-    () => parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY]),
+    () => {
+      const parsed = parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY])
+      return parsed.exposureContext || !answers.pep_contexto_exposicao
+        ? parsed
+        : { ...parsed, exposureContext: answers.pep_contexto_exposicao }
+    },
     [answers]
   )
   const pepBaselinePending = [
@@ -4043,7 +4048,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
   const persistPepBaselineAssessment = useCallback((patch: Partial<PepBaselineAssessment>) => {
     const current = parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY])
-    const next = { ...current, ...patch }
+    const next = {
+      ...current,
+      exposureContext: current.exposureContext || answers.pep_contexto_exposicao || '',
+      ...patch
+    }
     const updatedAnswers = { ...answers, [PEP_BASELINE_ASSESSMENT_KEY]: JSON.stringify(next) }
     setAnswers(updatedAnswers)
     onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
