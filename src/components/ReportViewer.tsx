@@ -911,6 +911,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const cystitisAntibiotic = answers.itu_cistite_antibiotico
       const pregnancyAntibiotic = answers.itu_gestacao_antibiotico
       const prostateAntibiotic = answers.itu_prostatite_antibiotico
+      const maleLocalizedAntibiotic = answers.itu_homem_localizada_antibiotico
       const reevaluation = answers.itu_reavaliacao_ambulatorial
       const dischargeDecision = answers.itu_criterios_alta
       const pregnancyContext = answers.itu_gestacao_tipo
@@ -926,18 +927,23 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         sulfametoxazol_trimetoprim: 'sulfametoxazol-trimetoprim 800/160 mg VO de 12/12 horas por 3 dias',
         ciprofloxacino_vo: 'ciprofloxacino 500 mg VO de 12/12 horas por 7 dias',
         ciprofloxacino_prostatite: 'ciprofloxacino 500 mg VO de 12/12 horas por 2–4 semanas',
+        levofloxacino_prostatite: 'levofloxacino 500 mg VO uma vez ao dia por 2–4 semanas',
         sulfametoxazol_trimetoprim_prostatite: 'sulfametoxazol-trimetoprim 800/160 mg VO de 12/12 horas por 2–4 semanas',
+        sulfametoxazol_trimetoprim_homem: 'sulfametoxazol-trimetoprim 800/160 mg VO de 12/12 horas por 7 dias',
+        ciprofloxacino_homem: 'ciprofloxacino 500 mg VO de 12/12 horas por 7 dias',
         levofloxacino_vo: 'levofloxacino 750 mg VO uma vez ao dia por 5 dias',
         amoxicilina_clavulanato_vo: 'amoxicilina-clavulanato 875/125 mg VO de 12/12 horas por 7 dias',
         cefalexina_gestacao: 'cefalexina 500 mg VO de 6/6 horas por 5–7 dias',
         amoxicilina_clavulanato_gestacao: 'amoxicilina-clavulanato 875/125 mg VO de 12/12 horas por 5–7 dias',
-        ceftriaxona_ev: 'ceftriaxona 1–2 g EV uma vez ao dia',
+        ceftriaxona_ev: 'ceftriaxona 2 g EV uma vez ao dia',
         ciprofloxacino_ev: 'ciprofloxacino 400 mg EV de 12/12 horas',
+        ampicilina_gentamicina: 'ampicilina EV associada a gentamicina EV, com dose individualizada por peso e função renal',
         cefepime_ev: 'cefepime 2 g EV, com intervalo ajustado à gravidade e função renal',
         piperacilina_tazobactam: 'piperacilina-tazobactam 4,5 g EV de 6/6 horas',
-        meropenem: 'meropenem 1 g EV de 8/8 horas'
+        meropenem: 'meropenem 1 g EV de 8/8 horas',
+        aztreonam_ev: 'aztreonam 2 g EV de 8/8 horas'
       }
-      const chosenAntibiotic = antibioticLabels[hospitalAntibiotic || ambulatoryAntibiotic || pregnancyAntibiotic || prostateAntibiotic || cystitisAntibiotic] || ''
+      const chosenAntibiotic = antibioticLabels[hospitalAntibiotic || ambulatoryAntibiotic || pregnancyAntibiotic || prostateAntibiotic || maleLocalizedAntibiotic || cystitisAntibiotic] || ''
       const isSepsis = sepsisDecision === 'sepse'
         || history.includes('itu_estabilizacao_sepse')
         || history.includes('itu_cuidados_aguarda_internacao')
@@ -960,8 +966,12 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         ? 'Pielonefrite/infecção urinária complicada com suspeita de sepse de foco urinário.'
         : pregnancyContext === 'gestacao_pielo'
           ? 'Pielonefrite durante a gestação, com indicação de manejo hospitalar e avaliação obstétrica.'
-          : prostateContext
-            ? 'Infecção urinária masculina com avaliação direcionada para prostatite bacteriana aguda.'
+          : prostateContext === 'prostatite_estavel'
+            ? 'Infecção urinária masculina com suspeita de prostatite bacteriana aguda, sem instabilidade registrada.'
+            : prostateContext === 'homem_itu_localizada'
+              ? 'Infecção urinária localizada no homem, sem manifestações prostáticas ou sistêmicas registradas.'
+              : prostateContext === 'prostatite_complicada'
+                ? 'Infecção urinária sistêmica no homem, com critério de gravidade, retenção ou intolerância oral.'
             : catheterContext === 'cateter_sintomatico'
               ? 'Infecção urinária sintomática associada a cateter, após diferenciação de bacteriúria relacionada ao dispositivo.'
         : isPyelonephritis
@@ -976,7 +986,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           : catheterContext
             ? 'Paciente portador ou usuário recente de cateter urinário, avaliado quanto a sintomas sistêmicos, necessidade do dispositivo, técnica de coleta e diferenciação entre colonização e infecção.'
             : prostateContext
-              ? 'Paciente masculino avaliado quanto a febre, dor perineal, retenção urinária, acometimento prostático e necessidade de internação ou urologia.'
+              ? `Paciente masculino avaliado quanto a febre, dor perineal, retenção urinária, acometimento prostático e necessidade de internação ou urologia. ${prostateContext === 'homem_itu_localizada' ? 'Não foram registrados sinais prostáticos ou sistêmicos; foi indicada urocultura e terapia oral guiada pela sensibilidade e epidemiologia.' : prostateContext === 'prostatite_estavel' ? 'O quadro foi classificado como provável prostatite aguda estável, com tratamento de boa penetração prostática e reavaliação precoce.' : 'Foram identificados elementos que exigem investigação sistêmica, antimicrobiano EV e definição de destino hospitalar.'}`
               : 'Paciente com sintomas de trato urinário inferior compatíveis com cistite, como disúria, polaciúria, urgência urinária ou dor suprapúbica, sem febre, dor lombar ou repercussão sistêmica registrada.'
 
       return {

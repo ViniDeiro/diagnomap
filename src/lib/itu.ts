@@ -53,12 +53,36 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     instructions: 'Reavaliar em 48–72 horas. Revisar função renal, interações, contraindicações, risco de resistência e resultado da urocultura/TSA.',
     prescribedBy: ITU_PRESCRIBER
   },
+  levofloxacino_prostatite: {
+    medication: 'Levofloxacino',
+    dosage: '500 mg',
+    frequency: 'VO uma vez ao dia',
+    duration: '2–4 semanas, conforme resposta, cultura e protocolo local',
+    instructions: 'Reavaliar em 48–72 horas. Revisar função renal, interações, contraindicações, exposição prévia a fluoroquinolona, resistência local e resultado da urocultura/TSA.',
+    prescribedBy: ITU_PRESCRIBER
+  },
   sulfametoxazol_trimetoprim_prostatite: {
     medication: 'Sulfametoxazol-trimetoprim',
     dosage: '800/160 mg',
     frequency: 'VO de 12/12 horas',
     duration: '2–4 semanas, conforme resposta, cultura e protocolo local',
     instructions: 'Utilizar se houver sensibilidade provável ou confirmada. Reavaliar em 48–72 horas e ajustar à função renal, interações, alergias e urocultura/TSA.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  sulfametoxazol_trimetoprim_homem: {
+    medication: 'Sulfametoxazol-trimetoprim',
+    dosage: '800/160 mg',
+    frequency: 'VO de 12/12 horas',
+    duration: '7 dias',
+    instructions: 'Opção para ITU localizada no homem quando houver sensibilidade provável ou confirmada e ausência de sinais prostáticos/sistêmicos. Ajustar à função renal e revisar alergias, interações e urocultura/TSA.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  ciprofloxacino_homem: {
+    medication: 'Ciprofloxacino',
+    dosage: '500 mg',
+    frequency: 'VO de 12/12 horas',
+    duration: '7 dias',
+    instructions: 'Reservar para ITU localizada no homem quando resistência local, TSA, exposição recente e contraindicações permitirem. Reavaliar se surgirem febre, dor perineal, retenção ou sinais sistêmicos.',
     prescribedBy: ITU_PRESCRIBER
   },
   levofloxacino_vo: {
@@ -95,10 +119,26 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
   },
   ceftriaxona_ev: {
     medication: 'Ceftriaxona',
-    dosage: '1 g',
+    dosage: '2 g',
     frequency: 'EV uma vez ao dia',
     duration: '7 dias',
     instructions: 'Preparo EV de referência: reconstituir o frasco de 1 g com 9,6 mL de diluente IV compatível (aproximadamente 100 mg/mL), retirar a dose e diluir em 50–100 mL de SF 0,9% ou SG 5%; infundir em 30 minutos. Não usar soluções contendo cálcio, como Ringer lactato. Confirmar a bula da apresentação padronizada, ajustar a duração conforme evolução clínica e urocultura/TSA, e reavaliar diariamente para ajuste ou descalonamento.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  ampicilina_ev: {
+    medication: 'Ampicilina',
+    dosage: '2 g',
+    frequency: 'EV de 4/4 a 6/6 horas, conforme protocolo e função renal',
+    duration: 'Definir conforme síndrome, cultura, resposta e controle do foco',
+    instructions: 'Componente do esquema ampicilina + gentamicina. Confirmar alergias, função renal, suspeita de Enterococcus e protocolo institucional; ajustar ou descalonar conforme culturas.',
+    prescribedBy: ITU_PRESCRIBER
+  },
+  gentamicina_ev: {
+    medication: 'Gentamicina',
+    dosage: '6–7 mg/kg',
+    frequency: 'EV uma vez ao dia, com individualização farmacocinética',
+    duration: 'Reavaliar diariamente; limitar exposição conforme resposta e cultura',
+    instructions: 'Calcular pelo peso apropriado e protocolo institucional. Ajustar à função renal, monitorar níveis quando indicado e vigiar nefrotoxicidade e ototoxicidade.',
     prescribedBy: ITU_PRESCRIBER
   },
   ciprofloxacino_ev: {
@@ -132,6 +172,14 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     duration: '7 dias',
     instructions: 'Preparo EV de referência: reconstituir 1 g com 20 mL de água para injetáveis, diluir em 50–100 mL de SF 0,9% e infundir em 15–30 minutos. Confirmar a bula da apresentação e a estabilidade após preparo. Reservar para quadro grave ou alto risco de resistência, ajustar à função renal e descalonar conforme culturas, resposta e duração clínica.',
     prescribedBy: ITU_PRESCRIBER
+  },
+  aztreonam_ev: {
+    medication: 'Aztreonam',
+    dosage: '2 g',
+    frequency: 'EV de 8/8 horas',
+    duration: 'Definir conforme resposta, cultura e controle do foco',
+    instructions: 'Alternativa em alergia imediata grave a beta-lactâmicos, com cobertura de Gram-negativos, inclusive Pseudomonas, mas sem cobertura de Gram-positivos ou anaeróbios. Ajustar à função renal e discutir associação apenas quando o contexto clínico/microbiológico e o protocolo local indicarem.',
+    prescribedBy: ITU_PRESCRIBER
   }
 }
 
@@ -157,6 +205,9 @@ const ituCistiteSymptomaticPrescriptions: PrescriptionDraft[] = [
 const ituCistiteChoices = new Set(['fosfomicina', 'nitrofurantoina', 'cefuroxima', 'sulfametoxazol_trimetoprim'])
 
 export const buildItuPrescriptionItems = (choice?: string): PrescriptionDraft[] => {
+  if (choice === 'ampicilina_gentamicina') {
+    return [{ ...ituAntibioticPrescriptions.ampicilina_ev }, { ...ituAntibioticPrescriptions.gentamicina_ev }]
+  }
   const prescription = choice ? ituAntibioticPrescriptions[choice] : undefined
   if (!prescription) return []
   const items = [{ ...prescription }]

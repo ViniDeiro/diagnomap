@@ -8846,6 +8846,7 @@ export const ituFlowchart: EmergencyFlowchart = {
     'itu_bacteriuria_procedimento',
     'itu_bacteriuria_especialista',
     'itu_gestacao_alta',
+    'itu_homem_localizada_concluida',
     'itu_prostatite_ambulatorial',
     'itu_cateter_assintomatico',
     'itu_recorrente_plano',
@@ -8993,17 +8994,31 @@ export const ituFlowchart: EmergencyFlowchart = {
     },
     itu_masculino_prostatite: {
       id: 'itu_masculino_prostatite', title: 'Homem: avaliar prostatite e retenção', description: 'Distinguir ITU localizada de infecção prostática ou sistêmica.', type: 'question', critical: true,
-      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><strong>Sugere prostatite:</strong> febre, dor perineal/pélvica, disúria intensa, retenção ou próstata dolorosa ao toque suave. Não realizar massagem prostática.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4">Colher urina e urocultura antes do antibiótico quando possível. Avaliar resíduo pós-miccional, retenção e necessidade de urologia.</div></div>`,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Procurar gravidade antes da via oral:</strong> temperatura ≥38 °C, calafrios, hipotensão, taquicardia persistente, alteração da consciência, vômitos persistentes, incapacidade de receber VO, retenção importante, imunossupressão ou suspeita de sepse.</div><div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><strong>Sugere prostatite aguda:</strong> febre, dor perineal/pélvica, sintomas obstrutivos, retenção ou próstata dolorosa ao toque suave. Não realizar massagem prostática.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Em todo homem sintomático:</strong> colher urina e urocultura antes do antibiótico quando isso não atrasar o tratamento; avaliar retenção, resíduo pós-miccional, próstata, IST quando pertinente e necessidade de urologia.</div></div>`,
       options: [
-        { text: 'Estável, tolera via oral e sem retenção/sepse', nextStep: 'itu_prostatite_antibiotico', value: 'prostatite_estavel' },
-        { text: 'Febre importante, retenção, vômitos, instabilidade ou imunossupressão', nextStep: 'itu_pielo_sepse', value: 'prostatite_complicada', critical: true }
+        { text: 'ITU localizada no homem, sem sinais prostáticos ou sistêmicos', description: 'Afebril, estável, sem dor perineal, retenção ou intolerância oral; manter cultura e seguimento.', nextStep: 'itu_homem_localizada_antibiotico', value: 'homem_itu_localizada' },
+        { text: 'Prostatite aguda provável, estável e tolerando via oral', description: 'Dor perineal/pélvica, sintomas obstrutivos ou próstata dolorosa, sem sepse ou retenção importante.', nextStep: 'itu_prostatite_antibiotico', value: 'prostatite_estavel' },
+        { text: 'ITU sistêmica/grave, retenção importante ou incapacidade de receber VO', description: 'Febre ≥38 °C, calafrios, vômitos persistentes, instabilidade, alteração da consciência, imunossupressão ou suspeita de sepse.', nextStep: 'itu_pielo_sepse', value: 'prostatite_complicada', critical: true }
       ]
+    },
+    itu_homem_localizada_antibiotico: {
+      id: 'itu_homem_localizada_antibiotico', title: 'ITU localizada no homem: terapia guiada por cultura', description: 'Selecionar opção com atividade adequada e revisar obrigatoriamente o TSA.', type: 'question',
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><strong>Antes de prescrever:</strong> confirmar ausência de febre, dor em flanco, dor perineal, retenção e instabilidade; colher urocultura e revisar função renal, alergias, interações, antibióticos recentes e resistência local.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">Nitrofurantoína e fosfomicina não devem ser usadas quando houver suspeita de acometimento prostático ou sistêmico. Fluoroquinolona empírica depende da resistência local, exposição recente e contraindicações.</div></div>`,
+      options: [
+        { text: 'Sulfametoxazol-trimetoprim 800/160 mg VO 12/12h por 7 dias, se sensível', nextStep: 'itu_homem_localizada_concluida', value: 'sulfametoxazol_trimetoprim_homem' },
+        { text: 'Ciprofloxacino 500 mg VO 12/12h por 7 dias, se apropriado ao TSA e epidemiologia', nextStep: 'itu_homem_localizada_concluida', value: 'ciprofloxacino_homem' }
+      ]
+    },
+    itu_homem_localizada_concluida: {
+      id: 'itu_homem_localizada_concluida', title: 'ITU localizada no homem: alta assistida', description: 'Prescrição registrada, cultura pendente acompanhada e retorno seguro orientado.', type: 'result', generatesPrescription: true,
+      content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-950">Completar o esquema selecionado e revisar precocemente a urocultura/TSA para manter, ajustar ou trocar o antimicrobiano.</div><div class="rounded-xl border border-red-200 bg-red-50 p-4 text-red-950"><strong>Retorno imediato:</strong> febre, calafrios, dor lombar ou perineal, vômitos, retenção urinária, oligúria, confusão, hipotensão ou piora geral.</div></div>`, options: []
     },
     itu_prostatite_antibiotico: {
       id: 'itu_prostatite_antibiotico', title: 'Prostatite provável: selecionar terapia oral', description: 'Registrar um esquema com penetração prostática e revisão precoce do TSA.', type: 'question',
       content: `<div class="space-y-3 text-sm"><div class="rounded-xl border border-blue-200 bg-blue-50 p-4">A escolha depende de cultura, resistência local, função renal, interações e contraindicações. Rever clinicamente em 48–72 horas e ajustar assim que o TSA estiver disponível.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-950">A duração costuma ser maior que a da cistite. Suspeita de abscesso, retenção, bacteremia ou ausência de resposta exige urologia e investigação por imagem.</div></div>`,
       options: [
         { text: 'Ciprofloxacino 500 mg VO 12/12h por 2–4 semanas', nextStep: 'itu_prostatite_ambulatorial', value: 'ciprofloxacino_prostatite' },
+        { text: 'Levofloxacino 500 mg VO 1x/dia por 2–4 semanas', nextStep: 'itu_prostatite_ambulatorial', value: 'levofloxacino_prostatite' },
         { text: 'Sulfametoxazol-trimetoprim 800/160 mg VO 12/12h por 2–4 semanas, se sensível', nextStep: 'itu_prostatite_ambulatorial', value: 'sulfametoxazol_trimetoprim_prostatite' }
       ]
     },
@@ -9212,20 +9227,23 @@ export const ituFlowchart: EmergencyFlowchart = {
       id: 'itu_antibiotico_hospitalar', title: 'ITU complicada: tratamento hospitalar', description: 'Pielonefrite, cistite complicada, prostatite complicada ou ITU associada a cateter. Internar, iniciar antibiótico empírico e guiar pelo TSA.', type: 'question', critical: true,
       content: `<div class="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-950"><p>Manter internação, hidratação e sintomáticos conforme necessidade. Revisar culturas e função renal. Pesquisar obstrução/abscesso e solicitar avaliação urológica quando indicada.</p></div>`,
       options: [
-        { text: 'Ceftriaxona 1–2 g EV 1x/dia', description: 'Opção para quadro comunitário sem choque e sem risco relevante de Pseudomonas/ESBL. Reconstituir e infundir conforme preparo exibido.', nextStep: 'itu_controle_foco', value: 'ceftriaxona_ev' },
+        { text: 'Ceftriaxona 2 g EV 1x/dia', description: 'Preferência no quadro comunitário sem choque e sem risco relevante de Pseudomonas/ESBL. Reconstituir e infundir conforme preparo exibido.', nextStep: 'itu_controle_foco', value: 'ceftriaxona_ev' },
         { text: 'Ciprofloxacino 400 mg EV 12/12h', description: 'Usar somente se epidemiologia, culturas prévias, contraindicações e resistência local forem compatíveis.', nextStep: 'itu_controle_foco', value: 'ciprofloxacino_ev' },
+        { text: 'Ampicilina + gentamicina EV', description: 'Alternativa quando o perfil clínico/microbiológico sustentar, especialmente diante de suspeita de Enterococcus; calcular aminoglicosídeo por peso e função renal.', nextStep: 'itu_controle_foco', value: 'ampicilina_gentamicina' },
         { text: 'Cefepime 2 g EV 8/8–12/12h', description: 'Considerar risco de Pseudomonas conforme gravidade e função renal; confirmar protocolo institucional.', nextStep: 'itu_controle_foco', value: 'cefepime_ev' },
         { text: 'Piperacilina-tazobactam 4,5 g EV 6/6h', description: 'Considerar risco de Pseudomonas ou infecção grave sem forte suspeita de ESBL; ajustar à função renal.', nextStep: 'itu_controle_foco', value: 'piperacilina_tazobactam' },
-        { text: 'Meropenem 1 g EV 8/8h', description: 'Reservar para choque, alto risco ou histórico de ESBL/MDR quando o perfil clínico e microbiológico sustentarem.', nextStep: 'itu_controle_foco', value: 'meropenem', critical: true }
+        { text: 'Meropenem 1 g EV 8/8h', description: 'Reservar para choque, alto risco ou histórico de ESBL/MDR quando o perfil clínico e microbiológico sustentarem.', nextStep: 'itu_controle_foco', value: 'meropenem', critical: true },
+        { text: 'Aztreonam 2 g EV 8/8h', description: 'Alternativa em alergia imediata grave a beta-lactâmicos, com cobertura limitada a Gram-negativos; avaliar necessidade de associação conforme síndrome, epidemiologia e protocolo local.', nextStep: 'itu_controle_foco', value: 'aztreonam_ev', critical: true }
       ]
     },
     itu_risco_resistencia_hospitalar: {
       id: 'itu_risco_resistencia_hospitalar', title: 'Escolha empírica: gravidade e risco microbiológico', description: 'Registrar os fatores que orientam o espectro antes de prescrever.', type: 'question', critical: true,
-      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Gravidade:</strong> sepse, choque, disfunção orgânica ou obstrução infectada exigem terapia EV imediata e controle urgente do foco.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Risco de resistência:</strong> cultura prévia com ESBL/Pseudomonas, antibiótico ou internação recente, dispositivo urinário, procedimento urológico, colonização MDR, exposição institucional e epidemiologia local.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><strong>Segurança:</strong> alergia imediata, gestação, eTFG, interações e prolongamento de QT modificam a escolha.</div><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><strong>Stewardship:</strong> colher culturas sem atrasar a primeira dose e estreitar o espectro assim que o TSA estiver disponível.</div></div>`,
+      content: `<div class="grid gap-3 md:grid-cols-2 text-sm"><div class="rounded-xl border border-red-300 bg-red-50 p-4 text-red-950"><strong>Gravidade:</strong> sepse, choque, disfunção orgânica ou obstrução infectada exigem terapia EV imediata e controle urgente do foco.</div><div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><strong>Pseudomonas:</strong> sonda vesical, nefrostomia, duplo J, internação ou antibiótico recente, ITU hospitalar, manipulação urológica e cultura prévia positiva.</div><div class="rounded-xl border border-orange-200 bg-orange-50 p-4"><strong>ESBL/MDR:</strong> cultura ou colonização anterior, antimicrobiano recente, internação/exposição institucional, dispositivo urinário e epidemiologia local. Priorizar o histórico microbiológico individual.</div><div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><strong>Enterococcus:</strong> considerar sobretudo em idoso, obstrução, cateter ou manipulação urológica; cefepime e aztreonam não oferecem cobertura adequada.</div><div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><strong>Segurança:</strong> alergia imediata, gestação, eTFG, interações, QT e toxicidade de aminoglicosídeo modificam a escolha.</div><div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><strong>Stewardship:</strong> colher urocultura e, se grave, hemoculturas e lactato sem atrasar a primeira dose; estreitar assim que o TSA estiver disponível.</div></div>`,
       options: [
         { text: 'Comunitária, sem sepse e sem risco relevante de MDR', nextStep: 'itu_antibiotico_hospitalar', value: 'baixo_risco_mdr' },
         { text: 'Risco de Pseudomonas ou exposição institucional', nextStep: 'itu_antibiotico_hospitalar', value: 'risco_pseudomonas', critical: true },
         { text: 'Choque, ESBL/MDR prévio ou alto risco de resistência', nextStep: 'itu_antibiotico_hospitalar', value: 'alto_risco_esbl_mdr', critical: true },
+        { text: 'Suspeita relevante de Enterococcus', nextStep: 'itu_antibiotico_hospitalar', value: 'suspeita_enterococcus', critical: true },
         { text: 'Alergia grave ou opções usuais incompatíveis', nextStep: 'itu_antibiotico_hospitalar', value: 'alergia_grave', critical: true }
       ]
     },

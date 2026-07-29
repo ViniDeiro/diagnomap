@@ -401,13 +401,16 @@ for (const required of [
   'itu_antibiotico_ambulatorial', 'itu_ambulatorial_concluido', 'itu_antibiotico_hospitalar',
   'itu_risco_resistencia_hospitalar', 'itu_controle_foco', 'itu_urologia_urgente',
   'itu_gestacao_tipo', 'itu_gestacao_antibiotico', 'itu_gestacao_pielonefrite',
-  'itu_masculino_prostatite', 'itu_prostatite_antibiotico', 'itu_prostatite_ambulatorial',
+  'itu_masculino_prostatite', 'itu_homem_localizada_antibiotico', 'itu_homem_localizada_concluida', 'itu_prostatite_antibiotico', 'itu_prostatite_ambulatorial',
   'itu_cateter_sintomas', 'itu_cateter_manejo', 'itu_cateter_assintomatico',
   'itu_recorrente_avaliacao', 'itu_recorrente_plano', 'itu_candiduria_avaliacao',
   'itu_diferencial_ist',
   'itu_cuidados_aguarda_enfermaria', 'itu_transferencia_enfermaria_concluida', 'itu_cuidados_aguarda_internacao', 'itu_sepse_encaminhada'
 ]) assert.ok(ituReachable.has(required), `ITU: caminho clínico obrigatório não alcançável (${required})`)
 assert.equal(ituFlowchart.steps.itu_estabilizacao_sepse.options[0].nextStep, 'itu_risco_resistencia_hospitalar', 'ITU: sepse não pode chegar à espera de UTI sem seleção antimicrobiana')
+assert.equal(ituFlowchart.steps.itu_masculino_prostatite.options.find(option => option.value === 'homem_itu_localizada')?.nextStep, 'itu_homem_localizada_antibiotico', 'ITU masculina localizada deve ter tratamento e cultura próprios')
+assert.equal(ituFlowchart.steps.itu_masculino_prostatite.options.find(option => option.value === 'prostatite_estavel')?.nextStep, 'itu_prostatite_antibiotico', 'Prostatite estável deve seguir para antimicrobiano com penetração prostática')
+assert.equal(ituFlowchart.steps.itu_masculino_prostatite.options.find(option => option.value === 'prostatite_complicada')?.nextStep, 'itu_pielo_sepse', 'ITU masculina grave deve entrar na avaliação sistêmica/sepse')
 for (const option of ituFlowchart.steps.itu_antibiotico_hospitalar.options) {
   assert.equal(option.nextStep, 'itu_controle_foco', `ITU: antibiótico hospitalar deve conduzir ao controle do foco (${option.value})`)
 }
@@ -419,8 +422,11 @@ for (const legacyInpatientStep of ['itu_reavaliacao_ambulatorial', 'itu_criterio
   assert.ok(!ituReachable.has(legacyInpatientStep), `ITU: etapa posterior ao destino não deve permanecer no fluxo do pronto-socorro (${legacyInpatientStep})`)
 }
 assert.ok(!ituFlowchart.steps.itu_apresentacao.options.some(option => option.value === 'pediatrico'), 'ITU adulto: seleção inicial não deve oferecer ramo pediátrico')
-for (const marker of ['cefepime_ev', 'cefalexina_gestacao', 'amoxicilina_clavulanato_gestacao']) {
+for (const marker of ['cefepime_ev', 'cefalexina_gestacao', 'amoxicilina_clavulanato_gestacao', 'levofloxacino_prostatite', 'sulfametoxazol_trimetoprim_homem', 'ciprofloxacino_homem', 'ampicilina_gentamicina', 'aztreonam_ev']) {
   assert.ok(ituLogicSource.includes(marker), `ITU: prescrição estruturada ausente (${marker})`)
+}
+for (const marker of ['allowedByRisk', 'risco_pseudomonas', 'alto_risco_esbl_mdr', 'suspeita_enterococcus', 'selectedPrescriptions.map']) {
+  assert.ok(ituComponentSource.includes(marker), `ITU: seleção hospitalar orientada por risco incompleta (${marker})`)
 }
 
 for (const marker of ['formatChiefComplaintWithDuration', 'return `${cleanComplaint} há ${cleanDuration}`']) {

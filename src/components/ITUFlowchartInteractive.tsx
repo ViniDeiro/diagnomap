@@ -77,7 +77,21 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   const progress = isFinal ? 100 : Math.min(94, 12 + history.length * 8)
   const StepIcon = iconForStep(step)
   const phase = phaseByStep(stage)
-  const selectedPrescription = useMemo(() => buildItuPrescriptionItems(selectedValue)[0], [selectedValue])
+  const selectedPrescriptions = useMemo(() => buildItuPrescriptionItems(selectedValue), [selectedValue])
+  const displayedOptions = useMemo(() => {
+    const options = step.options || []
+    if (stage !== 'itu_antibiotico_hospitalar') return options
+
+    const allowedByRisk: Record<string, string[]> = {
+      baixo_risco_mdr: ['ceftriaxona_ev', 'ciprofloxacino_ev', 'ampicilina_gentamicina'],
+      risco_pseudomonas: ['piperacilina_tazobactam', 'cefepime_ev'],
+      alto_risco_esbl_mdr: ['meropenem'],
+      suspeita_enterococcus: ['ampicilina_gentamicina', 'piperacilina_tazobactam'],
+      alergia_grave: ['aztreonam_ev']
+    }
+    const allowed = allowedByRisk[answers.itu_risco_resistencia_hospitalar]
+    return allowed ? options.filter(option => option.value && allowed.includes(option.value)) : options
+  }, [answers.itu_risco_resistencia_hospitalar, stage, step.options])
 
   const riskLabel = (nextStep: string) => /sepse|internacao|hospitalar|aguarda/.test(nextStep) ? 'ITU hospitalar' : /pielo/.test(nextStep) ? 'Pielonefrite' : 'ITU'
 
@@ -92,7 +106,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   }
 
   const confirmSelection = () => {
-    const option = (step.options || []).find(item => item.value === selectedValue)
+    const option = displayedOptions.find(item => item.value === selectedValue)
     if (!option) { setNotice('Selecione uma opção para continuar.'); return }
     moveTo(option.nextStep, option.value)
   }
@@ -166,11 +180,11 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
 
         {phase === 'Investigação' && <div className="mt-6"><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados da investigação urinária" suggestedTests={['Urina tipo 1','Urocultura','Hemograma','Creatinina','Ureia','eTFG','Beta-hCG — quando aplicável','Lactato','Hemoculturas','TC de abdome e pelve — quando indicada']} /></div>}
 
-        {['itu_antibiotico_hospitalar', 'itu_gestacao_antibiotico', 'itu_prostatite_antibiotico'].includes(stage) && selectedPrescription && <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Preparo e administração da opção selecionada</p><h3 className="mt-2 text-lg font-black">{selectedPrescription.medication} · {selectedPrescription.dosage}</h3><p className="mt-1 text-sm font-bold">{selectedPrescription.frequency}</p><p className="mt-3 text-sm leading-relaxed">{selectedPrescription.instructions}</p><p className="mt-3 text-xs font-semibold">A apresentação comercial e o protocolo da farmácia institucional devem ser conferidos antes do preparo.</p></div>}
+        {['itu_antibiotico_hospitalar', 'itu_gestacao_antibiotico', 'itu_prostatite_antibiotico', 'itu_homem_localizada_antibiotico'].includes(stage) && selectedPrescriptions.length > 0 && <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Preparo e administração da opção selecionada</p><div className="mt-3 space-y-3">{selectedPrescriptions.map((prescription, index) => <div key={`${prescription.medication}-${index}`} className="rounded-xl border border-amber-200 bg-white/70 p-4"><h3 className="text-lg font-black">{prescription.medication} · {prescription.dosage}</h3><p className="mt-1 text-sm font-bold">{prescription.frequency} · {prescription.duration}</p><p className="mt-3 text-sm leading-relaxed">{prescription.instructions}</p></div>)}</div><p className="mt-3 text-xs font-semibold">A apresentação comercial e o protocolo da farmácia institucional devem ser conferidos antes do preparo.</p></div>}
 
         {isTransition && <div className="mt-6"><UniversalCareTransition destination={stage === 'itu_cuidados_aguarda_internacao' ? 'icu' : 'ward'} context={stage === 'itu_cuidados_aguarda_internacao' ? 'itu sepse urinária, choque ou foco obstruído com UTI solicitada' : 'itu pielonefrite hospitalar'} value={storedTransition} onChange={persistTransition} onConfirmed={confirmTransition} /></div>}
 
-        {!isTransition && !isFinal && <div className="mt-6 space-y-4"><div className={clsx('grid gap-3', (step.options || []).length > 1 && 'md:grid-cols-2')}>{(step.options || []).map(option => { const selected = selectedValue === option.value; return <button key={option.value || option.text} type="button" aria-pressed={selected} onClick={() => { setSelectedValue(option.value || ''); setNotice('') }} className={clsx('group flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md', optionTone(option, selected))}><span className={clsx('mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border', selected ? option.critical ? 'border-red-600 bg-red-600 text-white' : 'border-cyan-700 bg-cyan-700 text-white' : 'border-slate-300 text-transparent')}><CheckCircle2 className="h-4 w-4" /></span><span className="min-w-0 flex-1"><strong className="block text-slate-950">{option.text}</strong>{option.description && <span className="mt-1 block text-sm leading-relaxed text-slate-600">{option.description}</span>}</span><ChevronRight className={clsx('mt-1 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5', option.critical ? 'text-red-500' : 'text-cyan-600')} /></button>})}</div><button type="button" disabled={!selectedValue} onClick={confirmSelection} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300', (step.options || []).find(option => option.value === selectedValue)?.critical ? 'bg-red-700 hover:bg-red-800' : 'bg-cyan-800 hover:bg-cyan-900')}>Confirmar escolha e continuar <ChevronRight className="h-5 w-5" /></button></div>}
+        {!isTransition && !isFinal && <div className="mt-6 space-y-4"><div className={clsx('grid gap-3', displayedOptions.length > 1 && 'md:grid-cols-2')}>{displayedOptions.map(option => { const selected = selectedValue === option.value; return <button key={option.value || option.text} type="button" aria-pressed={selected} onClick={() => { setSelectedValue(option.value || ''); setNotice('') }} className={clsx('group flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md', optionTone(option, selected))}><span className={clsx('mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border', selected ? option.critical ? 'border-red-600 bg-red-600 text-white' : 'border-cyan-700 bg-cyan-700 text-white' : 'border-slate-300 text-transparent')}><CheckCircle2 className="h-4 w-4" /></span><span className="min-w-0 flex-1"><strong className="block text-slate-950">{option.text}</strong>{option.description && <span className="mt-1 block text-sm leading-relaxed text-slate-600">{option.description}</span>}</span><ChevronRight className={clsx('mt-1 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5', option.critical ? 'text-red-500' : 'text-cyan-600')} /></button>})}</div><button type="button" disabled={!selectedValue} onClick={confirmSelection} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300', displayedOptions.find(option => option.value === selectedValue)?.critical ? 'bg-red-700 hover:bg-red-800' : 'bg-cyan-800 hover:bg-cyan-900')}>Confirmar escolha e continuar <ChevronRight className="h-5 w-5" /></button></div>}
 
         {isFinal && <div className="mt-6 space-y-4"><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><ShieldCheck className="mr-2 inline h-5 w-5" /><strong>Antes de concluir:</strong> confirme estabilidade, alergias, função renal, resultados de cultura pendentes, orientação de retorno e destino assistencial.</div><button type="button" onClick={finish} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white hover:bg-emerald-800"><CheckCircle2 className="h-5 w-5" /> Registrar desfecho e concluir</button></div>}
 
