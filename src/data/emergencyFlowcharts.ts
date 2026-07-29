@@ -9003,7 +9003,8 @@ export const ituFlowchart: EmergencyFlowchart = {
       options: [
         { text: 'Sem indicação de antibiótico após avaliação especializada', nextStep: 'itu_bacteriuria_imunologico_concluido', value: 'imunologico_nao_tratar' },
         { text: 'Há indicação individual documentada: selecionar antimicrobiano pelo TSA', nextStep: 'itu_bacteriuria_imunologico_antibiotico', value: 'imunologico_tratar' },
-        { text: 'Há sintomas ou sinais sistêmicos: reclassificar como ITU', nextStep: 'itu_pielo_sepse', value: 'imunologico_sintomatico', critical: true }
+        { text: 'Há sintomas urinários localizados, sem sinais sistêmicos', description: 'Disúria, polaciúria, urgência ou dor suprapúbica, com estabilidade clínica: reclassificar como ITU sintomática.', nextStep: 'itu_cistite_complicadores', value: 'imunologico_sintomas_localizados' },
+        { text: 'Há sinais sistêmicos, sepse ou instabilidade', description: 'Febre/calafrios com deterioração, hipotensão, hipoperfusão, alteração da consciência, oligúria, hipoxemia ou disfunção orgânica.', nextStep: 'itu_estabilizacao_sepse', value: 'imunologico_sistemico_instavel', critical: true, requiresImmediateAction: true }
       ]
     },
     itu_bacteriuria_imunologico_antibiotico: {
