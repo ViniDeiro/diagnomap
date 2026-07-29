@@ -919,6 +919,15 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
       const prostateContext = answers.itu_masculino_prostatite
       const resistanceRisk = answers.itu_risco_resistencia_hospitalar
       const sourceControl = answers.itu_controle_foco
+      const imagingRecord = (() => {
+        try { return answers.__itu_imaging_record_v1 ? JSON.parse(answers.__itu_imaging_record_v1) as { ultrasoundStatus?: string; ultrasoundReport?: string; ctStatus?: string; ctProtocol?: string; ctReport?: string; findings?: string[]; urologyAction?: string; notes?: string } : null } catch { return null }
+      })()
+      const imagingStatusLabels: Record<string, string> = { nao_indicado: 'não indicado', solicitado: 'solicitado', pendente: 'resultado pendente', realizado: 'realizado', indisponivel: 'indisponível no serviço' }
+      const imagingFindingLabels: Record<string, string> = { sem_alteracao_aguda: 'sem alteração aguda', hidronefrose: 'hidronefrose', calculo: 'cálculo urinário', obstrucao: 'obstrução urinária', pionefrose: 'pionefrose', abscesso: 'abscesso renal/perinefrético', retencao: 'retenção ou resíduo elevado', alteracao_enxerto: 'alteração do enxerto renal', outro: 'outro achado' }
+      const systemicCystitisProfile = ['itu_sistemica_complicada', 'febre_dor_lombar'].includes(cystitisProfile)
+      const highRiskCystitisProfile = cystitisProfile === 'imunossupressao_transplante'
+      const obstructiveCystitisProfile = cystitisProfile === 'obstrucao_disfuncao_renal'
+      const complicatedCystitisProfile = systemicCystitisProfile || highRiskCystitisProfile || obstructiveCystitisProfile
 
       const antibioticLabels: Record<string, string> = {
         fosfomicina: 'fosfomicina trometamol 3 g VO, dose única',
@@ -958,7 +967,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
         || history.includes('itu_cuidados_aguarda_internacao')
         || ['itu_controle_foco', 'itu_urologia_urgente', 'itu_cuidados_aguarda_internacao', 'itu_cuidados_aguarda_enfermaria', 'itu_transferencia_enfermaria_concluida', 'itu_sepse_encaminhada', 'itu_criterios_alta', 'itu_manutencao_hospitalar', 'itu_alta_hospitalar'].includes(currentStep)
       const isPyelonephritis = presentation === 'pielonefrite'
-        || cystitisProfile === 'itu_sistemica_complicada'
+        || systemicCystitisProfile
         || pregnancyContext === 'gestacao_pielo'
         || history.includes('itu_pielo_sepse')
       const isAsymptomaticBacteriuria = presentation === 'bacteriuria_assintomatica'
@@ -974,13 +983,21 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
                 ? 'Infecção urinária sistêmica no homem, com critério de gravidade, retenção ou intolerância oral.'
             : catheterContext === 'cateter_sintomatico'
               ? 'Infecção urinária sintomática associada a cateter, após diferenciação de bacteriúria relacionada ao dispositivo.'
-        : isPyelonephritis
+          : isPyelonephritis
           ? `Pielonefrite aguda${isHospital ? ' com indicação de tratamento hospitalar' : ' em manejo ambulatorial assistido'}.`
+          : highRiskCystitisProfile
+            ? 'Infecção urinária em paciente imunossuprimido ou transplantado, submetida a investigação e tratamento diferenciados.'
+            : obstructiveCystitisProfile
+              ? 'Infecção urinária com suspeita de obstrução, retenção ou repercussão renal.'
           : isAsymptomaticBacteriuria
             ? 'Bacteriúria assintomática em avaliação de indicação específica de tratamento.'
             : 'Cistite aguda não complicada, sem sinais clínicos atuais de acometimento do trato urinário superior.'
       const clinicalNarrative = isPyelonephritis
         ? 'Paciente avaliado por quadro compatível com infecção do trato urinário superior, apresentando febre/calafrios, dor lombar ou em flanco, punho-percussão lombar dolorosa, náuseas ou vômitos conforme dados selecionados no fluxo. Foram pesquisados sinais de sepse, intolerância oral, obstrução e demais critérios de internação.'
+          : highRiskCystitisProfile
+            ? 'Paciente com sintomas urinários e condição de maior risco por imunossupressão ou transplante. Foram avaliados sinais sistêmicos, função renal ou do enxerto, culturas prévias, exposição antimicrobiana e necessidade de imagem ou internação.'
+            : obstructiveCystitisProfile
+              ? 'Paciente com sintomas urinários associados a suspeita de obstrução, retenção ou disfunção renal. Foram indicadas avaliação da função renal, imagem do trato urinário e definição de controle urgente do foco quando aplicável.'
           : isAsymptomaticBacteriuria
           ? `Urocultura/bacteriúria identificada sem sintomas urinários estruturados. ${bacteriuriaDecision === 'grupo_especial' ? 'Paciente enquadrado em situação que exige protocolo específico e tratamento guiado por cultura.' : 'Sem indicação registrada para antibioticoterapia.'}`
           : catheterContext
@@ -1010,10 +1027,14 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
           },
           {
             title: 'Investigação',
-            items: isPyelonephritis
+            items: isPyelonephritis || complicatedCystitisProfile
               ? [
                   'Solicitados EAS e urocultura com teste de sensibilidade aos antimicrobianos, preferencialmente antes do antibiótico quando isso não atrasar o tratamento.',
                   'Solicitados hemograma, ureia, creatinina e eletrólitos; hemoculturas e imagem direcionada conforme gravidade, internação, obstrução ou evolução desfavorável.',
+                  imagingRecord?.ultrasoundStatus ? `Ultrassonografia de rins e vias urinárias: ${imagingStatusLabels[imagingRecord.ultrasoundStatus] || imagingRecord.ultrasoundStatus}${imagingRecord.ultrasoundReport ? `. Laudo/resultado: ${imagingRecord.ultrasoundReport}` : ''}.` : null,
+                  imagingRecord?.ctStatus ? `Tomografia de abdome e pelve: ${imagingStatusLabels[imagingRecord.ctStatus] || imagingRecord.ctStatus}${imagingRecord.ctProtocol ? `; protocolo ${imagingRecord.ctProtocol.replaceAll('_', ' ')}` : ''}${imagingRecord.ctReport ? `. Laudo/resultado: ${imagingRecord.ctReport}` : ''}.` : null,
+                  imagingRecord?.findings?.length ? `Achados de imagem registrados: ${imagingRecord.findings.map(item => imagingFindingLabels[item] || item).join(', ')}.` : null,
+                  imagingRecord?.urologyAction ? `Decisão sobre urologia: ${imagingRecord.urologyAction === 'acionada' ? 'equipe acionada ou drenagem em organização' : imagingRecord.urologyAction === 'avaliar' ? 'avaliação solicitada' : 'sem indicação atual'}${imagingRecord.notes ? `. Observações: ${imagingRecord.notes}` : ''}.` : null,
                   ...labItems
                 ]
               : ['Na cistite típica não complicada, exames complementares podem ser dispensados conforme avaliação clínica; solicitar cultura em recorrência, falha, gestação ou contexto complicado.', ...labItems]

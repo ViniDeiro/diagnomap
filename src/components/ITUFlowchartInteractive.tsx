@@ -26,6 +26,7 @@ import { patientService } from '@/services/patientService'
 import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
+import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS } from './ABCDEChecklist'
 
 interface Props {
   patient: EmergencyPatient
@@ -38,9 +39,34 @@ interface Props {
   onOpenReport?: () => void
 }
 
+export const ITU_IMAGING_RECORD_KEY = '__itu_imaging_record_v1'
+export const ITU_PRE_ICU_ABCDE_KEY = '__itu_pre_icu_abcde_v1'
+
+type ImagingStatus = '' | 'nao_indicado' | 'solicitado' | 'pendente' | 'realizado' | 'indisponivel'
+interface ItuImagingRecord {
+  ultrasoundStatus: ImagingStatus
+  ultrasoundReport: string
+  ctStatus: ImagingStatus
+  ctProtocol: '' | 'sem_contraste' | 'com_contraste' | 'outro'
+  ctReport: string
+  findings: string[]
+  urologyAction: '' | 'nao_indicada' | 'avaliar' | 'acionada'
+  notes: string
+}
+
+const emptyImagingRecord: ItuImagingRecord = { ultrasoundStatus: '', ultrasoundReport: '', ctStatus: '', ctProtocol: '', ctReport: '', findings: [], urologyAction: '', notes: '' }
+const parseImagingRecord = (value?: string): ItuImagingRecord => {
+  if (!value) return emptyImagingRecord
+  try { return { ...emptyImagingRecord, ...JSON.parse(value) } } catch { return emptyImagingRecord }
+}
+const parseStringArray = (value?: string) => {
+  if (!value) return []
+  try { const parsed = JSON.parse(value); return Array.isArray(parsed) ? parsed.filter(item => typeof item === 'string') : [] } catch { return [] }
+}
+
 const phaseByStep = (step: string) => {
   if (/apresentacao|complicadores|bacteriuria|pielo_sepse|gestacao_tipo|masculino|cateter_sintomas|candiduria|recorrente_avaliacao/.test(step)) return 'Classificação'
-  if (/exames|cateter_manejo|controle_foco/.test(step)) return 'Investigação'
+  if (/exames|registro_imagem|cateter_manejo|controle_foco/.test(step)) return 'Investigação'
   if (/antibiotico|cistite_(fos|nitro|cef|sulfa)|estabilizacao|gestacao_pielo|urologia/.test(step)) return 'Tratamento'
   if (/aguarda|internacao|hospitalar|criterios_alta|manutencao/.test(step)) return 'Destino'
   return 'Conclusão'
@@ -67,9 +93,13 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   const [selectedValue, setSelectedValue] = useState(initialAnswers[safeInitialStep] || '')
   const [showCompletion, setShowCompletion] = useState(false)
   const [notice, setNotice] = useState('')
+  const [imagingRecord, setImagingRecord] = useState<ItuImagingRecord>(() => parseImagingRecord(initialAnswers[ITU_IMAGING_RECORD_KEY]))
   const step = ituFlowchart.steps[stage]
   const isFinal = ituFlowchart.finalSteps.includes(stage)
   const isTransition = stage === 'itu_cuidados_aguarda_internacao' || stage === 'itu_cuidados_aguarda_enfermaria'
+  const isImagingRegistration = stage === 'itu_registro_imagem'
+  const isPreIcuAbcde = stage === 'itu_abcde_pre_uti'
+  const selectedPreIcuAbcde = useMemo(() => parseStringArray(answers[ITU_PRE_ICU_ABCDE_KEY]), [answers])
   const transitionKey = `__care_transition_${stage}`
   const storedTransition = useMemo<CareTransitionData | null>(() => {
     try { return answers[transitionKey] ? JSON.parse(answers[transitionKey]) : null } catch { return null }
@@ -106,6 +136,10 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   }
 
   const confirmSelection = () => {
+    if (isPreIcuAbcde && selectedPreIcuAbcde.length !== DEFAULT_ABCDE_ITEMS.length) {
+      setNotice('Conclua os cinco domínios do ABCDE antes de seguir para os cuidados enquanto aguarda UTI.')
+      return
+    }
     const option = displayedOptions.find(item => item.value === selectedValue)
     if (!option) { setNotice('Selecione uma opção para continuar.'); return }
     moveTo(option.nextStep, option.value)
@@ -129,6 +163,25 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
     onUpdate(patient.id, stage, history, nextAnswers, progress, riskLabel(stage))
   }
 
+  const persistPreIcuAbcde = (items: string[]) => {
+    const nextAnswers = { ...answers, [ITU_PRE_ICU_ABCDE_KEY]: JSON.stringify(items) }
+    setAnswers(nextAnswers)
+    setNotice('')
+    onUpdate(patient.id, stage, history, nextAnswers, progress, riskLabel(stage))
+  }
+
+  const toggleImagingFinding = (finding: string) => setImagingRecord(current => ({ ...current, findings: current.findings.includes(finding) ? current.findings.filter(item => item !== finding) : [...current.findings, finding] }))
+  const confirmImagingRecord = () => {
+    if (!imagingRecord.ultrasoundStatus || !imagingRecord.ctStatus || !imagingRecord.urologyAction) {
+      setNotice('Registre a situação do ultrassom, da tomografia e a decisão sobre urologia para continuar.')
+      return
+    }
+    if (imagingRecord.ultrasoundStatus === 'realizado' && !imagingRecord.ultrasoundReport.trim()) { setNotice('Informe o resultado do ultrassom realizado.'); return }
+    if (imagingRecord.ctStatus === 'realizado' && !imagingRecord.ctReport.trim()) { setNotice('Informe o resultado da tomografia realizada.'); return }
+    if (imagingRecord.findings.some(item => ['obstrucao', 'pionefrose', 'abscesso'].includes(item)) && imagingRecord.urologyAction === 'nao_indicada') { setNotice('Obstrução, pionefrose ou abscesso exigem avaliação urológica/controle do foco. Revise a decisão registrada.'); return }
+    moveTo('itu_criterios_internacao', 'imagem_registrada', { [ITU_IMAGING_RECORD_KEY]: JSON.stringify(imagingRecord) })
+  }
+
   const goBack = () => {
     if (showCompletion) { setShowCompletion(false); return }
     if (!history.length) { onBack?.(); return }
@@ -143,6 +196,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
     const preserved: Record<string, string> = {}
     if (answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]) preserved[UNIVERSAL_ASSESSMENT_ANSWER_KEY] = answers[UNIVERSAL_ASSESSMENT_ANSWER_KEY]
     patientService.replacePrescriptionsByPrescriber(patient.id, ITU_PRESCRIBER, [])
+    setImagingRecord(emptyImagingRecord)
     setStage(ituFlowchart.initialStep); setHistory([]); setAnswers(preserved); setSelectedValue(''); setShowCompletion(false); setNotice('')
     onUpdate(patient.id, ituFlowchart.initialStep, [], preserved, 8, 'ITU')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -178,13 +232,33 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950"><Droplets className="mt-0.5 h-5 w-5 shrink-0" /><p className="text-sm"><strong>Decisão clínica guiada:</strong> selecione o cenário que corresponde ao paciente. A escolha ficará registrada no relatório e determinará somente o próximo ramo previsto.</p></div>
         {step.content && <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: step.content }} />}
 
-        {phase === 'Investigação' && <div className="mt-6"><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados da investigação urinária" suggestedTests={['Urina tipo 1','Urocultura','Hemograma','Creatinina','Ureia','eTFG','Beta-hCG — quando aplicável','Lactato','Hemoculturas','TC de abdome e pelve — quando indicada']} /></div>}
+        {phase === 'Investigação' && !isImagingRegistration && <div className="mt-6"><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Resultados da investigação urinária" suggestedTests={['Urina tipo 1','Urocultura','Hemograma','Creatinina','Ureia','eTFG','Beta-hCG — quando aplicável','Lactato','Hemoculturas']} /></div>}
 
-        {['itu_antibiotico_hospitalar', 'itu_gestacao_antibiotico', 'itu_prostatite_antibiotico', 'itu_homem_localizada_antibiotico'].includes(stage) && selectedPrescriptions.length > 0 && <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Preparo e administração da opção selecionada</p><div className="mt-3 space-y-3">{selectedPrescriptions.map((prescription, index) => <div key={`${prescription.medication}-${index}`} className="rounded-xl border border-amber-200 bg-white/70 p-4"><h3 className="text-lg font-black">{prescription.medication} · {prescription.dosage}</h3><p className="mt-1 text-sm font-bold">{prescription.frequency} · {prescription.duration}</p><p className="mt-3 text-sm leading-relaxed">{prescription.instructions}</p></div>)}</div><p className="mt-3 text-xs font-semibold">A apresentação comercial e o protocolo da farmácia institucional devem ser conferidos antes do preparo.</p></div>}
+        {isImagingRegistration && <div className="mt-6 space-y-5">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <section className="rounded-2xl border border-sky-200 bg-sky-50 p-5"><h2 className="font-black text-sky-950">Ultrassonografia de rins e vias urinárias</h2><label className="mt-4 block text-sm font-bold text-slate-800">Situação do exame<select value={imagingRecord.ultrasoundStatus} onChange={event => setImagingRecord(current => ({ ...current, ultrasoundStatus: event.target.value as ImagingStatus }))} className="mt-2 w-full rounded-xl border border-sky-200 bg-white px-4 py-3"><option value="">Selecione</option><option value="nao_indicado">Não indicado neste momento</option><option value="solicitado">Solicitado</option><option value="pendente">Aguardando resultado</option><option value="realizado">Realizado</option><option value="indisponivel">Indisponível no serviço</option></select></label><label className="mt-4 block text-sm font-bold text-slate-800">Resultado/laudo<textarea value={imagingRecord.ultrasoundReport} onChange={event => setImagingRecord(current => ({ ...current, ultrasoundReport: event.target.value }))} rows={4} placeholder="Hidronefrose, cálculo, resíduo vesical, abscesso, avaliação do enxerto ou ausência de alterações" className="mt-2 w-full rounded-xl border border-sky-200 bg-white p-3" /></label></section>
+            <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5"><h2 className="font-black text-violet-950">Tomografia de abdome e pelve</h2><label className="mt-4 block text-sm font-bold text-slate-800">Situação do exame<select value={imagingRecord.ctStatus} onChange={event => setImagingRecord(current => ({ ...current, ctStatus: event.target.value as ImagingStatus }))} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-4 py-3"><option value="">Selecione</option><option value="nao_indicado">Não indicada neste momento</option><option value="solicitado">Solicitada</option><option value="pendente">Aguardando resultado</option><option value="realizado">Realizada</option><option value="indisponivel">Indisponível no serviço</option></select></label><label className="mt-4 block text-sm font-bold text-slate-800">Protocolo<select value={imagingRecord.ctProtocol} onChange={event => setImagingRecord(current => ({ ...current, ctProtocol: event.target.value as ItuImagingRecord['ctProtocol'] }))} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-4 py-3"><option value="">Não registrado</option><option value="sem_contraste">Sem contraste — suspeita predominante de cálculo</option><option value="com_contraste">Com contraste — avaliar complicação/abscesso</option><option value="outro">Outro protocolo</option></select></label><label className="mt-4 block text-sm font-bold text-slate-800">Resultado/laudo<textarea value={imagingRecord.ctReport} onChange={event => setImagingRecord(current => ({ ...current, ctReport: event.target.value }))} rows={4} placeholder="Descreva cálculo, obstrução, pionefrose, abscesso ou outro achado" className="mt-2 w-full rounded-xl border border-violet-200 bg-white p-3" /></label></section>
+          </div>
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-black text-amber-950">Achados estruturados</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[['sem_alteracao_aguda','Sem alteração aguda'],['hidronefrose','Hidronefrose'],['calculo','Cálculo urinário'],['obstrucao','Obstrução urinária'],['pionefrose','Pionefrose'],['abscesso','Abscesso renal/perinefrético'],['retencao','Retenção/resíduo elevado'],['alteracao_enxerto','Alteração do enxerto renal'],['outro','Outro achado']].map(([value,label]) => <button key={value} type="button" aria-pressed={imagingRecord.findings.includes(value)} onClick={() => toggleImagingFinding(value)} className={clsx('rounded-xl border px-4 py-3 text-left text-sm font-bold transition', imagingRecord.findings.includes(value) ? 'border-amber-600 bg-amber-600 text-white' : 'border-amber-200 bg-white text-amber-950 hover:border-amber-400')}>{label}</button>)}</div></section>
+          <section className="rounded-2xl border border-red-200 bg-red-50 p-5"><h2 className="font-black text-red-950">Decisão sobre urologia e controle do foco</h2><div className="mt-4 grid gap-3 sm:grid-cols-3">{([['nao_indicada','Sem indicação atual'],['avaliar','Avaliação solicitada'],['acionada','Urologia acionada / drenagem em organização']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setImagingRecord(current => ({ ...current, urologyAction: value }))} className={clsx('rounded-xl border px-4 py-3 text-left text-sm font-bold', imagingRecord.urologyAction === value ? 'border-red-700 bg-red-700 text-white' : 'border-red-200 bg-white text-red-950')}>{label}</button>)}</div><textarea value={imagingRecord.notes} onChange={event => setImagingRecord(current => ({ ...current, notes: event.target.value }))} rows={3} placeholder="Conduta, horário do contato, drenagem proposta ou justificativa para acompanhamento" className="mt-4 w-full rounded-xl border border-red-200 bg-white p-3 text-sm" /></section>
+          <button type="button" onClick={confirmImagingRecord} className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-800 px-5 py-4 font-extrabold text-white hover:bg-cyan-900">Registrar imagem e definir destino <ChevronRight className="h-5 w-5" /></button>
+        </div>}
+
+        {isPreIcuAbcde && <div className="mt-6">
+          <ABCDEChecklist
+            value={selectedPreIcuAbcde}
+            onChange={persistPreIcuAbcde}
+            title="ABCDE antes da transferência para UTI"
+            subtitle="Registre cada domínio conduzido. A avaliação deve ser repetida continuamente enquanto o paciente aguarda o leito."
+            tone="red"
+          />
+        </div>}
+
+        {(/antibiotico|antifungico|candiduria_resistente/.test(stage) || stage === 'itu_bacteriuria_procedimento') && selectedPrescriptions.length > 0 && <div className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-5 text-amber-950"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Preparo e administração da opção selecionada</p><div className="mt-3 space-y-3">{selectedPrescriptions.map((prescription, index) => <div key={`${prescription.medication}-${index}`} className="rounded-xl border border-amber-200 bg-white/70 p-4"><h3 className="text-lg font-black">{prescription.medication} · {prescription.dosage}</h3><p className="mt-1 text-sm font-bold">{prescription.frequency} · {prescription.duration}</p><p className="mt-3 text-sm leading-relaxed">{prescription.instructions}</p></div>)}</div><p className="mt-3 text-xs font-semibold">A apresentação comercial e o protocolo da farmácia institucional devem ser conferidos antes do preparo.</p></div>}
 
         {isTransition && <div className="mt-6"><UniversalCareTransition destination={stage === 'itu_cuidados_aguarda_internacao' ? 'icu' : 'ward'} context={stage === 'itu_cuidados_aguarda_internacao' ? 'itu sepse urinária, choque ou foco obstruído com UTI solicitada' : 'itu pielonefrite hospitalar'} value={storedTransition} onChange={persistTransition} onConfirmed={confirmTransition} /></div>}
 
-        {!isTransition && !isFinal && <div className="mt-6 space-y-4"><div className={clsx('grid gap-3', displayedOptions.length > 1 && 'md:grid-cols-2')}>{displayedOptions.map(option => { const selected = selectedValue === option.value; return <button key={option.value || option.text} type="button" aria-pressed={selected} onClick={() => { setSelectedValue(option.value || ''); setNotice('') }} className={clsx('group flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md', optionTone(option, selected))}><span className={clsx('mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border', selected ? option.critical ? 'border-red-600 bg-red-600 text-white' : 'border-cyan-700 bg-cyan-700 text-white' : 'border-slate-300 text-transparent')}><CheckCircle2 className="h-4 w-4" /></span><span className="min-w-0 flex-1"><strong className="block text-slate-950">{option.text}</strong>{option.description && <span className="mt-1 block text-sm leading-relaxed text-slate-600">{option.description}</span>}</span><ChevronRight className={clsx('mt-1 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5', option.critical ? 'text-red-500' : 'text-cyan-600')} /></button>})}</div><button type="button" disabled={!selectedValue} onClick={confirmSelection} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300', displayedOptions.find(option => option.value === selectedValue)?.critical ? 'bg-red-700 hover:bg-red-800' : 'bg-cyan-800 hover:bg-cyan-900')}>Confirmar escolha e continuar <ChevronRight className="h-5 w-5" /></button></div>}
+        {!isTransition && !isImagingRegistration && !isFinal && <div className="mt-6 space-y-4"><div className={clsx('grid gap-3', displayedOptions.length > 1 && 'md:grid-cols-2')}>{displayedOptions.map(option => { const selected = selectedValue === option.value; return <button key={option.value || option.text} type="button" aria-pressed={selected} onClick={() => { setSelectedValue(option.value || ''); setNotice('') }} className={clsx('group flex w-full items-start gap-3 rounded-2xl border p-4 text-left transition-all hover:-translate-y-0.5 hover:shadow-md', optionTone(option, selected))}><span className={clsx('mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border', selected ? option.critical ? 'border-red-600 bg-red-600 text-white' : 'border-cyan-700 bg-cyan-700 text-white' : 'border-slate-300 text-transparent')}><CheckCircle2 className="h-4 w-4" /></span><span className="min-w-0 flex-1"><strong className="block text-slate-950">{option.text}</strong>{option.description && <span className="mt-1 block text-sm leading-relaxed text-slate-600">{option.description}</span>}</span><ChevronRight className={clsx('mt-1 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5', option.critical ? 'text-red-500' : 'text-cyan-600')} /></button>})}</div><button type="button" disabled={!selectedValue} onClick={confirmSelection} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300', displayedOptions.find(option => option.value === selectedValue)?.critical ? 'bg-red-700 hover:bg-red-800' : 'bg-cyan-800 hover:bg-cyan-900')}>Confirmar escolha e continuar <ChevronRight className="h-5 w-5" /></button></div>}
 
         {isFinal && <div className="mt-6 space-y-4"><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><ShieldCheck className="mr-2 inline h-5 w-5" /><strong>Antes de concluir:</strong> confirme estabilidade, alergias, função renal, resultados de cultura pendentes, orientação de retorno e destino assistencial.</div><button type="button" onClick={finish} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white hover:bg-emerald-800"><CheckCircle2 className="h-5 w-5" /> Registrar desfecho e concluir</button></div>}
 

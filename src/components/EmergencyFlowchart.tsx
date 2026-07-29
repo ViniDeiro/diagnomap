@@ -49,7 +49,6 @@ import SubarachnoidHemorrhageFlowchartInteractive from './SubarachnoidHemorrhage
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
-import UniversalConductCopyScope from './UniversalConductCopyScope'
 import TEPAssessment from './TEPAssessment'
 import {
   INFLUENZA_SEVERITY_SIGNS,
@@ -1660,17 +1659,23 @@ Confirmar a concentração disponível antes do preparo. Monitorizar pressão ar
 const GECA_ADULT_DISCHARGE_PRESCRIPTION = `RECEITA MÉDICA — GECA / PLANO A — ADULTO
 
 USO ORAL
-1. Sais para reidratação oral — envelopes.
-Dissolver cada envelope exatamente no volume de água potável indicado pelo fabricante. Ingerir em pequenos goles e com maior frequência, especialmente após cada evacuação diarreica ou episódio de vômito. Descartar a solução preparada conforme a orientação do produto.
+1. Racecadotrila 100 mg — cápsulas.
+Tomar 1 cápsula por via oral a cada 8 horas, preferencialmente antes das refeições, até cessarem as evacuações diarreicas, pelo menor tempo necessário e por no máximo 7 dias. Suspender se houver constipação. Não utilizar em diarreia com sangue, febre alta, suspeita de colite ou outra contraindicação clínica.
 
-2. Paracetamol 500 mg — comprimidos.
-Tomar 1 comprimido por via oral a cada 6 horas se dor ou febre. Não ultrapassar 3.000 mg ao dia. Não usar em doença hepática relevante ou junto com outro produto que contenha paracetamol.
+2. Simeticona 125 mg — comprimidos.
+Tomar 1 comprimido por via oral ao dia, por até 5 dias, somente se houver distensão abdominal ou excesso de gases.
 
-3. Ondansetrona 4 mg — comprimidos, SOMENTE SE PRESCRITA após avaliação individual.
+3. Saccharomyces boulardii 200 mg — cápsulas.
+Tomar 1 cápsula por via oral a cada 12 horas, por 3 dias, somente quando o benefício tiver sido avaliado individualmente. Não utilizar em paciente crítico, imunossuprimido importante ou portador de cateter venoso central.
+
+4. Ondansetrona 4 mg — comprimidos, SOMENTE SE PRESCRITA após avaliação individual.
 Tomar 1 comprimido por via oral a cada 8 horas se náuseas ou vômitos estiverem impedindo a hidratação, pelo menor tempo necessário. Rever intervalo QT, interações, gestação e contraindicações.
 
+5. Sais para reidratação oral — envelopes.
+Dissolver cada envelope exatamente no volume de água potável indicado pelo fabricante. Ingerir em pequenos goles, repetidamente, especialmente após cada evacuação diarreica ou episódio de vômito. Para maiores de 10 anos, oferecer a quantidade aceita de acordo com sede e perdas. Descartar a solução preparada conforme a orientação do produto.
+
 ORIENTAÇÕES
-Manter alimentação habitual em porções menores e frequentes. Não usar antibiótico, antiparasitário ou antidiarreico por conta própria. Retornar imediatamente se houver sangue nas fezes, vômitos repetidos, incapacidade de beber, sede intensa, redução da urina, prostração, desmaio, febre alta persistente ou dor abdominal intensa/localizada. Reavaliar se não houver melhora em até 48 horas.
+Manter alimentação habitual em porções menores e frequentes e aumentar a ingestão de líquidos seguros. Não usar antibiótico ou antiparasitário por conta própria. Retornar imediatamente se houver sangue nas fezes, piora da frequência ou do volume da diarreia, vômitos repetidos, incapacidade de beber, sede intensa, redução da urina, prostração, desmaio, febre alta persistente ou dor abdominal intensa/localizada. Reavaliar se não houver melhora em até 48 horas.
 
 Modelo de apoio à prescrição: confirmar alergias, peso, idade, gestação, função renal/hepática, medicamentos em uso e protocolo institucional antes de assinar.`
 
@@ -1691,6 +1696,42 @@ ORIENTAÇÕES
 Não oferecer refrigerantes, energéticos ou soluções concentradas. Retornar imediatamente se houver piora, sangue nas fezes, vômitos repetidos, recusa de líquidos/alimentos, muita sede, redução da urina, sonolência/prostração, febre alta persistente ou dor abdominal intensa. Reavaliar se não houver melhora em até 48 horas.
 
 Modelo de apoio à prescrição: registrar peso e calcular qualquer medicamento individualmente antes de assinar.`
+
+const GECA_PRESCRIBER = 'Fluxograma GECA'
+
+const buildGecaStructuredPrescriptionItems = (
+  savedAntibioticAnswer: string | undefined,
+  patient: Pick<EmergencyPatient, 'age' | 'weight'>
+) => {
+  const items: Array<{ medication: string; dosage: string; frequency: string; duration: string; instructions: string; prescribedBy: string }> = []
+  if (patient.age >= 18) {
+    items.push(
+      { medication: 'Racecadotrila', dosage: '100 mg', frequency: 'VO de 8/8 horas, preferencialmente antes das refeições', duration: 'Até cessar a diarreia; máximo de 7 dias', instructions: 'Suspender se houver constipação. Não utilizar em diarreia com sangue, febre alta, suspeita de colite ou outra contraindicação clínica.', prescribedBy: GECA_PRESCRIBER },
+      { medication: 'Simeticona', dosage: '125 mg', frequency: 'VO uma vez ao dia, somente se distensão ou excesso de gases', duration: 'Até 5 dias', instructions: 'Medicamento sintomático; suspender quando houver resolução.', prescribedBy: GECA_PRESCRIBER },
+      { medication: 'Saccharomyces boulardii', dosage: '200 mg', frequency: 'VO de 12/12 horas', duration: '3 dias', instructions: 'Uso condicionado à avaliação individual. Evitar em paciente crítico, imunossupressão importante ou presença de cateter venoso central.', prescribedBy: GECA_PRESCRIBER },
+      { medication: 'Ondansetrona', dosage: '4 mg', frequency: 'VO de 8/8 horas, se náuseas ou vômitos impedirem hidratação', duration: 'Pelo menor tempo necessário', instructions: 'Usar somente após avaliação individual. Rever intervalo QT, interações, gestação e contraindicações.', prescribedBy: GECA_PRESCRIBER },
+      { medication: 'Sais para reidratação oral', dosage: '1 envelope', frequency: 'VO, em pequenos goles e após cada perda', duration: 'Enquanto houver diarreia ou vômitos', instructions: 'Dissolver exatamente no volume de água indicado pelo fabricante. Aumentar a frequência após evacuação ou vômito e descartar conforme orientação do produto.', prescribedBy: GECA_PRESCRIBER }
+    )
+  } else {
+    items.push({ medication: 'Sais para reidratação oral', dosage: '1 envelope', frequency: 'VO, em pequenas quantidades e após cada perda', duration: 'Enquanto houver diarreia ou vômitos', instructions: 'Dissolver exatamente no volume de água indicado pelo fabricante. Manter aleitamento e alimentação habitual.', prescribedBy: GECA_PRESCRIBER })
+  }
+  if (!savedAntibioticAnswer) return items
+  try {
+    const saved = JSON.parse(savedAntibioticAnswer) as { esquemaSelecionado?: string }
+    const weight = patient.weight
+    const antibiotics: Record<string, typeof items[number] | undefined> = {
+      azitromicina_pediatrica: { medication: 'Azitromicina', dosage: weight ? `${Math.round(weight * 10)} mg no dia 1; ${Math.round(weight * 5)} mg/dia nos dias 2–5` : '10 mg/kg no dia 1; 5 mg/kg/dia nos dias 2–5', frequency: 'VO uma vez ao dia', duration: '5 dias', instructions: 'Dose calculada pelo peso. Confirmar indicação, alergias, função hepática, QT, interações e protocolo local.', prescribedBy: GECA_PRESCRIBER },
+      ceftriaxona_pediatrica: { medication: 'Ceftriaxona', dosage: weight ? `${Math.round(weight * 50)} mg` : '50 mg/kg', frequency: 'IM uma vez ao dia', duration: '3–5 dias', instructions: 'Confirmar peso, alergias, apresentação, diluição, dose máxima e protocolo institucional.', prescribedBy: GECA_PRESCRIBER },
+      ciprofloxacino_adulto: { medication: 'Ciprofloxacino', dosage: '500 mg', frequency: 'VO de 12/12 horas', duration: '3 dias', instructions: 'Usar somente quando a indicação clínica estiver confirmada. Rever gestação, função renal, QT, interações, cultura e resistência local.', prescribedBy: GECA_PRESCRIBER },
+      ceftriaxona_alto_risco_hospitalar: { medication: 'Ceftriaxona', dosage: weight ? `${Math.round(weight * 50)}–${Math.round(weight * 100)} mg/dia` : '50–100 mg/kg/dia', frequency: 'EV ou IM conforme protocolo hospitalar', duration: 'Definir conforme diagnóstico, cultura e resposta', instructions: 'Esquema hospitalar: confirmar peso, dose máxima, alergias, função renal/hepática, apresentação, diluição e protocolo institucional.', prescribedBy: GECA_PRESCRIBER }
+    }
+    const selected = saved.esquemaSelecionado ? antibiotics[saved.esquemaSelecionado] : undefined
+    if (selected) items.push(selected)
+  } catch {
+    // Mantém a receita de suporte se o registro legado de antibiótico estiver inválido.
+  }
+  return items
+}
 
 const GECA_REASSESSMENT_STATE_KEY = '__geca_reassessment_state'
 
@@ -3590,6 +3631,14 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
                                       : value || nextStep
     }
     const newProgress = calculateProgress(nextStep, newHistory)
+
+    if (flowchart.id === 'geca' && nextStep === 'geca_alta_plano_a') {
+      patientService.replacePrescriptionsByPrescriber(
+        patient.id,
+        GECA_PRESCRIBER,
+        buildGecaStructuredPrescriptionItems(newAnswers['geca_antibioticos'], patient)
+      )
+    }
 
     setCurrentStep(nextStep)
     setHistory(newHistory)
@@ -7982,14 +8031,12 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     )
   }
 
-  const renderWithConductCopy = (content: React.ReactNode) => (
-    <UniversalConductCopyScope title={`${flowchart.name} · ${currentStepData.title}`}>
-      {content}
-    </UniversalConductCopyScope>
-  )
+  // O copiar/colar pertence à conduta já gerada, não à navegação inteira do fluxo.
+  // As telas de conduta e prescrição renderizam seus próprios controles ao lado do texto.
+  const renderFlowContent = (content: React.ReactNode) => content
 
   if (flowchart.id === 'avc') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <AVCFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8004,7 +8051,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'iam') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <AcuteCoronarySyndromeFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8019,7 +8066,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'hsa') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <SubarachnoidHemorrhageFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8034,7 +8081,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'hipertensao') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <HypertensionFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8050,7 +8097,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'hellp') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <HELLPFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8065,7 +8112,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'sindrome_aortica_aguda') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <AcuteAorticSyndromeFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8080,7 +8127,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'atendimento_antirrabico') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <RabiesExposureFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8095,7 +8142,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'itu') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <ITUFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8110,7 +8157,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   if (flowchart.id === 'crise_ansiedade') {
-    return renderWithConductCopy(
+    return renderFlowContent(
       <AnxietyFlowchartInteractive
         patient={patient}
         initialStep={currentStep}
@@ -8125,7 +8172,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     )
   }
 
-  return renderWithConductCopy(
+  return renderFlowContent(
     <div className={clsx('min-h-screen pb-12', flowchart.id === 'geca' && 'bg-gradient-to-b from-slate-50 via-white to-cyan-50/40')}>
       {/* Premium Medical Header */}
       <div className={clsx("relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8", flowchart.id === 'geca' && 'hidden')}>
@@ -12078,6 +12125,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       if (gecaAdultCopyButton) {
                         event.preventDefault()
                         event.stopPropagation()
+                        patientService.replacePrescriptionsByPrescriber(
+                          patient.id,
+                          GECA_PRESCRIBER,
+                          buildGecaStructuredPrescriptionItems(answers.geca_antibioticos, patient)
+                        )
                         const prescription = buildGecaDischargePrescription(
                           GECA_ADULT_DISCHARGE_PRESCRIPTION,
                           answers.geca_antibioticos,
@@ -12093,6 +12145,11 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       if (gecaPediatricCopyButton) {
                         event.preventDefault()
                         event.stopPropagation()
+                        patientService.replacePrescriptionsByPrescriber(
+                          patient.id,
+                          GECA_PRESCRIBER,
+                          buildGecaStructuredPrescriptionItems(answers.geca_antibioticos, patient)
+                        )
                         const prescription = buildGecaDischargePrescription(
                           GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION,
                           answers.geca_antibioticos,

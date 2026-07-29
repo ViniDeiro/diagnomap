@@ -190,7 +190,8 @@ for (const marker of [
   'buildItuPrescriptionItems', 'ITU_PRESCRIBER'
 ]) assert.ok(ituComponentSource.includes(marker), `ITU: experiência interativa nova ausente (${marker})`)
 assert.match(emergencyComponentSource, /flowchart\.id === 'itu'[\s\S]*ITUFlowchartInteractive/)
-assert.match(emergencyComponentSource, /renderWithConductCopy[\s\S]*UniversalConductCopyScope/, 'Todos os fluxogramas devem receber o controle universal de copiar conduta')
+assert.doesNotMatch(emergencyComponentSource, /UniversalConductCopyScope/, 'O copiar conduta não pode ficar flutuando globalmente em todos os fluxogramas')
+assert.match(emergencyComponentSource, /O copiar\/colar pertence à conduta já gerada/, 'O controle de cópia deve permanecer restrito às telas de conduta gerada')
 for (const marker of ['Copiar conduta', 'Conduta copiada', 'data-conduct-copy-source', 'aria-pressed', 'writeClipboard']) {
   assert.ok(universalConductCopySource.includes(marker) || emergencyComponentSource.includes(marker), `Cópia universal de conduta sem marcador obrigatório (${marker})`)
 }
@@ -238,7 +239,7 @@ for (const marker of [
   'Piperacilina-tazobactam', 'reconstituir o frasco de 4,5 g com 20 mL',
   'Meropenem', 'reconstituir 1 g com 20 mL de água para injetáveis'
 ]) assert.ok(ituLogicSource.includes(marker), `ITU: orientação de preparo ausente (${marker})`)
-for (const marker of ['Tomografia de abdome e pelve', 'TC de abdome e pelve — quando indicada', 'Preparo e administração da opção selecionada']) {
+for (const marker of ['Tomografia de abdome e pelve', 'Ultrassonografia de rins e vias urinárias', 'Preparo e administração da opção selecionada']) {
   assert.ok(ituComponentSource.includes(marker) || flowSource.includes(marker), `ITU: investigação/preparo visual ausente (${marker})`)
 }
 
@@ -388,6 +389,9 @@ for (const marker of ['PEP_BASELINE_ASSESSMENT_KEY', 'PEP_EXPOSED_SITES', 'PEP_H
 for (const marker of ['GECA_ADULT_DISCHARGE_PRESCRIPTION', 'GECA_PEDIATRIC_DISCHARGE_PRESCRIPTION', 'buildGecaDischargePrescription', 'answers.geca_antibioticos', 'ANTIBIOTICOTERAPIA SELECIONADA NO FLUXO', 'data-geca-copy-adult', 'data-geca-copy-pediatric']) {
   assert.match(`${emergencyComponentSource}\n${gecaSource}`, new RegExp(marker), `GECA: receita de alta ausente (${marker})`)
 }
+for (const marker of ['GECA_PRESCRIBER', 'buildGecaStructuredPrescriptionItems', "nextStep === 'geca_alta_plano_a'", 'Sais para reidratação oral', 'Racecadotrila', 'Simeticona', 'Saccharomyces boulardii', 'Ondansetrona', 'ciprofloxacino_adulto', 'replacePrescriptionsByPrescriber']) {
+  assert.ok(emergencyComponentSource.includes(marker), `GECA: registro estruturado no receituário ausente (${marker})`)
+}
 assert.match(clinicalSummarySource, /parsePepBaselineForSummary/, 'PEP HIV: avaliação basal precisa aparecer no resumo clínico')
 assert.equal(pepHivFlowchart.steps.pep_inicio.options[0]?.nextStep, 'pep_material_risco', 'PEP HIV: contexto e material de risco devem ser registrados na mesma tela, sem etapa intermediária')
 for (const marker of ['isPepMaterialRiskStep', 'Grupo do tipo de exposição', 'persistPepExposureContext', 'Selecione primeiro o grupo do tipo de exposição']) {
@@ -397,24 +401,38 @@ assert.equal(ituFlowchart.steps.itu_bacteriuria_excecoes.options.find(option => 
 const ituReachable = reachable(ituFlowchart)
 for (const required of [
   'itu_cistite_complicadores', 'itu_cistite_antibiotico', 'itu_bacteriuria_excecoes', 'itu_bacteriuria_grupo_especial',
-  'itu_pielo_sepse', 'itu_estabilizacao_sepse', 'itu_exames_pielonefrite', 'itu_criterios_internacao',
+  'itu_pielo_sepse', 'itu_estabilizacao_sepse', 'itu_exames_pielonefrite', 'itu_registro_imagem', 'itu_criterios_internacao',
   'itu_antibiotico_ambulatorial', 'itu_ambulatorial_concluido', 'itu_antibiotico_hospitalar',
   'itu_risco_resistencia_hospitalar', 'itu_controle_foco', 'itu_urologia_urgente',
   'itu_gestacao_tipo', 'itu_gestacao_antibiotico', 'itu_gestacao_pielonefrite',
   'itu_masculino_prostatite', 'itu_homem_localizada_antibiotico', 'itu_homem_localizada_concluida', 'itu_prostatite_antibiotico', 'itu_prostatite_ambulatorial',
   'itu_cateter_sintomas', 'itu_cateter_manejo', 'itu_cateter_assintomatico',
-  'itu_recorrente_avaliacao', 'itu_recorrente_plano', 'itu_candiduria_avaliacao',
+  'itu_recorrente_avaliacao', 'itu_recorrente_plano', 'itu_candiduria_avaliacao', 'itu_candiduria_procedimento_antifungico', 'itu_candiduria_cistite_antifungico', 'itu_candiduria_resistente', 'itu_candiduria_pielo_grave',
   'itu_diferencial_ist',
+  'itu_bacteriuria_procedimento', 'itu_bacteriuria_imunologico_antibiotico', 'itu_abcde_pre_uti',
   'itu_cuidados_aguarda_enfermaria', 'itu_transferencia_enfermaria_concluida', 'itu_cuidados_aguarda_internacao', 'itu_sepse_encaminhada'
 ]) assert.ok(ituReachable.has(required), `ITU: caminho clínico obrigatório não alcançável (${required})`)
 assert.equal(ituFlowchart.steps.itu_estabilizacao_sepse.options[0].nextStep, 'itu_risco_resistencia_hospitalar', 'ITU: sepse não pode chegar à espera de UTI sem seleção antimicrobiana')
+assert.equal(ituFlowchart.steps.itu_exames_pielonefrite.options[0]?.nextStep, 'itu_registro_imagem', 'ITU: investigação complicada deve abrir o registro estruturado de imagem')
+assert.equal(ituFlowchart.steps.itu_registro_imagem.options[0]?.nextStep, 'itu_criterios_internacao', 'ITU: registro de imagem deve anteceder a decisão de destino')
+for (const marker of ['ITU_IMAGING_RECORD_KEY', 'Ultrassonografia de rins e vias urinárias', 'Tomografia de abdome e pelve', 'Achados estruturados', 'Decisão sobre urologia e controle do foco']) {
+  assert.ok(ituComponentSource.includes(marker), `ITU: tela estruturada de imagem incompleta (${marker})`)
+}
+for (const complicator of ['febre_dor_lombar', 'imunossupressao_transplante', 'obstrucao_disfuncao_renal']) {
+  assert.equal(ituFlowchart.steps.itu_cistite_complicadores.options.find(option => option.value === complicator)?.nextStep, 'itu_pielo_sepse', `ITU: complicador da cistite precisa excluir infecção sistêmica (${complicator})`)
+}
 assert.equal(ituFlowchart.steps.itu_masculino_prostatite.options.find(option => option.value === 'homem_itu_localizada')?.nextStep, 'itu_homem_localizada_antibiotico', 'ITU masculina localizada deve ter tratamento e cultura próprios')
 assert.equal(ituFlowchart.steps.itu_masculino_prostatite.options.find(option => option.value === 'prostatite_estavel')?.nextStep, 'itu_prostatite_antibiotico', 'Prostatite estável deve seguir para antimicrobiano com penetração prostática')
 assert.equal(ituFlowchart.steps.itu_masculino_prostatite.options.find(option => option.value === 'prostatite_complicada')?.nextStep, 'itu_pielo_sepse', 'ITU masculina grave deve entrar na avaliação sistêmica/sepse')
 for (const option of ituFlowchart.steps.itu_antibiotico_hospitalar.options) {
   assert.equal(option.nextStep, 'itu_controle_foco', `ITU: antibiótico hospitalar deve conduzir ao controle do foco (${option.value})`)
 }
-assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_sepse_uti')?.nextStep, 'itu_cuidados_aguarda_internacao', 'ITU: sepse/disfunção orgânica deve solicitar UTI')
+assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_sepse_uti')?.nextStep, 'itu_abcde_pre_uti', 'ITU: sepse/disfunção orgânica deve passar pelo ABCDE antes da espera por UTI')
+assert.equal(ituFlowchart.steps.itu_abcde_pre_uti.options[0]?.nextStep, 'itu_cuidados_aguarda_internacao', 'ITU: ABCDE concluído deve abrir os cuidados enquanto aguarda UTI')
+assert.equal(ituFlowchart.steps.itu_bacteriuria_grupo_especial.options.find(option => option.value === 'procedimento_urologico')?.nextStep, 'itu_bacteriuria_procedimento', 'ITU: procedimento urológico deve abrir seleção terapêutica dirigida')
+assert.equal(ituFlowchart.steps.itu_bacteriuria_grupo_especial.options.find(option => option.value === 'imunologico')?.nextStep, 'itu_bacteriuria_especialista', 'ITU: condição imunológica deve registrar decisão antes da terapia')
+for (const marker of ['fluconazol_candiduria_procedimento', 'fluconazol_candiduria_cistite', 'anfotericina_candiduria_resistente', 'flucitosina_candiduria', 'fluconazol_candiduria_pielo']) assert.ok(ituLogicSource.includes(marker), `ITU: esquema de candidúria ausente (${marker})`)
+for (const marker of ['ITU_PRE_ICU_ABCDE_KEY', 'ABCDE antes da transferência para UTI', 'Conclua os cinco domínios do ABCDE']) assert.ok(ituComponentSource.includes(marker), `ITU: ABCDE pré-UTI incompleto (${marker})`)
 assert.equal(ituFlowchart.steps.itu_controle_foco.options.find(option => option.value === 'foco_obstruido')?.nextStep, 'itu_urologia_urgente', 'ITU: foco obstruído deve exigir drenagem/urologia')
 assert.equal(ituFlowchart.steps.itu_cuidados_aguarda_enfermaria.options[0]?.nextStep, 'itu_transferencia_enfermaria_concluida', 'ITU: após transferência para enfermaria o fluxo do pronto-socorro deve terminar')
 assert.equal(ituFlowchart.steps.itu_cuidados_aguarda_internacao.options[0]?.nextStep, 'itu_sepse_encaminhada', 'ITU: após transferência para UTI o fluxo do pronto-socorro deve terminar')

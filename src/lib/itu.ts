@@ -180,6 +180,42 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     duration: 'Definir conforme resposta, cultura e controle do foco',
     instructions: 'Alternativa em alergia imediata grave a beta-lactâmicos, com cobertura de Gram-negativos, inclusive Pseudomonas, mas sem cobertura de Gram-positivos ou anaeróbios. Ajustar à função renal e discutir associação apenas quando o contexto clínico/microbiológico e o protocolo local indicarem.',
     prescribedBy: ITU_PRESCRIBER
+  },
+  ceftriaxona_procedimento_urologico: {
+    medication: 'Ceftriaxona', dosage: '1 g', frequency: 'EV, dose perioperatória dirigida pelo TSA', duration: '1 dose; excepcionalmente 2 doses conforme protocolo',
+    instructions: 'Administrar em geral 30–60 minutos antes do procedimento com trauma de mucosa. Confirmar sensibilidade, alergias, função renal/hepática, horário cirúrgico e protocolo da urologia.', prescribedBy: ITU_PRESCRIBER
+  },
+  ciprofloxacino_procedimento_urologico: {
+    medication: 'Ciprofloxacino', dosage: '400 mg', frequency: 'EV, dose perioperatória dirigida pelo TSA', duration: '1 dose; excepcionalmente 2 doses conforme protocolo',
+    instructions: 'Administrar em geral 30–60 minutos antes do procedimento. Confirmar sensibilidade, função renal, QT, interações, alergias e protocolo da urologia.', prescribedBy: ITU_PRESCRIBER
+  },
+  sulfametoxazol_procedimento_urologico: {
+    medication: 'Sulfametoxazol-trimetoprim', dosage: '800/160 mg', frequency: 'VO, dose perioperatória dirigida pelo TSA', duration: '1 dose; excepcionalmente 2 doses conforme protocolo',
+    instructions: 'Confirmar sensibilidade, função renal, alergia a sulfa, interações e horário do procedimento com a urologia.', prescribedBy: ITU_PRESCRIBER
+  },
+  fluconazol_candiduria_procedimento: {
+    medication: 'Fluconazol', dosage: '400 mg (6 mg/kg)', frequency: 'VO ou EV uma vez ao dia', duration: 'Alguns dias antes e após o procedimento, conforme infectologia/urologia',
+    instructions: 'Usar somente se a espécie for sensível. Ajustar à função renal e revisar função hepática, QT, interações e gestação.', prescribedBy: ITU_PRESCRIBER
+  },
+  anfotericina_candiduria_procedimento: {
+    medication: 'Anfotericina B desoxicolato', dosage: '0,3–0,6 mg/kg', frequency: 'EV uma vez ao dia', duration: 'Alguns dias antes e após o procedimento, conforme infectologia/urologia',
+    instructions: 'Uso hospitalar. Confirmar formulação desoxicolato, peso, função renal, potássio e magnésio; monitorar reação infusional e nefrotoxicidade.', prescribedBy: ITU_PRESCRIBER
+  },
+  fluconazol_candiduria_cistite: {
+    medication: 'Fluconazol', dosage: '200 mg', frequency: 'VO uma vez ao dia', duration: '14 dias',
+    instructions: 'Somente para cistite sintomática por espécie sensível. Ajustar à função renal e revisar função hepática, QT, interações e gestação; remover/trocar cateter quando possível.', prescribedBy: ITU_PRESCRIBER
+  },
+  anfotericina_candiduria_resistente: {
+    medication: 'Anfotericina B desoxicolato', dosage: '0,3–0,6 mg/kg', frequency: 'EV uma vez ao dia', duration: '1–7 dias, conforme espécie, síndrome e infectologia',
+    instructions: 'Uso hospitalar para infecção urinária por Candida resistente selecionada. Confirmar formulação, função renal e eletrólitos; monitorar reação infusional e nefrotoxicidade.', prescribedBy: ITU_PRESCRIBER
+  },
+  flucitosina_candiduria: {
+    medication: 'Flucitosina', dosage: '25 mg/kg', frequency: 'VO de 6/6 horas', duration: '7–10 dias, conforme espécie e infectologia',
+    instructions: 'Quando disponível e indicada. Ajustar obrigatoriamente à função renal e monitorar hemograma, função hepática e toxicidade; confirmar sensibilidade.', prescribedBy: ITU_PRESCRIBER
+  },
+  fluconazol_candiduria_pielo: {
+    medication: 'Fluconazol', dosage: '200–400 mg', frequency: 'VO ou EV uma vez ao dia', duration: '14 dias',
+    instructions: 'Pielonefrite por Candida sensível: internar, excluir fungemia/obstrução, ajustar à função renal e acionar infectologia/urologia.', prescribedBy: ITU_PRESCRIBER
   }
 }
 
