@@ -67,12 +67,17 @@ import {
   PneumoniaPsiFieldKey,
   PneumoniaPsiValues,
   buildPneumoniaPrescriptionItems,
+  buildPneumoniaHospitalConductText,
+  buildPneumoniaHospitalPrescriptionItems,
   calculatePneumoniaCurb65,
   calculatePneumoniaPsi,
   defaultCurbValues,
   defaultPsiValues,
   getPneumoniaSmartCopRisk,
-  hasPneumoniaPrescriptionSet
+  hasPneumoniaPrescriptionSet,
+  PNEUMONIA_HOSPITAL_PRESCRIBER,
+  PNEUMONIA_HOSPITAL_REGIMENS,
+  type PneumoniaHospitalRegimenId
 } from '@/lib/pneumonia'
 import { buildItuPrescriptionItems, ITU_PRESCRIBER } from '@/lib/itu'
 import {
@@ -2621,6 +2626,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
   const [asthmaDischargeCopied, setAsthmaDischargeCopied] = useState(false)
   const [asthmaMagnesiumCopied, setAsthmaMagnesiumCopied] = useState(false)
+  const [inlineConductCopied, setInlineConductCopied] = useState(false)
   const [influenzaSeveritySigns, setInfluenzaSeveritySigns] = useState<string[]>([])
   const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
   const [influenzaWorseningSigns, setInfluenzaWorseningSigns] = useState<string[]>([])
@@ -3519,7 +3525,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         .filter((item) => gecaPlanCInstabilityCriteria.includes(item.id))
         .map((item) => item.label)
     })
-    const newAnswers = {
+    const newAnswers: Record<string, string> = {
       ...answers,
       ...(updatedGecaReassessmentCount !== null
         ? { [GECA_REASSESSMENT_STATE_KEY]: JSON.stringify({ count: updatedGecaReassessmentCount, lastAssessmentAt: new Date().toISOString() }) }
@@ -4691,6 +4697,48 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isPneumoniaSmartCopStep = flowchart.id === 'pneumonia' && ['pac_smartcop_enfermaria', 'pac_smartcop_uti'].includes(currentStepData?.id || '')
   const isPneumoniaAmbulatoryConductStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_conduta_ambulatorial'
   const isPneumoniaWardDestinationStep = flowchart.id === 'pneumonia' && currentStepData?.id === 'pac_destino_enfermaria'
+  const selectedPneumoniaHospitalRegimens = (() => {
+    try {
+      const parsed = JSON.parse(answers.pac_hospital_regimens || '[]')
+      return Array.isArray(parsed) ? parsed.filter((id: unknown): id is PneumoniaHospitalRegimenId => typeof id === 'string' && id in PNEUMONIA_HOSPITAL_REGIMENS) : []
+    } catch {
+      return [] as PneumoniaHospitalRegimenId[]
+    }
+  })()
+  const selectPneumoniaHospitalRegimen = (id: PneumoniaHospitalRegimenId) => {
+    const isMrsa = id.startsWith('mrsa_')
+    const withoutSameGroup = selectedPneumoniaHospitalRegimens.filter((item) => isMrsa ? !item.startsWith('mrsa_') : item.startsWith('mrsa_'))
+    const selected = [...withoutSameGroup, id]
+    const updatedAnswers = { ...answers, pac_hospital_regimens: JSON.stringify(selected) }
+    setAnswers(updatedAnswers)
+    patientService.replacePrescriptionsByPrescriber(patient.id, PNEUMONIA_HOSPITAL_PRESCRIBER, buildPneumoniaHospitalPrescriptionItems(selected))
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, currentStepData?.group)
+  }
+  const copyPneumoniaHospitalConduct = async () => {
+    if (selectedPneumoniaHospitalRegimens.length === 0) return
+    await navigator.clipboard.writeText(buildPneumoniaHospitalConductText(selectedPneumoniaHospitalRegimens))
+    setInlineConductCopied(true)
+    window.setTimeout(() => setInlineConductCopied(false), 1800)
+  }
+  const isInlineCopyableConduct = Boolean(
+    currentStepData?.content && (
+      currentStepData.generatesPrescription ||
+      ['action', 'medication', 'procedure'].includes(currentStepData.type) ||
+      (flowchart.id === 'asthma' && /saba|ipratr|cortico|magnesio|resgate|alta|oxigenio|falencia/.test(currentStepData.id)) ||
+      /conduta|tratamento|terapia|antibi[oó]tico|hidrata[cç][aã]o|dose|prescri[cç][aã]o|manejo|estabiliza[cç][aã]o/i.test(`${currentStepData.title} ${currentStepData.description}`)
+    )
+  )
+  const copyInlineConduct = async () => {
+    if (!currentStepData?.content) return
+    const parser = new DOMParser()
+    const document = parser.parseFromString(currentStepData.content, 'text/html')
+    document.querySelectorAll('button, img, svg').forEach((element) => element.remove())
+    const body = (document.body.textContent || '').replace(/\s+/g, ' ').trim()
+    const text = [`CONDUTA — ${currentStepData.title}`, currentStepData.description, body].filter(Boolean).join('\n\n')
+    await navigator.clipboard.writeText(text)
+    setInlineConductCopied(true)
+    window.setTimeout(() => setInlineConductCopied(false), 1800)
+  }
   const isPneumoniaAmbulatoryPrescriptionStep = isPneumoniaAmbulatoryConductStep
   const currentRespiratoryVitalSigns = isTEPPhysicalExamStep
     ? tepVitalSigns
@@ -12175,6 +12223,18 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
+                  {isInlineCopyableConduct && (
+                    <div className="mt-3 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={copyInlineConduct}
+                        className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-slate-800"
+                      >
+                        {inlineConductCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}
+                        {inlineConductCopied ? 'Conduta copiada' : 'Copiar conduta'}
+                      </button>
+                    </div>
+                  )}
                   {(isGecaPlanBStep || isGecaPlanCStep) && (
                     <div className={clsx(
                       'mt-5 rounded-2xl border p-5 text-sm shadow-sm',
@@ -12390,7 +12450,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
 
               {isPneumoniaWardDestinationStep && (
                 <div className={clsx(
-                  'mb-6 rounded-2xl border p-5',
+                  'mb-6 space-y-5 rounded-2xl border p-5',
                   effectivePneumoniaDripScore >= 4
                     ? 'border-violet-300 bg-violet-50 text-violet-950'
                     : 'border-emerald-200 bg-emerald-50 text-emerald-950'
@@ -12415,6 +12475,42 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       DRIP {effectivePneumoniaDripScore}
                     </span>
                   </div>
+
+                  <section className="rounded-2xl border border-white/80 bg-white p-4 shadow-sm">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <h4 className="font-extrabold text-slate-950">Antibioticoterapia empírica inicial</h4>
+                        <p className="mt-1 text-sm text-slate-600">Selecione um esquema-base. Acrescente cobertura anti-MRSA somente quando houver fator específico. A escolha será registrada na evolução.</p>
+                      </div>
+                      <span className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-black text-slate-700">Ajustar à função renal</span>
+                    </div>
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {(effectivePneumoniaDripScore >= 4
+                        ? (['pseudomonas_piptazo', 'pseudomonas_cefepime', 'pseudomonas_meropenem'] as PneumoniaHospitalRegimenId[])
+                        : (['standard_ceftriaxone', 'standard_ampicillin'] as PneumoniaHospitalRegimenId[])
+                      ).map((id) => {
+                        const regimen = PNEUMONIA_HOSPITAL_REGIMENS[id]
+                        const selected = selectedPneumoniaHospitalRegimens.includes(id)
+                        return <button key={id} type="button" aria-pressed={selected} onClick={() => selectPneumoniaHospitalRegimen(id)} className={clsx('rounded-xl border-2 p-4 text-left transition-all', selected ? 'border-blue-600 bg-blue-50 ring-2 ring-blue-100' : 'border-slate-200 bg-white hover:border-blue-300')}><span className="block font-extrabold text-slate-950">{regimen.label}</span><span className="mt-2 block text-sm leading-relaxed text-slate-700">{regimen.summary}</span></button>
+                      })}
+                    </div>
+                    {effectivePneumoniaDripScore >= 4 && (
+                      <div className="mt-4">
+                        <p className="text-xs font-black uppercase tracking-wide text-slate-500">Cobertura adicional se risco específico de MRSA</p>
+                        <div className="mt-2 grid gap-3 md:grid-cols-2">
+                          {(['mrsa_vancomycin', 'mrsa_linezolid'] as PneumoniaHospitalRegimenId[]).map((id) => {
+                            const regimen = PNEUMONIA_HOSPITAL_REGIMENS[id]
+                            const selected = selectedPneumoniaHospitalRegimens.includes(id)
+                            return <button key={id} type="button" aria-pressed={selected} onClick={() => selectPneumoniaHospitalRegimen(id)} className={clsx('rounded-xl border-2 p-4 text-left transition-all', selected ? 'border-violet-600 bg-violet-50 ring-2 ring-violet-100' : 'border-slate-200 bg-white hover:border-violet-300')}><span className="block font-extrabold text-slate-950">{regimen.label}</span><span className="mt-2 block text-sm leading-relaxed text-slate-700">{regimen.summary}</span></button>
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="text-sm font-semibold text-slate-600">{selectedPneumoniaHospitalRegimens.length > 0 ? `${selectedPneumoniaHospitalRegimens.length} item(ns) registrado(s) no prontuário.` : 'Selecione o esquema antes de copiar a conduta.'}</p>
+                      <button type="button" disabled={selectedPneumoniaHospitalRegimens.length === 0} onClick={copyPneumoniaHospitalConduct} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300">{inlineConductCopied ? <ClipboardCheck className="h-4 w-4" /> : <Clipboard className="h-4 w-4" />}{inlineConductCopied ? 'Conduta copiada' : 'Copiar conduta'}</button>
+                    </div>
+                  </section>
                 </div>
               )}
 

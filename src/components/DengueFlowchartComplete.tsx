@@ -20,7 +20,8 @@ import {
   ArrowLeft,
   RotateCcw,
   FileText,
-  Info
+  Info,
+  Hospital
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { Patient } from '@/types/patient'
@@ -180,11 +181,22 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
     if (!raw) return null
     try { return JSON.parse(raw) as CareTransitionData } catch { return null }
   })
+  const [wardCareTransition, setWardCareTransition] = useState<CareTransitionData | null>(() => {
+    const raw = patient.flowchartState.answers?.__care_transition_dengue_enfermaria
+    if (!raw) return null
+    try { return JSON.parse(raw) as CareTransitionData } catch { return null }
+  })
   const persistCriticalCareTransition = (transition: CareTransitionData) => {
     const updatedAnswers = { ...answers, __care_transition_dengue_uti: JSON.stringify(transition) }
     setCriticalCareTransition(transition)
     setAnswers(updatedAnswers)
     onUpdate(patient.id, currentStep, history, updatedAnswers, progress, 'D')
+  }
+  const persistWardCareTransition = (transition: CareTransitionData) => {
+    const updatedAnswers = { ...answers, __care_transition_dengue_enfermaria: JSON.stringify(transition) }
+    setWardCareTransition(transition)
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, 'C')
   }
   const toggleDischargeCriterion = (criterion: string) => {
     const next = dischargeCriteria.includes(criterion)
@@ -3325,7 +3337,7 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
         </div>
       ),
       options: [
-        { text: criticalCareTransition?.transferConfirmed ? 'Manejo inicial até ingresso na UTI' : 'Confirme a transição assistencial para avançar', nextStep: 'treatment_d', value: 'continue', disabled: !criticalCareTransition?.transferConfirmed }
+        { text: !criticalCareTransition?.transferConfirmed ? 'Confirme a passagem para UTI' : !hasNotificationNumber ? 'Informe o número da notificação para finalizar' : 'Transferir o cuidado e finalizar atendimento', nextStep: 'end', value: 'transfer_to_icu', disabled: !criticalCareTransition?.transferConfirmed || !hasNotificationNumber }
       ]
     },
 
@@ -4331,14 +4343,35 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
           return [{ text: 'Ht em queda com instabilidade/sangramento — conduzir como Grupo D', nextStep: 'group_d_shock', value: 'possible_bleeding' }]
         }
         if (hemoconcentrationAssessment === 'fall_with_improvement') {
-          return [{ text: 'Resposta clínica e laboratorial — iniciar manutenção do Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down_improved' }]
+          return [{ text: 'Resposta clínica e laboratorial — internar e iniciar manutenção do Grupo C', nextStep: 'transfer_group_c', value: 'ht_down_improved' }]
         }
 
         return [
-          { text: 'Hematócrito em queda - Manter no Grupo C', nextStep: 'maintenance_c_phase1', value: 'ht_down' },
+          { text: 'Hematócrito em queda - internar no Grupo C', nextStep: 'transfer_group_c', value: 'ht_down' },
           { text: 'Hematócrito hemoconcentrado - Ir para Grupo D', nextStep: 'group_d_shock', value: 'ht_up' }
         ]
       })()
+    },
+
+    transfer_group_c: {
+      id: 'transfer_group_c',
+      title: 'Internação do Grupo C — passagem do cuidado',
+      description: 'Iniciar a manutenção no pronto-socorro e encerrar o atendimento após a transferência formal.',
+      type: 'action',
+      icon: <Hospital className="w-6 h-6" />,
+      color: 'bg-yellow-500',
+      content: (
+        <div className="space-y-5">
+          <div className="rounded-xl border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-950">
+            <strong>Conduta enquanto aguarda o leito:</strong> iniciar solução isotônica 25 mL/kg em 6 horas e deixar programada a etapa seguinte de 25 mL/kg em 8 horas, com sinais vitais, perfusão, diurese, balanço e hematócrito seriados. A equipe da emergência entrega o plano ativo; as reavaliações após a internação pertencem à equipe receptora.
+          </div>
+          {renderNotificationCard(true)}
+          <UniversalCareTransition destination="ward" context="dengue:grupo_c" value={wardCareTransition} onChange={persistWardCareTransition} onConfirmed={() => undefined} />
+        </div>
+      ),
+      options: [
+        { text: !wardCareTransition?.transferConfirmed ? 'Confirme a passagem para enfermaria' : !hasNotificationNumber ? 'Informe o número da notificação para finalizar' : 'Transferir o cuidado e finalizar atendimento', nextStep: 'end', value: 'transfer_to_ward', disabled: !wardCareTransition?.transferConfirmed || !hasNotificationNumber }
+      ]
     },
 
     maintenance_c_phase1: {

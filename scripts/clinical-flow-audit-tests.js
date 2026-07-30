@@ -359,7 +359,9 @@ for (const timeWindow of ['6_9h', '9_24h', 'mais_24h']) {
 }
 assert.match(avcComponentSource, /Confirmar janela e continuar/, 'AVC: janela temporal deve separar seleção e avanço para evitar travamento da transição')
 assert.doesNotMatch(avcComponentSource, /onClick=\{\(\) => nextFromWindow\(id\)\}/, 'AVC: cartão de horário ainda tenta selecionar e navegar no mesmo clique')
-assert.match(avcComponentSource, /requestedStage === 'avc_cuidados_sem_reperfusao' && isAVCTimeWindowBeyondSixHours/, 'AVC: ausência de trombectomia após 6 horas deve redirecionar diretamente para UTI')
+assert.doesNotMatch(avcComponentSource, /requestedStage === 'avc_cuidados_sem_reperfusao' && isAVCTimeWindowBeyondSixHours/, 'AVC: tempo acima de 6 horas não deve tornar UTI obrigatória em paciente estável')
+assert.match(avcComponentSource, /Estável: unidade de AVC\/enfermaria/, 'AVC: paciente estável sem reperfusão precisa de destino monitorizado fora da UTI')
+assert.match(avcComponentSource, /Há critério intensivo: solicitar UTI/, 'AVC: UTI deve permanecer disponível quando houver necessidade de cuidado intensivo')
 assert.match(avcComponentSource, /disabled={!pressureWithinThrombolysisLimit}/, 'AVC: confirmação da meta pressórica deve ser bloqueada pelo valor digitado')
 for (const marker of ['postThrombolysisBloodPressure', 'postThrombolysisBPManagement', 'PA acima da meta pós-trombólise', 'Plano terapêutico — apresentação acima de 24 horas']) {
   assert.match(avcComponentSource, new RegExp(marker), `AVC: orientação solicitada pelo revisor ausente (${marker})`)

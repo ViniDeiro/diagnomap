@@ -10,7 +10,9 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   Clock3,
+  Copy,
   Droplets,
   Heart,
   Hospital,
@@ -41,6 +43,11 @@ import {
   type AVCVesselTerritory
 } from '@/lib/avc'
 
+const ConductCopyButton = ({ text, label = 'Copiar conduta' }: { text: string; label?: string }) => {
+  const [copied, setCopied] = useState(false)
+  return <button type="button" onClick={async () => { await navigator.clipboard.writeText(text); setCopied(true); window.setTimeout(() => setCopied(false), 1800) }} className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm hover:bg-slate-800">{copied ? <ClipboardCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? 'Conduta copiada' : label}</button>
+}
+
 export const AVC_CASE_ANSWER_KEY = 'avc_caso_estruturado'
 
 export const AVC_STAGES = [
@@ -61,6 +68,7 @@ export const AVC_STAGES = [
   'avc_desfecho_trombectomia',
   'avc_transferencia_reperfusao',
   'avc_cuidados_sem_reperfusao',
+  'avc_aguardo_enfermaria',
   'avc_hemorragico_destino',
   'avc_aguardo_uti'
 ] as const
@@ -148,6 +156,7 @@ const stageMeta: Record<AVCStage, { title: string; subtitle: string; icon: React
   avc_desfecho_trombectomia: { title: 'Trombectomia indicada', subtitle: 'Acione transferência ou equipe neurointervencionista sem observar resposta à trombólise.', icon: <Hospital /> },
   avc_transferencia_reperfusao: { title: 'Transferência para centro de AVC', subtitle: 'A indisponibilidade local de imagem avançada ou terapia endovascular não deve encerrar a avaliação de reperfusão.', icon: <Hospital /> },
   avc_cuidados_sem_reperfusao: { title: 'Cuidados quando não há reperfusão imediata', subtitle: 'Mantenha suporte, prevenção de complicações e prevenção secundária individualizada.', icon: <CheckCircle2 /> },
+  avc_aguardo_enfermaria: { title: 'Transferência para unidade de AVC', subtitle: 'Paciente estável segue para unidade de AVC ou enfermaria monitorizada, com passagem formal do cuidado.', icon: <Hospital /> },
   avc_hemorragico_destino: { title: 'Hemorragia intracraniana identificada', subtitle: 'Interrompa o caminho de AVC isquêmico e acione protocolo neurocrítico.', icon: <AlertTriangle /> },
   avc_aguardo_uti: { title: 'Aguardar leito de UTI', subtitle: 'O AVC confirmado permanece sob vigilância contínua até a transferência para cuidado intensivo/neurocrítico.', icon: <Hospital /> }
 }
@@ -334,10 +343,13 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(() => Boolean(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).completedAt))
   const [careTransition, setCareTransition] = useState<CareTransitionData | null>(() => {
-    try { return initialAnswers.__care_transition_avc_aguardo_uti ? JSON.parse(initialAnswers.__care_transition_avc_aguardo_uti) : null } catch { return null }
+    const transitionKey = safeInitialStage === 'avc_aguardo_enfermaria'
+      ? '__care_transition_avc_aguardo_enfermaria'
+      : '__care_transition_avc_aguardo_uti'
+    try { return initialAnswers[transitionKey] ? JSON.parse(initialAnswers[transitionKey]) : null } catch { return null }
   })
 
-  const isFinalStage = stage === 'avc_aguardo_uti' || stage === 'avc_transferencia_reperfusao'
+  const isFinalStage = stage === 'avc_aguardo_uti' || stage === 'avc_aguardo_enfermaria' || stage === 'avc_transferencia_reperfusao'
   const progress = isFinalStage ? 100 : Math.max(4, Math.round(((AVC_STAGES.indexOf(stage) + 1) / AVC_STAGES.length) * 100))
   const currentMeta = stageMeta[stage]
   const hasAbsoluteContraindication = (data.thrombolysisContraindications || []).some(value => value.startsWith('abs_'))
@@ -358,16 +370,8 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
   const update = (patch: Partial<AVCCaseData>) => setData(previous => ({ ...previous, ...patch }))
   const persist = (requestedStage: AVCStage, patch: Partial<AVCCaseData> = {}) => {
-    const effectiveTimeWindow = patch.timeWindow ?? data.timeWindow
-    const requiresDirectIcu = requestedStage === 'avc_cuidados_sem_reperfusao' && isAVCTimeWindowBeyondSixHours(effectiveTimeWindow)
-    const nextStage: AVCStage = requiresDirectIcu ? 'avc_aguardo_uti' : requestedStage
-    const resolvedPatch: Partial<AVCCaseData> = requiresDirectIcu
-      ? {
-          ...patch,
-          outcome: 'AVC com mais de 6 horas, sem trombectomia indicada ou realizada; encaminhamento imediato para UTI.',
-          utiRequestedAt: data.utiRequestedAt || new Date().toISOString()
-        }
-      : patch
+    const nextStage = requestedStage
+    const resolvedPatch = patch
     const nextData = { ...data, ...resolvedPatch, updatedAt: new Date().toISOString() }
     const nextHistory = [...history, stage]
     const nextAnswers = {
@@ -417,7 +421,10 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   }
   const finalizeCase = (outcome: string, confirmedTransition?: CareTransitionData) => {
     const finalData = { ...data, outcome, completedAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
-    const nextAnswers = { ...answers, ...(confirmedTransition ? { __care_transition_avc_aguardo_uti: JSON.stringify(confirmedTransition) } : {}), [AVC_CASE_ANSWER_KEY]: JSON.stringify(finalData) }
+    const transitionKey = stage === 'avc_aguardo_enfermaria'
+      ? '__care_transition_avc_aguardo_enfermaria'
+      : '__care_transition_avc_aguardo_uti'
+    const nextAnswers = { ...answers, ...(confirmedTransition ? { [transitionKey]: JSON.stringify(confirmedTransition) } : {}), [AVC_CASE_ANSWER_KEY]: JSON.stringify(finalData) }
     setData(finalData)
     setAnswers(nextAnswers)
     onUpdate(patient.id, stage, [...history, stage], nextAnswers, 100, 'AVC')
@@ -436,7 +443,8 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     utiRequestedAt: data.utiRequestedAt || new Date().toISOString()
   })
   const persistCareTransition = (transition: CareTransitionData) => {
-    const nextAnswers = { ...answers, __care_transition_avc_aguardo_uti: JSON.stringify(transition) }
+    const transitionKey = stage === 'avc_aguardo_enfermaria' ? '__care_transition_avc_aguardo_enfermaria' : '__care_transition_avc_aguardo_uti'
+    const nextAnswers = { ...answers, [transitionKey]: JSON.stringify(transition) }
     setCareTransition(transition)
     setAnswers(nextAnswers)
     onUpdate(patient.id, stage, history, nextAnswers, progress, 'AVC')
@@ -472,7 +480,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
     if (windowValue === 'ate_45h') persist('avc_trombolise_seguranca', { timeWindow: windowValue })
     else if (windowValue === '45_6h' || windowValue === 'desconhecida') persist('avc_imagem_avancada', { timeWindow: windowValue })
     else if (windowValue === '6_9h' || windowValue === '9_24h') persist('avc_vaso', { timeWindow: windowValue })
-    else proceedToIcu('AVC com mais de 24 horas, fora da janela rotineira de reperfusão; encaminhamento para UTI e manejo especializado.', { timeWindow: windowValue })
+    else persist('avc_cuidados_sem_reperfusao', { timeWindow: windowValue })
   }
 
   return (
@@ -681,7 +689,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           {stage === 'avc_janela' && (
             <div className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">{([['ate_45h','Até 4 horas e 30 minutos','Avaliar trombólise IV e, em paralelo, oclusão de grande vaso.'],['45_6h','Entre 4 horas e 30 minutos e 6 horas','Imagem avançada pode selecionar trombólise; grande vaso ainda está na janela precoce da trombectomia.'],['6_9h','Entre 6 e 9 horas','Pesquisar oclusão tratável e selecionar trombectomia; sem indicação, encaminhar diretamente para UTI.'],['9_24h','Entre 9 e 24 horas','Manter o caminho de reperfusão apenas para candidato selecionado à trombectomia; caso contrário, UTI.'],['mais_24h','Mais de 24 horas','Fora da janela rotineira de reperfusão: encaminhar diretamente para UTI e manejo especializado.'],['desconhecida','Horário desconhecido ou wake-up stroke','Usar protocolo de imagem avançada quando disponível.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.timeWindow === id} title={title} description={description} danger={id === 'mais_24h'} onClick={() => update({ timeWindow: id, advancedImaging: undefined, vesselTerritory: undefined, aspects: undefined, pcAspects: undefined, thrombectomyRecommendation: undefined })} />)}</div>
-              {isAVCTimeWindowBeyondSixHours(data.timeWindow) && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950"><strong>Regra de destino:</strong> acima de 6 horas, somente a indicação de trombectomia mantém o percurso de reperfusão. Se ela não for indicada ou realizada, o fluxo solicitará UTI sem exigir etapas intermediárias.</div>}
+              {isAVCTimeWindowBeyondSixHours(data.timeWindow) && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950"><strong>Regra de destino:</strong> acima de 6 horas, a reperfusão depende de seleção para trombectomia. Sem indicação ou sem recurso, acione transferência quando houver candidato; nos demais casos, defina unidade de AVC/enfermaria monitorizada ou UTI conforme estabilidade e necessidade de suporte intensivo.</div>}
               <button type="button" disabled={!data.timeWindow} onClick={() => nextFromWindow(data.timeWindow)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Confirmar janela e continuar <ChevronRight /></button>
             </div>
           )}
@@ -727,14 +735,14 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
                 />
               </div>
               {data.currentBloodPressure && !parsedCurrentBloodPressure && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-950">Informe a pressão no formato sistólica/diastólica, por exemplo: 170/100.</div>}
-              {parsedCurrentBloodPressure && !pressureWithinThrombolysisLimit && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-950">PA acima do limite para trombólise IV. A confirmação ficará bloqueada até nova aferição documentar valor ≤185/110 mmHg.</div>}
+              {parsedCurrentBloodPressure && !pressureWithinThrombolysisLimit && <div className="space-y-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"><p className="font-semibold">PA acima do limite para trombólise IV. A confirmação ficará bloqueada até nova aferição documentar valor ≤185/110 mmHg.</p><div className="rounded-xl border border-red-200 bg-white p-4"><p className="font-black">Opções EV tituláveis conforme disponibilidade e protocolo</p><ul className="mt-2 list-disc space-y-1 pl-5"><li><strong>Labetalol:</strong> 10–20 mg EV em 1–2 minutos; pode repetir uma vez e considerar infusão titulada.</li><li><strong>Nicardipina:</strong> iniciar 5 mg/h EV e elevar 2,5 mg/h a cada 5–15 minutos, máximo 15 mg/h.</li><li><strong>Clevidipina:</strong> iniciar 1–2 mg/h EV e titular rapidamente, máximo 21 mg/h.</li><li><strong>Alternativa institucional:</strong> hidralazina ou outro agente pode ser empregado quando os preferenciais não estiverem disponíveis, com monitorização contínua. Nitroprussiato não é primeira escolha rotineira por potencial aumento da pressão intracraniana.</li></ul></div><div className="flex justify-end"><ConductCopyButton text={`CONDUTA — PA ACIMA DO LIMITE PARA TROMBÓLISE IV\nPA registrada: ${data.currentBloodPressure}. Meta antes da trombólise: ≤185/110 mmHg.\nOpções conforme disponibilidade: labetalol 10–20 mg EV em 1–2 min, podendo repetir uma vez; ou nicardipina 5 mg/h EV, elevar 2,5 mg/h a cada 5–15 min até 15 mg/h; ou clevidipina 1–2 mg/h EV, titulada até 21 mg/h.\nReaferir pressão, evitar queda abrupta e somente liberar trombólise após documentar valor dentro da meta.`} /></div></div>}
               {thrombolysisBlocked && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-semibold text-red-950">A trombólise IV não está liberada pelos dados registrados. Isso não encerra a avaliação para trombectomia.</div>}
               <div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={thrombolysisBlocked} onClick={() => persist('avc_trombolitico')} className="rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Elegível: escolher trombolítico</button><button type="button" onClick={() => persist('avc_vaso')} className="rounded-xl border border-indigo-300 bg-indigo-50 px-5 py-4 font-extrabold text-indigo-900">Sem trombólise IV: avaliar trombectomia</button></div>
             </div>
           )}
 
           {stage === 'avc_trombolitico' && (
-            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2"><CardOption selected={data.thrombolytic === 'tenecteplase'} title="Tenecteplase" description="0,25 mg/kg, máximo de 25 mg, administrada em bolus único." onClick={() => update({ thrombolytic: 'tenecteplase' })} /><CardOption selected={data.thrombolytic === 'alteplase'} title="Alteplase" description="0,9 mg/kg, máximo de 90 mg: 10% em bolus e o restante em uma hora." onClick={() => update({ thrombolytic: 'alteplase' })} /></div><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-900">Peso confirmado (kg)<input type="number" min="3" max="300" step="0.1" value={data.weight ?? ''} onChange={event => update({ weight: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label>{lyticDose && <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-emerald-700">Cálculo para conferência</p><p className="mt-2 text-lg font-black text-emerald-950">{lyticDose}</p><p className="mt-2 text-sm text-emerald-800">Confirmar peso, apresentação disponível, pressão e dupla checagem institucional antes da administração.</p></div>}<button type="button" disabled={!data.thrombolytic || !lyticDose} onClick={() => persist('avc_pos_trombolise', { thrombolyticDose: lyticDose, receivedThrombolysis: true })} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar trombólise e iniciar vigilância <ChevronRight /></button></div>
+            <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2"><CardOption selected={data.thrombolytic === 'tenecteplase'} title="Tenecteplase" description="0,25 mg/kg, máximo de 25 mg, administrada em bolus único." onClick={() => update({ thrombolytic: 'tenecteplase' })} /><CardOption selected={data.thrombolytic === 'alteplase'} title="Alteplase" description="0,9 mg/kg, máximo de 90 mg: 10% em bolus e o restante em uma hora." onClick={() => update({ thrombolytic: 'alteplase' })} /></div><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm font-black text-slate-900">Peso confirmado (kg)<input type="number" min="3" max="300" step="0.1" value={data.weight ?? ''} onChange={event => update({ weight: event.target.value === '' ? undefined : Number(event.target.value) })} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label>{lyticDose && <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5"><p className="text-xs font-black uppercase tracking-wider text-emerald-700">Cálculo para conferência</p><p className="mt-2 text-lg font-black text-emerald-950">{lyticDose}</p><p className="mt-2 text-sm text-emerald-800">Confirmar peso, apresentação disponível, pressão e dupla checagem institucional antes da administração.</p><div className="mt-4 flex justify-end"><ConductCopyButton text={`CONDUTA — TROMBÓLISE INTRAVENOSA\n${lyticDose}\nConfirmar peso, pressão ≤185/110 mmHg, contraindicações e dupla checagem antes da administração.`} /></div></div>}<button type="button" disabled={!data.thrombolytic || !lyticDose} onClick={() => persist('avc_pos_trombolise', { thrombolyticDose: lyticDose, receivedThrombolysis: true })} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar trombólise e iniciar vigilância <ChevronRight /></button></div>
           )}
 
           {stage === 'avc_pos_trombolise' && (
@@ -744,18 +752,18 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
                 <label className="text-sm font-black text-slate-950">Pressão arterial atual após reperfusão<input value={data.postThrombolysisBloodPressure || ''} onChange={event => update({ postThrombolysisBloodPressure: event.target.value })} placeholder="Ex.: 175/100" className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-lg" /></label>
                 {data.postThrombolysisBloodPressure && !parsedPostThrombolysisBloodPressure && <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-950">Informe no formato sistólica/diastólica, por exemplo: 175/100.</p>}
                 {parsedPostThrombolysisBloodPressure && !postThrombolysisPressureAboveTarget && <p className="mt-3 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-semibold text-emerald-950">PA dentro da meta pós-reperfusão. Manter vigilância seriada.</p>}
-                {postThrombolysisPressureAboveTarget && <div className="mt-4 space-y-4"><div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"><strong>PA acima da meta pós-trombólise.</strong> Iniciar controle EV titulável conforme protocolo e disponibilidade, sem redução abrupta. O manejo não deve atrasar avaliação de grande vaso.</div><div className="grid gap-3 md:grid-cols-2">{postThrombolysisBPOptions.map(([id,title,description]) => <CardOption key={id} selected={(data.postThrombolysisBPManagement || []).includes(id)} title={title} description={description} danger={id === 'monitoring'} onClick={() => selectMany('postThrombolysisBPManagement', id)} />)}</div></div>}
+                {postThrombolysisPressureAboveTarget && <div className="mt-4 space-y-4"><div className="rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-950"><strong>PA acima da meta pós-trombólise.</strong> Iniciar controle EV titulável conforme protocolo e disponibilidade, sem redução abrupta. O manejo não deve atrasar avaliação de grande vaso.</div><div className="grid gap-3 md:grid-cols-2">{postThrombolysisBPOptions.map(([id,title,description]) => <CardOption key={id} selected={(data.postThrombolysisBPManagement || []).includes(id)} title={title} description={description} danger={id === 'monitoring'} onClick={() => selectMany('postThrombolysisBPManagement', id)} />)}</div>{(data.postThrombolysisBPManagement || []).length > 0 && <div className="flex justify-end"><ConductCopyButton text={['CONDUTA — CONTROLE PRESSÓRICO APÓS TROMBÓLISE', `PA registrada: ${data.postThrombolysisBloodPressure}. Meta: manter abaixo de 180/105 mmHg nas primeiras 24 horas, sem buscar PAS abaixo de 140 mmHg.`, ...postThrombolysisBPOptions.filter(([id]) => (data.postThrombolysisBPManagement || []).includes(id)).map(([, title, description]) => `${title}: ${description}`), 'Monitorizar resposta e registrar fármaco, dose, horários e eventos adversos.'].join('\n')} /></div>}</div>}
               </section>
               <h2 className="font-black text-slate-950">Há sinal de complicação?</h2><div className="grid gap-3 md:grid-cols-2">{postLysisAlerts.map(([id,label]) => <CardOption key={id} selected={(data.postThrombolysisAlerts || []).includes(id)} title={label} danger onClick={() => selectMany('postThrombolysisAlerts', id)} />)}</div><div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={(data.postThrombolysisAlerts || []).length === 0} onClick={() => persist('avc_complicacao_trombolise')} className="rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Investigar complicação imediatamente</button><button type="button" onClick={() => persist('avc_vaso')} className="rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Seguir em paralelo: avaliar grande vaso</button></div>
             </div>
           )}
 
           {stage === 'avc_complicacao_trombolise' && (
-            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Ação imediata</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Interromper a infusão do trombolítico, quando ainda estiver em curso.</li><li>Repetir TC de crânio e colher hemograma, coagulação e fibrinogênio.</li><li>Se houver transformação hemorrágica, discutir reversão com hemoterapia, neurologia e neurocirurgia.</li><li>No angioedema orolingual, priorizar avaliação e proteção da via aérea.</li></ul></div><button type="button" onClick={() => proceedToIcu('Complicação após trombólise - manejo neurocrítico imediato')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar intercorrência e solicitar UTI</button></div>
+            <div className="space-y-5"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="text-xl font-black">Ação imediata</h2><ul className="mt-3 list-disc space-y-2 pl-5 text-sm"><li>Interromper a infusão do trombolítico, quando ainda estiver em curso.</li><li>Repetir TC de crânio e colher hemograma, coagulação e fibrinogênio.</li><li>Se houver transformação hemorrágica, discutir reversão com hemoterapia, neurologia e neurocirurgia.</li><li>No angioedema orolingual, priorizar avaliação e proteção da via aérea.</li></ul><div className="mt-4 flex justify-end"><ConductCopyButton text="CONDUTA — POSSÍVEL COMPLICAÇÃO DA TROMBÓLISE\nInterromper a infusão quando ainda estiver em curso. Solicitar TC de crânio urgente, hemograma, coagulograma e fibrinogênio. Acionar neurologia, hemoterapia e neurocirurgia conforme o achado; diante de angioedema, priorizar proteção da via aérea." /></div></div><button type="button" onClick={() => proceedToIcu('Complicação após trombólise - manejo neurocrítico imediato')} className="w-full rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white">Registrar intercorrência e solicitar UTI</button></div>
           )}
 
           {stage === 'avc_vaso' && (
-            <div className="grid gap-3 md:grid-cols-2">{([['grande_anterior','Grande vaso da circulação anterior','Carótida interna ou segmento proximal da cerebral média.'],['m2_dominante','Ramo M2 dominante','Oclusão de médio vaso com território funcional relevante.'],['medio_distal','Médio vaso distal ou não dominante','Evidência de benefício rotineiro é insuficiente no protocolo.'],['basilar','Artéria basilar','Aplicar PC-ASPECTS, NIHSS e funcionalidade prévia.'],['sem_ogv','Sem oclusão tratável de grande vaso','Seguir cuidados clínicos e prevenção secundária.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.vesselTerritory === id} title={title} description={description} danger={id === 'medio_distal'} onClick={() => id === 'sem_ogv' ? persist('avc_cuidados_sem_reperfusao', { vesselTerritory: id }) : update({ vesselTerritory: id })} />)}{data.vesselTerritory && data.vesselTerritory !== 'sem_ogv' && <button type="button" onClick={() => persist('avc_trombectomia_criterios')} className="md:col-span-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Aplicar critérios de trombectomia <ChevronRight /></button>}</div>
+            <div className="grid gap-3 md:grid-cols-2">{([['grande_anterior','Grande vaso da circulação anterior','Carótida interna ou segmento proximal da cerebral média.'],['m2_dominante','Ramo M2 dominante','Oclusão de médio vaso com território funcional relevante.'],['medio_distal','Médio vaso distal ou não dominante','Evidência de benefício rotineiro é insuficiente no protocolo.'],['basilar','Artéria basilar','Aplicar PC-ASPECTS, NIHSS e funcionalidade prévia.'],['sem_ogv','Sem oclusão tratável de grande vaso','Seguir cuidados clínicos e prevenção secundária.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.vesselTerritory === id} title={title} description={description} danger={id === 'medio_distal'} onClick={() => id === 'sem_ogv' ? persist('avc_cuidados_sem_reperfusao', { vesselTerritory: id }) : update({ vesselTerritory: id })} />)}<CardOption selected={false} title="Angioimagem indisponível neste serviço" description="Não interpretar a ausência do recurso como ausência de oclusão. Acionar neurologia/regulação e transferir para centro com capacidade vascular/endovascular quando a janela e o quadro mantiverem possibilidade de benefício." danger onClick={() => persist('avc_transferencia_reperfusao', { advancedImaging: 'indisponivel_transferir', vesselTerritory: undefined })} />{data.vesselTerritory && data.vesselTerritory !== 'sem_ogv' && <button type="button" onClick={() => persist('avc_trombectomia_criterios')} className="md:col-span-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Aplicar critérios de trombectomia <ChevronRight /></button>}</div>
           )}
 
           {stage === 'avc_trombectomia_criterios' && (
@@ -778,7 +786,16 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
               {data.timeWindow === 'mais_24h' && <div className="rounded-2xl border border-indigo-300 bg-indigo-50 p-5 text-sm text-indigo-950"><h2 className="text-lg font-black">Plano terapêutico — apresentação acima de 24 horas</h2><p className="mt-2">O tempo afasta reperfusão rotineira pelo caminho atual, mas não encerra o cuidado do AVC. Registre suporte, estratégia antitrombótica individualizada, investigação etiológica, prevenção secundária e reabilitação. Reavalie imagem vascular ou transferência se houver dúvida sobre o horário real ou situação excepcional.</p></div>}
               <div className="grid gap-3 md:grid-cols-2">{supportiveOptions.map(([id,label,description]) => <CardOption key={id} selected={(data.supportiveCare || []).includes(id)} title={label} description={description} onClick={() => selectMany('supportiveCare', id)} />)}</div>
               {data.timeWindow === 'mais_24h' && <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950"><strong>Pressão sem reperfusão:</strong> não aplicar automaticamente a meta pós-trombólise. Na ausência de outra emergência hipertensiva, evitar redução precoce excessiva e individualizar a intervenção conforme nível pressórico, perfusão e comorbidades.</div>}
-              {data.receivedThrombolysis && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-950">Como houve trombólise, antiagregantes e anticoagulantes somente após 24 horas e imagem de controle sem sangramento.</div>}<button type="button" disabled={(data.supportiveCare || []).length < 4} onClick={() => proceedToIcu(data.receivedThrombolysis ? 'Cuidados pós-trombólise sem trombectomia indicada' : data.timeWindow === 'mais_24h' ? 'AVC acima de 24 horas - manejo clínico e prevenção secundária' : 'Manejo clínico sem reperfusão imediata')} className="w-full rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Registrar plano e solicitar UTI</button>
+              {data.receivedThrombolysis && <div className="rounded-2xl border border-red-300 bg-red-50 p-4 text-sm font-bold text-red-950">Como houve trombólise, antiagregantes e anticoagulantes somente após 24 horas e imagem de controle sem sangramento.</div>}
+              <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Destino após o pronto-socorro:</strong> unidade de AVC/enfermaria monitorizada é apropriada para paciente estável sem necessidade intensiva. UTI ou unidade neurocrítica fica reservada para instabilidade, deterioração neurológica, suporte ventilatório/hemodinâmico, edema cerebral, complicação ou monitorização intensiva pós-reperfusão.</div>
+              {(data.supportiveCare || []).length > 0 && <div className="flex justify-end"><ConductCopyButton text={['CONDUTA — AVC SEM REPERFUSÃO IMEDIATA', ...supportiveOptions.filter(([id]) => (data.supportiveCare || []).includes(id)).map(([, label, description]) => `${label}: ${description}`), data.receivedThrombolysis ? 'Após trombólise, não iniciar antiagregante ou anticoagulante antes de 24 horas e da imagem de controle sem sangramento.' : 'Definir antitrombótico após excluir hemorragia e conforme mecanismo clínico.'].join('\n')} /></div>}
+              <div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={(data.supportiveCare || []).length < 4} onClick={() => persist('avc_aguardo_enfermaria', { outcome: data.timeWindow === 'mais_24h' ? 'AVC acima de 24 horas - manejo clínico e transferência para unidade de AVC' : 'AVC sem reperfusão imediata - transferência para unidade de AVC' })} className="rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Estável: unidade de AVC/enfermaria</button><button type="button" disabled={(data.supportiveCare || []).length < 4} onClick={() => proceedToIcu(data.receivedThrombolysis ? 'Cuidados pós-trombólise com necessidade de vigilância intensiva' : 'AVC com critério clínico de cuidado intensivo')} className="rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Há critério intensivo: solicitar UTI</button></div>
+            </div>
+          )}
+
+          {stage === 'avc_aguardo_enfermaria' && (
+            <div className="space-y-6">
+              <UniversalCareTransition destination="ward" context="avc:unidade_avc" value={careTransition} onChange={persistCareTransition} onConfirmed={(transition) => finishWithTransition(data.outcome || 'AVC estável transferido para unidade de AVC/enfermaria monitorizada', transition)} />
             </div>
           )}
 

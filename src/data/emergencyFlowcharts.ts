@@ -44,7 +44,7 @@ export const avcFlowchart: EmergencyFlowchart = {
   icon: 'brain',
   color: 'from-purple-600 to-purple-800',
   initialStep: 'avc_ativacao',
-  finalSteps: ['avc_aguardo_uti', 'avc_transferencia_reperfusao'],
+  finalSteps: ['avc_aguardo_uti', 'avc_aguardo_enfermaria', 'avc_transferencia_reperfusao'],
   steps: {
     avc_ativacao: {
       id: 'avc_ativacao', title: 'Ativação do protocolo de AVC', description: 'Registrar déficits, último momento bem e medidas paralelas.', type: 'question', critical: true, timeSensitive: true,
@@ -135,7 +135,13 @@ export const avcFlowchart: EmergencyFlowchart = {
     },
     avc_cuidados_sem_reperfusao: {
       id: 'avc_cuidados_sem_reperfusao', title: 'Cuidados clínicos e prevenção secundária', description: 'Aplicar suporte e prevenção de complicações conforme reperfusão realizada.', type: 'result',
-      options: [{ text: 'Solicitar cuidado intensivo', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }]
+      options: [
+        { text: 'Paciente estável: unidade de AVC ou enfermaria monitorizada', nextStep: 'avc_aguardo_enfermaria', value: 'enfermaria' },
+        { text: 'Há critério intensivo: solicitar UTI', nextStep: 'avc_aguardo_uti', value: 'uti', critical: true }
+      ]
+    },
+    avc_aguardo_enfermaria: {
+      id: 'avc_aguardo_enfermaria', title: 'Aguardando unidade de AVC', description: 'Manter tratamento e vigilância até a transferência formal para unidade de AVC ou enfermaria monitorizada.', type: 'result', options: []
     },
     avc_hemorragico_destino: {
       id: 'avc_hemorragico_destino', title: 'Hemorragia intracraniana', description: 'Migrar imediatamente para protocolo neurocrítico específico.', type: 'result', critical: true, requiresSpecialist: true,
@@ -1847,7 +1853,11 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA/ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p><strong>Prioridades:</strong> manter SABA em dose intensiva, ipratrópio, corticoide sistêmico, oxigênio titulado e magnésio EV quando indicado.</p>
+            <p><strong>Salbutamol:</strong> 4–10 jatos de 100 mcg com espaçador a cada 20 minutos na primeira hora; em nebulização, 2,5–5 mg em 4 mL de SF 0,9%, repetindo a cada 20 minutos ou de forma contínua conforme gravidade e protocolo.</p>
+            <p><strong>Ipratrópio:</strong> 4–8 jatos de 20 mcg a cada 20 minutos por 3 doses ou 0,5 mg por nebulização a cada 20 minutos por 3 doses.</p>
+            <p><strong>Corticoide sistêmico:</strong> prednisona/prednisolona 40–50 mg VO ao dia por 5–7 dias; se a via oral não for possível, usar equivalente EV, como metilprednisolona 40–80 mg/dia, ajustado ao protocolo.</p>
+            <p><strong>Oxigênio:</strong> titular para SatO2 de 93–95% no adulto.</p>
+            <p><strong>Magnésio:</strong> 2 g EV em 20 minutos quando houver crise grave com resposta inadequada; usar o preparo detalhado na próxima etapa.</p>
             <p>Aminofilina, heliox e ventilação não invasiva não compõem uma sequência automática de resgate. O foco é reconhecer rapidamente a necessidade de UTI e de via aérea avançada.</p>
           </div>
         </div>
@@ -1863,9 +1873,13 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Primeira terapia adjuvante após má resposta ao tratamento inicial.',
       type: 'question',
       content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Sulfato de Magnésio IV:</strong> 2 g EV em 15-20 min, se ainda não realizado, para crise grave com resposta inadequada ao tratamento inicial.</p>
-          <p>Monitorar FC, PA e reflexos; efeitos adversos: rubor, hipotensao leve e bradicardia.</p>
+        <div class="space-y-3 bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+          <p><strong>Sulfato de magnésio:</strong> 2 g EV, dose única, infundidos em aproximadamente 20 minutos, se ainda não administrado.</p>
+          <div class="rounded-lg border border-amber-200 bg-white p-3">
+            <p><strong>Apresentação 10% (100 mg/mL):</strong> aspirar 20 mL (2 g) e acrescentar 80 mL de SF 0,9%, volume final de 100 mL.</p>
+            <p class="mt-2"><strong>Apresentação 50% (500 mg/mL):</strong> aspirar 4 mL (2 g) e acrescentar 96 mL de SF 0,9%, volume final de 100 mL.</p>
+          </div>
+          <p><strong>Segurança:</strong> confirmar a concentração da ampola, função renal e monitorizar PA, FC, frequência respiratória e reflexos.</p>
         </div>
       `,
       options: [

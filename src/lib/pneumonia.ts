@@ -2,6 +2,82 @@ import type { Patient, Prescription } from '@/types/patient'
 
 type PrescriptionDraft = Omit<Prescription, 'id' | 'prescribedAt'>
 
+export const PNEUMONIA_HOSPITAL_PRESCRIBER = 'Fluxograma Pneumonia - internação'
+
+export const PNEUMONIA_HOSPITAL_REGIMENS = {
+  standard_ceftriaxone: {
+    label: 'Ceftriaxona + azitromicina',
+    summary: 'Ceftriaxona 1–2 g EV a cada 24 h + azitromicina 500 mg EV/VO a cada 24 h.',
+    items: [
+      ['Ceftriaxona', '1–2 g', 'EV a cada 24 horas'],
+      ['Azitromicina', '500 mg', 'EV ou VO a cada 24 horas']
+    ]
+  },
+  standard_ampicillin: {
+    label: 'Ampicilina-sulbactam + azitromicina',
+    summary: 'Ampicilina-sulbactam 1,5–3 g EV a cada 6 h + azitromicina 500 mg EV/VO a cada 24 h.',
+    items: [
+      ['Ampicilina-sulbactam', '1,5–3 g', 'EV a cada 6 horas'],
+      ['Azitromicina', '500 mg', 'EV ou VO a cada 24 horas']
+    ]
+  },
+  pseudomonas_piptazo: {
+    label: 'Piperacilina-tazobactam + azitromicina',
+    summary: 'Piperacilina-tazobactam 4,5 g EV a cada 6 h + azitromicina 500 mg EV/VO a cada 24 h.',
+    items: [
+      ['Piperacilina-tazobactam', '4,5 g', 'EV a cada 6 horas'],
+      ['Azitromicina', '500 mg', 'EV ou VO a cada 24 horas']
+    ]
+  },
+  pseudomonas_cefepime: {
+    label: 'Cefepime + azitromicina',
+    summary: 'Cefepime 2 g EV a cada 8 h + azitromicina 500 mg EV/VO a cada 24 h.',
+    items: [
+      ['Cefepime', '2 g', 'EV a cada 8 horas'],
+      ['Azitromicina', '500 mg', 'EV ou VO a cada 24 horas']
+    ]
+  },
+  pseudomonas_meropenem: {
+    label: 'Meropenem + azitromicina',
+    summary: 'Meropenem 1 g EV a cada 8 h + azitromicina 500 mg EV/VO a cada 24 h; reservar carbapenêmico para risco documentado de ESBL/MDR.',
+    items: [
+      ['Meropenem', '1 g', 'EV a cada 8 horas'],
+      ['Azitromicina', '500 mg', 'EV ou VO a cada 24 horas']
+    ]
+  },
+  mrsa_vancomycin: {
+    label: 'Cobertura adicional para MRSA: vancomicina',
+    summary: 'Vancomicina 15 mg/kg EV a cada 12 h, com ajuste por função renal e monitorização farmacocinética institucional.',
+    items: [['Vancomicina', '15 mg/kg', 'EV a cada 12 horas']]
+  },
+  mrsa_linezolid: {
+    label: 'Cobertura adicional para MRSA: linezolida',
+    summary: 'Linezolida 600 mg EV/VO a cada 12 h.',
+    items: [['Linezolida', '600 mg', 'EV ou VO a cada 12 horas']]
+  }
+} as const
+
+export type PneumoniaHospitalRegimenId = keyof typeof PNEUMONIA_HOSPITAL_REGIMENS
+
+export const buildPneumoniaHospitalPrescriptionItems = (ids: PneumoniaHospitalRegimenId[]): PrescriptionDraft[] =>
+  ids.flatMap((id) => PNEUMONIA_HOSPITAL_REGIMENS[id].items.map(([medication, dosage, frequency]) => ({
+    medication,
+    dosage,
+    frequency,
+    duration: 'Reavaliar diariamente e ajustar após culturas e evolução clínica',
+    instructions: 'Confirmar alergias, função renal/hepática, interações, culturas prévias e antibiograma local. Descalonar assim que possível.',
+    prescribedBy: PNEUMONIA_HOSPITAL_PRESCRIBER
+  })))
+
+export const buildPneumoniaHospitalConductText = (ids: PneumoniaHospitalRegimenId[]) => {
+  const selected = ids.map((id) => PNEUMONIA_HOSPITAL_REGIMENS[id].summary)
+  return [
+    'CONDUTA — PAC COM INDICAÇÃO DE INTERNAÇÃO',
+    ...selected.map((item, index) => `${index + 1}. ${item}`),
+    'Colher culturas quando indicadas sem atrasar a primeira dose. Confirmar alergias, função renal/hepática, interações, culturas prévias e epidemiologia local. Reavaliar diariamente e descalonar conforme microbiologia e resposta clínica.'
+  ].join('\n')
+}
+
 export type PneumoniaPsiFieldKey =
   | 'idade'
   | 'residenteCasaRepouso'

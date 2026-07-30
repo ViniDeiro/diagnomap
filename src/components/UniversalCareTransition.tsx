@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Activity, AlertTriangle, CheckCircle2, Clock3, Hospital, ShieldCheck, Stethoscope, TestTube2 } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, ClipboardCheck, Clock3, Copy, Hospital, ShieldCheck, Stethoscope, TestTube2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
 export type CareDestination = 'observation' | 'ward' | 'transfer' | 'icu'
@@ -121,6 +121,7 @@ const cardTone = { blue: 'border-blue-200 bg-blue-50 text-blue-950', emerald: 'b
 const cardIcon = { care: Stethoscope, clock: Clock3, tests: TestTube2, alert: AlertTriangle }
 
 const UniversalCareTransition: React.FC<Props> = ({ destination, context = '', value, onChange, onConfirmed }) => {
+  const [copied, setCopied] = React.useState(false)
   const copy = destinationCopy[destination]
   const data: CareTransitionData = value?.destination === destination ? value : {
     destination,
@@ -136,6 +137,18 @@ const UniversalCareTransition: React.FC<Props> = ({ destination, context = '', v
   const toggle = (item: string) => update({ checks: data.checks.includes(item) ? data.checks.filter(entry => entry !== item) : [...data.checks, item] })
   const ready = data.receivingUnit.trim().length > 0 && requiredChecks.every(item => data.checks.includes(item))
   const careCards = [...contextualCareCards(context), ...generalCareCards[destination]]
+  const copyActivePlan = async () => {
+    const lines = [
+      `${copy.title}.`,
+      ...careCards.map(card => `${card.title}: ${card.description}`),
+      data.receivingUnit.trim() ? `Destino/unidade receptora: ${data.receivingUnit.trim()}.` : '',
+      data.responsibleTeam.trim() ? `Equipe receptora: ${data.responsibleTeam.trim()}.` : '',
+      data.notes.trim() ? `Pendências e observações: ${data.notes.trim()}` : ''
+    ].filter(Boolean)
+    await navigator.clipboard.writeText(lines.join('\n'))
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1800)
+  }
 
   return (
     <div className="max-h-[82vh] space-y-5 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]">
@@ -147,10 +160,14 @@ const UniversalCareTransition: React.FC<Props> = ({ destination, context = '', v
       </header>
 
       <section>
-        <div className="mb-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-700">Plano assistencial durante a espera</p>
-          <h3 className="mt-1 text-xl font-black text-slate-950">O cuidado continua antes da transferência</h3>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">Estas orientações recuperam o plano clínico que deve permanecer ativo enquanto a vaga, o aceite ou o transporte são organizados.</p>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div><p className="text-xs font-black uppercase tracking-[0.18em] text-indigo-700">Plano assistencial durante a espera</p>
+            <h3 className="mt-1 text-xl font-black text-slate-950">O cuidado continua antes da transferência</h3>
+            <p className="mt-1 text-sm leading-relaxed text-slate-600">Estas orientações recuperam o plano clínico que deve permanecer ativo enquanto a vaga, o aceite ou o transporte são organizados.</p>
+          </div>
+          <button type="button" onClick={copyActivePlan} className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-extrabold text-white shadow-sm transition hover:bg-slate-800">
+            {copied ? <ClipboardCheck className="h-4 w-4" /> : <Copy className="h-4 w-4" />}{copied ? 'Conduta copiada' : 'Copiar conduta'}
+          </button>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
           {careCards.map((card, index) => {
