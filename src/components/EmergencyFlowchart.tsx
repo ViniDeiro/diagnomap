@@ -1648,6 +1648,7 @@ const ASTHMA_ADULT_DISCHARGE_PRESCRIPTION = `USO ORAL
 1. Prednisona 40 mg — tomar 1 dose pela manhã, por 5 a 7 dias.
 
 USO INALATÓRIO — RESGATE (quando SABA fizer parte do plano individual)
+SABA significa agonista beta-2 adrenérgico de curta ação; neste esquema, corresponde ao salbutamol.
 2. Salbutamol 100 mcg/dose — inalar 1 a 2 jatos com espaçador a cada 4 a 6 horas se falta de ar.
 
 Orientações: revisar técnica inalatória; manter o controlador prescrito; retornar em 24–48 horas; procurar emergência se houver piora, dificuldade para falar, sonolência, cianose ou ausência de resposta ao resgate. Ajustar esta sugestão às alergias, contraindicações, idade, gestação, comorbidades e tratamento de manutenção.`
@@ -4725,7 +4726,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       currentStepData.generatesPrescription ||
       ['action', 'medication', 'procedure'].includes(currentStepData.type) ||
       (flowchart.id === 'asthma' && /saba|ipratr|cortico|magnesio|resgate|alta|oxigenio|falencia/.test(currentStepData.id)) ||
-      /conduta|tratamento|terapia|antibi[oó]tico|hidrata[cç][aã]o|dose|prescri[cç][aã]o|manejo|estabiliza[cç][aã]o/i.test(`${currentStepData.title} ${currentStepData.description}`)
+      /conduta|tratamento|terapia|antibi[oó]tico|antimicrobiano|antif[uú]ngico|hidrata[cç][aã]o|dose|dilui[cç][aã]o|infus[aã]o|prescri[cç][aã]o|manejo|estabiliza[cç][aã]o|adrenalina|salbutamol|ipratr[oó]pio|corticoide|hidrocortisona|prednisona|magn[eé]sio|ceftriaxona|azitromicina|oseltamivir|heparina|anticoagula[cç][aã]o/i.test(`${currentStepData.title} ${currentStepData.description} ${currentStepData.content}`)
     )
   )
   const copyInlineConduct = async () => {

@@ -29,6 +29,7 @@ import { patientService } from '@/services/patientService'
 import { enableLocalStorageReplication, hydrateLocalStorageFromDB } from '@/services/patientStorageBridge'
 import UniversalClinicalAssessment, { UNIVERSAL_ASSESSMENT_ANSWER_KEY, type UniversalClinicalAssessmentData } from './UniversalClinicalAssessment'
 import UniversalCareTransition, { type CareTransitionData } from './UniversalCareTransition'
+import InlineClinicalCopyButton from './InlineClinicalCopyButton'
 
 interface FlowchartStep {
   id: string
@@ -5539,6 +5540,10 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
   }
 
   const step = steps[currentStep]
+  const hasCopyableConduct = Boolean(step?.content && (
+    step.type === 'action' ||
+    /conduta|tratamento|hidrata|expans|manuten|soro|volume|dose|medica|antitérmico|paracetamol|dipirona|albumina|cristaloide|hemocomponente|prescri|choque|estabiliza/i.test(`${step?.id || ''} ${step?.title || ''} ${step?.description || ''}`)
+  ))
 
   
   if (!step) {
@@ -5817,8 +5822,9 @@ const DengueFlowchartComplete: React.FC<DengueFlowchartProps> = ({
 
               {/* Step Content */}
               {step.content && (
-                <div className="mb-8 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl p-6 border border-slate-200/50">
+                <div id="dengue-current-conduct" className="mb-8 bg-gradient-to-br from-slate-50 to-blue-50/30 rounded-2xl p-6 border border-slate-200/50">
                   {step.content}
+                  {hasCopyableConduct && <div className="mt-5 flex justify-end"><InlineClinicalCopyButton targetId="dengue-current-conduct" /></div>}
                 </div>
               )}
 

@@ -1578,12 +1578,12 @@ export const asthmaFlowchart: EmergencyFlowchart = {
     },
     asma_saba_leve_moderada: {
       id: 'asma_saba_leve_moderada',
-      title: 'SABA Leve/Moderada',
-      description: 'Broncodilatação inicial com salbutamol.',
+      title: 'Broncodilatador de curta ação — SABA',
+      description: 'SABA significa agonista beta-2 adrenérgico de curta ação; neste fluxo, o representante utilizado é o salbutamol.',
       type: 'question',
       content: `
         <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p><strong>Salbutamol:</strong> 400-800 mcg (4-8 jatos) com espaçador OU nebulização 2,5-5 mg em 4 ml SF, repetir a cada 20 min até 3 doses.</p>
+          <p><strong>SABA (agonista beta-2 adrenérgico de curta ação):</strong> broncodilatador de resgate com início rápido. <strong>Salbutamol:</strong> 400-800 mcg (4-8 jatos) com espaçador OU nebulização 2,5-5 mg em 4 ml de SF 0,9%, repetir a cada 20 min até 3 doses.</p>
         </div>
       `,
       options: [
@@ -1621,6 +1621,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p><strong>IV apenas se VO não for possível:</strong> reservar metilprednisolona IV para vômitos, incapacidade de deglutir ou outra impossibilidade prática de usar a via oral.</p>
+            <p><strong>Alternativa EV:</strong> Hidrocortisona 100 mg EV a cada 8 horas, enquanto a via oral não estiver disponível; migrar para corticoide VO assim que possível.</p>
           </div>
         </div>
       `,
@@ -1685,18 +1686,18 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Nebulizar com SABA + Ipratrópio', nextStep: 'asma_nebulizacao_grave_vida', value: 'o2_grave_ok', critical: true }
+        { text: 'Nebulizar com SABA (salbutamol) + ipratrópio', nextStep: 'asma_nebulizacao_grave_vida', value: 'o2_grave_ok', critical: true }
       ]
     },
     asma_nebulizacao_grave_vida: {
       id: 'asma_nebulizacao_grave_vida',
-      title: 'SABA + Ipratrópio',
-      description: 'Broncodilatação combinada intensiva.',
+      title: 'SABA (salbutamol) + ipratrópio',
+      description: 'SABA é o agonista beta-2 adrenérgico de curta ação usado como broncodilatador de resgate; o ipratrópio é associado nas crises moderadas ou graves.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>Salbutamol + brometo de ipratrópio:</strong> associar ipratrópio nas exacerbações moderadas a graves, sobretudo se PFE &lt; 60%, SpO2 &lt; 92% persistente ou necessidade de múltiplas doses de SABA.</p>
+            <p><strong>SABA significa agonista beta-2 adrenérgico de curta ação.</strong> Neste protocolo, corresponde ao salbutamol, utilizado como broncodilatador de resgate. Associar brometo de ipratrópio nas exacerbações moderadas a graves, sobretudo se PFE &lt; 60%, SpO2 &lt; 92% persistente ou necessidade de múltiplas doses de salbutamol.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p><strong>MDI com espaçador (adultos):</strong> 4-8 jatos de ipratrópio (80-160 mcg) a cada 20 min na 1ª hora, em associação ao salbutamol.</p>
@@ -1724,6 +1725,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p><strong>Preferir VO se o paciente conseguir deglutir:</strong> Prednisona ou Prednisolona 40-60 mg/dia por 5-7 dias.</p>
             <p><strong>Reservar IV para casos selecionados:</strong> metilprednisolona IV quando houver vômitos, incapacidade de deglutir, necessidade de UTI ou impossibilidade prática da via oral.</p>
             <p><strong>Metilprednisolona IV (adultos):</strong> 60-125 mg IV, com transição para VO após melhora clínica.</p>
+            <p><strong>Hidrocortisona IV (alternativa em adultos):</strong> 100 mg EV a cada 8 horas, com transição para VO assim que o paciente tolerar.</p>
             <p><strong>Equivalência útil:</strong> metilprednisolona 4 mg = prednisolona 5 mg = hidrocortisona 20 mg.</p>
           </div>
         </div>
@@ -1845,17 +1847,17 @@ export const asthmaFlowchart: EmergencyFlowchart = {
     asma_escalonamento: {
       id: 'asma_escalonamento',
       title: 'Terapias de Resgate',
-      description: 'Para má resposta após SABA/ipratrópio e corticoide sistêmico na 1ª hora.',
+      description: 'Para má resposta após SABA (agonista beta-2 de curta ação)/ipratrópio e corticoide sistêmico na 1ª hora.',
       type: 'question',
       content: `
         <div class="space-y-2 text-sm">
           <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
-            <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA/ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
+            <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA — agonista beta-2 adrenérgico de curta ação, como salbutamol — associado ao ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p><strong>Salbutamol:</strong> 4–10 jatos de 100 mcg com espaçador a cada 20 minutos na primeira hora; em nebulização, 2,5–5 mg em 4 mL de SF 0,9%, repetindo a cada 20 minutos ou de forma contínua conforme gravidade e protocolo.</p>
             <p><strong>Ipratrópio:</strong> 4–8 jatos de 20 mcg a cada 20 minutos por 3 doses ou 0,5 mg por nebulização a cada 20 minutos por 3 doses.</p>
-            <p><strong>Corticoide sistêmico:</strong> prednisona/prednisolona 40–50 mg VO ao dia por 5–7 dias; se a via oral não for possível, usar equivalente EV, como metilprednisolona 40–80 mg/dia, ajustado ao protocolo.</p>
+            <p><strong>Corticoide sistêmico:</strong> prednisona/prednisolona 40–50 mg VO ao dia por 5–7 dias; se a via oral não for possível, usar metilprednisolona EV conforme protocolo ou hidrocortisona 100 mg EV a cada 8 horas, migrando para VO assim que possível.</p>
             <p><strong>Oxigênio:</strong> titular para SatO2 de 93–95% no adulto.</p>
             <p><strong>Magnésio:</strong> 2 g EV em 20 minutos quando houver crise grave com resposta inadequada; usar o preparo detalhado na próxima etapa.</p>
             <p>Aminofilina, heliox e ventilação não invasiva não compõem uma sequência automática de resgate. O foco é reconhecer rapidamente a necessidade de UTI e de via aérea avançada.</p>
@@ -2041,7 +2043,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       content: `
         <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
-          <p><strong>Prescrição literal sugerida para adulto:</strong> Prednisona 40 mg VO pela manhã por 5–7 dias. Para resgate, preferir esquema contendo corticoide inalatório; quando for utilizado SABA, Salbutamol 100 mcg: inalar 1–2 jatos com espaçador a cada 4–6 horas se falta de ar, conforme plano individual.</p>
+          <p><strong>Prescrição literal sugerida para adulto:</strong> Prednisona 40 mg VO pela manhã por 5–7 dias. Para resgate, preferir esquema contendo corticoide inalatório; quando for utilizado SABA — agonista beta-2 adrenérgico de curta ação — usar Salbutamol 100 mcg: inalar 1–2 jatos com espaçador a cada 4–6 horas se falta de ar, conforme plano individual.</p>
           <p class="mt-2"><strong>Antes da alta:</strong> revisar alergias, contraindicações, tratamento de manutenção e técnica do dispositivo. Ajustar a receita para idade, gestação e comorbidades.</p>
         </div>
       `,
@@ -2074,7 +2076,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-green-50 p-3 rounded border-l-4 border-green-600">
-            <p><strong>ALTA com plano terapêutico:</strong> 1) corticoide oral 5-7 dias; 2) ICS-formoterol como reliever (ou ICS regular + SABA resgate); 3) plano de ação escrito personalizado; 4) retorno em 24-48h; 5) revisão de técnica inalatória, adesão e gatilhos.</p>
+            <p><strong>ALTA com plano terapêutico:</strong> 1) corticoide oral 5-7 dias; 2) ICS-formoterol como medicação de alívio (ou ICS regular + SABA de resgate); 3) plano de ação escrito personalizado; 4) retorno em 24-48h; 5) revisão de técnica inalatória, adesão e gatilhos.</p>
           </div>
           <div class="bg-emerald-50 p-3 rounded border border-emerald-200">
             <p><strong>Plano de ação escrito:</strong> reconhecer piora, aumentar medicação, quando procurar emergência e contatos úteis.</p>
@@ -2084,7 +2086,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
           </div>
           <div class="bg-slate-50 p-3 rounded border border-slate-200">
             <p><strong>Track 1 (preferencial):</strong> ICS-formoterol em todas as etapas; resgate 1-2 inalações conforme sintomas.</p>
-            <p><strong>Track 2 (alternativa):</strong> ICS regular + SABA resgate; escalonar ICS/LABA e considerar tiotrópio/biológico conforme fenótipo.</p>
+            <p><strong>Track 2 (alternativa):</strong> ICS regular + SABA de resgate. SABA significa agonista beta-2 adrenérgico de curta ação, como o salbutamol; escalonar ICS/LABA e considerar tiotrópio/biológico conforme fenótipo.</p>
             <p><strong>Zonas do plano:</strong> verde (PFE&gt;80%), amarela (PFE 50-80%), vermelha (PFE&lt;50% com procura imediata de emergência).</p>
             <p><strong>Acompanhamento:</strong> retorno em 24-48h e revisão seriada ambulatorial.</p>
             <p><em>Referências:</em> GINA 2024, SBPT 2012, ATS, O'Byrne 2018, Bateman 2018.</p>
@@ -3252,15 +3254,15 @@ export const dpocFlowchart: EmergencyFlowchart = {
     tratamento_inicial_leve: {
       id: 'tratamento_inicial_leve',
       title: 'Iniciar Tratamento Ambulatorial',
-      description: 'Iniciar broncodilatadores (SABA ± SAMA) + Corticoide sistêmico',
+      description: 'Iniciar broncodilatadores de curta ação (SABA ± SAMA) e corticoide sistêmico.',
       type: 'action',
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-blue-50 p-3 rounded border-l-4 border-blue-500">
             <strong>Broncodilatadores de curta ação:</strong>
             <ul class="list-disc pl-5 mt-1 space-y-1">
-              <li><strong>SABA (Salbutamol):</strong> Spray 100-200 mcg (1-2 jatos) a cada 4-6h com espaçador, OU Nebulização 2,5-5mg diluído em 3-4 mL SF a cada 4-6h.</li>
-              <li><strong>SAMA (Ipratrópio):</strong> Spray 40-80 mcg (2-4 jatos) a cada 6-8h, OU Nebulização 0,5mg (20 gotas) em SF a cada 6-8h.</li>
+              <li><strong>SABA — agonista beta-2 adrenérgico de curta ação (Salbutamol):</strong> Spray 100-200 mcg (1-2 jatos) a cada 4-6h com espaçador, OU Nebulização 2,5-5mg diluído em 3-4 mL SF a cada 4-6h.</li>
+              <li><strong>SAMA — antagonista muscarínico de curta ação (Ipratrópio):</strong> Spray 40-80 mcg (2-4 jatos) a cada 6-8h, OU Nebulização 0,5mg (20 gotas) em SF a cada 6-8h.</li>
               <li><strong>Combinação (Preferencial - Berodual):</strong> Spray 2-4 jatos a cada 6h com espaçador, OU Nebulização 20-40 gotas em 3mL de SF a cada 6h.</li>
             </ul>
           </div>
@@ -3297,8 +3299,8 @@ export const dpocFlowchart: EmergencyFlowchart = {
           <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
             <strong>Broncodilatadores e Corticoides na Urgência:</strong>
             <ul class="list-disc pl-5 mt-1 space-y-1">
-              <li>SABA + SAMA: Repetir a cada 20 min na 1ª hora se necessário. Preferir combinação.</li>
-              <li>Corticosteroide Endovenoso (se incapaz VO): Metilprednisolona 40-125mg EV 6/6h OU Hidrocortisona 100-200mg EV 6-8h. (Duração 5-7 dias total).</li>
+              <li>SABA (agonista beta-2 de curta ação) + SAMA (antagonista muscarínico de curta ação): repetir a cada 20 min na 1ª hora se necessário. Preferir combinação.</li>
+              <li><strong>Corticosteroide endovenoso se a via oral não for possível:</strong> Hidrocortisona 100 mg EV a cada 8 horas, com transição para VO assim que houver tolerância. A duração total do corticoide deve ser definida pelo quadro clínico.</li>
             </ul>
           </div>
         </div>

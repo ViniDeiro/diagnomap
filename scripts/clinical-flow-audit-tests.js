@@ -30,6 +30,7 @@ const labNotebookSource = fs.readFileSync(path.join(root, 'src/components/Univer
 const patientServiceSource = fs.readFileSync(path.join(root, 'src/services/patientService.ts'), 'utf8')
 const ituLogicSource = fs.readFileSync(path.join(root, 'src/lib/itu.ts'), 'utf8')
 const anxietyComponentSource = fs.readFileSync(path.join(root, 'src/components/AnxietyFlowchartInteractive.tsx'), 'utf8')
+const inlineClinicalCopySource = fs.readFileSync(path.join(root, 'src/components/InlineClinicalCopyButton.tsx'), 'utf8')
 const hypertensionLogicSource = fs.readFileSync(path.join(root, 'src/lib/hypertension.ts'), 'utf8')
 const universalAssessmentSource = fs.readFileSync(path.join(root, 'src/components/UniversalClinicalAssessment.tsx'), 'utf8')
 const physicalExamSource = fs.readFileSync(path.join(root, 'src/components/PhysicalExamForm.tsx'), 'utf8')
@@ -541,6 +542,8 @@ assert.match(avcComponentSource, /NIHSSCalculator/)
 assert.match(avcComponentSource, /ModifiedRankinSelector/)
 assert.match(flowSource, /POCUS não disponível: seguir para D-dímero/, 'TVP de baixa probabilidade deve prosseguir sem POCUS')
 assert.match(flowSource, /MgSO4 a 10% \(100 mg\/mL\)/, 'Asma deve detalhar diluição do magnésio a 10%')
+assert.match(flowSource, /SABA significa agonista beta-2 adrenérgico de curta ação/, 'Asma deve explicar a sigla SABA no próprio fluxo')
+assert.match(flowSource, /Hidrocortisona 100 mg EV a cada 8 horas/, 'Asma deve oferecer a dose EV padronizada de hidrocortisona')
 assert.match(emergencyComponentSource, /ASTHMA_MAGNESIUM_PRESCRIPTION/)
 assert.match(emergencyComponentSource, /data-asthma-copy-magnesium/)
 assert.match(emergencyComponentSource, /ASTHMA_ADULT_DISCHARGE_PRESCRIPTION/)
@@ -655,6 +658,19 @@ const finishedIds = selectorSource.match(/const finishedFlowchartIds = \[([\s\S]
 for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao', 'pep_hiv']) {
   assert.doesNotMatch(inProgressIds, new RegExp(`['"]${completed}['"]`), `${completed}: ainda marcado como em andamento`)
   assert.match(finishedIds, new RegExp(`['"]${completed}['"]`), `${completed}: não marcado como finalizado`)
+}
+
+assert.match(inlineClinicalCopySource, /data-copy-exclude="true"/, 'Cópia de conduta: o próprio botão não deve entrar no texto copiado')
+assert.doesNotMatch(inlineClinicalCopySource, /fixed|sticky|bottom-|right-/, 'Cópia de conduta: o botão reutilizável não pode flutuar sobre a tela')
+assert.match(emergencyComponentSource, /isInlineCopyableConduct[\s\S]*antimicrobiano[\s\S]*hidrocortisona[\s\S]*heparina/, 'Fluxos legados: medicamentos e condutas devem ativar cópia contextual')
+assert.match(emergencyComponentSource, /flowchart\.id === 'asthma'[\s\S]*saba\|ipratr\|cortico\|magnesio/, 'Asma: todos os ramos terapêuticos devem ativar cópia contextual')
+assert.match(dengueSource, /hasCopyableConduct[\s\S]*InlineClinicalCopyButton/, 'Dengue: telas terapêuticas devem oferecer cópia contextual')
+assert.match(ituComponentSource, /hasCopyableConduct[\s\S]*InlineClinicalCopyButton/, 'ITU: telas terapêuticas devem oferecer cópia contextual')
+assert.match(hypertensionComponentSource, /hipertensao_emergencia_plano[\s\S]*hipertensao_alta_sem_loa[\s\S]*InlineClinicalCopyButton/, 'Hipertensão: planos IV e oral devem oferecer cópia contextual')
+assert.match(anxietyComponentSource, /ansiedade_medicamentosa[\s\S]*InlineClinicalCopyButton/, 'Ansiedade: etapa medicamentosa deve oferecer cópia contextual')
+assert.match(rabiesComponentSource, /raiva_vacina_soro[\s\S]*InlineClinicalCopyButton/, 'Mordedura: vacina e imunização passiva devem oferecer cópia contextual')
+for (const stage of ['avc_glicemia', 'avc_trombolitico', 'avc_complicacao_trombolise', 'avc_desfecho_trombectomia', 'avc_cuidados_sem_reperfusao', 'avc_hemorragico_destino']) {
+  assert.match(avcComponentSource, new RegExp(`${stage}[\\s\\S]*ConductCopyButton`), `AVC: etapa ${stage} deve oferecer cópia contextual`)
 }
 
 const gecaStepIds = new Set(Object.keys(gecaFlowchart.steps))

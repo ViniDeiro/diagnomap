@@ -820,6 +820,9 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
             </div>
           )}
 
+          {stage === 'avc_glicemia' && data.glucose != null && data.glucose < 60 && <div className="mt-5 flex justify-end"><ConductCopyButton text="CONDUTA — HIPOGLICEMIA NO PROTOCOLO AVC\nCorrigir imediatamente conforme nível de consciência e via segura; registrar produto, dose e via utilizados; repetir glicemia em curto intervalo e refazer o exame neurológico após normalização." /></div>}
+          {stage === 'avc_desfecho_trombectomia' && <div className="mt-5 flex justify-end"><ConductCopyButton text="CONDUTA — REPERFUSÃO ENDOVASCULAR INDICADA\nAcionar imediatamente centro com capacidade de trombectomia, manter monitorização e suporte durante a transferência e compartilhar imagem, horários, NIHSS, Rankin, medicações e dados de eventual trombólise." /></div>}
+          {stage === 'avc_hemorragico_destino' && <div className="mt-5 flex justify-end"><ConductCopyButton text="CONDUTA — HEMORRAGIA INTRACRANIANA\nSuspender trombolítico, antiagregante e anticoagulante até avaliação específica; controlar pressão e via aérea, avaliar hipertensão intracraniana, providenciar reversão quando indicada e acionar neurologia/neurocirurgia ou regulação imediatamente." /></div>}
           {notice && <p className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-900">{notice}</p>}
           <div className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5"><button type="button" onClick={goBack} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-5 w-5" /> Voltar</button><span className="text-xs font-semibold text-slate-500">As escolhas ficam registradas no relatório clínico.</span></div>
           </div>

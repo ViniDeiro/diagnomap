@@ -27,6 +27,7 @@ import UniversalCareTransition, { type CareTransitionData } from './UniversalCar
 import { UNIVERSAL_ASSESSMENT_ANSWER_KEY } from './UniversalClinicalAssessment'
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
 import ABCDEChecklist, { DEFAULT_ABCDE_ITEMS } from './ABCDEChecklist'
+import InlineClinicalCopyButton from './InlineClinicalCopyButton'
 
 interface Props {
   patient: EmergencyPatient
@@ -108,6 +109,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   const StepIcon = iconForStep(step)
   const phase = phaseByStep(stage)
   const selectedPrescriptions = useMemo(() => buildItuPrescriptionItems(selectedValue), [selectedValue])
+  const hasCopyableConduct = /antibiotico|antifungico|candiduria_resistente|cistite_(fos|nitro|cef|sulfa)|estabilizacao|gestacao_pielo|urologia|cateter_manejo|controle_foco|criterios_alta|manutencao/.test(stage)
   const displayedOptions = useMemo(() => {
     const options = step.options || []
     if (stage !== 'itu_antibiotico_hospitalar') return options
@@ -228,7 +230,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
         <section className="grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Apresentação</p><p className="mt-2 text-lg font-black text-slate-950">{answers.itu_apresentacao === 'cistite' ? 'Cistite' : answers.itu_apresentacao === 'pielonefrite' ? 'Pielonefrite' : answers.itu_apresentacao === 'bacteriuria_assintomatica' ? 'Bacteriúria assintomática' : 'Avaliação urinária'}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Desfecho</p><p className="mt-2 text-lg font-black text-slate-950">{step.title}</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><p className="text-xs font-black uppercase tracking-wider text-slate-500">Etapas registradas</p><p className="mt-2 text-2xl font-black text-slate-950">{new Set([...history, stage]).size}</p></div></section>
         <section className="rounded-[1.75rem] border border-cyan-200 bg-gradient-to-br from-cyan-50 to-blue-50 p-6"><div className="flex items-start gap-4"><span className="rounded-xl bg-cyan-700 p-3 text-white"><ClipboardCheck className="h-5 w-5" /></span><div><p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Síntese clínica</p><h3 className="mt-1 text-xl font-black text-slate-950">{step.title}</h3><p className="mt-2 text-sm leading-relaxed text-cyan-950">Consulte o relatório para revisar sintomas, classificação, antimicrobiano selecionado, cuidados durante eventual espera por leito e orientações finais.</p></div></div></section>
         <div className="grid gap-3 sm:grid-cols-2">{onOpenReport && <button type="button" onClick={onOpenReport} className="inline-flex items-center justify-center gap-2 rounded-xl border border-cyan-300 bg-white px-5 py-4 font-extrabold text-cyan-950"><FileText className="h-5 w-5" /> Abrir relatório completo</button>}<button type="button" onClick={onComplete} className="inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-800 px-5 py-4 font-extrabold text-white"><CheckCircle2 className="h-5 w-5" /> Concluir e ir ao dashboard</button></div>
-      </motion.div> : <motion.section key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7">
+      </motion.div> : <motion.section id="itu-current-conduct" key={stage} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-xl shadow-slate-200/50 sm:p-7">
         <div className="mb-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950"><Droplets className="mt-0.5 h-5 w-5 shrink-0" /><p className="text-sm"><strong>Decisão clínica guiada:</strong> selecione o cenário que corresponde ao paciente. A escolha ficará registrada no relatório e determinará somente o próximo ramo previsto.</p></div>
         {step.content && <div className="prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: step.content }} />}
 
@@ -262,6 +264,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
 
         {isFinal && <div className="mt-6 space-y-4"><div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><ShieldCheck className="mr-2 inline h-5 w-5" /><strong>Antes de concluir:</strong> confirme estabilidade, alergias, função renal, resultados de cultura pendentes, orientação de retorno e destino assistencial.</div><button type="button" onClick={finish} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white hover:bg-emerald-800"><CheckCircle2 className="h-5 w-5" /> Registrar desfecho e concluir</button></div>}
 
+        {hasCopyableConduct && <div className="mt-5 flex justify-end"><InlineClinicalCopyButton targetId="itu-current-conduct" /></div>}
         {notice && <p role="alert" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-950"><AlertTriangle className="mr-2 inline h-4 w-4" />{notice}</p>}
         <footer className="mt-8 flex items-center justify-between border-t border-slate-200 pt-5"><button type="button" onClick={goBack} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-3 font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-5 w-5" /> Voltar</button><span className="hidden text-xs font-semibold text-slate-500 sm:block">Escolhas e condutas permanecem no relatório clínico.</span></footer>
       </motion.section>}
