@@ -38,11 +38,13 @@ import UnderDevelopmentModal from './UnderDevelopmentModal'
 interface EmergencySelectorProps {
     onSelectFlowchart: (flowchart: EmergencyFlowchart) => void
     selectedFlowchart?: string
+    finalizedOnly?: boolean
 }
 
 const EmergencySelector: React.FC<EmergencySelectorProps> = ({
     onSelectFlowchart,
-    selectedFlowchart
+    selectedFlowchart,
+    finalizedOnly = false
 }) => {
     const router = useRouter()
     const [searchTerm, setSearchTerm] = useState('')
@@ -83,7 +85,9 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
             .replace(/[\u0300-\u036f]/g, '')
             .toLowerCase()
 
-    const visibleFlowcharts = activeTab === 'finished'
+    const visibleFlowcharts = finalizedOnly
+        ? allAvailableFlowcharts.filter(flowchart => finishedFlowchartIds.includes(flowchart.id))
+        : activeTab === 'finished'
         ? allAvailableFlowcharts.filter(flowchart => inProgressFlowchartIds.includes(flowchart.id))
         : activeTab === 'protocols'
             ? allAvailableFlowcharts.filter(flowchart => finishedFlowchartIds.includes(flowchart.id))
@@ -200,16 +204,16 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <h1 className="text-2xl sm:text-3xl font-bold text-slate-700 mb-1">
-                            Protocolos de Emergência
+                            {finalizedOnly ? 'Fluxogramas liberados para atendimento' : 'Protocolos de Emergência'}
                         </h1>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
                             <p className="text-slate-500 font-medium">
-                                Selecione o protocolo apropriado para iniciar o atendimento
+                                {finalizedOnly ? 'Durante o teste, somente fluxogramas finalizados estão disponíveis.' : 'Selecione o protocolo apropriado para iniciar o atendimento'}
                             </p>
-                            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
+                            {!finalizedOnly && <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
                                 <Activity className="h-4 w-4" />
                                 {implementedFlowchartsCount} de {totalFlowchartsCount} fluxogramas implementados
-                            </span>
+                            </span>}
                             <span className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
                                 <CheckCircle className="h-4 w-4" />
                                 {finishedFlowchartsCount} finalizados
@@ -217,7 +221,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                         </div>
                     </div>
 
-                    <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex">
+                    {!finalizedOnly && <div className="bg-white p-1.5 rounded-xl border border-slate-200 shadow-sm flex">
                         <button
                             onClick={() => setActiveTab('flowcharts')}
                             className={clsx(
@@ -251,7 +255,7 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                         >
                             Finalizados
                         </button>
-                    </div>
+                    </div>}
                 </div>
 
                 {/* Search Bar */}

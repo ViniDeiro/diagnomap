@@ -12,6 +12,7 @@ const dengueSource = fs.readFileSync(path.join(root, 'src/components/DengueFlowc
 const emergencyComponentSource = fs.readFileSync(path.join(root, 'src/components/EmergencyFlowchart.tsx'), 'utf8')
 const abcdeComponentSource = fs.readFileSync(path.join(root, 'src/components/ABCDEChecklist.tsx'), 'utf8')
 const selectorSource = fs.readFileSync(path.join(root, 'src/components/EmergencySelector.tsx'), 'utf8')
+const appPageSource = fs.readFileSync(path.join(root, 'src/app/page.tsx'), 'utf8')
 const avcComponentSource = fs.readFileSync(path.join(root, 'src/components/AVCFlowchartInteractive.tsx'), 'utf8')
 const reportSource = fs.readFileSync(path.join(root, 'src/components/ReportViewer.tsx'), 'utf8')
 const avcLogicSource = fs.readFileSync(path.join(root, 'src/lib/avc.ts'), 'utf8')
@@ -659,6 +660,10 @@ for (const completed of ['asthma', 'dengue', 'anafilaxia', 'avc', 'hipertensao',
   assert.doesNotMatch(inProgressIds, new RegExp(`['"]${completed}['"]`), `${completed}: ainda marcado como em andamento`)
   assert.match(finishedIds, new RegExp(`['"]${completed}['"]`), `${completed}: não marcado como finalizado`)
 }
+assert.match(appPageSource, /handleNewPatient[\s\S]*setSelectorFinalizedOnly\(true\)[\s\S]*setAppState\('emergency-selector'\)/, 'Novo atendimento deve abrir diretamente o seletor restrito aos fluxogramas finalizados')
+assert.match(appPageSource, /finalizedOnly=\{selectorFinalizedOnly\}/, 'Novo atendimento deve informar ao seletor que o modo de teste está ativo')
+assert.match(selectorSource, /finalizedOnly[\s\S]*finishedFlowchartIds\.includes\(flowchart\.id\)/, 'Modo de teste deve filtrar exclusivamente IDs finalizados')
+assert.match(selectorSource, /!finalizedOnly && <div[\s\S]*Implementados[\s\S]*Em andamento[\s\S]*Finalizados/, 'Modo de teste não deve exibir abas de implementação ou andamento')
 
 assert.match(inlineClinicalCopySource, /data-copy-exclude="true"/, 'Cópia de conduta: o próprio botão não deve entrar no texto copiado')
 assert.doesNotMatch(inlineClinicalCopySource, /fixed|sticky|bottom-|right-/, 'Cópia de conduta: o botão reutilizável não pode flutuar sobre a tela')

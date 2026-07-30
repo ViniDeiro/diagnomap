@@ -33,6 +33,7 @@ export default function Home() {
   const [selectedFlowchart, setSelectedFlowchart] = useState<EmergencyFlowchartType | null>(null)
   const [libraryFlowchart, setLibraryFlowchart] = useState<EmergencyFlowchartType | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [selectorFinalizedOnly, setSelectorFinalizedOnly] = useState(false)
   const [previousState, setPreviousState] = useState<AppState>('dashboard')
   const [isFading, setIsFading] = useState(false)
   const [safetyAlertRequired, setSafetyAlertRequired] = useState(false)
@@ -56,13 +57,14 @@ export default function Home() {
         new URLSearchParams(window.location.search).get('view') === 'emergency-selector'
 
       const requestedInitialState: AppState = shouldOpenNewPatientDirectly
-        ? 'new-patient'
+        ? 'emergency-selector'
         : shouldOpenFlowchartLibraryDirectly
           ? 'emergency-selector'
           : 'dashboard'
 
       if (!isSupabaseConfigured) {
         if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly || shouldOpenFlowchartLibraryDirectly) {
+          setSelectorFinalizedOnly(shouldOpenNewPatientDirectly)
           window.history.replaceState(null, '', '/')
           setAppState(requestedInitialState)
           return
@@ -92,6 +94,7 @@ export default function Home() {
           return
         }
         if (shouldOpenDashboardDirectly || shouldOpenNewPatientDirectly || shouldOpenFlowchartLibraryDirectly) {
+          setSelectorFinalizedOnly(shouldOpenNewPatientDirectly)
           window.history.replaceState(null, '', '/')
           setAppState(requestedInitialState)
           return
@@ -110,6 +113,7 @@ export default function Home() {
           setIsFading(true)
           setTimeout(() => {
             if (!active) return
+            setSelectorFinalizedOnly(shouldOpenNewPatientDirectly)
             setAppState(requestedInitialState)
           }, 500)
         }, 1200)
@@ -121,7 +125,13 @@ export default function Home() {
 
   const handleNewPatient = () => {
     setLibraryFlowchart(null)
-    setAppState('new-patient')
+    setSelectorFinalizedOnly(true)
+    setAppState('emergency-selector')
+  }
+
+  const handleOpenFlowchartLibrary = () => {
+    setSelectorFinalizedOnly(false)
+    setAppState('emergency-selector')
   }
 
   const handleSelectEmergencyFlowchart = (flowchart: EmergencyFlowchartType) => {
@@ -438,11 +448,12 @@ export default function Home() {
           <Header
             onProfileClick={() => setAppState('profile')}
             onNewPatientClick={handleNewPatient}
-            onFlowchartLibraryClick={() => setAppState('emergency-selector')}
+            onFlowchartLibraryClick={handleOpenFlowchartLibrary}
           />
           <EmergencySelector
             onSelectFlowchart={handleSelectEmergencyFlowchart}
             selectedFlowchart={selectedFlowchart?.id}
+            finalizedOnly={selectorFinalizedOnly}
           />
         </>
       )
@@ -540,7 +551,7 @@ export default function Home() {
          <Header
            onProfileClick={() => setAppState('profile')}
            onNewPatientClick={handleNewPatient}
-           onFlowchartLibraryClick={() => setAppState('emergency-selector')}
+           onFlowchartLibraryClick={handleOpenFlowchartLibrary}
          />
         }
 
