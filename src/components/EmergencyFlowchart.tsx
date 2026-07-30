@@ -1648,7 +1648,7 @@ const ASTHMA_ADULT_DISCHARGE_PRESCRIPTION = `USO ORAL
 1. Prednisona 40 mg — tomar 1 dose pela manhã, por 5 a 7 dias.
 
 USO INALATÓRIO — RESGATE (quando SABA fizer parte do plano individual)
-SABA significa agonista beta-2 adrenérgico de curta ação; neste esquema, corresponde ao salbutamol.
+SABA significa beta-2 agonista adrenérgico de curta ação: é um broncodilatador de alívio rápido. Neste esquema, corresponde ao salbutamol.
 2. Salbutamol 100 mcg/dose — inalar 1 a 2 jatos com espaçador a cada 4 a 6 horas se falta de ar.
 
 Orientações: revisar técnica inalatória; manter o controlador prescrito; retornar em 24–48 horas; procurar emergência se houver piora, dificuldade para falar, sonolência, cianose ou ausência de resposta ao resgate. Ajustar esta sugestão às alergias, contraindicações, idade, gestação, comorbidades e tratamento de manutenção.`

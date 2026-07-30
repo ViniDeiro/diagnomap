@@ -1686,7 +1686,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
         </div>
       `,
       options: [
-        { text: 'Nebulizar com SABA (salbutamol) + ipratrópio', nextStep: 'asma_nebulizacao_grave_vida', value: 'o2_grave_ok', critical: true }
+        { text: 'Nebulizar com SABA — beta-2 agonista de curta ação (salbutamol) — associado ao ipratrópio', nextStep: 'asma_nebulizacao_grave_vida', value: 'o2_grave_ok', critical: true }
       ]
     },
     asma_nebulizacao_grave_vida: {
@@ -1703,7 +1703,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p><strong>MDI com espaçador (adultos):</strong> 4-8 jatos de ipratrópio (80-160 mcg) a cada 20 min na 1ª hora, em associação ao salbutamol.</p>
             <p><strong>Nebulização (adultos):</strong> ipratrópio 500 mcg associado ao salbutamol, repetir a cada 20 min por até 3 doses na 1ª hora.</p>
             <p><strong>Observação prática:</strong> existem combinações fixas para nebulização, como salbutamol 2,5 mg + ipratrópio 500 mcg, quando disponíveis no serviço.</p>
-            <p>Adicionar brometo de ipratrópio em exacerbações moderadas/graves reduz hospitalização quando associado ao SABA.</p>
+            <p>Adicionar brometo de ipratrópio em exacerbações moderadas ou graves ao <strong>SABA (beta-2 agonista de curta ação, como o salbutamol)</strong> potencializa a broncodilatação e pode reduzir hospitalizações.</p>
           </div>
         </div>
       `,
@@ -2076,7 +2076,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       content: `
         <div class="space-y-3 text-sm">
           <div class="bg-green-50 p-3 rounded border-l-4 border-green-600">
-            <p><strong>ALTA com plano terapêutico:</strong> 1) corticoide oral 5-7 dias; 2) ICS-formoterol como medicação de alívio (ou ICS regular + SABA de resgate); 3) plano de ação escrito personalizado; 4) retorno em 24-48h; 5) revisão de técnica inalatória, adesão e gatilhos.</p>
+            <p><strong>ALTA com plano terapêutico:</strong> 1) corticoide oral por 5–7 dias; 2) ICS-formoterol como medicação de alívio — ICS significa corticoide inalatório — ou ICS regular associado a SABA de resgate; <strong>SABA significa beta-2 agonista de curta ação, broncodilatador de alívio rápido, como o salbutamol</strong>; 3) plano de ação escrito personalizado; 4) retorno em 24–48 horas; 5) revisão da técnica inalatória, adesão e gatilhos.</p>
           </div>
           <div class="bg-emerald-50 p-3 rounded border border-emerald-200">
             <p><strong>Plano de ação escrito:</strong> reconhecer piora, aumentar medicação, quando procurar emergência e contatos úteis.</p>
@@ -3254,7 +3254,7 @@ export const dpocFlowchart: EmergencyFlowchart = {
     tratamento_inicial_leve: {
       id: 'tratamento_inicial_leve',
       title: 'Iniciar Tratamento Ambulatorial',
-      description: 'Iniciar broncodilatadores de curta ação (SABA ± SAMA) e corticoide sistêmico.',
+      description: 'Iniciar broncodilatadores de curta ação: SABA (beta-2 agonista de curta ação, como salbutamol), associado ou não a SAMA (antagonista muscarínico de curta ação, como ipratrópio), além de corticoide sistêmico.',
       type: 'action',
       content: `
         <div class="space-y-3 text-sm">
