@@ -2467,12 +2467,16 @@ const standardizeUniversalEvolution = (
     patient.admission?.complaintDuration,
     summary.chiefComplaint
   )
-  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}. Fluxograma: ${flowchartName}.`
+  const identification = `Paciente ${patient.name || 'não identificado'}, ${patient.age || 'idade não informada'} anos, ${patient.gender || 'gênero não informado'}, atendido em ${formatClinicalDate(patient.admission?.date)}${patient.admission?.time ? ` às ${patient.admission.time}` : ''}.`
+  const diagnosticHypothesis = flowchartName.replace(/\s*\([A-ZÀ-Ú0-9-]{2,12}\)\s*$/, '').trim()
   const canonicalText = [
     'RELATÓRIO MÉDICO',
     '',
     'IDENTIFICAÇÃO',
     identification,
+    '',
+    'HD (Hipótese Diagnóstica)',
+    `${diagnosticHypothesis}.`,
     '',
     'QUEIXA PRINCIPAL',
     `${chiefComplaint}.`,

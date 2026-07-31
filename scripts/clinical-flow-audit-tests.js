@@ -469,9 +469,14 @@ for (const flowId of ['tvp', 'influenza', 'pneumonia', 'tep', 'pep_hiv', 'crise_
   const routePattern = new RegExp(`flowchart\\.id === '${flowId}'[\\s\\S]{0,350}return standardizeUniversalEvolution\\(`)
   assert.match(clinicalSummarySource, routePattern, `Resumo clínico: ${flowId} deve usar a evolução universal padronizada`)
 }
-for (const marker of ['QUEIXA PRINCIPAL', 'SINAIS VITAIS', 'EXAME FÍSICO', "vitalItems.join(' / ')", 'Sem medidas registradas.']) {
+for (const marker of ['HD (Hipótese Diagnóstica)', 'diagnosticHypothesis', 'QUEIXA PRINCIPAL', 'SINAIS VITAIS', 'EXAME FÍSICO', "vitalItems.join(' / ')", 'Sem medidas registradas.']) {
   assert.ok(clinicalSummarySource.includes(marker), `Resumo clínico universal: seção obrigatória ausente (${marker})`)
 }
+assert.doesNotMatch(
+  clinicalSummarySource.match(/const standardizeUniversalEvolution[\s\S]*?export function buildClinicalSummary/)?.[0] || '',
+  /Fluxograma:/,
+  'Resumo clínico universal: identificação não deve exibir o rótulo Fluxograma'
+)
 
 const hypertensionReachable = reachable(hypertensionFlowchart)
 for (const required of [
