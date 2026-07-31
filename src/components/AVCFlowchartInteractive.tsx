@@ -17,13 +17,15 @@ import {
   Droplets,
   Heart,
   Hospital,
+  Info,
   FileText,
   RotateCcw,
   ScanLine,
   ShieldAlert,
   Stethoscope,
   Syringe,
-  TestTube2
+  TestTube2,
+  X
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { EmergencyPatient } from '@/types/emergency'
@@ -357,6 +359,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
   const [onsetDateText, setOnsetDateText] = useState(() => formatISODateToBR(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).onsetDate))
   const [notice, setNotice] = useState('')
   const [showCompletion, setShowCompletion] = useState(() => Boolean(parseAVCCase(initialAnswers[AVC_CASE_ANSWER_KEY]).completedAt))
+  const [cincinnatiGuideOpen, setCincinnatiGuideOpen] = useState(false)
   const [careTransition, setCareTransition] = useState<CareTransitionData | null>(() => {
     const transitionKey = safeInitialStage === 'avc_aguardo_enfermaria'
       ? '__care_transition_avc_aguardo_enfermaria'
@@ -671,11 +674,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_triagem' && (
             <div className="space-y-5">
-              <figure className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm">
-                <Image src="/clinical-guides/avc-cincinnati-cpss.jpeg" alt="Guia visual da Escala de Cincinnati com avaliação de face, braços e fala" width={1536} height={2048} className="h-auto w-full" priority />
-                <figcaption className="border-t border-indigo-100 p-3 text-xs text-slate-600">Referência visual de apoio. Qualquer item alterado mantém a suspeita de AVC; resultado normal não exclui o diagnóstico.</figcaption>
-              </figure>
-              <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-950 to-blue-900 text-white shadow-lg"><div className="p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200">Referência visual · Escala de Cincinnati</p><h2 className="mt-1 text-2xl font-black">Face, braços e fala</h2><p className="mt-2 max-w-3xl text-sm text-blue-100">Execute os três itens em menos de um minuto. Qualquer alteração torna a triagem positiva e exige continuidade do protocolo, sem transformar a escala em diagnóstico isolado.</p></div><div className="grid gap-px bg-white/15 md:grid-cols-3">{[
+              <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-950 to-blue-900 text-white shadow-lg"><div className="flex items-start justify-between gap-4 p-5 sm:p-6"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200">Referência visual · Escala de Cincinnati</p><h2 className="mt-1 text-2xl font-black">Face, braços e fala</h2><p className="mt-2 max-w-3xl text-sm text-blue-100">Execute os três itens em menos de um minuto. Qualquer alteração torna a triagem positiva e exige continuidade do protocolo, sem transformar a escala em diagnóstico isolado.</p></div><button type="button" onClick={() => setCincinnatiGuideOpen(true)} aria-label="Abrir imagem explicativa da Escala de Cincinnati" title="Ver guia visual da Escala de Cincinnati" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/30 bg-white/15 text-white shadow-sm transition hover:scale-105 hover:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white"><Info className="h-6 w-6" /></button></div><div className="grid gap-px bg-white/15 md:grid-cols-3">{[
                 ['1','Face','Solicite um sorriso mostrando os dentes. Compare a mobilidade dos dois lados e procure queda da comissura.'],
                 ['2','Braços','Peça para manter ambos os braços elevados, palmas para cima, por 10 segundos. Observe queda ou incapacidade.'],
                 ['3','Fala','Peça para repetir uma frase simples. Procure fala arrastada, palavras inadequadas ou incapacidade de responder.']
@@ -683,6 +682,17 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
               <div className="grid gap-3 md:grid-cols-3">{[['face','Assimetria ao sorrir','Um lado da face apresenta menor movimento.'],['braco','Queda de um braço','Há queda, ausência de elevação ou assimetria sustentada.'],['fala','Alteração da fala','Fala incompreensível, troca de palavras ou incapacidade de repetir frase.']].map(([id,title,description]) => <CardOption key={id} selected={(data.cincinnati || []).includes(id)} title={title} description={description} onClick={() => selectMany('cincinnati', id)} />)}</div>
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Importante:</strong> triagem sem alteração não exclui circulação posterior, déficit visual, ataxia, AIT ou outros AVCs. A decisão deve considerar todo o exame neurológico.</div>
               <button type="button" onClick={() => persist('avc_nihss')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Registrar triagem e calcular gravidade <ChevronRight /></button>
+              {cincinnatiGuideOpen && (
+                <div className="fixed inset-0 z-[140] flex items-center justify-center bg-slate-950/80 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-labelledby="cincinnati-guide-title" onClick={() => setCincinnatiGuideOpen(false)}>
+                  <div className="flex max-h-[94vh] w-full max-w-5xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
+                    <div className="flex items-center justify-between gap-4 border-b border-indigo-100 bg-indigo-950 px-5 py-4 text-white">
+                      <div><p className="text-xs font-black uppercase tracking-[0.16em] text-indigo-200">Guia visual</p><h2 id="cincinnati-guide-title" className="mt-1 text-lg font-black sm:text-xl">Escala de Cincinnati (CPSS)</h2></div>
+                      <button type="button" onClick={() => setCincinnatiGuideOpen(false)} aria-label="Fechar guia visual" className="rounded-full bg-white/15 p-2 transition hover:bg-white/25"><X className="h-6 w-6" /></button>
+                    </div>
+                    <div className="overflow-y-auto bg-slate-100 p-2 sm:p-4"><Image src="/clinical-guides/avc-cincinnati-cpss.jpeg" alt="Guia visual da Escala de Cincinnati com avaliação de face, braços e fala" width={1536} height={2048} className="mx-auto h-auto w-full max-w-4xl rounded-xl" priority /></div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
