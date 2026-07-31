@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { clsx } from 'clsx'
-import { Thermometer, Activity, Brain, Heart, Stethoscope } from 'lucide-react'
+import { Thermometer, Activity, Brain, Heart, Stethoscope, Camera, ShieldCheck, X } from 'lucide-react'
 
 export interface PhysicalExamData {
   generalState: 'bom' | 'regular' | 'mal' | 'grave' | 'pessimo'
@@ -124,6 +124,7 @@ const ExamSection: React.FC<{
 }
 
 const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, showGlasgowInput = true, neurologicalAssessment }) => {
+  const [photoGuidanceOpen, setPhotoGuidanceOpen] = useState(false)
   const update = <K extends keyof PhysicalExamData>(key: K, patch: Partial<PhysicalExamData[K]>) => {
     const current = value[key]
     // @ts-expect-error dynamic merge
@@ -132,6 +133,20 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="lg:col-span-2 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-cyan-50 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-700 text-white shadow-md"><Camera className="h-5 w-5" /></div>
+            <div>
+              <h3 className="font-extrabold text-slate-950">Imagem clínica do achado físico</h3>
+              <p className="mt-1 text-sm text-slate-600">Recurso previsto para documentar achados relevantes no prontuário, com finalidade assistencial e consentimento.</p>
+            </div>
+          </div>
+          <button type="button" onClick={() => setPhotoGuidanceOpen(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 font-bold text-blue-800 transition hover:bg-blue-100">
+            <Camera className="h-4 w-4" /> Registrar imagem
+          </button>
+        </div>
+      </div>
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
         <SectionTitle icon={<Stethoscope className="w-5 h-5" />} title="Estado Geral" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
@@ -517,6 +532,22 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           className="w-full resize-y rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
         />
       </div>
+      {photoGuidanceOpen && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/65 p-4" role="dialog" aria-modal="true" aria-labelledby="clinical-photo-title">
+          <div className="w-full max-w-2xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex items-start justify-between bg-gradient-to-r from-blue-700 to-cyan-700 p-5 text-white">
+              <div><p className="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Funcionalidade em construção</p><h3 id="clinical-photo-title" className="mt-1 text-xl font-black">Registro de imagem clínica</h3></div>
+              <button type="button" onClick={() => setPhotoGuidanceOpen(false)} aria-label="Fechar orientação" className="rounded-full bg-white/15 p-2 hover:bg-white/25"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="space-y-4 p-6 text-sm leading-relaxed text-slate-700">
+              <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0" /><p><strong>Nesta versão não há captura nem envio de arquivos.</strong> A tela antecipa a futura integração segura com o prontuário.</p></div>
+              <p>Quando disponibilizado, o recurso deverá ser usado somente para um achado clinicamente relevante, com finalidade documentada, ciência do paciente ou responsável e respeito às regras institucionais e à LGPD.</p>
+              <ul className="list-disc space-y-2 pl-5"><li>Registrar apenas a imagem mínima necessária e vinculá-la ao atendimento correto.</li><li>Não utilizar aparelho pessoal, mensageiros ou armazenamento fora do prontuário autorizado.</li><li>Descrever o achado no exame físico: a fotografia será complementar e não substituirá o registro escrito.</li><li>Restringir acesso, exportação e retenção conforme política de segurança da instituição.</li></ul>
+              <button type="button" onClick={() => setPhotoGuidanceOpen(false)} className="w-full rounded-xl bg-blue-700 px-4 py-3 font-extrabold text-white hover:bg-blue-800">Entendi</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

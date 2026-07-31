@@ -370,7 +370,7 @@ for (const marker of ['postThrombolysisBloodPressure', 'postThrombolysisBPManage
 }
 assert.match(avcComponentSource, /Imagem vascular\/avançada ou trombectomia indisponível — solicitar transferência/, 'AVC: falta opção explícita de transferência quando o recurso local é insuficiente')
 assert.match(avcComponentSource, /destination="transfer" context="avc:centro_reperfusao"/, 'AVC: transferência deve usar a tela universal de espera e passagem do cuidado')
-for (const marker of ['Cronometria porta–imagem', 'arrivalTime', 'ctStartTime', 'hypoglycemiaTreatment', 'repeatGlucose', 'Referência visual · Escala de Cincinnati', 'Guia visual esquemático da imagem inicial', 'neurosurgeryContacted', 'Interconsulta neurocirúrgica/neurológica']) {
+for (const marker of ['Cronometria porta–imagem', 'arrivalTime', 'ctStartTime', 'hypoglycemiaTreatment', 'repeatGlucose', 'Referência visual · Escala de Cincinnati', '/clinical-guides/avc-tc-guia.jpeg', '/clinical-guides/avc-rm-dwi-flair.jpeg', 'neurosurgeryContacted', 'Interconsulta neurocirúrgica/neurológica']) {
   assert.match(avcComponentSource, new RegExp(marker), `AVC: correção solicitada nos vídeos ausente (${marker})`)
 }
 for (const finalStep of pepHivFlowchart.finalSteps) {

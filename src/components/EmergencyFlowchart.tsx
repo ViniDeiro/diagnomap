@@ -6831,9 +6831,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     if (currentStepData.id === 'asma_decisao_1h' && satRe !== null && frRe !== null) {
       const melhora = (pfeRe === null || pfeRe > 70) && satRe > 92 && frRe < 25 && reFlags.melhoraClinica && !reFlags.necessidadeBroncoRepetido
       if (melhora) return [pick('asma_resposta_boa')].filter(Boolean) as EmergencyOption[]
-      const parcial = (pfeRe !== null && pfeRe >= 50 && pfeRe <= 70) || satRe <= 92 || reFlags.necessidadeBroncoRepetido
+      const deterioracao = satRe < 90 || frRe > 30 || (pfeRe !== null && pfeRe < 50)
+      if (deterioracao) return [pick('asma_resposta_ma')].filter(Boolean) as EmergencyOption[]
+      const parcial = pfeRe === null || (pfeRe >= 50 && pfeRe <= 70) || satRe <= 92 || reFlags.necessidadeBroncoRepetido || !reFlags.melhoraClinica
       if (parcial) return [pick('asma_resposta_incompleta')].filter(Boolean) as EmergencyOption[]
-      return [pick('asma_resposta_ma')].filter(Boolean) as EmergencyOption[]
+      return [pick('asma_resposta_incompleta')].filter(Boolean) as EmergencyOption[]
     }
 
     if (currentStepData.id === 'asma_escalonamento') {
@@ -12236,6 +12238,14 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       </button>
                     </div>
                   )}
+                  {flowchart.id === 'asthma' && currentStep === 'asma_checar_anafilaxia' && onSwitchFlowchart && (
+                    <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-950">
+                      <p className="text-sm font-semibold leading-relaxed"><strong>Suspeita de anafilaxia:</strong> a estabilização da crise asmática pode continuar em paralelo, mas a adrenalina intramuscular e o protocolo específico não devem ser atrasados.</p>
+                      <button type="button" onClick={() => onSwitchFlowchart('anafilaxia')} className="mt-3 inline-flex items-center gap-2 rounded-xl bg-red-700 px-4 py-3 text-sm font-extrabold text-white shadow-sm transition-colors hover:bg-red-800">
+                        Abrir protocolo completo de anafilaxia <ChevronRight className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                   {(isGecaPlanBStep || isGecaPlanCStep) && (
                     <div className={clsx(
                       'mt-5 rounded-2xl border p-5 text-sm shadow-sm',
@@ -12861,6 +12871,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
                     <span className="w-fit rounded-full bg-white px-3 py-1 text-xs font-bold text-cyan-800 ring-1 ring-cyan-200">Campos com * são obrigatórios</span>
                   </div>
+                  <details className="mb-5 overflow-hidden rounded-2xl border border-blue-200 bg-white">
+                    <summary className="cursor-pointer px-4 py-3 font-extrabold text-blue-900">Como medir e interpretar o PFE (opcional)</summary>
+                    <div className="border-t border-blue-100 p-4">
+                      <img src="/clinical-guides/asma-pfe-tecnica.jpeg" alt="Técnica em seis etapas para medir o pico de fluxo expiratório" className="h-auto w-full rounded-xl" />
+                      <div className="mt-4 space-y-2 text-sm leading-relaxed text-slate-700"><p><strong>PFE significa Pico de Fluxo Expiratório</strong> (Peak Expiratory Flow): maior fluxo alcançado em uma expiração rápida e explosiva após inspiração máxima.</p><p>Realize três manobras aceitáveis e registre o maior valor. Compare preferencialmente com o melhor valor pessoal: zona verde 80–100%, amarela 50–79% e vermelha abaixo de 50%.</p><p className="font-semibold text-amber-800">A ausência do aparelho ou de uma medida confiável não bloqueia a classificação: sintomas, fala, esforço respiratório, SatO₂, FR, FC e ausculta continuam determinantes.</p></div>
+                    </div>
+                  </details>
                   <div className="grid md:grid-cols-2 gap-3">
                     {asthmaInitialFieldConfig.map((field) => {
                       const value = asthmaInitialDraft[field.key]
@@ -12959,7 +12976,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <div className="mb-4 border-b border-cyan-100 pb-4">
                     <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-cyan-700">Resposta ao tratamento</p>
                     <h4 className="mt-1 text-lg font-extrabold text-slate-950">Nova medida após a primeira hora</h4>
-                    <p className="mt-1 text-sm text-slate-600">Use valores atuais, não os da chegada. O sistema cruza melhora clínica, oximetria, frequência respiratória e PFE.</p>
+                    <p className="mt-1 text-sm text-slate-600">Use valores atuais, não os da chegada. O sistema cruza melhora clínica, oximetria e frequência respiratória; o PFE agrega informação quando disponível, mas não é obrigatório.</p>
                   </div>
                   <div className="grid md:grid-cols-3 gap-3">
                     {asthmaReevalFieldConfig.map((field) => {

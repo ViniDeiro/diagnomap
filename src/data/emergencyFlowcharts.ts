@@ -1796,9 +1796,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Definir melhora, resposta parcial ou falha.',
       type: 'question',
       options: [
-        { text: 'Resposta marcada (PFE > 70% e estabilidade)', nextStep: 'asma_resposta_boa', value: 'melhora' },
-        { text: 'Resposta incompleta (PFE 50-70% / sintomas persistentes)', nextStep: 'asma_resposta_incompleta', value: 'parcial' },
-        { text: 'Má resposta ou deterioração (PFE < 50%)', nextStep: 'asma_resposta_ma', value: 'sem_resposta', critical: true, requiresImmediateAction: true }
+        { text: 'Resposta marcada — melhora clínica e estabilidade; PFE favorável quando medido', nextStep: 'asma_resposta_boa', value: 'melhora' },
+        { text: 'Resposta parcial — melhora incompleta ou necessidade persistente de broncodilatador', nextStep: 'asma_resposta_incompleta', value: 'parcial' },
+        { text: 'Má resposta ou deterioração clínica; PFE < 50% quando medido', nextStep: 'asma_resposta_ma', value: 'sem_resposta', critical: true, requiresImmediateAction: true }
       ]
     },
     asma_resposta_boa: {

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
   Activity,
@@ -172,6 +173,17 @@ const symptomOptions = [
   ['consciencia', 'Redução do nível de consciência']
 ] as const
 
+const symptomDescriptions: Record<string, string> = {
+  face: 'Peça para sorrir ou mostrar os dentes; observe queda ou menor movimento de um lado.',
+  motor: 'Compare braços e pernas; procure queda, paresia, perda de destreza ou coordenação unilateral.',
+  sensitivo: 'Compare o toque nos dois lados; registre dormência ou redução sensitiva unilateral súbita.',
+  fala: 'Afasia altera linguagem ou compreensão; disartria é fala imprecisa com linguagem preservada.',
+  visual: 'Diplopia é visão dupla; hemianopsia é perda de metade do campo visual.',
+  equilibrio: 'Ataxia é descoordenação desproporcional à fraqueza; avalie a marcha somente com segurança.',
+  posterior: 'Inclui diplopia, disartria, disfagia, vertigem incapacitante, ataxia e déficits cruzados.',
+  consciencia: 'Registre sonolência, estupor ou coma e quantifique com Glasgow e NIHSS.'
+}
+
 const formatISODateToBR = (value?: string) => {
   if (!value) return ''
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
@@ -215,10 +227,10 @@ const examOptions = [
   ['angio', 'Angio-TC cervical e intracraniana'],
   ['hemograma', 'Hemograma e plaquetas'],
   ['coagulacao', 'TP/INR e TTPa'],
-  ['renal', 'Função renal e eletrólitos'],
+  ['renal', 'Ureia, creatinina, sódio, potássio, cálcio iônico e magnésio'],
   ['ecg', 'Eletrocardiograma'],
   ['troponina', 'Troponina conforme contexto'],
-  ['metabolico', 'HbA1c e perfil lipídico para investigação etiológica']
+  ['metabolico', 'Hemoglobina glicada (HbA1c) e perfil lipídico para investigação etiológica']
 ] as const
 
 const absoluteContraindications = [
@@ -258,11 +270,13 @@ const postLysisAlerts = [
 
 const supportiveOptions = [
   ['disfagia', 'Manter jejum até triagem segura da deglutição', 'Definir via segura para medicamentos, hidratação e nutrição.'],
-  ['temperatura', 'Evitar febre e corrigir alteração térmica', 'Pesquisar e tratar a causa da febre sem resfriamento agressivo de rotina.'],
-  ['glicemia', 'Manter controle glicêmico, evitando hipo e hiperglicemia', 'Corrigir hipoglicemia e evitar metas intensivas que aumentem o risco de nova hipoglicemia.'],
-  ['volume', 'Corrigir hipovolemia e hipotensão com solução isotônica', 'Preservar perfusão cerebral e evitar soluções hipotônicas.'],
-  ['pressao', 'Definir meta pressórica conforme reperfusão realizada ou não', 'Sem reperfusão, evitar redução precoce excessiva; individualizar se PA muito elevada ou houver outra emergência.'],
-  ['antiagregante', 'Definir estratégia antitrombótica após excluir hemorragia', 'Escolher antiagregação ou anticoagulação conforme mecanismo, imagem, tempo e contraindicações; respeitar 24 h após trombólise.'],
+  ['oxigenio', 'Oxigênio somente quando houver hipoxemia', 'Manter SpO₂ ≥94%; não oferecer oxigênio rotineiramente ao paciente não hipoxêmico.'],
+  ['temperatura', 'Tratar febre e manter temperatura abaixo de 37,5 °C', 'Pesquisar a causa e usar antitérmico quando indicado; não realizar resfriamento agressivo de rotina.'],
+  ['glicemia', 'Manter glicemia aproximadamente entre 140 e 180 mg/dL', 'Corrigir imediatamente hipoglicemia e evitar controle intensivo que aumente o risco de nova hipoglicemia.'],
+  ['volume', 'Manter euvolemia com solução isotônica', 'Corrigir hipovolemia ou hipotensão com SF 0,9% quando indicado e evitar soluções hipotônicas.'],
+  ['pressao', 'Aplicar meta pressórica conforme reperfusão', 'Sem reperfusão e sem outra emergência, em geral tratar apenas PA ≥220/120 mmHg e reduzir cerca de 15% nas primeiras 24 h; individualizar.'],
+  ['antiagregante', 'Iniciar AAS após excluir hemorragia quando indicado', 'Sem trombólise e sem contraindicação, considerar AAS 160–300 mg nas primeiras 24–48 h. Após trombólise, aguardar 24 h e imagem de controle.'],
+  ['estatina', 'Planejar estatina de alta intensidade', 'Iniciar ou manter conforme etiologia, tolerância, função hepática e protocolo de prevenção secundária.'],
   ['tevc', 'Prevenir tromboembolismo venoso e lesões por pressão', 'Associar mobilização segura e profilaxia conforme risco hemorrágico e mobilidade.'],
   ['etiologia', 'Planejar investigação etiológica e prevenção secundária', 'Incluir avaliação vascular e cardíaca, perfil lipídico, controle de fatores de risco e reabilitação precoce.']
 ] as const
@@ -623,7 +637,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_ativacao' && (
             <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-              <section><h2 className="text-lg font-black text-slate-950">Manifestações de início súbito</h2><p className="mt-1 text-sm text-slate-600">Marque todos os déficits presentes. Sinais posteriores também exigem ativação do protocolo.</p><div className="mt-4 grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <CardOption key={id} selected={(data.symptoms || []).includes(id)} title={label} onClick={() => selectMany('symptoms', id)} />)}</div></section>
+              <section><h2 className="text-lg font-black text-slate-950">Manifestações de início súbito</h2><p className="mt-1 text-sm text-slate-600">Marque todos os déficits presentes. Cada item traz uma descrição operacional para padronizar a avaliação.</p><div className="mt-4 grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <CardOption key={id} selected={(data.symptoms || []).includes(id)} title={label} description={symptomDescriptions[id]} onClick={() => selectMany('symptoms', id)} />)}</div></section>
               <section className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><h2 className="font-black text-slate-950">Último momento conhecido sem déficit</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"><label className="text-sm font-bold text-slate-700">Data<input type="text" inputMode="numeric" lang="pt-BR" placeholder="DD/MM/AAAA" maxLength={10} value={onsetDateText} onChange={event => { const digits = event.target.value.replace(/\D/g, '').slice(0, 8); const masked = digits.replace(/^(\d{2})(\d)/, '$1/$2').replace(/^(\d{2}\/\d{2})(\d)/, '$1/$2'); const onsetDate = parseBRDateToISO(masked); setOnsetDateText(masked); update({ onsetDate, onsetUnknown: false }) }} aria-label="Data do último momento conhecido sem déficit no formato dia, mês e ano" className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><label className="text-sm font-bold text-slate-700">Horário<input type="time" lang="pt-BR" value={data.onsetTime || ''} onChange={event => update({ onsetTime: event.target.value, onsetUnknown: false })} className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3" /></label><CardOption selected={Boolean(data.wakeUpStroke)} title="Déficit percebido ao acordar" onClick={() => update({ wakeUpStroke: !data.wakeUpStroke, onsetUnknown: true })} /><CardOption selected={Boolean(data.onsetUnknown)} title="Horário não determinado" onClick={() => update({ onsetUnknown: !data.onsetUnknown })} /></div></section>
               <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5">
                 <div className="flex items-start gap-3"><Clock3 className="mt-0.5 h-6 w-6 shrink-0 text-violet-700" /><div><h2 className="font-black text-violet-950">Cronometria porta–imagem</h2><p className="mt-1 text-sm leading-relaxed text-violet-900">Registre os horários reais. A meta operacional é iniciar a imagem cerebral em até 20 minutos da chegada e obter interpretação sem atraso; a meta institucional deve ser conferida localmente.</p></div></div>
@@ -632,7 +646,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
                   <label className="text-sm font-bold text-violet-950">Início da TC/RM<input type="time" value={data.ctStartTime || ''} onChange={event => update({ ctStartTime: event.target.value })} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-3" /></label>
                   <label className="text-sm font-bold text-violet-950">Imagem interpretada<input type="time" value={data.ctResultTime || ''} onChange={event => update({ ctResultTime: event.target.value })} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-3 py-3" /></label>
                 </div>
-                {(doorToCtMinutes != null || doorToCtResultMinutes != null) && <div className="mt-4 flex flex-wrap gap-2 text-sm font-black"><span className={clsx('rounded-full border px-3 py-2', doorToCtMinutes != null && doorToCtMinutes <= 20 ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-amber-300 bg-amber-50 text-amber-950')}>Porta–imagem: {doorToCtMinutes ?? '—'} min</span><span className="rounded-full border border-violet-300 bg-white px-3 py-2 text-violet-950">Porta–interpretação: {doorToCtResultMinutes ?? '—'} min</span></div>}
+                {(doorToCtMinutes != null || doorToCtResultMinutes != null) && <div className="mt-4 flex flex-wrap gap-2 text-sm font-black"><span className={clsx('rounded-full border px-3 py-2', doorToCtMinutes == null ? 'border-slate-300 bg-white text-slate-700' : doorToCtMinutes <= 20 ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : doorToCtMinutes <= 40 ? 'border-amber-300 bg-amber-50 text-amber-950' : 'border-red-300 bg-red-50 text-red-900')}>Porta–imagem: {doorToCtMinutes ?? '—'} min</span><span className="rounded-full border border-violet-300 bg-white px-3 py-2 text-violet-950">Porta–interpretação: {doorToCtResultMinutes ?? '—'} min</span></div>}
               </section>
               <ABCDEChecklist
                 value={data.abcdeDomains || []}
@@ -656,6 +670,10 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_triagem' && (
             <div className="space-y-5">
+              <figure className="overflow-hidden rounded-2xl border border-indigo-200 bg-white shadow-sm">
+                <Image src="/clinical-guides/avc-cincinnati-cpss.jpeg" alt="Guia visual da Escala de Cincinnati com avaliação de face, braços e fala" width={1536} height={2048} className="h-auto w-full" priority />
+                <figcaption className="border-t border-indigo-100 p-3 text-xs text-slate-600">Referência visual de apoio. Qualquer item alterado mantém a suspeita de AVC; resultado normal não exclui o diagnóstico.</figcaption>
+              </figure>
               <section className="overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-950 to-blue-900 text-white shadow-lg"><div className="p-5 sm:p-6"><p className="text-xs font-black uppercase tracking-[0.2em] text-blue-200">Referência visual · Escala de Cincinnati</p><h2 className="mt-1 text-2xl font-black">Face, braços e fala</h2><p className="mt-2 max-w-3xl text-sm text-blue-100">Execute os três itens em menos de um minuto. Qualquer alteração torna a triagem positiva e exige continuidade do protocolo, sem transformar a escala em diagnóstico isolado.</p></div><div className="grid gap-px bg-white/15 md:grid-cols-3">{[
                 ['1','Face','Solicite um sorriso mostrando os dentes. Compare a mobilidade dos dois lados e procure queda da comissura.'],
                 ['2','Braços','Peça para manter ambos os braços elevados, palmas para cima, por 10 segundos. Observe queda ou incapacidade.'],
@@ -677,11 +695,10 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_imagem' && (
             <div className="space-y-5">
-              <section className="rounded-2xl border border-slate-200 bg-slate-950 p-5 text-white"><div className="flex gap-3"><ScanLine className="h-6 w-6 text-cyan-300" /><div><h2 className="font-black">Guia visual esquemático da imagem inicial</h2><p className="mt-1 text-sm text-slate-300">Representação didática para organizar a decisão; não substitui a leitura das imagens nem o laudo radiológico.</p></div></div><div className="mt-4 grid gap-3 md:grid-cols-3">{[
-                ['Hemorragia','Área hiperdensa no parênquima, ventrículos ou espaços subaracnoides muda imediatamente o caminho terapêutico.','bg-white'],
-                ['Isquemia precoce','Pode haver hipodensidade discreta, perda da diferenciação córtico-subcortical ou apagamento de sulcos.','bg-slate-500'],
-                ['Sem alteração aguda evidente','Uma TC inicial aparentemente normal ainda pode coexistir com AVC isquêmico nas primeiras horas.','bg-slate-800']
-              ].map(([title,description,tone], index) => <article key={title} className="rounded-xl border border-white/15 bg-white/5 p-4"><div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full border-[10px] border-slate-500 bg-slate-700 shadow-inner"><span className={clsx('block rounded-full', tone, index === 0 ? 'h-7 w-5 translate-x-3 -translate-y-2' : index === 1 ? 'h-10 w-12 opacity-35' : 'h-2 w-2 opacity-20')} /></div><h3 className="mt-3 font-black">{title}</h3><p className="mt-1 text-xs leading-relaxed text-slate-300">{description}</p></article>)}</div></section>
+              <figure className="overflow-hidden rounded-2xl border border-slate-700 bg-slate-950 shadow-lg">
+                <Image src="/clinical-guides/avc-tc-guia.jpeg" alt="Exemplos de tomografia de crânio com hemorragia, sinais precoces de isquemia e exame sem alteração aguda" width={1600} height={1259} className="h-auto w-full" />
+                <figcaption className="p-3 text-xs text-slate-300">Guia didático: a interpretação definitiva depende das imagens completas e do laudo especializado.</figcaption>
+              </figure>
               <CardOption selected={data.imagingResult === 'hemorragia'} title="Hemorragia intracraniana presente" description="O caminho de reperfusão isquêmica deve ser interrompido." danger onClick={() => update({ imagingResult: 'hemorragia' })} /><CardOption selected={data.imagingResult === 'sem_hemorragia'} title="Sem hemorragia na imagem inicial" description="Prosseguir como possível AVC isquêmico conforme tempo e déficit." onClick={() => update({ imagingResult: 'sem_hemorragia' })} /><CardOption selected={data.imagingResult === 'inconclusiva'} title="Imagem sem diagnóstico definitivo" description="Uma TC precoce normal não exclui isquemia; correlacionar com clínica e imagem vascular." onClick={() => update({ imagingResult: 'inconclusiva' })} /><button type="button" disabled={!data.imagingResult} onClick={() => data.imagingResult === 'hemorragia' ? persist('avc_hemorragico_destino') : persist('avc_janela')} className={clsx('flex w-full items-center justify-center gap-2 rounded-xl px-5 py-4 font-extrabold text-white disabled:bg-slate-300', data.imagingResult === 'hemorragia' ? 'bg-red-700' : 'bg-indigo-700')}>Confirmar resultado e continuar <ChevronRight /></button>
             </div>
           )}
@@ -696,12 +713,17 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
 
           {stage === 'avc_imagem_avancada' && (
             <div className="space-y-4">
+              <figure className="overflow-hidden rounded-2xl border border-violet-300 bg-slate-950 shadow-lg">
+                <Image src="/clinical-guides/avc-rm-dwi-flair.jpeg" alt="Guia visual de ressonância magnética com padrões DWI e FLAIR no AVC agudo" width={1600} height={1000} className="h-auto w-full" />
+                <figcaption className="p-3 text-xs text-slate-300">O mismatch DWI/FLAIR pode apoiar seleção em horário desconhecido; a decisão exige protocolo e especialista.</figcaption>
+              </figure>
               <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950"><strong>Imagem avançada seleciona reperfusão na janela estendida, mas não existe na maioria dos serviços.</strong> Registre a capacidade local. A falta do recurso não deve ser convertida em resultado negativo nem encerrar a discussão com um centro de AVC.</div>
               <CardOption selected={data.advancedImaging === 'mismatch'} title="Padrão favorável de tecido viável" description="Perfusão ou RM demonstrou discordância compatível com tecido potencialmente recuperável." onClick={() => update({ advancedImaging: 'mismatch' })} />
               <CardOption selected={data.advancedImaging === 'sem_mismatch'} title="Imagem avançada realizada, sem padrão favorável" description="O exame foi efetivamente realizado e não demonstrou seleção adequada para trombólise em janela estendida." danger onClick={() => update({ advancedImaging: 'sem_mismatch' })} />
-              <CardOption selected={data.advancedImaging === 'indisponivel_angio_disponivel' || data.advancedImaging === 'indisponivel'} title="Perfusão/RM indisponível, mas angio-TC disponível" description="Prosseguir para pesquisa de oclusão tratável e avaliar trombectomia conforme território, tempo e imagem." onClick={() => update({ advancedImaging: 'indisponivel_angio_disponivel' })} />
+              <CardOption selected={data.advancedImaging === 'indisponivel_angio_disponivel'} title="Perfusão/RM indisponível, mas angio-TC disponível" description="Prosseguir para pesquisa de oclusão tratável e avaliar trombectomia conforme território, tempo e imagem." onClick={() => update({ advancedImaging: 'indisponivel_angio_disponivel' })} />
               <CardOption selected={data.advancedImaging === 'indisponivel_transferir'} title="Imagem vascular/avançada ou trombectomia indisponível — solicitar transferência" description="Contatar imediatamente centro de AVC com capacidade diagnóstica e endovascular; enviar TC simples, horários, NIHSS e dados clínicos." danger onClick={() => update({ advancedImaging: 'indisponivel_transferir' })} />
-              <button type="button" disabled={!data.advancedImaging} onClick={() => data.advancedImaging === 'mismatch' ? persist('avc_trombolise_seguranca') : data.advancedImaging === 'indisponivel_transferir' ? persist('avc_transferencia_reperfusao') : persist('avc_vaso')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar disponibilidade e continuar <ChevronRight /></button>
+              <CardOption selected={data.advancedImaging === 'indisponivel'} title="Sem imagem avançada e sem transferência factível" description="Registrar a limitação, manter discussão com neurologia e seguir para manejo clínico completo; ausência do recurso não equivale a exame negativo." danger onClick={() => update({ advancedImaging: 'indisponivel' })} />
+              <button type="button" disabled={!data.advancedImaging} onClick={() => data.advancedImaging === 'mismatch' ? persist('avc_trombolise_seguranca') : data.advancedImaging === 'indisponivel_transferir' ? persist('avc_transferencia_reperfusao') : data.advancedImaging === 'indisponivel' ? persist('avc_cuidados_sem_reperfusao') : persist('avc_vaso')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar disponibilidade e continuar <ChevronRight /></button>
             </div>
           )}
 
@@ -763,7 +785,7 @@ const AVCFlowchartInteractive: React.FC<AVCFlowchartInteractiveProps> = ({
           )}
 
           {stage === 'avc_vaso' && (
-            <div className="grid gap-3 md:grid-cols-2">{([['grande_anterior','Grande vaso da circulação anterior','Carótida interna ou segmento proximal da cerebral média.'],['m2_dominante','Ramo M2 dominante','Oclusão de médio vaso com território funcional relevante.'],['medio_distal','Médio vaso distal ou não dominante','Evidência de benefício rotineiro é insuficiente no protocolo.'],['basilar','Artéria basilar','Aplicar PC-ASPECTS, NIHSS e funcionalidade prévia.'],['sem_ogv','Sem oclusão tratável de grande vaso','Seguir cuidados clínicos e prevenção secundária.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.vesselTerritory === id} title={title} description={description} danger={id === 'medio_distal'} onClick={() => id === 'sem_ogv' ? persist('avc_cuidados_sem_reperfusao', { vesselTerritory: id }) : update({ vesselTerritory: id })} />)}<CardOption selected={false} title="Angioimagem indisponível neste serviço" description="Não interpretar a ausência do recurso como ausência de oclusão. Acionar neurologia/regulação e transferir para centro com capacidade vascular/endovascular quando a janela e o quadro mantiverem possibilidade de benefício." danger onClick={() => persist('avc_transferencia_reperfusao', { advancedImaging: 'indisponivel_transferir', vesselTerritory: undefined })} />{data.vesselTerritory && data.vesselTerritory !== 'sem_ogv' && <button type="button" onClick={() => persist('avc_trombectomia_criterios')} className="md:col-span-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Aplicar critérios de trombectomia <ChevronRight /></button>}</div>
+            <div className="grid gap-3 md:grid-cols-2">{([['grande_anterior','Grande vaso da circulação anterior','Carótida interna ou segmento proximal da cerebral média.'],['m2_dominante','Ramo M2 dominante','Oclusão de médio vaso com território funcional relevante.'],['medio_distal','Médio vaso distal ou não dominante','Evidência de benefício rotineiro é insuficiente no protocolo.'],['basilar','Artéria basilar','Aplicar PC-ASPECTS, NIHSS e funcionalidade prévia.'],['sem_ogv','Sem oclusão tratável de grande vaso','Seguir cuidados clínicos e prevenção secundária.']] as const).map(([id,title,description]) => <CardOption key={id} selected={data.vesselTerritory === id} title={title} description={description} danger={id === 'medio_distal'} onClick={() => id === 'sem_ogv' ? persist('avc_cuidados_sem_reperfusao', { vesselTerritory: id }) : update({ vesselTerritory: id })} />)}<CardOption selected={false} title="Angioimagem indisponível — transferência factível" description="Acionar neurologia/regulação e transferir para centro vascular/endovascular quando a janela e o quadro mantiverem possibilidade de benefício." danger onClick={() => persist('avc_transferencia_reperfusao', { advancedImaging: 'indisponivel_transferir', vesselTerritory: undefined })} /><CardOption selected={false} title="Angioimagem indisponível — sem transferência factível" description="Documentar a limitação do recurso e seguir imediatamente para o pacote completo de manejo clínico e definição de unidade monitorizada ou UTI conforme estabilidade." danger onClick={() => persist('avc_cuidados_sem_reperfusao', { advancedImaging: 'indisponivel', vesselTerritory: undefined })} />{data.vesselTerritory && data.vesselTerritory !== 'sem_ogv' && <button type="button" onClick={() => persist('avc_trombectomia_criterios')} className="md:col-span-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-4 font-extrabold text-white">Aplicar critérios de trombectomia <ChevronRight /></button>}</div>
           )}
 
           {stage === 'avc_trombectomia_criterios' && (
