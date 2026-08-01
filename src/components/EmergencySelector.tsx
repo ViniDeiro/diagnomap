@@ -77,7 +77,6 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
         'pep_hiv',
         'geca'
     ]
-    const finishedFlowchartsCount = finishedFlowchartIds.length
 
     const normalizeText = (value: string) =>
         value
@@ -214,10 +213,6 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                                 <Activity className="h-4 w-4" />
                                 {implementedFlowchartsCount} de {totalFlowchartsCount} fluxogramas implementados
                             </span>}
-                            <span className="inline-flex w-fit items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-bold text-blue-700">
-                                <CheckCircle className="h-4 w-4" />
-                                {finishedFlowchartsCount} finalizados
-                            </span>
                         </div>
                     </div>
 
