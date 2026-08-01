@@ -206,9 +206,9 @@ const EmergencySelector: React.FC<EmergencySelectorProps> = ({
                             {finalizedOnly ? 'Fluxogramas liberados para atendimento' : 'Protocolos de Emergência'}
                         </h1>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                            <p className="text-slate-500 font-medium">
-                                {finalizedOnly ? 'Durante o teste, somente fluxogramas finalizados estão disponíveis.' : 'Selecione o protocolo apropriado para iniciar o atendimento'}
-                            </p>
+                            {!finalizedOnly && <p className="text-slate-500 font-medium">
+                                Selecione o protocolo apropriado para iniciar o atendimento
+                            </p>}
                             {!finalizedOnly && <span className="inline-flex w-fit items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-sm font-bold text-emerald-700">
                                 <Activity className="h-4 w-4" />
                                 {implementedFlowchartsCount} de {totalFlowchartsCount} fluxogramas implementados
