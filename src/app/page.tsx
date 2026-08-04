@@ -21,9 +21,11 @@ import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { isSupabaseConfigured, supabase } from '@/services/supabaseClient'
 import Header from '@/components/Header'
 import ProfileScreen from '@/components/ProfileScreen'
+import AdminActivityPanel from '@/components/AdminActivityPanel'
+import { logActivityEvent } from '@/services/activityAudit'
 import { AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react'
 
-type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form' | 'profile'
+type AppState = 'loading' | 'dashboard' | 'emergency-selector' | 'new-patient' | 'flowchart' | 'emergency-flowchart' | 'prescriptions' | 'report' | 'medical-prescription' | 'return-visit' | 'return-form' | 'profile' | 'admin'
 
 export default function Home() {
   const router = useRouter()
@@ -144,6 +146,7 @@ export default function Home() {
 
   const handlePatientFormSubmit = (formData: PatientFormData) => {
     const newPatient = patientService.createPatient(formData)
+    void logActivityEvent({ eventType: 'patient_created', patientExternalId: newPatient.id, flowchartId: formData.selectedFlowchart, stepId: 'start', progress: 0 })
     setLibraryFlowchart(null)
     setCurrentPatient(newPatient)
     setRefreshTrigger(prev => prev + 1)
@@ -247,6 +250,7 @@ export default function Home() {
   }
 
   const handleFlowchartComplete = () => {
+    if (currentPatient) void logActivityEvent({ eventType: 'flowchart_completed', patientExternalId: currentPatient.id, flowchartId: currentPatient.selectedFlowchart, progress: 100 })
     setSafetyAlertRequired(false)
     setAppState('dashboard')
     setCurrentPatient(null)
@@ -267,6 +271,7 @@ export default function Home() {
         !!currentPatient?.medicalRecord && storedPatient.medicalRecord === currentPatient.medicalRecord
       )
     const storagePatientId = storagePatient?.id || patientId
+    void logActivityEvent({ eventType: history.length <= 1 ? 'flowchart_started' : 'flowchart_progress', patientExternalId: storagePatientId, flowchartId: storagePatient?.selectedFlowchart ?? currentPatient?.selectedFlowchart, stepId: currentStep, progress })
 
     patientService.updateFlowchartState(storagePatientId, currentStep, history, answers, progress, group)
     const lastUpdate = new Date()
@@ -449,6 +454,7 @@ export default function Home() {
             onProfileClick={() => setAppState('profile')}
             onNewPatientClick={handleNewPatient}
             onFlowchartLibraryClick={handleOpenFlowchartLibrary}
+            onAdminClick={() => setAppState('admin')}
           />
           <EmergencySelector
             onSelectFlowchart={handleSelectEmergencyFlowchart}
@@ -543,6 +549,20 @@ export default function Home() {
       )
     }
 
+    if (appState === 'admin') {
+      return (
+        <>
+          <Header
+            onProfileClick={() => setAppState('profile')}
+            onNewPatientClick={handleNewPatient}
+            onFlowchartLibraryClick={handleOpenFlowchartLibrary}
+            onAdminClick={() => setAppState('admin')}
+          />
+          <AdminActivityPanel onBack={() => setAppState('dashboard')} />
+        </>
+      )
+    }
+
     // Dashboard and Overlays
     return (
       <>
@@ -552,6 +572,7 @@ export default function Home() {
            onProfileClick={() => setAppState('profile')}
            onNewPatientClick={handleNewPatient}
            onFlowchartLibraryClick={handleOpenFlowchartLibrary}
+           onAdminClick={() => setAppState('admin')}
          />
         }
 

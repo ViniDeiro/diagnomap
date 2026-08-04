@@ -13,7 +13,8 @@ import {
   Settings, 
   ChevronRight,
   User,
-  Calculator
+  Calculator,
+  ShieldCheck
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
@@ -27,6 +28,7 @@ interface SidebarProps {
   onProfileClick?: () => void
   onNewPatientClick?: () => void
   onFlowchartLibraryClick?: () => void
+  onAdminClick?: () => void
 }
 
 type SidebarChild = {
@@ -38,7 +40,7 @@ type SidebarLinkItem = {
   icon: LucideIcon
   label: string
   href: string
-  action?: 'new-patient' | 'flowchart-library'
+  action?: 'new-patient' | 'flowchart-library' | 'admin'
   submenuId?: never
   children?: never
 }
@@ -66,7 +68,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   userEmail,
   onProfileClick,
   onNewPatientClick,
-  onFlowchartLibraryClick
+  onFlowchartLibraryClick,
+  onAdminClick
 }) => {
   const [openSubmenus, setOpenSubmenus] = useState<Record<string, boolean>>({
     calculadoras: true
@@ -109,6 +112,13 @@ const Sidebar: React.FC<SidebarProps> = ({
       ]
     }
   ]
+
+  if (userEmail?.trim().toLowerCase() === 'joaopedrolopes@gmail.com') {
+    menuGroups.push({
+      title: 'Administração',
+      items: [{ icon: ShieldCheck, label: 'Painel administrativo', href: '/?view=admin', action: 'admin' }]
+    })
+  }
 
   return (
     <AnimatePresence>
@@ -206,6 +216,10 @@ const Sidebar: React.FC<SidebarProps> = ({
                               if (item.action === 'flowchart-library' && onFlowchartLibraryClick) {
                                 event.preventDefault()
                                 onFlowchartLibraryClick()
+                              }
+                              if (item.action === 'admin' && onAdminClick) {
+                                event.preventDefault()
+                                onAdminClick()
                               }
                               onClose()
                             }}

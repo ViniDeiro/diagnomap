@@ -46,12 +46,14 @@ async function run() {
   const schemaFlowchartsPath = path.join(__dirname, '..', 'db', 'supabase', 'schema_flowcharts.sql')
   const schemaStorageAvatarsPath = path.join(__dirname, '..', 'db', 'supabase', 'schema_storage_avatars.sql')
   const ensureDoctorProfilePath = path.join(__dirname, '..', 'db', 'supabase', 'ensure_doctor_profile_persistence.sql')
+  const schemaActivityEventsPath = path.join(__dirname, '..', 'db', 'supabase', 'schema_activity_events.sql')
 
   const sql1 = fs.readFileSync(schemaPath, 'utf8')
   const sql2 = fs.readFileSync(schemaDoctorsPath, 'utf8')
   const sql3 = fs.readFileSync(schemaFlowchartsPath, 'utf8')
   const sql4 = fs.readFileSync(schemaStorageAvatarsPath, 'utf8')
   const sql5 = fs.readFileSync(ensureDoctorProfilePath, 'utf8')
+  const sql6 = fs.readFileSync(schemaActivityEventsPath, 'utf8')
 
   try {
     console.log('Conectando ao banco...')
@@ -71,6 +73,9 @@ async function run() {
 
     console.log('Aplicando ensure_doctor_profile_persistence.sql...')
     await client.query(sql5)
+
+    console.log('Aplicando schema_activity_events.sql...')
+    await client.query(sql6)
 
     console.log('Verificando tabelas...')
     const checkTables = await client.query("select to_regclass('public.patients') as patients, to_regclass('public.doctors') as doctors, to_regclass('public.flowcharts') as flowcharts")

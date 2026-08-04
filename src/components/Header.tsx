@@ -9,9 +9,10 @@ interface HeaderProps {
   onProfileClick?: () => void
   onNewPatientClick?: () => void
   onFlowchartLibraryClick?: () => void
+  onAdminClick?: () => void
 }
 
-const Header: React.FC<HeaderProps> = ({ onProfileClick, onNewPatientClick, onFlowchartLibraryClick }) => {
+const Header: React.FC<HeaderProps> = ({ onProfileClick, onNewPatientClick, onFlowchartLibraryClick, onAdminClick }) => {
   const [avatarUrl, setAvatarUrl] = useState<string>('')
   const [userName, setUserName] = useState<string>('')
   const [userEmail, setUserEmail] = useState<string>('')
@@ -65,6 +66,7 @@ const Header: React.FC<HeaderProps> = ({ onProfileClick, onNewPatientClick, onFl
         onProfileClick={onProfileClick}
         onNewPatientClick={onNewPatientClick}
         onFlowchartLibraryClick={onFlowchartLibraryClick}
+        onAdminClick={onAdminClick}
       />
       <header className="relative bg-white sticky top-0 z-50 border-b border-slate-100">
         <div className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 h-32">
