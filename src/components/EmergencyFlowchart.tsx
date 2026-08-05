@@ -47,6 +47,7 @@ import AcuteAorticSyndromeFlowchartInteractive from './AcuteAorticSyndromeFlowch
 import AcuteCoronarySyndromeFlowchartInteractive from './AcuteCoronarySyndromeFlowchartInteractive'
 import SubarachnoidHemorrhageFlowchartInteractive from './SubarachnoidHemorrhageFlowchartInteractive'
 import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
+import UniversalImagingNotebook, { UNIVERSAL_IMAGING_RESULTS_KEY } from './UniversalImagingNotebook'
 import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
 import TEPAssessment from './TEPAssessment'
@@ -1652,6 +1653,22 @@ SABA significa beta-2 agonista adrenérgico de curta ação: é um broncodilatad
 2. Salbutamol 100 mcg/dose — inalar 1 a 2 jatos com espaçador a cada 4 a 6 horas se falta de ar.
 
 Orientações: revisar técnica inalatória; manter o controlador prescrito; retornar em 24–48 horas; procurar emergência se houver piora, dificuldade para falar, sonolência, cianose ou ausência de resposta ao resgate. Ajustar esta sugestão às alergias, contraindicações, idade, gestação, comorbidades e tratamento de manutenção.`
+
+const ASTHMA_PRESCRIBER = 'Fluxograma Crise Asmática'
+const ASTHMA_DISCHARGE_CRITERIA_KEY = '__asthma_discharge_criteria'
+const ASTHMA_DISCHARGE_CRITERIA = [
+  'Sintomas mínimos e estabilidade clínica',
+  'Sem necessidade de medicação de resgate na última hora',
+  'SatO₂ acima de 92% em ar ambiente',
+  'PFE/VEF1 acima de 70%, quando a medida estiver disponível',
+  'Medicação e dispositivo disponíveis para continuidade',
+  'Técnica inalatória revisada e demonstrada',
+  'Plano de ação, retorno em 24–48 horas e acesso seguro à reavaliação'
+]
+const buildAsthmaDischargePrescriptionItems = () => [
+  { medication: 'Prednisona', dosage: '40 mg VO', frequency: '1 vez pela manhã', duration: '5 a 7 dias', instructions: 'Confirmar contraindicações, comorbidades e tratamento já utilizado.', prescribedBy: ASTHMA_PRESCRIBER },
+  { medication: 'Salbutamol spray', dosage: '100 mcg/dose — 1 a 2 jatos com espaçador', frequency: 'a cada 4 a 6 horas se falta de ar', duration: 'conforme plano de ação e reavaliação', instructions: 'SABA de resgate. Revisar técnica inalatória e orientar procura imediata do PS se não houver resposta.', prescribedBy: ASTHMA_PRESCRIBER }
+]
 
 const ASTHMA_MAGNESIUM_PRESCRIPTION = `SULFATO DE MAGNÉSIO — CRISE ASMÁTICA GRAVE
 Administrar 2 g por via intravenosa, em dose única, ao longo de 20 a 30 minutos.
@@ -3646,6 +3663,9 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         buildGecaStructuredPrescriptionItems(newAnswers['geca_antibioticos'], patient)
       )
     }
+    if (flowchart.id === 'asthma' && nextStep === 'asma_alta_final') {
+      patientService.replacePrescriptionsByPrescriber(patient.id, ASTHMA_PRESCRIBER, buildAsthmaDischargePrescriptionItems())
+    }
 
     setCurrentStep(nextStep)
     setHistory(newHistory)
@@ -4077,6 +4097,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     currentStepData.requiresLabs || currentStepData.type === 'lab_wait' ||
     /(exames_dirigidos|resultados_exames|laboratorio|investigacao_dirigida)/i.test(currentStepData.id)
   ))
+  const shouldShowUniversalImagingNotebook = Boolean(
+    (flowchart.id === 'pneumonia' && ['pac_solicitacao_exames', 'pac_resultados_exames'].includes(currentStep)) ||
+    (flowchart.id === 'influenza' && ['influenza_painel_viral_enfermaria', 'influenza_painel_viral_uti'].includes(currentStep))
+  )
+  const isAsthmaDischargeCriteriaStep = flowchart.id === 'asthma' && currentStep === 'asma_criterios_alta'
+  const asthmaDischargeCriteria = useMemo(() => {
+    try {
+      const parsed = JSON.parse(answers[ASTHMA_DISCHARGE_CRITERIA_KEY] || '[]')
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string') : []
+    } catch { return [] as string[] }
+  }, [answers])
   const isGecaReassessmentScreen = flowchart.id === 'geca' && ['geca_reavaliacao_plano_b', 'geca_reavaliacao_plano_b_segunda', 'geca_reavaliacao_plano_c'].includes(currentStep)
   const gecaReassessmentNumber = Math.min(2, parseGecaReassessmentCount(answers[GECA_REASSESSMENT_STATE_KEY]) + 1)
   const universalSuggestedLabs = flowchart.id === 'geca'
@@ -4103,6 +4134,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     setAnswers(updatedAnswers)
     onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
   }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
+  const persistUniversalImagingNotebook = useCallback((serialized: string) => {
+    const updatedAnswers = { ...answers, [UNIVERSAL_IMAGING_RESULTS_KEY]: serialized }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }, [answers, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
+  const toggleAsthmaDischargeCriterion = useCallback((criterion: string) => {
+    const selected = asthmaDischargeCriteria.includes(criterion)
+      ? asthmaDischargeCriteria.filter((item) => item !== criterion)
+      : [...asthmaDischargeCriteria, criterion]
+    const updatedAnswers = { ...answers, [ASTHMA_DISCHARGE_CRITERIA_KEY]: JSON.stringify(selected) }
+    setAnswers(updatedAnswers)
+    onUpdate(patient.id, currentStep, history, updatedAnswers, progress, patient.emergencyState.riskGroup)
+  }, [answers, asthmaDischargeCriteria, currentStep, history, onUpdate, patient.emergencyState.riskGroup, patient.id, progress])
   const persistPepBaselineAssessment = useCallback((patch: Partial<PepBaselineAssessment>) => {
     const current = parsePepBaselineAssessment(answers[PEP_BASELINE_ASSESSMENT_KEY])
     const next = {
@@ -12159,6 +12203,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                       if (target.closest('[data-asthma-copy-discharge="true"]')) {
                         event.preventDefault()
                         event.stopPropagation()
+                        patientService.replacePrescriptionsByPrescriber(patient.id, ASTHMA_PRESCRIBER, buildAsthmaDischargePrescriptionItems())
                         void navigator.clipboard.writeText(ASTHMA_ADULT_DISCHARGE_PRESCRIPTION).then(() => {
                           setAsthmaDischargeCopied(true)
                           window.setTimeout(() => setAsthmaDischargeCopied(false), 1800)
@@ -12237,6 +12282,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         {inlineConductCopied ? 'Conduta copiada' : 'Copiar conduta'}
                       </button>
                     </div>
+                  )}
+                  {isAsthmaDischargeCriteriaStep && (
+                    <section className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4 sm:p-5">
+                      <div className="flex items-center justify-between gap-3"><div><h3 className="font-extrabold text-slate-950">Checklist obrigatório para alta</h3><p className="mt-1 text-sm text-slate-600">Confirme individualmente os critérios aplicáveis. O PFE não impede a alta quando não estiver disponível.</p></div><span className="rounded-full bg-white px-3 py-1 text-sm font-black text-emerald-800">{asthmaDischargeCriteria.length}/{ASTHMA_DISCHARGE_CRITERIA.length}</span></div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">{ASTHMA_DISCHARGE_CRITERIA.map((criterion) => { const checked = asthmaDischargeCriteria.includes(criterion); return <button key={criterion} type="button" aria-pressed={checked} onClick={() => toggleAsthmaDischargeCriterion(criterion)} className={clsx('flex items-start gap-3 rounded-xl border p-4 text-left text-sm font-bold transition', checked ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-200 bg-white text-slate-800 hover:border-emerald-400')}><span className={clsx('flex h-5 w-5 shrink-0 items-center justify-center rounded border', checked ? 'border-white bg-white text-emerald-700' : 'border-slate-300 text-transparent')}>✓</span>{criterion}</button> })}</div>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2"><button type="button" disabled={asthmaDischargeCriteria.length !== ASTHMA_DISCHARGE_CRITERIA.length} onClick={() => { const option = currentStepData.options?.find((item) => item.value === 'alta_ok'); if (option) handleOptionSelect(option) }} className="rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:cursor-not-allowed disabled:bg-slate-300">Confirmar critérios e gerar receita</button><button type="button" onClick={() => { const option = currentStepData.options?.find((item) => item.value === 'alta_negada'); if (option) handleOptionSelect(option) }} className="rounded-xl border border-red-300 bg-red-50 px-5 py-4 font-extrabold text-red-900">Critérios não atendidos — manter no hospital</button></div>
+                    </section>
                   )}
                   {flowchart.id === 'asthma' && currentStep === 'asma_checar_anafilaxia' && onSwitchFlowchart && (
                     <div className="mt-4 rounded-2xl border border-red-300 bg-red-50 p-4 text-red-950">
@@ -18848,6 +18900,9 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
               {isAsthmaFlow && asthmaMagnesiumCopied && (
                 <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">Preparo do sulfato de magnésio copiado.</div>
               )}
+              {shouldShowUniversalImagingNotebook && (
+                <div className="mb-6"><UniversalImagingNotebook value={answers[UNIVERSAL_IMAGING_RESULTS_KEY]} onChange={persistUniversalImagingNotebook} title={flowchart.id === 'pneumonia' ? 'RX de tórax · Pneumonia adquirida na comunidade' : 'RX de tórax · Síndrome gripal / SRAG'} /></div>
+              )}
 
               {/* Opções */}
               {(() => {
@@ -18863,7 +18918,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isPepInteractiveAssessmentStep || isPepMaterialRiskStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isAsthmaDischargeCriteriaStep || isPepInteractiveAssessmentStep || isPepMaterialRiskStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (

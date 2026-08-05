@@ -5,6 +5,7 @@ import { getOseltamivirDoseText } from '@/lib/influenza'
 import { getPneumoniaSmartCopRisk } from '@/lib/pneumonia'
 import { parseUniversalClinicalAssessment, summarizeUniversalPhysicalExam, UNIVERSAL_ASSESSMENT_ANSWER_KEY } from '@/components/UniversalClinicalAssessment'
 import { parseUniversalLabNotebook, UNIVERSAL_LAB_RESULTS_KEY } from '@/components/UniversalLabNotebook'
+import { parseUniversalImagingRecord, UNIVERSAL_IMAGING_RESULTS_KEY } from '@/components/UniversalImagingNotebook'
 import { formatChiefComplaintWithDuration } from '@/lib/clinicalText'
 
 export type ClinicalSummaryData = {
@@ -49,6 +50,24 @@ type PneumoniaExamSummary = {
   extremities?: { altered?: string }
   skin?: { altered?: string }
   additionalInformation?: string
+}
+
+const formatUniversalChestXrayRecord = (answers: Record<string, string>): string | null => {
+  const imaging = parseUniversalImagingRecord(answers[UNIVERSAL_IMAGING_RESULTS_KEY])
+  const statusLabels = {
+    solicitado: 'solicitada',
+    pendente: 'solicitada, com resultado pendente',
+    realizado: 'realizada',
+    indisponivel: 'indicada, porém indisponível no serviço'
+  } as const
+  const status = imaging.chestXrayStatus
+  if (!status && !imaging.chestXrayReport.trim() && !imaging.chestXrayImpression.trim() && !imaging.notes.trim()) return null
+  return uniqueTextItems([
+    `Radiografia de tórax ${status ? statusLabels[status] : 'registrada'}`,
+    imaging.chestXrayReport.trim() ? `laudo/achados: ${imaging.chestXrayReport.trim()}` : null,
+    imaging.chestXrayImpression.trim() ? `impressão: ${imaging.chestXrayImpression.trim()}` : null,
+    imaging.notes.trim() ? `observações: ${imaging.notes.trim()}` : null
+  ]).join('; ')
 }
 
 const houseBrackmannLabels: Record<string, string> = {
@@ -1060,6 +1079,7 @@ const buildInfluenzaClinicalSummary = (
   const requestedExams = Array.isArray(viralPanel?.examesSolicitados)
     ? uniqueTextItems(viralPanel.examesSolicitados.map(String))
     : []
+  const chestXrayRecord = formatUniversalChestXrayRecord(answers)
   const severityDecision = String(severity?.decision || answers.influenza_sinais_gravidade || '')
   const icuDecision = String(icu?.decision || answers.influenza_criterios_uti || '')
   const hasSRAG = severity?.classificadoComoSRAG === true
@@ -1160,11 +1180,13 @@ const buildInfluenzaClinicalSummary = (
         ? 'Foi indicada terapia intensiva; os critérios específicos não estão disponíveis no registro estruturado'
         : null
   ].filter(Boolean).join('. ') + '.'
-  const investigationSentence = requestedExams.length
-    ? `Coleta respiratória e solicitação de ${formatClinicalListText(requestedExams)}.`
-    : hasSRAG
-      ? 'Em razão da classificação como SRAG, recomenda-se coleta respiratória precoce para RT-PCR ou painel viral e investigação laboratorial e radiológica conforme gravidade.'
-      : ''
+  const investigationSentence = uniqueTextItems([
+    requestedExams.length ? `Coleta respiratória e solicitação de ${formatClinicalListText(requestedExams)}` : null,
+    chestXrayRecord,
+    !requestedExams.length && !chestXrayRecord && hasSRAG
+      ? 'Em razão da classificação como SRAG, recomenda-se coleta respiratória precoce para RT-PCR ou painel viral e investigação laboratorial e radiológica conforme gravidade'
+      : null
+  ]).join('. ') + (requestedExams.length || chestXrayRecord || hasSRAG ? '.' : '')
 
   const prescribedItems = uniqueTextItems(
     patient.treatment.prescriptions
@@ -1359,6 +1381,7 @@ const buildPneumoniaClinicalSummary = (
   ])
 
   const requestedExams = Array.isArray(examRequest?.examesSelecionados) ? examRequest.examesSelecionados.map(String) : []
+  const chestXrayRecord = formatUniversalChestXrayRecord(answers)
   const recordedLabs = Object.entries(labResults)
     .filter(([, value]) => String(value ?? '').trim())
     .map(([name, value]) => `${name}: ${String(value).trim()}`)
@@ -1399,7 +1422,8 @@ const buildPneumoniaClinicalSummary = (
   ])
   const investigationLines = uniqueTextItems([
     requestedExams.length ? `exames solicitados: ${requestedExams.join('; ')}` : null,
-    recordedLabs.length ? `resultados disponíveis: ${recordedLabs.join('; ')}` : null
+    recordedLabs.length ? `resultados disponíveis: ${recordedLabs.join('; ')}` : null,
+    chestXrayRecord
   ])
   const investigationSentence = investigationLines.length
     ? `Investigação complementar: ${investigationLines.join('; ')}.`

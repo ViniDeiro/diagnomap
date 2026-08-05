@@ -28,6 +28,7 @@ const ituComponentSource = fs.readFileSync(path.join(root, 'src/components/ITUFl
 const universalConductCopySource = fs.readFileSync(path.join(root, 'src/components/UniversalConductCopyScope.tsx'), 'utf8')
 const hellpComponentSource = fs.readFileSync(path.join(root, 'src/components/HELLPFlowchartInteractive.tsx'), 'utf8')
 const labNotebookSource = fs.readFileSync(path.join(root, 'src/components/UniversalLabNotebook.tsx'), 'utf8')
+const imagingNotebookSource = fs.readFileSync(path.join(root, 'src/components/UniversalImagingNotebook.tsx'), 'utf8')
 const patientServiceSource = fs.readFileSync(path.join(root, 'src/services/patientService.ts'), 'utf8')
 const ituLogicSource = fs.readFileSync(path.join(root, 'src/lib/itu.ts'), 'utf8')
 const anxietyComponentSource = fs.readFileSync(path.join(root, 'src/components/AnxietyFlowchartInteractive.tsx'), 'utf8')
@@ -67,6 +68,10 @@ vm.runInNewContext(compiledClinicalSummary, {
     if (request.includes('UniversalLabNotebook')) return {
       UNIVERSAL_LAB_RESULTS_KEY: '__universal_lab_results',
       parseUniversalLabNotebook: raw => raw ? JSON.parse(raw) : { entries: [], notes: '' }
+    }
+    if (request.includes('UniversalImagingNotebook')) return {
+      UNIVERSAL_IMAGING_RESULTS_KEY: '__universal_imaging_results',
+      parseUniversalImagingRecord: raw => raw ? JSON.parse(raw) : { chestXrayStatus: '', chestXrayReport: '', chestXrayImpression: '', notes: '' }
     }
     if (request.includes('clinicalText')) return {
       formatChiefComplaintWithDuration: (complaint, duration, fallback = 'motivo do atendimento não informado') => {
@@ -560,6 +565,11 @@ assert.match(emergencyComponentSource, /ASTHMA_MAGNESIUM_PRESCRIPTION/)
 assert.match(emergencyComponentSource, /data-asthma-copy-magnesium/)
 assert.match(emergencyComponentSource, /ASTHMA_ADULT_DISCHARGE_PRESCRIPTION/)
 assert.match(emergencyComponentSource, /data-asthma-copy-discharge/)
+assert.match(emergencyComponentSource, /nextStep === 'asma_alta_final'[\s\S]*replacePrescriptionsByPrescriber\(patient\.id, ASTHMA_PRESCRIBER/, 'Alta da asma deve registrar os medicamentos no prontuário')
+assert.match(emergencyComponentSource, /ASTHMA_DISCHARGE_CRITERIA[\s\S]*Confirmar critérios e gerar receita/, 'Alta da asma deve exigir checklist individual')
+assert.match(emergencyComponentSource, /shouldShowUniversalImagingNotebook[\s\S]*UniversalImagingNotebook/, 'PAC e síndrome gripal devem permitir registrar RX')
+assert.match(imagingNotebookSource, /Situação do RX de tórax[\s\S]*Impressão diagnóstica[\s\S]*Resultado\/laudo/, 'Registro de RX deve conter situação, laudo e impressão')
+assert.match(clinicalSummarySource, /formatUniversalChestXrayRecord[\s\S]*Radiografia de tórax/, 'Resultado do RX deve seguir para a evolução clínica')
 assert.match(anaphylaxisLogicSource, /age !== null && age > 12[\s\S]*doseMg: 0\.5/, 'Dose adulta de adrenalina deve prevalecer sobre peso inconsistente')
 assert.match(clinicalSummarySource, /buildDengueClinicalSummary/, 'Dengue deve possuir resumo clínico próprio')
 assert.match(clinicalSummarySource, /flowchart\.id === 'dengue'[\s\S]*buildDengueClinicalSummary/, 'Dengue ainda está usando o resumo genérico')
@@ -610,6 +620,16 @@ const narrativeCases = [
     id: 'asthma', flow: asthmaFlowchart, step: 'asma_alta_final', history: ['asma_avaliacao_inicial', 'asma_tratamento_1h_leve_moderada', 'asma_saba_leve_moderada', 'asma_corticoide_leve_moderada', 'asma_resposta_boa'],
     answers: { __avaliacao_clinica_inicial: universalAnswer, asma_avaliacao_inicial: JSON.stringify({ values: { sato2: 93, fr: 27, fc: 105, pfe: 62 }, flags: { usoMusculatura: true } }), asma_reavaliacao_1h: JSON.stringify({ values: { sato2Re: 97, frRe: 20, pfeRe: 82 }, flags: { melhoraClinica: true } }) },
     expected: [/exacerbação asmática moderada/i, /boa resposta/, /alta do pronto-socorro/]
+  },
+  {
+    id: 'influenza', flow: influenzaFlowchart, step: 'influenza_painel_viral_enfermaria', history: ['influenza_sinais_gravidade', 'influenza_painel_viral_enfermaria'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, influenza_sinais_gravidade: JSON.stringify({ classificadoComoSRAG: true, sinaisGravidadeSelecionados: ['hipoxemia'] }), __universal_imaging_results: JSON.stringify({ chestXrayStatus: 'realizado', chestXrayReport: 'opacidade em base direita', chestXrayImpression: 'consolidação lobar', notes: '' }) },
+    expected: [/Radiografia de tórax realizada/, /opacidade em base direita/, /consolidação lobar/]
+  },
+  {
+    id: 'pneumonia', flow: pneumoniaFlowchart, step: 'pac_resultados_exames', history: ['pac_inicio', 'pac_solicitacao_exames', 'pac_resultados_exames'],
+    answers: { __avaliacao_clinica_inicial: universalAnswer, pac_solicitacao_exames: JSON.stringify({ examesSelecionados: ['Radiografia de tórax'] }), __universal_imaging_results: JSON.stringify({ chestXrayStatus: 'pendente', chestXrayReport: '', chestXrayImpression: '', notes: 'solicitada às 14h' }) },
+    expected: [/Radiografia de tórax solicitada, com resultado pendente/, /solicitada às 14h/]
   },
   {
     id: 'hipertensao', flow: hypertensionFlowchart, step: 'hipertensao_emergencia_plano', history: ['hipertensao_confirmacao', 'hipertensao_lesao_orgao', 'hipertensao_emergencia_cenario'],
