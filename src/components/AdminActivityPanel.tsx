@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Activity, ArrowLeft, CheckCircle2, Clock3, RefreshCw, ShieldCheck, Stethoscope, Users } from 'lucide-react'
-import { ADMIN_EMAIL } from '@/services/activityAudit'
+import { isAdminEmail } from '@/services/activityAudit'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { supabase } from '@/services/supabaseClient'
 
@@ -48,7 +48,7 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
   const load = async () => {
     setLoading(true)
     const { data: authData } = await supabase.auth.getUser()
-    const isAdmin = authData.user?.email?.toLowerCase() === ADMIN_EMAIL
+    const isAdmin = isAdminEmail(authData.user?.email)
     setAuthorized(isAdmin)
     if (!isAdmin) {
       setLoading(false)

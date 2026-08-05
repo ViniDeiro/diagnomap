@@ -1,7 +1,15 @@
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { isSupabaseConfigured, supabase } from './supabaseClient'
 
-export const ADMIN_EMAIL = 'joaopedrolopes@gmail.com'
+export const ADMIN_EMAILS = [
+  'joaopedrolopes@gmail.com',
+  'rodrigoplutarco@hotmail.com'
+] as const
+
+export function isAdminEmail(email?: string | null): boolean {
+  if (!email) return false
+  return ADMIN_EMAILS.includes(email.trim().toLowerCase() as (typeof ADMIN_EMAILS)[number])
+}
 
 export type ActivityEventType =
   | 'patient_created'

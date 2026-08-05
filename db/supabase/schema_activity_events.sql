@@ -30,7 +30,12 @@ create policy activity_events_insert_own on public.activity_events
 drop policy if exists activity_events_admin_select on public.activity_events;
 create policy activity_events_admin_select on public.activity_events
   for select to authenticated
-  using (lower(coalesce(auth.jwt() ->> 'email', '')) = 'joaopedrolopes@gmail.com');
+  using (
+    lower(coalesce(auth.jwt() ->> 'email', '')) in (
+      'joaopedrolopes@gmail.com',
+      'rodrigoplutarco@hotmail.com'
+    )
+  );
 
 revoke all on table public.activity_events from anon;
 grant insert on table public.activity_events to authenticated;

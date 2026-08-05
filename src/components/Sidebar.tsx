@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import Link from 'next/link'
+import { isAdminEmail } from '@/services/activityAudit'
 
 interface SidebarProps {
   isOpen: boolean
@@ -113,7 +114,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     }
   ]
 
-  if (userEmail?.trim().toLowerCase() === 'joaopedrolopes@gmail.com') {
+  if (isAdminEmail(userEmail)) {
     menuGroups.push({
       title: 'Administração',
       items: [{ icon: ShieldCheck, label: 'Painel administrativo', href: '/?view=admin', action: 'admin' }]
