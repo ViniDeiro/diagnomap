@@ -4766,7 +4766,8 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     window.setTimeout(() => setInlineConductCopied(false), 1800)
   }
   const isInlineCopyableConduct = Boolean(
-    currentStepData?.content && (
+    currentStepData?.content &&
+    !(flowchart.id === 'asthma' && currentStepData.id === 'asma_tratamento_1h_leve_moderada') && (
       currentStepData.generatesPrescription ||
       ['action', 'medication', 'procedure'].includes(currentStepData.type) ||
       (flowchart.id === 'asthma' && /saba|ipratr|cortico|magnesio|resgate|alta|oxigenio|falencia/.test(currentStepData.id)) ||
