@@ -3,7 +3,8 @@ import { isSupabaseConfigured, supabase } from './supabaseClient'
 
 export const ADMIN_EMAILS = [
   'joaopedrolopes@gmail.com',
-  'rodrigoplutarco@hotmail.com'
+  'rodrigoplutarco@hotmail.com',
+  'wrkcristianehellena@gmail.com'
 ] as const
 
 export function isAdminEmail(email?: string | null): boolean {
