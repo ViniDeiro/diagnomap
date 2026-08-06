@@ -34,7 +34,8 @@ create policy activity_events_admin_select on public.activity_events
     lower(coalesce(auth.jwt() ->> 'email', '')) in (
       'joaopedrolopes@gmail.com',
       'rodrigoplutarco@hotmail.com',
-      'wrkcristianehellena@gmail.com'
+      'wrkcristianehellena@gmail.com',
+      'makotopanetta@gmail.com'
     )
   );
 
