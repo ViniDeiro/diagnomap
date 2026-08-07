@@ -1704,19 +1704,25 @@ export const asthmaFlowchart: EmergencyFlowchart = {
           <div class="p-5">
             <p><strong>SABA</strong> significa agonista beta-2 adrenérgico de curta ação. Neste protocolo, corresponde ao <strong>salbutamol</strong>, broncodilatador de resgate.</p>
             <p class="mt-3 border-t border-slate-200 pt-3">Em exacerbações moderadas ou graves, associe o ipratrópio e escolha abaixo a forma de administração que será realmente utilizada. A seleção ficará registrada no resumo clínico.</p>
+            <div class="mt-4 rounded-xl bg-cyan-50 p-4 text-cyan-950">
+              <p class="font-black">Preparo para nebulização no adulto</p>
+              <p class="mt-2"><strong>Beta-2 agonista:</strong> fenoterol 5 mg/mL, 10–20 gotas, <strong>ou</strong> salbutamol 2,5–5 mg.</p>
+              <p class="mt-1"><strong>Associar:</strong> brometo de ipratrópio 0,25 mg/mL, 40 gotas (0,5 mg), e SF 0,9% até o volume de 5 mL.</p>
+              <p class="mt-2 border-t border-cyan-200 pt-2 font-bold">Realizar uma nebulização a cada 20 minutos, por três doses na primeira hora.</p>
+            </div>
           </div>
         </div>
       `,
       options: [
         {
           text: 'Bombinha com espaçador',
-          description: 'Salbutamol 4–10 jatos + ipratrópio 4–8 jatos, a cada 20 min na primeira hora.',
+          description: 'Salbutamol spray 100 mcg/dose: 4–8 jatos com espaçador a cada 20 minutos durante a primeira hora; associar ipratrópio conforme a gravidade.',
           nextStep: 'asma_corticoide_grave_vida',
           value: 'saba_ipratropio_mdi'
         },
         {
           text: 'Nebulização',
-          description: 'Salbutamol 2,5–5 mg + ipratrópio 500 mcg, a cada 20 min por até 3 doses na primeira hora.',
+          description: 'Fenoterol 5 mg/mL, 10–20 gotas, ou salbutamol 2,5–5 mg + ipratrópio 40 gotas; completar com SF 0,9% até 5 mL. Repetir a cada 20 min por 3 doses.',
           nextStep: 'asma_corticoide_grave_vida',
           value: 'saba_ipratropio_nebulizacao'
         }
@@ -1864,7 +1870,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
             <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA — agonista beta-2 adrenérgico de curta ação, como salbutamol — associado ao ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
           </div>
           <div class="divide-y divide-slate-200 rounded-xl bg-slate-50 px-4 py-2 [&_p]:py-2">
-            <p><strong>Salbutamol:</strong> 4–10 jatos de 100 mcg com espaçador a cada 20 minutos na primeira hora; em nebulização, 2,5–5 mg em 4 mL de SF 0,9%, repetindo a cada 20 minutos ou de forma contínua conforme gravidade e protocolo.</p>
+            <p><strong>Salbutamol spray 100 mcg/dose:</strong> 4–8 jatos com espaçador a cada 20 minutos durante a primeira hora; em nebulização, 2,5–5 mg em SF 0,9%, repetindo a cada 20 minutos ou de forma contínua conforme gravidade e protocolo.</p>
             <p><strong>Ipratrópio:</strong> 4–8 jatos de 20 mcg a cada 20 minutos por 3 doses ou 0,5 mg por nebulização a cada 20 minutos por 3 doses.</p>
             <p><strong>Corticoide sistêmico:</strong> prednisona/prednisolona 40–50 mg VO ao dia por 5–7 dias; se a via oral não for possível, usar metilprednisolona EV conforme protocolo ou hidrocortisona 100 mg EV a cada 8 horas, migrando para VO assim que possível.</p>
             <p><strong>Oxigênio:</strong> titular para SatO2 de 93–95% no adulto.</p>
