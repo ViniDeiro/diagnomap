@@ -12205,7 +12205,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 <div className={clsx(
                   'mb-6',
                   isAsthmaFlow
-                    ? 'rounded-2xl border border-cyan-100 bg-slate-50/70 p-3 shadow-sm sm:p-5'
+                    ? 'bg-transparent p-0'
                     : flowchart.id === 'geca'
                       ? 'rounded-2xl border border-blue-100 bg-slate-50/70 p-3 shadow-sm sm:p-5'
                       : 'rounded-lg border-l-4 border-blue-500 bg-gray-50 p-4'
@@ -12238,7 +12238,8 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   <div
                     className={clsx(
                       'prose prose-sm max-w-none',
-                      (isAsthmaFlow || flowchart.id === 'geca') && '[&>div]:space-y-3 [&_div]:rounded-xl [&_div]:border [&_div]:p-4 sm:[&_div]:p-5 [&_p]:leading-relaxed [&_p]:text-slate-700 [&_p+p]:mt-2 [&_strong]:font-extrabold [&_strong]:text-slate-950 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_button]:min-h-11 [&_button]:w-full [&_button]:shadow-sm sm:[&_button]:w-auto'
+                      isAsthmaFlow && '[&>div]:space-y-4 [&_p]:leading-relaxed [&_p+p]:mt-2 [&_strong]:font-extrabold [&_ul]:space-y-2 [&_li]:leading-relaxed [&_button]:min-h-11 [&_button]:w-full [&_button]:shadow-sm sm:[&_button]:w-auto',
+                      flowchart.id === 'geca' && '[&>div]:space-y-3 [&_div]:rounded-xl [&_div]:border [&_div]:p-4 sm:[&_div]:p-5 [&_p]:leading-relaxed [&_p]:text-slate-700 [&_p+p]:mt-2 [&_strong]:font-extrabold [&_strong]:text-slate-950 [&_ul]:space-y-2 [&_li]:leading-relaxed [&_button]:min-h-11 [&_button]:w-full [&_button]:shadow-sm sm:[&_button]:w-auto'
                     )}
                     onClick={(event) => {
                       const target = event.target as HTMLElement
