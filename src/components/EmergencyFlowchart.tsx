@@ -4778,11 +4778,11 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
   const isInlineCopyableConduct = Boolean(
     currentStepData?.content &&
-    !(flowchart.id === 'asthma' && currentStepData.id === 'asma_tratamento_1h_leve_moderada') && (
-      currentStepData.generatesPrescription ||
-      ['action', 'medication', 'procedure'].includes(currentStepData.type) ||
-      (flowchart.id === 'asthma' && /saba|ipratr|cortico|magnesio|resgate|alta|oxigenio|falencia/.test(currentStepData.id)) ||
-      /conduta|tratamento|terapia|antibi[oó]tico|antimicrobiano|antif[uú]ngico|hidrata[cç][aã]o|dose|dilui[cç][aã]o|infus[aã]o|prescri[cç][aã]o|manejo|estabiliza[cç][aã]o|adrenalina|salbutamol|ipratr[oó]pio|corticoide|hidrocortisona|prednisona|magn[eé]sio|ceftriaxona|azitromicina|oseltamivir|heparina|anticoagula[cç][aã]o/i.test(`${currentStepData.title} ${currentStepData.description} ${currentStepData.content}`)
+    flowchart.id !== 'asthma' &&
+    (
+      currentStepData.generatesPrescription === true ||
+      currentStepData.type === 'medication' ||
+      Boolean(currentStepData.prescriptionTemplate?.length)
     )
   )
   const copyInlineConduct = async () => {
@@ -12368,7 +12368,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
-                  {isInlineCopyableConduct && flowchart.id !== 'asthma' && (
+                  {isInlineCopyableConduct && (
                     <div className="mt-3 flex justify-end">
                       <button
                         type="button"

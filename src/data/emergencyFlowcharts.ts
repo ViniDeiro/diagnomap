@@ -1493,9 +1493,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Dispneia, tosse, sibilância e progressão rápida exigem avaliação sistemática.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <p><strong>Quadro típico:</strong> dispneia, tosse, sibilância e opressão torácica.</p>
-          <p>Avaliar precocemente para prevenir deterioração clínica e insuficiência respiratória.</p>
+        <div class="overflow-hidden rounded-2xl border border-cyan-200 bg-white text-sm text-slate-700 shadow-sm">
+          <div class="bg-gradient-to-r from-cyan-700 to-blue-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">Reconhecimento inicial</p><h3 class="mt-1 text-lg font-black">Suspeita de exacerbação asmática</h3></div>
+          <div class="p-5"><p class="text-base"><strong class="text-slate-950">Quadro compatível:</strong> dispneia, tosse, sibilância ou opressão torácica, especialmente quando há piora rápida.</p><p class="mt-3 border-t border-slate-200 pt-3">A avaliação deve começar imediatamente para reconhecer fadiga, hipoxemia e risco de insuficiência respiratória.</p></div>
         </div>
       `,
       options: [
@@ -1508,9 +1508,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Sinais vitais, exame respiratório e PFE para classificar gravidade.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <p><strong>Registrar:</strong> SatO2, FR, FC, PA, nível de consciência, uso de musculatura acessória, ausculta pulmonar e PFE (se possível).</p>
-          <p>Considerar gasometria se hipoxemia importante, fadiga, rebaixamento de consciência ou piora progressiva.</p>
+        <div class="overflow-hidden rounded-2xl border border-blue-200 bg-white text-sm text-slate-700 shadow-sm">
+          <div class="flex items-center justify-between gap-3 bg-gradient-to-r from-blue-700 to-cyan-600 px-5 py-4 text-white"><div><p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Minuto zero</p><h3 class="mt-1 text-lg font-black">Fotografe o estado respiratório de entrada</h3></div><span class="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">PFE opcional</span></div>
+          <div class="p-5"><div class="flex flex-wrap gap-2">${['SatO2','FR','FC','PA','Consciência','Fala','Musculatura acessória','Ausculta','PFE, se disponível'].map((item) => `<span class="rounded-full bg-blue-50 px-3 py-1.5 font-bold text-blue-950">${item}</span>`).join('')}</div><p class="mt-4 border-t border-slate-200 pt-3"><strong>Gasometria:</strong> reservar para hipoxemia importante, fadiga, alteração de consciência ou deterioração progressiva.</p></div>
         </div>
       `,
       options: [
@@ -1523,19 +1523,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Leve, moderada, grave ou risco de vida.',
       type: 'question',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p><strong>Leve:</strong> conversa sem pausas relevantes, permanece confortável em repouso, SatO2 ≥ 94% e PFE/VEF1 acima de 70% do previsto ou melhor pessoal.</p>
-          </div>
-          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-            <p><strong>Moderada:</strong> fala entrecortada, prefere ficar sentado, maior esforço ventilatório, SatO2 entre 92% e 94% ou PFE/VEF1 entre 50% e 70%.</p>
-          </div>
-          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
-            <p><strong>Grave:</strong> qualquer um entre incapacidade de falar ou deitar, FR &gt; 30, uso marcante de musculatura acessória, SatO2 &lt; 92%, tórax pouco ventilado ou PFE/VEF1 &lt; 50%.</p>
-          </div>
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>Risco de vida:</strong> exaustão, confusão/sonolência, hipotensão, bradipneia, cianose, tórax silencioso.</p>
-          </div>
+        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white text-sm text-slate-700 shadow-sm">
+          <div class="bg-gradient-to-r from-slate-800 to-blue-800 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Estratificação clínica</p><h3 class="mt-1 text-lg font-black">Use o pior achado para definir a gravidade</h3></div>
+          <div class="divide-y divide-slate-200 px-5"><div class="grid gap-1 py-4 md:grid-cols-[9rem_1fr]"><p class="font-black text-emerald-700">Leve</p><p>Fala preservada, conforto em repouso, SatO2 ≥ 94%; PFE/VEF1 &gt; 70% quando disponível.</p></div><div class="grid gap-1 py-4 md:grid-cols-[9rem_1fr]"><p class="font-black text-amber-700">Moderada</p><p>Fala entrecortada, posição sentada, esforço aumentado, SatO2 92–94%; PFE/VEF1 50–70% quando disponível.</p></div><div class="grid gap-1 py-4 md:grid-cols-[9rem_1fr]"><p class="font-black text-orange-700">Grave</p><p>Incapacidade de falar ou deitar, FR &gt; 30, musculatura acessória marcante, SatO2 &lt; 92%, tórax pouco ventilado; PFE/VEF1 &lt; 50% quando disponível.</p></div><div class="grid gap-1 py-4 md:grid-cols-[9rem_1fr]"><p class="font-black text-red-700">Risco de vida</p><p>Exaustão, confusão ou sonolência, hipotensão, bradipneia, cianose ou tórax silencioso.</p></div></div>
         </div>
       `,
       options: [
@@ -1595,8 +1585,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'SABA significa agonista beta-2 adrenérgico de curta ação; neste fluxo, o representante utilizado é o salbutamol.',
       type: 'question',
       content: `
-        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p><strong>SABA (agonista beta-2 adrenérgico de curta ação):</strong> broncodilatador de resgate com início rápido. <strong>Salbutamol:</strong> 400-800 mcg (4-8 jatos) com espaçador OU nebulização 2,5-5 mg em 4 ml de SF 0,9%, repetir a cada 20 min até 3 doses.</p>
+        <div class="overflow-hidden rounded-2xl border border-emerald-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">Medicação de resgate</p><h3 class="mt-1 text-lg font-black">Salbutamol: duas formas de administrar</h3></div><div class="grid gap-0 divide-y divide-slate-200 p-5 md:grid-cols-2 md:divide-x md:divide-y-0"><div class="pb-4 md:pb-0 md:pr-5"><p class="font-black text-emerald-950">Bombinha com espaçador</p><p class="mt-2 text-lg font-black">400–800 mcg</p><p>4–8 jatos por aplicação.</p></div><div class="pt-4 md:pl-5 md:pt-0"><p class="font-black text-teal-950">Nebulização</p><p class="mt-2 text-lg font-black">2,5–5 mg</p><p>Diluir em 4 mL de SF 0,9%.</p></div></div><p class="border-t border-slate-200 px-5 py-4"><strong>SABA significa agonista beta-2 adrenérgico de curta ação.</strong> Repetir a dose escolhida a cada 20 minutos, por até três administrações na primeira hora.</p>
         </div>
       `,
       options: [
@@ -1655,9 +1644,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Conduta intensiva imediata.',
       type: 'question',
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p>Crise grave ou risco de vida: iniciar protocolo intensivo na primeira hora sem atraso.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-red-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-red-700 to-orange-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Prioridade máxima</p><h3 class="mt-1 text-lg font-black">A primeira hora começa agora</h3></div><div class="grid gap-4 p-5 md:grid-cols-[1fr_auto]"><p class="text-base">Inicie suporte intensivo, broncodilatação combinada e corticoide precoce em paralelo. Não espere a conclusão de uma medida para começar a seguinte.</p><span class="h-fit rounded-full bg-red-100 px-3 py-1.5 font-black text-red-800">Reavaliação contínua</span></div></div>
       `,
       options: [
         { text: 'Checar anafilaxia e iniciar suporte', nextStep: 'asma_checar_anafilaxia', value: 'grave_suporte', critical: true }
@@ -1670,9 +1657,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       critical: true,
       content: `
-        <div class="rounded border-l-4 border-red-600 bg-red-50 p-3 text-sm">
-          <p>Procure início abrupto após possível desencadeante, edema de língua/laringe, urticária difusa, hipotensão, síncope ou sintomas intensos em mais de um sistema.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-red-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-red-700 to-rose-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Diagnóstico que muda a prioridade</p><h3 class="mt-1 text-lg font-black">Procure reação sistêmica associada</h3></div><div class="p-5"><p>Considere anafilaxia diante de início abrupto após desencadeante provável, edema de língua ou laringe, urticária difusa, hipotensão, síncope ou comprometimento intenso de mais de um sistema.</p><p class="mt-3 border-t border-red-100 pt-3 font-bold text-red-800">Se provável, a adrenalina intramuscular passa a ser a intervenção prioritária.</p></div></div>
       `,
       options: [
         { text: 'Sim, anafilaxia provável', nextStep: 'asma_adrenalina_anafilaxia', value: 'anafilaxia_associada', critical: true, requiresImmediateAction: true },
@@ -1687,9 +1672,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       critical: true,
       timeSensitive: true,
       content: `
-        <div class="rounded border-l-4 border-red-700 bg-red-50 p-3 text-sm">
-          <p>Aplicar adrenalina intramuscular na coxa conforme idade/peso e protocolo de anafilaxia. Acionar ajuda, monitorizar e seguir simultaneamente com oxigênio e broncodilatação.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border-2 border-red-300 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-red-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Anafilaxia provável</p><h3 class="mt-1 text-lg font-black">Adrenalina IM sem atraso</h3></div><div class="p-5"><p class="text-base">Aplicar na face anterolateral da coxa conforme idade, peso e protocolo de anafilaxia.</p><div class="mt-4 flex flex-wrap gap-x-6 gap-y-2 border-t border-slate-200 pt-4 font-bold text-slate-900"><span>Acionar ajuda</span><span>Monitorizar</span><span>Ofertar O2</span><span>Manter broncodilatação</span></div></div></div>
       `,
       options: [
         { text: 'Continuar suporte da crise asmática', nextStep: 'asma_o2_grave_vida', value: 'adrenalina_iniciada', critical: true }
@@ -1701,9 +1684,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Suporte ventilatório inicial.',
       type: 'question',
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>O2 imediato</strong> com alvo de SatO2 93-95%.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-blue-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-blue-700 to-cyan-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Suporte imediato</p><h3 class="mt-1 text-lg font-black">Oxigênio titulado, não fixo</h3></div><div class="flex flex-col gap-2 p-5 sm:flex-row sm:items-end sm:justify-between"><div><p class="text-3xl font-black text-blue-800">93–95%</p><p>Alvo de saturação no adulto.</p></div><p class="max-w-xl border-t border-slate-200 pt-3 sm:border-l sm:border-t-0 sm:pl-5 sm:pt-0">Escolha o dispositivo conforme a hipoxemia e ajuste o fluxo com oximetria contínua.</p></div></div>
       `,
       options: [
         { text: 'Nebulizar com SABA — beta-2 agonista de curta ação (salbutamol) — associado ao ipratrópio', nextStep: 'asma_nebulizacao_grave_vida', value: 'o2_grave_ok', critical: true }
@@ -1711,24 +1692,34 @@ export const asthmaFlowchart: EmergencyFlowchart = {
     },
     asma_nebulizacao_grave_vida: {
       id: 'asma_nebulizacao_grave_vida',
-      title: 'SABA (salbutamol) + ipratrópio',
-      description: 'SABA é o agonista beta-2 adrenérgico de curta ação usado como broncodilatador de resgate; o ipratrópio é associado nas crises moderadas ou graves.',
+      title: 'Escolher a forma de broncodilatação',
+      description: 'Selecione bombinha com espaçador ou nebulização conforme a condição clínica, a técnica do paciente e os recursos disponíveis.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>SABA significa agonista beta-2 adrenérgico de curta ação.</strong> Neste protocolo, corresponde ao salbutamol, utilizado como broncodilatador de resgate. Associar brometo de ipratrópio nas exacerbações moderadas a graves, sobretudo se PFE &lt; 60%, SpO2 &lt; 92% persistente ou necessidade de múltiplas doses de salbutamol.</p>
+        <div class="overflow-hidden rounded-2xl border border-cyan-200 bg-white text-sm text-slate-700 shadow-sm">
+          <div class="bg-gradient-to-r from-blue-700 to-cyan-600 px-5 py-4 text-white">
+            <p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">Broncodilatação combinada</p>
+            <h3 class="mt-1 text-lg font-black">Salbutamol associado ao ipratrópio</h3>
           </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p><strong>MDI com espaçador (adultos):</strong> 4-8 jatos de ipratrópio (80-160 mcg) a cada 20 min na 1ª hora, em associação ao salbutamol.</p>
-            <p><strong>Nebulização (adultos):</strong> ipratrópio 500 mcg associado ao salbutamol, repetir a cada 20 min por até 3 doses na 1ª hora.</p>
-            <p><strong>Observação prática:</strong> existem combinações fixas para nebulização, como salbutamol 2,5 mg + ipratrópio 500 mcg, quando disponíveis no serviço.</p>
-            <p>Adicionar brometo de ipratrópio em exacerbações moderadas ou graves ao <strong>SABA (beta-2 agonista de curta ação, como o salbutamol)</strong> potencializa a broncodilatação e pode reduzir hospitalizações.</p>
+          <div class="p-5">
+            <p><strong>SABA</strong> significa agonista beta-2 adrenérgico de curta ação. Neste protocolo, corresponde ao <strong>salbutamol</strong>, broncodilatador de resgate.</p>
+            <p class="mt-3 border-t border-slate-200 pt-3">Em exacerbações moderadas ou graves, associe o ipratrópio e escolha abaixo a forma de administração que será realmente utilizada. A seleção ficará registrada no resumo clínico.</p>
           </div>
         </div>
       `,
       options: [
-        { text: 'Iniciar corticoide sistêmico precoce', nextStep: 'asma_corticoide_grave_vida', value: 'neb_grave_ok', critical: true }
+        {
+          text: 'Bombinha com espaçador',
+          description: 'Salbutamol 4–10 jatos + ipratrópio 4–8 jatos, a cada 20 min na primeira hora.',
+          nextStep: 'asma_corticoide_grave_vida',
+          value: 'saba_ipratropio_mdi'
+        },
+        {
+          text: 'Nebulização',
+          description: 'Salbutamol 2,5–5 mg + ipratrópio 500 mcg, a cada 20 min por até 3 doses na primeira hora.',
+          nextStep: 'asma_corticoide_grave_vida',
+          value: 'saba_ipratropio_nebulizacao'
+        }
       ]
     },
     asma_corticoide_grave_vida: {
@@ -1737,11 +1728,11 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Corticoide sistêmico precoce na primeira hora.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
+        <div class="space-y-4 rounded-2xl border border-violet-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
+          <div class="rounded-xl bg-gradient-to-r from-violet-700 to-indigo-700 p-4 text-white">
             <p><strong>Indicação:</strong> iniciar corticoide sistêmico idealmente na 1ª hora em todas as exacerbações moderadas a graves ou quando não houver resposta imediata ao broncodilatador.</p>
           </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+          <div class="divide-y divide-slate-200 rounded-xl bg-slate-50 px-4 py-2 [&_p]:py-2">
             <p><strong>Preferir VO se o paciente conseguir deglutir:</strong> Prednisona ou Prednisolona 40-60 mg/dia por 5-7 dias.</p>
             <p><strong>Reservar IV para casos selecionados:</strong> metilprednisolona IV quando houver vômitos, incapacidade de deglutir, necessidade de UTI ou impossibilidade prática da via oral.</p>
             <p><strong>Metilprednisolona IV (adultos):</strong> 60-125 mg IV, com transição para VO após melhora clínica.</p>
@@ -1760,9 +1751,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Reservar o adjuvante para crise grave com resposta insuficiente ao tratamento inalatório inicial.',
       type: 'question',
       content: `
-        <div class="rounded border border-amber-200 bg-amber-50 p-3 text-sm">
-          <p>Considere magnésio quando persistirem obstrução intensa, hipoxemia ou sinais de gravidade após broncodilatação combinada. Não use de rotina em crises leves.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-amber-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-amber-600 to-orange-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Adjuvante seletivo</p><h3 class="mt-1 text-lg font-black">Magnésio somente quando o quadro justificar</h3></div><div class="p-5"><p>Considere se persistirem obstrução intensa, hipoxemia ou sinais de gravidade após broncodilatação combinada.</p><p class="mt-3 border-t border-amber-100 pt-3 font-bold text-amber-900">Não administrar rotineiramente nas crises leves.</p></div></div>
       `,
       options: [
         { text: 'Sim, administrar magnésio EV', nextStep: 'asma_magnesio_grave_vida', value: 'magnesio_indicado', critical: true },
@@ -1775,9 +1764,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Adjuvante na crise grave.',
       type: 'question',
       content: `
-        <div class="space-y-3 bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
+        <div class="space-y-4 rounded-2xl border border-red-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
           <p><strong>Sulfato de magnésio:</strong> 2 g EV, dose única, infundidos em 20–30 minutos.</p>
-          <div class="rounded-lg border border-red-200 bg-white p-3">
+          <div class="rounded-xl bg-red-50 p-4">
             <p><strong>Se MgSO4 a 10% (100 mg/mL):</strong> aspirar 20 mL (2 g) e adicionar 80 mL de SF 0,9%, obtendo volume final de 100 mL.</p>
             <p class="mt-2"><strong>Se MgSO4 a 50% (500 mg/mL):</strong> aspirar 4 mL (2 g) e adicionar 96 mL de SF 0,9%, obtendo volume final de 100 mL.</p>
           </div>
@@ -1814,6 +1803,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       title: 'Decisão Pós-Reavaliação',
       description: 'Definir melhora, resposta parcial ou falha.',
       type: 'question',
+      content: `
+        <div class="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5 text-sm text-slate-700 shadow-sm"><p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-800">Ponto de decisão</p><h3 class="mt-1 text-lg font-black text-slate-950">Escolha pela resposta global, não por um número isolado</h3><p class="mt-2">Considere sintomas, fala, esforço respiratório, SatO2 e necessidade de resgate. O PFE complementa a decisão quando disponível.</p></div>
+      `,
       options: [
         { text: 'Resposta marcada — melhora clínica e estabilidade; PFE favorável quando medido', nextStep: 'asma_resposta_boa', value: 'melhora' },
         { text: 'Resposta parcial — melhora incompleta ou necessidade persistente de broncodilatador', nextStep: 'asma_resposta_incompleta', value: 'parcial' },
@@ -1842,9 +1834,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Melhora parcial com sintomas persistentes.',
       type: 'question',
       content: `
-        <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
-          <p><strong>Resposta incompleta:</strong> PFE 50-70% e sintomas persistentes.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-amber-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-amber-600 to-orange-500 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Melhora insuficiente</p><h3 class="mt-1 text-lg font-black">Ainda não há segurança para alta</h3></div><div class="p-5"><p>Sintomas persistentes ou necessidade recorrente de broncodilatador indicam observação e tratamento seriado. Quando medido, PFE entre 50% e 70% reforça resposta parcial.</p></div></div>
       `,
       options: [
         { text: 'Iniciar observação no PS', nextStep: 'asma_observacao_ps', value: 'obs_ps' }
@@ -1857,9 +1847,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       critical: true,
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>Má resposta/deterioração:</strong> PFE &lt; 50% e/ou piora clínica.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border-2 border-red-300 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-red-700 to-rose-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Falha terapêutica</p><h3 class="mt-1 text-lg font-black">Escalone antes que a fadiga se instale</h3></div><div class="p-5"><p>Piora clínica, hipoxemia, redução do nível de consciência ou ventilação progressivamente menor exigem resgate imediato. PFE &lt; 50%, quando obtido, é um marcador adicional de gravidade.</p></div></div>
       `,
       options: [
         { text: 'Escalonar para terapias de resgate', nextStep: 'asma_escalonamento', value: 'escalonar_resgate', critical: true }
@@ -1871,11 +1859,11 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Para má resposta após SABA (agonista beta-2 de curta ação)/ipratrópio e corticoide sistêmico na 1ª hora.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
+        <div class="space-y-4 rounded-2xl border border-orange-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
+          <div class="rounded-xl bg-gradient-to-r from-orange-600 to-red-600 p-4 text-white">
             <p><strong>Crise grave/refratária:</strong> se não houver resposta adequada após SABA — agonista beta-2 adrenérgico de curta ação, como salbutamol — associado ao ipratrópio e corticoide sistêmico precoce, iniciar terapias adjuvantes de 2ª linha, com monitorização intensiva.</p>
           </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
+          <div class="divide-y divide-slate-200 rounded-xl bg-slate-50 px-4 py-2 [&_p]:py-2">
             <p><strong>Salbutamol:</strong> 4–10 jatos de 100 mcg com espaçador a cada 20 minutos na primeira hora; em nebulização, 2,5–5 mg em 4 mL de SF 0,9%, repetindo a cada 20 minutos ou de forma contínua conforme gravidade e protocolo.</p>
             <p><strong>Ipratrópio:</strong> 4–8 jatos de 20 mcg a cada 20 minutos por 3 doses ou 0,5 mg por nebulização a cada 20 minutos por 3 doses.</p>
             <p><strong>Corticoide sistêmico:</strong> prednisona/prednisolona 40–50 mg VO ao dia por 5–7 dias; se a via oral não for possível, usar metilprednisolona EV conforme protocolo ou hidrocortisona 100 mg EV a cada 8 horas, migrando para VO assim que possível.</p>
@@ -1896,9 +1884,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Primeira terapia adjuvante após má resposta ao tratamento inicial.',
       type: 'question',
       content: `
-        <div class="space-y-3 bg-amber-50 p-3 rounded border-l-4 border-amber-500 text-sm">
+        <div class="space-y-4 rounded-2xl border border-amber-200 bg-white p-5 text-sm text-slate-700 shadow-sm">
           <p><strong>Sulfato de magnésio:</strong> 2 g EV, dose única, infundidos em aproximadamente 20 minutos, se ainda não administrado.</p>
-          <div class="rounded-lg border border-amber-200 bg-white p-3">
+          <div class="rounded-xl bg-amber-50 p-4">
             <p><strong>Apresentação 10% (100 mg/mL):</strong> aspirar 20 mL (2 g) e acrescentar 80 mL de SF 0,9%, volume final de 100 mL.</p>
             <p class="mt-2"><strong>Apresentação 50% (500 mg/mL):</strong> aspirar 4 mL (2 g) e acrescentar 96 mL de SF 0,9%, volume final de 100 mL.</p>
           </div>
@@ -1914,6 +1902,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       title: 'Precisa de UTI?',
       description: 'Decisão após terapias de resgate e reavaliação clínica.',
       type: 'question',
+      content: `
+        <div class="rounded-2xl border border-red-200 bg-gradient-to-r from-slate-50 to-red-50 p-5 text-sm text-slate-700 shadow-sm"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-700">Destino após resgate</p><h3 class="mt-1 text-lg font-black text-slate-950">Defina o nível de cuidado pela fisiologia atual</h3><p class="mt-2">Persistência de hipoxemia, fadiga, alteração de consciência, instabilidade ou necessidade de suporte ventilatório favorece UTI.</p></div>
+      `,
       options: [
         { text: 'Não, sem critérios de UTI no momento', nextStep: 'asma_criterios_internacao_enfermaria', value: 'sem_uti' },
         { text: 'Sim, há critérios para UTI', nextStep: 'asma_criterios_uti', value: 'com_uti', critical: true }
@@ -1925,11 +1916,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Persistência de sintomas sem necessidade imediata de UTI.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-500">
-            <p><strong>Internar em enfermaria se:</strong> sem retorno à linha de base após 4h, SpO2&lt;92% após 1h, PFE&lt;40% após tratamento, fadiga muscular, alteração de consciência, impossibilidade de tratamento ambulatorial ou fatores de risco para asma fatal.</p>
-          </div>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-orange-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-orange-600 to-amber-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-orange-100">Destino hospitalar</p><h3 class="mt-1 text-lg font-black">Quando a enfermaria é necessária</h3></div><div class="divide-y divide-slate-200 px-5"><p class="py-3">Sem retorno à linha de base após o período de observação.</p><p class="py-3">SatO2 &lt; 92% após tratamento ou necessidade persistente de oxigênio.</p><p class="py-3">Broncodilatador frequente, risco de asma fatal ou impossibilidade de cuidado ambulatorial seguro.</p><p class="py-3">PFE &lt; 40%, quando disponível, reforça a indicação — mas sua ausência não bloqueia a decisão.</p></div></div>
       `,
       options: [
         { text: 'Admitir em enfermaria', nextStep: 'asma_internacao', value: 'internacao_enfermaria', critical: true }
@@ -1942,11 +1929,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       critical: true,
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-red-50 p-3 rounded border-l-4 border-red-600">
-            <p><strong>Critérios UTI:</strong> PaO2&lt;60, PaCO2&gt;45, consciência alterada, exaustão, necessidade de ventilação mecânica e ausência de resposta ao tratamento inicial.</p>
-          </div>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-red-300 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-red-800 to-rose-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Cuidado intensivo</p><h3 class="mt-1 text-lg font-black">Critérios que exigem UTI</h3></div><div class="p-5"><div class="flex flex-wrap gap-2">${['Exaustão','Consciência alterada','PaCO2 > 45','PaO2 < 60','Ventilação mecânica','Falha do tratamento inicial'].map((item) => `<span class="rounded-full bg-red-50 px-3 py-1.5 font-bold text-red-900">${item}</span>`).join('')}</div><p class="mt-4 border-t border-red-100 pt-3">Solicite a vaga sem interromper broncodilatação, oxigenação, monitorização e preparo para via aérea avançada.</p></div></div>
       `,
       options: [
         { text: 'Admitir em UTI', nextStep: 'asma_uti', value: 'admitir_uti', critical: true }
@@ -1959,10 +1942,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       critical: true,
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p><strong>Sinais críticos:</strong> exaustão, hipercapnia progressiva, confusão/rebaixamento, tórax silencioso, cianose ou instabilidade hemodinâmica.</p>
-          <p>Acionar suporte avançado, manter broncodilatação intensiva e preparar UTI/IOT conforme evolução.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border-2 border-red-400 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-red-800 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Falência respiratória iminente</p><h3 class="mt-1 text-lg font-black">Acione suporte avançado agora</h3></div><div class="p-5"><p>Exaustão, hipercapnia progressiva, confusão ou rebaixamento, tórax silencioso, cianose ou instabilidade hemodinâmica são sinais críticos.</p><p class="mt-3 border-t border-red-100 pt-3 font-bold text-red-900">Mantenha broncodilatação intensiva enquanto prepara UTI e via aérea avançada conforme a evolução.</p></div></div>
       `,
       options: [
         { text: 'Necessita intubação orotraqueal imediata', nextStep: 'asma_intubacao', value: 'iot', critical: true, requiresImmediateAction: true },
@@ -1975,14 +1955,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Observar por 2-4 horas com tratamento seriado.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-            <p><strong>Resposta incompleta não encerra o fluxo:</strong> manter o paciente em observação e repetir o esquema broncodilatador durante 2-4 horas.</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p>Continuar salbutamol, considerar manter ipratrópio conforme gravidade/resposta, manter corticoide sistêmico e monitorar evolução clínica seriada.</p>
-          </div>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-amber-200 bg-white text-sm text-slate-700 shadow-sm"><div class="flex flex-col gap-2 bg-gradient-to-r from-amber-600 to-orange-500 px-5 py-4 text-white sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Observação no PS</p><h3 class="mt-1 text-lg font-black">A resposta incompleta mantém o cuidado ativo</h3></div><span class="w-fit rounded-full bg-white/15 px-3 py-1.5 font-black">2–4 horas</span></div><div class="p-5"><p>Continuar salbutamol em doses seriadas, reavaliar a manutenção do ipratrópio conforme a gravidade e manter o corticoide sistêmico.</p><p class="mt-3 border-t border-slate-200 pt-3">Registre fala, esforço respiratório, SatO2, frequência respiratória, frequência cardíaca e impressão clínica em cada reavaliação.</p></div></div>
       `,
       options: [
         { text: 'Repetir esquema e manter observação por 2-4h', nextStep: 'asma_repetir_nebulizacao', value: 'observar_repetir' }
@@ -1994,14 +1967,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Broncodilatação seriada e manutenção do tratamento durante o período observacional.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-amber-50 p-3 rounded border-l-4 border-amber-500">
-            <p><strong>Repetir o esquema broncodilatador:</strong> manter salbutamol em doses seriadas, geralmente a cada 1-2 horas, conforme resposta clínica e protocolo institucional.</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p>Se estava usando associação com ipratrópio, reavaliar a necessidade de mantê-la conforme gravidade e resposta. Manter corticoide sistêmico e observação por 2-4 horas.</p>
-          </div>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-cyan-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-cyan-700 to-blue-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">Tratamento seriado</p><h3 class="mt-1 text-lg font-black">Repita, meça a resposta e ajuste</h3></div><div class="grid gap-0 divide-y divide-slate-200 px-5 md:grid-cols-3 md:divide-x md:divide-y-0"><div class="py-4 md:pr-4"><p class="font-black text-cyan-900">Salbutamol</p><p class="mt-1">Doses seriadas, em geral a cada 1–2 horas, conforme resposta e protocolo.</p></div><div class="py-4 md:px-4"><p class="font-black text-blue-900">Ipratrópio</p><p class="mt-1">Manter somente quando a gravidade e a resposta justificarem.</p></div><div class="py-4 md:pl-4"><p class="font-black text-violet-900">Corticoide</p><p class="mt-1">Manter o esquema sistêmico já iniciado.</p></div></div></div>
       `,
       options: [
         { text: 'Após observação, reavaliar novamente', nextStep: 'asma_reavaliar_novamente', value: 'reavaliar_pos_obs' }
@@ -2012,6 +1978,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       title: 'Reavaliar Novamente',
       description: 'Nova decisão após período de observação.',
       type: 'question',
+      content: `
+        <div class="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-white p-5 text-sm text-slate-700 shadow-sm"><p class="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Fim da observação</p><h3 class="mt-1 text-lg font-black text-slate-950">Compare com a avaliação anterior</h3><p class="mt-2">Registre se houve melhora sustentada, estabilidade sem progresso ou deterioração. A escolha define alta, internação ou escalonamento imediato.</p></div>
+      `,
       options: [
         { text: 'Melhora clínica progressiva', nextStep: 'asma_criterios_alta', value: 'melhora_obs' },
         { text: 'Sem melhora relevante', nextStep: 'asma_internacao', value: 'sem_melhora', critical: true },
@@ -2025,9 +1994,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'result',
       critical: true,
       content: `
-        <div class="bg-orange-50 p-3 rounded border-l-4 border-orange-600 text-sm">
-          <p>Internar se PFE &lt; 60%, hipoxemia persistente, necessidade frequente de broncodilatador, piora clínica ou risco social.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-orange-200 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-orange-700 to-amber-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-orange-100">Transição assistencial</p><h3 class="mt-1 text-lg font-black">Internação em enfermaria</h3></div><div class="p-5"><p>Manter tratamento, oxigenação titulada e reavaliações enquanto o leito é organizado. Hipoxemia persistente, broncodilatador frequente, piora clínica ou risco social justificam a internação; PFE reduzido, quando medido, complementa a decisão.</p></div></div>
       `,
       options: []
     },
@@ -2038,9 +2005,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'result',
       critical: true,
       content: `
-        <div class="bg-red-50 p-3 rounded border-l-4 border-red-600 text-sm">
-          <p>Monitorização intensiva, broncodilatação contínua, corticoide EV, magnésio e estratégias avançadas conforme refratariedade.</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border border-red-300 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-gradient-to-r from-red-800 to-rose-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-100">Transição crítica</p><h3 class="mt-1 text-lg font-black">UTI solicitada: o tratamento continua</h3></div><div class="p-5"><p>Manter monitorização intensiva, broncodilatação contínua ou seriada, corticoide sistêmico, oxigenação titulada e magnésio quando indicado. Vigiar fadiga e necessidade de via aérea avançada até a transferência.</p></div></div>
       `,
       options: []
     },
@@ -2051,9 +2016,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'result',
       critical: true,
       content: `
-        <div class="bg-red-100 p-3 rounded border-l-4 border-red-700 text-sm">
-          <p><strong>Via aérea avançada:</strong> IOT + ventilação mecânica protetora (Vt 4-6 ml/kg, FR baixa, tempo expiratório prolongado e hipercapnia permissiva quando aplicável).</p>
-        </div>
+        <div class="overflow-hidden rounded-2xl border-2 border-red-400 bg-white text-sm text-slate-700 shadow-sm"><div class="bg-slate-950 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-red-200">Via aérea avançada</p><h3 class="mt-1 text-lg font-black">Intubação e ventilação com estratégia para asma</h3></div><div class="p-5"><p>Após IOT, utilizar baixos volumes correntes, frequência respiratória reduzida e tempo expiratório prolongado para limitar hiperinsuflação dinâmica. Hipercapnia permissiva pode ser aceita quando clinicamente apropriada.</p></div></div>
       `,
       options: []
     },
@@ -2063,9 +2026,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Paciente com boa resposta após reavaliação.',
       type: 'question',
       content: `
-        <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
-          <p><strong>Prescrição literal sugerida para adulto:</strong> Formoterol + budesonida 6/200 mcg/dose: inalar 1 jato a cada 4 horas se falta de ar, enxaguando a boca após o uso; associar prednisona 40 mg pela manhã por 5 dias. Conferir apresentação, dispositivo, contraindicações e tratamento de manutenção antes de assinar.</p>
-          <p class="mt-2"><strong>Antes da alta:</strong> revisar alergias, contraindicações, tratamento de manutenção e técnica do dispositivo. Ajustar a receita para idade, gestação e comorbidades.</p>
+        <div class="overflow-hidden rounded-2xl border border-emerald-200 bg-white text-sm text-slate-700 shadow-sm">
+          <div class="flex flex-col gap-2 bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-4 text-white sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">Preparação da alta</p><h3 class="mt-1 text-lg font-black">Prescrição clara e continuidade segura</h3></div><span class="w-fit rounded-full bg-white/15 px-3 py-1.5 text-xs font-black">Adulto</span></div>
+          <div class="p-5"><div class="grid gap-5 md:grid-cols-[1.2fr_1fr]"><div><p class="text-xs font-black uppercase tracking-[0.16em] text-emerald-700">Receita sugerida</p><div class="mt-3 divide-y divide-emerald-100 border-y border-emerald-100"><div class="py-3"><p class="font-black text-slate-950">Formoterol + budesonida 6/200 mcg/dose</p><p class="mt-1">Inalar 1 jato a cada 4 horas se falta de ar; enxaguar a boca após o uso.</p></div><div class="py-3"><p class="font-black text-slate-950">Prednisona 40 mg</p><p class="mt-1">Tomar pela manhã por 5 dias.</p></div></div></div><div class="border-t border-slate-200 pt-4 md:border-l md:border-t-0 md:pl-5 md:pt-0"><p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Antes de assinar</p><ul class="mt-3 space-y-2"><li>• Confirmar apresentação e dispositivo.</li><li>• Revisar alergias e contraindicações.</li><li>• Conciliar tratamento de manutenção.</li><li>• Ajustar para idade, gestação e comorbidades.</li><li>• Demonstrar a técnica da bombinha.</li></ul></div></div></div>
         </div>
       `,
       options: [
