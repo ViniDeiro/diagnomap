@@ -114,7 +114,7 @@ const compiledHypertensionLogic = ts.transpileModule(hypertensionLogicSource, {
 }).outputText
 const hypertensionLogicModule = { exports: {} }
 vm.runInNewContext(compiledHypertensionLogic, { module: hypertensionLogicModule, exports: hypertensionLogicModule.exports }, { filename: 'hypertension.compiled.js' })
-const { classifyHypertensionRoute, HYPERTENSION_SCENARIO_TARGETS } = hypertensionLogicModule.exports
+const { classifyHypertensionRoute, HYPERTENSION_SCENARIO_TARGETS, isPersistentExtremeBloodPressure } = hypertensionLogicModule.exports
 
 const validateLinks = flow => {
   assert.ok(flow, 'Fluxograma precisa existir')
@@ -507,10 +507,13 @@ const hypertensionCases = [
 for (const [input, expected] of hypertensionCases) {
   assert.equal(classifyHypertensionRoute(input), expected, `Hipertensão: classificação divergente para ${JSON.stringify(input)}`)
 }
+assert.equal(isPersistentExtremeBloodPressure(230, 110), true, 'Hipertensão: PAS extrema persistente deve bloquear alta direta')
+assert.equal(isPersistentExtremeBloodPressure(200, 120), true, 'Hipertensão: PAD extrema persistente deve bloquear alta direta')
+assert.equal(isPersistentExtremeBloodPressure(219, 119), false, 'Hipertensão: limiar extremo não deve ser antecipado')
 for (const scenario of ['aortic_syndrome', 'encephalopathy', 'ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage', 'catecholamine_crisis', 'acute_coronary_syndrome', 'pulmonary_edema', 'pregnancy_emergency', 'other']) {
   assert.ok(HYPERTENSION_SCENARIO_TARGETS[scenario]?.length, `Hipertensão: meta ausente para ${scenario}`)
 }
-for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY', 'parseUniversalClinicalAssessment', '24–72 horas', 'Captopril VO', 'Anlodipino VO', 'Clonidina VO', 'Sulfato de magnésio', 'Esquema de Zuspan', '1 g/h', 'Gluconato de cálcio', 'Nitroprussiato de sódio', 'Nitroglicerina', 'Nicardipina', 'Labetalol', 'Hidralazina', 'Esmolol', 'Metoprolol', 'Fentolamina', 'scenarioMedicationGuidance', 'Meta pressórica deste tratamento', 'Esmolol — opção preferencial', 'aorticBetaBlocker', 'aorticVasodilator', 'Vasodilatador isolado']) {
+for (const marker of ['HYPERTENSION_CASE_ANSWER_KEY', 'pressureAfterRest', 'pressureAfterTreatment', 'safetyReassessment', 'persistentExtremePressure', 'Pressão extrema persistente: alta bloqueada', 'Não liberar enquanto a PA permanecer extrema', 'organDamage', 'selectedIVAgent', 'selectedOralPlan', 'HYPERTENSION_SCENARIO_TARGETS', 'Dashboard', 'Reiniciar', 'showCompletion', 'Abrir relatório completo', 'Concluir e ir ao dashboard', 'UNIVERSAL_ASSESSMENT_ANSWER_KEY', 'parseUniversalClinicalAssessment', 'Captopril VO', 'Anlodipino VO', 'Clonidina VO', 'Sulfato de magnésio', 'Esquema de Zuspan', '1 g/h', 'Gluconato de cálcio', 'Nitroprussiato de sódio', 'Nitroglicerina', 'Hidralazina', 'Esmolol', 'Metoprolol', 'Fentolamina', 'scenarioMedicationGuidance', 'Meta pressórica deste tratamento', 'Esmolol — opção preferencial', 'aorticBetaBlocker', 'aorticVasodilator', 'Vasodilatador isolado']) {
   assert.match(hypertensionComponentSource, new RegExp(marker), `Hipertensão: implementação interativa sem marcador obrigatório (${marker})`)
 }
 assert.match(hypertensionComponentSource, /'asymptomatic', 'Assintomático/, 'Hipertensão: opção assintomático ausente')
@@ -604,8 +607,8 @@ const universalAnswer = JSON.stringify({ sinaisVitais: { temperature: 36.8, bloo
 const narrativeCases = [
   {
     id: 'avc', flow: avcFlowchart, step: 'avc_aguardo_uti', history: ['avc_ativacao', 'avc_nihss', 'avc_imagem', 'avc_trombolitico'],
-    answers: { __avaliacao_clinica_inicial: universalAnswer, avc_caso_estruturado: JSON.stringify({ symptoms: ['fraqueza em hemicorpo', 'fala alterada'], onsetTime: '09:10', glucose: 110, nihss: 12, premorbidRankin: 1, imagingResult: 'sem_hemorragia', timeWindow: 'ate_45h', receivedThrombolysis: true, thrombolytic: 'tenecteplase', thrombolyticDose: '18 mg EV em bolus', postThrombolysisBloodPressure: '190/108', postThrombolysisBPManagement: ['monitoring', 'nicardipine'], outcome: 'UTI' }) },
-    expected: [/NIHSS 12/, /trombólise intravenosa/, /PA de 190\/108/, /nicardipina em infusão titulada/, /UTI ou unidade neurocrítica/]
+    answers: { __avaliacao_clinica_inicial: universalAnswer, avc_caso_estruturado: JSON.stringify({ symptoms: ['fraqueza em hemicorpo', 'fala alterada'], onsetTime: '09:10', glucose: 110, nihss: 12, premorbidRankin: 1, imagingResult: 'sem_hemorragia', timeWindow: 'ate_45h', receivedThrombolysis: true, thrombolytic: 'tenecteplase', thrombolyticDose: '18 mg EV em bolus', postThrombolysisBloodPressure: '190/108', postThrombolysisBPManagement: ['monitoring', 'local_protocol'], outcome: 'UTI' }) },
+    expected: [/NIHSS 12/, /trombólise intravenosa/, /PA de 190\/108/, /alternativa anti-hipertensiva prevista no protocolo institucional/, /UTI ou unidade neurocrítica/]
   },
   {
     id: 'avc', flow: avcFlowchart, step: 'avc_aguardo_uti', history: ['avc_ativacao', 'avc_imagem', 'avc_janela', 'avc_cuidados_sem_reperfusao'],

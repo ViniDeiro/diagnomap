@@ -2001,7 +2001,7 @@ const buildAVCClinicalSummary = (
     tevc: 'prevenção de tromboembolismo venoso e lesão por pressão',
     etiologia: 'investigação etiológica, prevenção secundária e reabilitação precoce'
   }
-  const postBPManagementLabels: Record<string, string> = { monitoring: 'monitorização pressórica intensificada', labetalol: 'labetalol EV conforme protocolo', nicardipine: 'nicardipina em infusão titulada', clevidipine: 'clevidipina em infusão titulada', local_protocol: 'alternativa anti-hipertensiva prevista no protocolo institucional' }
+  const postBPManagementLabels: Record<string, string> = { monitoring: 'monitorização pressórica intensificada', labetalol: 'agente anti-hipertensivo do protocolo institucional (registro legado)', nicardipine: 'agente anti-hipertensivo do protocolo institucional (registro legado)', clevidipine: 'clevidipina em infusão titulada', local_protocol: 'alternativa anti-hipertensiva prevista no protocolo institucional' }
   const supportiveCare = Array.isArray(data.supportiveCare) ? data.supportiveCare.map((item: unknown) => supportiveLabels[String(item)] || String(item)) : []
   const postBPManagement = Array.isArray(data.postThrombolysisBPManagement) ? data.postThrombolysisBPManagement.map((item: unknown) => postBPManagementLabels[String(item)] || String(item)) : []
   const scoreLines = uniqueTextItems([
@@ -2162,8 +2162,8 @@ const buildHypertensionClinicalSummary = (
   const organLabels: Record<string, string> = { encephalopathy: 'encefalopatia hipertensiva', stroke: 'evento cerebrovascular agudo', aorta: 'síndrome aórtica aguda', coronary: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', renal: 'injúria renal aguda', pregnancy: 'pré-eclâmpsia grave/eclâmpsia/HELLP', catecholamine: 'crise catecolaminérgica' }
   const scenarioLabels: Record<string, string> = { aortic_syndrome: 'síndrome aórtica aguda', encephalopathy: 'encefalopatia hipertensiva', ischemic_stroke_lysis: 'AVC isquêmico candidato à trombólise', ischemic_stroke_no_lysis: 'AVC isquêmico sem trombólise', intracerebral_hemorrhage: 'hemorragia intracerebral', subarachnoid_hemorrhage: 'hemorragia subaracnoide', catecholamine_crisis: 'crise catecolaminérgica', acute_coronary_syndrome: 'síndrome coronariana aguda', pulmonary_edema: 'edema agudo de pulmão', pregnancy_emergency: 'emergência hipertensiva na gestação', other: 'outra lesão aguda de órgão-alvo' }
   const routeLabels: Record<string, string> = { chronic: 'hipertensão crônica descompensada, sem quadro agudo tempo-dependente', emergency: 'emergência hipertensiva com lesão aguda de órgão-alvo', important_elevation: 'elevação pressórica importante sem lesão aguda demonstrada', pseudocrisis: 'pseudocrise hipertensiva associada a fator precipitante' }
-  const pressureStrategyLabels: Record<string, string> = { nitroprusside: 'nitroprussiato de sódio', nitroglycerin: 'nitroglicerina', nicardipine: 'nicardipina', labetalol: 'labetalol', hydralazine: 'hidralazina', esmolol: 'esmolol', metoprolol: 'metoprolol', phentolamine: 'fentolamina', nifedipine_pregnancy: 'nifedipino no protocolo obstétrico', protocol_specific: 'agente definido pelo protocolo institucional' }
-  const aorticVasodilatorLabels: Record<string, string> = { not_needed: 'não foi necessário associar vasodilatador após atingir a meta', nitroprusside: 'nitroprussiato associado somente após o betabloqueio', nicardipine: 'nicardipina associada somente após o betabloqueio' }
+  const pressureStrategyLabels: Record<string, string> = { nitroprusside: 'nitroprussiato de sódio', nitroglycerin: 'nitroglicerina', nicardipine: 'agente do protocolo institucional (registro legado)', labetalol: 'agente do protocolo institucional (registro legado)', hydralazine: 'hidralazina', esmolol: 'esmolol', metoprolol: 'metoprolol', phentolamine: 'fentolamina', nifedipine_pregnancy: 'nifedipino no protocolo obstétrico', protocol_specific: 'agente definido pelo protocolo institucional' }
+  const aorticVasodilatorLabels: Record<string, string> = { not_needed: 'não foi necessário associar vasodilatador após atingir a meta', nitroprusside: 'nitroprussiato associado somente após o betabloqueio', nicardipine: 'vasodilatador do protocolo institucional (registro legado)' }
   const oralPlanLabels: Record<string, string> = { adjust_chronic: 'retomada do esquema habitual', captopril: 'captopril por via oral', amlodipine: 'anlodipino por via oral', clonidine: 'clonidina por via oral', cause_only: 'tratamento do fator precipitante', no_medication: 'sem medicação imediata, com seguimento programado' }
   const magnesiumLabels: Record<string, string> = { zuspan: 'Zuspan (ataque de 4 g EV e manutenção de 1 g/h)', pritchard: 'Pritchard conforme protocolo obstétrico' }
   const recordedSymptoms = Array.isArray(data.symptoms) ? data.symptoms.map(String) : []
@@ -2190,7 +2190,8 @@ const buildHypertensionClinicalSummary = (
   const examLines = uniqueTextItems([
     universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null,
     ...universal.examItems,
-    data.pressureAfterRest ? `pressão após repouso e nova aferição: ${data.pressureAfterRest} mmHg` : null
+    data.pressureAfterRest ? `pressão após repouso e nova aferição: ${data.pressureAfterRest} mmHg` : null,
+    data.pressureAfterTreatment ? `pressão após tratamento e período de observação: ${data.pressureAfterTreatment} mmHg` : null
   ])
   const examLabels: Record<string, string> = {
     cbc: 'hemograma completo', renal: 'ureia, creatinina, sódio e potássio', ecg: 'eletrocardiograma',
@@ -2220,7 +2221,7 @@ const buildHypertensionClinicalSummary = (
     route === 'emergency' && data.scenario === 'aortic_syndrome' && data.aorticVasodilator ? `Reavaliação após terapia anti-impulso: ${aorticVasodilatorLabels[String(data.aorticVasodilator)] || String(data.aorticVasodilator)}.` : null,
     data.selectedIVAgent ? `Estratégia pressórica selecionada: ${pressureStrategyLabels[String(data.selectedIVAgent)] || String(data.selectedIVAgent)}.` : null,
     route === 'emergency' && data.scenario === 'pregnancy_emergency' && data.magnesiumRegimen ? `Sulfato de magnésio (esquema ${magnesiumLabels[String(data.magnesiumRegimen)] || String(data.magnesiumRegimen)}) para prevenção ou tratamento de convulsões, associado ao controle pressórico e à vigilância de reflexo patelar, respiração, diurese e função renal.` : null,
-    route === 'important_elevation' ? `Ajuste cauteloso do tratamento oral, com redução gradual em 24–72 horas, sem aplicar a meta aguda de 25%.` : null,
+    route === 'important_elevation' ? 'Ajuste cauteloso do tratamento oral, com redução gradual, nova aferição antes do destino e seguimento em 1–7 dias, sem aplicar indiscriminadamente a meta aguda de 20–25% em uma hora.' : null,
     data.selectedOralPlan ? `Plano oral selecionado: ${oralPlanLabels[String(data.selectedOralPlan)] || String(data.selectedOralPlan)}.` : null,
     route === 'pseudocrisis' ? 'Tratamento direcionado ao fator precipitante identificado.' : null,
     route === 'chronic' ? 'Revisão do tratamento anti-hipertensivo habitual, adesão e fatores associados.' : null
@@ -2285,8 +2286,8 @@ const buildAorticClinicalSummary = (
   const data = parseFlowAnswerForSummary(answers.sindrome_aortica_caso_estruturado) || {}
   const universal = getUniversalAssessmentNarrative(answers)
   const findingLabels: Record<string, string> = { abrupt_pain: 'dor abrupta e intensa', pulse_deficit: 'assimetria de pulsos ou pressão entre membros', malperfusion: 'sinais de má perfusão', aortic_regurgitation: 'novo sopro de insuficiência aórtica', shock: 'instabilidade, choque ou tamponamento', risk_condition: 'condição predisponente para doença aórtica' }
-  const blockerLabels: Record<string, string> = { esmolol: 'esmolol', seloken: 'Seloken (tartarato de metoprolol)', labetalol: 'labetalol', non_dhp: 'alternativa não di-hidropiridínica por contraindicação ao betabloqueador' }
-  const vasodilatorLabels: Record<string, string> = { none: 'sem vasodilatador adicional após atingir a meta', nitroprusside: 'nitroprussiato após betabloqueio', nicardipine: 'nicardipina após betabloqueio' }
+  const blockerLabels: Record<string, string> = { esmolol: 'esmolol', seloken: 'Seloken (tartarato de metoprolol)', labetalol: 'betabloqueador do protocolo institucional (registro legado)', non_dhp: 'alternativa não di-hidropiridínica por contraindicação ao betabloqueador' }
+  const vasodilatorLabels: Record<string, string> = { none: 'sem vasodilatador adicional após atingir a meta', nitroprusside: 'nitroprussiato após betabloqueio', nicardipine: 'vasodilatador do protocolo institucional (registro legado)' }
   const imageLabels: Record<string, string> = { cta: 'angio-TC da aorta', tee: 'ecocardiograma transesofágico', pocus: 'POCUS/ecocardiograma focado complementar', transfer_imaging: 'transferência para obtenção de imagem definitiva' }
   const findings = Array.isArray(data.findings) ? data.findings.map(item => findingLabels[String(item)] || String(item)) : []
   const imaging = Array.isArray(data.imaging) ? data.imaging.map(item => imageLabels[String(item)] || String(item)) : []

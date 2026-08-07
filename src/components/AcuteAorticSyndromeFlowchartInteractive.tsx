@@ -43,14 +43,12 @@ const findingOptions = [
 const blockerOptions = [
   ['esmolol', 'Esmolol — opção preferencial', 'Bolus opcional de 500 mcg/kg; iniciar 50–100 mcg/kg/min em bomba e titular até 300 mcg/kg/min. Curta meia-vida facilita ajustes rápidos.'],
   ['seloken', 'Seloken® (tartarato de metoprolol)', 'Apresentação injetável 1 mg/mL, ampola de 5 mL. Administrar 5 mg EV lentamente; repetir a cada 5 minutos até 15 mg, conforme frequência, condução e função ventricular.'],
-  ['labetalol', 'Labetalol, se disponível', '20 mg EV; depois 40 mg e 80 mg a cada 10 minutos conforme resposta, respeitando o limite institucional.'],
   ['non_dhp', 'Betabloqueador contraindicado', 'Documentar a contraindicação e considerar verapamil ou diltiazem intravenoso para controle de frequência conforme especialista/protocolo.']
 ] as const
 
 const vasodilatorOptions = [
   ['none', 'Sem vasodilatador adicional', 'A PAS já está abaixo de 120 mmHg, ou no menor valor que mantém perfusão adequada.'],
   ['nitroprusside', 'Associar nitroprussiato', 'Somente depois do controle da frequência/impulso. Titular em bomba, proteger da luz e vigiar toxicidade.'],
-  ['nicardipine', 'Associar nicardipina', 'Somente depois do controle da frequência/impulso. Iniciar em 5 mg/h e titular até 15 mg/h conforme resposta.']
 ] as const
 
 const imagingOptions = [

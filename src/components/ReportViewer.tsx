@@ -543,6 +543,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
               ...listLabels(hypertension.measurementChecks),
               ...listLabels(hypertension.observationMeasures),
               hypertension.pressureAfterRest ? `Pressão após repouso: ${hypertension.pressureAfterRest}.` : null,
+              hypertension.pressureAfterTreatment ? `Pressão após tratamento e observação: ${hypertension.pressureAfterTreatment}.` : null,
               hypertension.symptomsImproved != null ? `Após observação, houve redução pressórica ou melhora sintomática: ${hypertension.symptomsImproved ? 'sim' : 'não'}.` : null
             ])
           },
@@ -571,6 +572,7 @@ const ReportViewer: React.FC<ReportViewerProps> = ({ patient, onClose }) => {
             items: uniqueItems([
               hypertension.selectedIVAgent ? `Estratégia intravenosa selecionada: ${HYPERTENSION_LABELS[hypertension.selectedIVAgent || ''] || hypertension.selectedIVAgent}.` : null,
               hypertension.selectedOralPlan ? `Plano sem lesão aguda: ${HYPERTENSION_LABELS[hypertension.selectedOralPlan || ''] || hypertension.selectedOralPlan}.` : null,
+              ...(listLabels(hypertension.safetyReassessment).length ? [`Itens de segurança antes do destino: ${listLabels(hypertension.safetyReassessment).join('; ')}.`] : []),
               hypertension.disposition || 'Conduta ainda em andamento.'
             ])
           },

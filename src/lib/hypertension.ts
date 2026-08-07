@@ -18,6 +18,9 @@ export const isMarkedBloodPressureElevation = (systolic?: number, diastolic?: nu
     ? (systolic != null && systolic >= 160) || (diastolic != null && diastolic >= 110)
     : (systolic != null && systolic >= 180) || (diastolic != null && diastolic >= 110)
 
+export const isPersistentExtremeBloodPressure = (systolic?: number, diastolic?: number) =>
+  (systolic != null && systolic >= 220) || (diastolic != null && diastolic >= 120)
+
 export const classifyHypertensionRoute = ({
   systolic,
   diastolic,
