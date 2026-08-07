@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react'
 import { Activity, ArrowLeft, CheckCircle2, Clock3, RefreshCw, ShieldCheck, Stethoscope, Users } from 'lucide-react'
-import { isAdminEmail } from '@/services/activityAudit'
+import { isAdminEmail, isVisibleAdminPanelUser } from '@/services/activityAudit'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { supabase } from '@/services/supabaseClient'
 
@@ -28,7 +28,7 @@ type PatientRow = {
   updated_at: string
 }
 
-type DoctorRow = { id: string; name: string; email: string | null }
+type DoctorRow = { id: string; name: string; email: string | null; created_at: string | null }
 
 const labels: Record<string, string> = {
   patient_created: 'Atendimento criado',
@@ -58,7 +58,7 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
     const [eventResult, patientResult, doctorResult] = await Promise.all([
       supabase.from('activity_events').select('*').order('occurred_at', { ascending: false }).limit(500),
       supabase.from('patients').select('id, assigned_doctor_id, selected_flowchart, status, flowchart_state, created_at, updated_at').order('updated_at', { ascending: false }).limit(500),
-      supabase.from('doctors').select('id, name, email').order('name')
+      supabase.from('doctors').select('id, name, email, created_at').order('name')
     ])
     setEvents((eventResult.data ?? []) as AuditRow[])
     setPatients((patientResult.data ?? []) as PatientRow[])
@@ -68,11 +68,25 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
 
   useEffect(() => { void load() }, [])
 
-  const doctorMap = useMemo(() => new Map(doctors.map((doctor) => [doctor.id, doctor])), [doctors])
-  const visiblePatients = doctorFilter === 'all' ? patients : patients.filter((patient) => patient.assigned_doctor_id === doctorFilter)
+  const panelDoctors = useMemo(() => doctors.filter(isVisibleAdminPanelUser), [doctors])
+  const doctorMap = useMemo(() => new Map(panelDoctors.map((doctor) => [doctor.id, doctor])), [panelDoctors])
+  const panelDoctorIds = useMemo(() => new Set(panelDoctors.map((doctor) => doctor.id)), [panelDoctors])
+  const panelDoctorEmails = useMemo(
+    () => new Set(panelDoctors.flatMap((doctor) => doctor.email ? [doctor.email.trim().toLowerCase()] : [])),
+    [panelDoctors]
+  )
+  const panelPatients = useMemo(
+    () => patients.filter((patient) => patient.assigned_doctor_id !== null && panelDoctorIds.has(patient.assigned_doctor_id)),
+    [patients, panelDoctorIds]
+  )
+  const panelEvents = useMemo(
+    () => events.filter((event) => panelDoctorEmails.has(event.user_email.trim().toLowerCase())),
+    [events, panelDoctorEmails]
+  )
+  const visiblePatients = doctorFilter === 'all' ? panelPatients : panelPatients.filter((patient) => patient.assigned_doctor_id === doctorFilter)
   const visibleEvents = doctorFilter === 'all'
-    ? events
-    : events.filter((event) => doctorMap.get(doctorFilter)?.email?.toLowerCase() === event.user_email.toLowerCase())
+    ? panelEvents
+    : panelEvents.filter((event) => doctorMap.get(doctorFilter)?.email?.toLowerCase() === event.user_email.toLowerCase())
   const today = new Date().toDateString()
   const eventsToday = visibleEvents.filter((event) => new Date(event.occurred_at).toDateString() === today).length
   const completed = visiblePatients.filter((patient) => patient.status === 'discharged').length
@@ -87,7 +101,7 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
           <div><button onClick={onBack} className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-blue-700"><ArrowLeft className="h-4 w-4"/>Voltar ao dashboard</button><p className="text-sm font-bold uppercase tracking-[0.2em] text-blue-600">Área exclusiva</p><h1 className="mt-2 text-3xl font-bold text-slate-950">Painel administrativo</h1><p className="mt-2 text-slate-600">Acompanhe quem está testando, qual protocolo percorreu e o estado atual do atendimento.</p></div>
-          <div className="flex gap-3"><select value={doctorFilter} onChange={(event) => setDoctorFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"><option value="all">Todos os usuários</option>{doctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}</option>)}</select><button onClick={() => void load()} className="rounded-xl border border-slate-200 bg-white p-3 text-slate-600 hover:text-blue-700" aria-label="Atualizar"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`}/></button></div>
+          <div className="flex gap-3"><select value={doctorFilter} onChange={(event) => setDoctorFilter(event.target.value)} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700"><option value="all">Todos os usuários</option>{panelDoctors.map((doctor) => <option key={doctor.id} value={doctor.id}>{doctor.name}</option>)}</select><button onClick={() => void load()} className="rounded-xl border border-slate-200 bg-white p-3 text-slate-600 hover:text-blue-700" aria-label="Atualizar"><RefreshCw className={`h-5 w-5 ${loading ? 'animate-spin' : ''}`}/></button></div>
         </div>
 
         <section className="grid gap-4 md:grid-cols-4">

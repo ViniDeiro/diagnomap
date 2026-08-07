@@ -8,6 +8,58 @@ export const ADMIN_EMAILS = [
   'makotopanetta@gmail.com'
 ] as const
 
+// Perfis que já existiam quando o painel administrativo foi disponibilizado para teste.
+// Os demais perfis históricos ficam fora da visão administrativa; cadastros feitos depois
+// deste marco entram automaticamente, sem exigir manutenção desta lista.
+export const ADMIN_VISIBLE_LEGACY_USERS_CUTOFF = '2026-08-07T12:26:35-03:00'
+
+const ADMIN_VISIBLE_LEGACY_EMAILS = [
+  'rodrigoplutarco@hotmail.com',
+  'makotopanetta@gmail.com',
+  'leybueno@hotmail.com'
+] as const
+
+const ADMIN_VISIBLE_LEGACY_NAMES = [
+  'mariana roveron',
+  'mariana abdalla',
+  'rafael panetta',
+  'rafael panneta',
+  'rodrigo machado',
+  'rodrigo luiz plutarco nogueira machado',
+  'ley ortega bueno'
+] as const
+
+type AdminVisibleUser = {
+  name?: string | null
+  email?: string | null
+  created_at?: string | null
+}
+
+function normalizeIdentity(value?: string | null): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+}
+
+export function isVisibleAdminPanelUser(user: AdminVisibleUser): boolean {
+  const email = normalizeIdentity(user.email)
+  const name = normalizeIdentity(user.name)
+  const nameParts = new Set(name.split(' ').filter(Boolean))
+  const isApprovedLegacyUser = ADMIN_VISIBLE_LEGACY_EMAILS.includes(
+    email as (typeof ADMIN_VISIBLE_LEGACY_EMAILS)[number]
+  ) || ADMIN_VISIBLE_LEGACY_NAMES.some((approvedName) => (
+    approvedName.split(' ').every((part) => nameParts.has(part))
+  ))
+
+  if (isApprovedLegacyUser) return true
+
+  const createdAt = user.created_at ? Date.parse(user.created_at) : Number.NaN
+  return Number.isFinite(createdAt) && createdAt > Date.parse(ADMIN_VISIBLE_LEGACY_USERS_CUTOFF)
+}
+
 export function isAdminEmail(email?: string | null): boolean {
   if (!email) return false
   return ADMIN_EMAILS.includes(email.trim().toLowerCase() as (typeof ADMIN_EMAILS)[number])
