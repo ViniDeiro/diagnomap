@@ -12367,7 +12367,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
-                  {isInlineCopyableConduct && (
+                  {isInlineCopyableConduct && flowchart.id !== 'asthma' && (
                     <div className="mt-3 flex justify-end">
                       <button
                         type="button"

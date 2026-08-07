@@ -1551,11 +1551,18 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Broncodilatação inalatória e reavaliação em curto intervalo.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p>Iniciar broncodilatador inalatório. Quando o serviço utiliza estratégia com formoterol associado a corticoide inalatório, ela pode ser aplicada conforme o plano terapêutico vigente.</p>
+        <div class="space-y-4 text-sm text-slate-700">
+          <div class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between gap-3 bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-white">
+              <div><p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">Primeira intervenção</p><h3 class="mt-1 text-lg font-black">Abrir a via aérea com broncodilatador</h3></div>
+              <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">Crise leve</span>
+            </div>
+            <div class="grid gap-3 p-5 md:grid-cols-2">
+              <div class="rounded-xl bg-emerald-50 p-4"><p class="font-black text-emerald-950">Objetivo imediato</p><p class="mt-1">Aliviar broncoespasmo, reduzir sintomas e recuperar o fluxo expiratório.</p></div>
+              <div class="rounded-xl bg-cyan-50 p-4"><p class="font-black text-cyan-950">Estratégia inalatória</p><p class="mt-1">Iniciar broncodilatador. Quando adotado pelo serviço, formoterol associado a corticoide inalatório pode seguir o plano terapêutico vigente.</p></div>
+            </div>
           </div>
-          <p>Reavaliar sintomas, oximetria e medida de fluxo após a sequência inicial, sem esperar uma hora se houver piora.</p>
+          <div class="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4"><span class="font-black text-amber-700">!</span><p><strong>Reavaliação precoce:</strong> conferir sintomas, oximetria e medida de fluxo após a sequência inicial. Se houver piora, reavaliar imediatamente.</p></div>
         </div>
       `,
       options: [
@@ -1568,8 +1575,14 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Broncodilatador de curta duração, anticolinérgico e corticoide sistêmico precoce.',
       type: 'question',
       content: `
-        <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500 text-sm">
-          <p>Associar broncodilatador de curta duração ao ipratrópio e iniciar corticoide sistêmico, com reavaliações durante a primeira hora.</p>
+        <div class="overflow-hidden rounded-2xl border border-cyan-200 bg-white text-sm text-slate-700 shadow-sm">
+          <div class="bg-gradient-to-r from-cyan-700 to-blue-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-100">Primeira hora</p><h3 class="mt-1 text-lg font-black">Tratamento combinado e sequencial</h3></div>
+          <div class="grid gap-3 p-5 md:grid-cols-3">
+            <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4"><span class="text-xs font-black text-cyan-700">01</span><p class="mt-1 font-black text-cyan-950">Broncodilatador</p><p class="mt-1">Iniciar agente inalatório de curta duração.</p></div>
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><span class="text-xs font-black text-blue-700">02</span><p class="mt-1 font-black text-blue-950">Ipratrópio</p><p class="mt-1">Associar anticolinérgico na sequência inicial.</p></div>
+            <div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><span class="text-xs font-black text-violet-700">03</span><p class="mt-1 font-black text-violet-950">Corticoide</p><p class="mt-1">Administrar precocemente, preferencialmente na primeira hora.</p></div>
+          </div>
+          <div class="mx-5 mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><strong class="text-amber-950">Não aguarde o fim da primeira hora se houver piora.</strong> Reavalie fala, esforço respiratório, SatO2 e resposta clínica durante o tratamento.</div>
         </div>
       `,
       options: [
@@ -1596,12 +1609,18 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Oxigênio quando houver dessaturação.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-blue-50 p-3 rounded border border-blue-200">
-            <p><strong>Ofertar O2 quando SatO2 estiver abaixo de 92%.</strong> Titular para 93-95% no adulto.</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p>Oxigenoterapia suplementar: cateter 1-5 L/min, máscara simples 5-10 L/min ou reservatório 10-15 L/min, com monitorização contínua.</p>
+        <div class="space-y-4 text-sm text-slate-700">
+          <div class="overflow-hidden rounded-2xl border border-blue-200 bg-white shadow-sm">
+            <div class="bg-gradient-to-r from-blue-600 to-cyan-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-blue-100">Suporte respiratório</p><h3 class="mt-1 text-lg font-black">Oxigenoterapia titulada pela saturação</h3></div>
+            <div class="p-5">
+              <div class="rounded-xl bg-blue-50 p-4"><p class="text-base"><strong class="text-blue-950">Iniciar O2 se SatO2 estiver abaixo de 92%.</strong> Ajustar o fluxo para manter 93–95% no adulto.</p></div>
+              <div class="mt-4 grid gap-3 md:grid-cols-3">
+                <div class="rounded-xl border border-slate-200 p-4"><p class="font-black text-slate-950">Cateter nasal</p><p class="mt-1 text-2xl font-black text-blue-700">1–5 <span class="text-sm">L/min</span></p></div>
+                <div class="rounded-xl border border-slate-200 p-4"><p class="font-black text-slate-950">Máscara simples</p><p class="mt-1 text-2xl font-black text-blue-700">5–10 <span class="text-sm">L/min</span></p></div>
+                <div class="rounded-xl border border-slate-200 p-4"><p class="font-black text-slate-950">Com reservatório</p><p class="mt-1 text-2xl font-black text-blue-700">10–15 <span class="text-sm">L/min</span></p></div>
+              </div>
+              <p class="mt-4 rounded-xl bg-slate-50 p-3"><strong>Durante o suporte:</strong> manter oximetria e reavaliação clínica contínuas.</p>
+            </div>
           </div>
         </div>
       `,
@@ -1615,13 +1634,14 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Corticoide sistêmico precoce na 1ª hora.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-emerald-50 p-3 rounded border-l-4 border-emerald-500">
-            <p><strong>Preferir VO:</strong> Prednisona ou Prednisolona 40-60 mg/dia por 5-7 dias.</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p><strong>IV apenas se VO não for possível:</strong> reservar metilprednisolona IV para vômitos, incapacidade de deglutir ou outra impossibilidade prática de usar a via oral.</p>
-            <p><strong>Alternativa EV:</strong> Hidrocortisona 100 mg EV a cada 8 horas, enquanto a via oral não estiver disponível; migrar para corticoide VO assim que possível.</p>
+        <div class="space-y-4 text-sm text-slate-700">
+          <div class="overflow-hidden rounded-2xl border border-violet-200 bg-white shadow-sm">
+            <div class="bg-gradient-to-r from-violet-700 to-indigo-700 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-violet-100">Anti-inflamatório sistêmico</p><h3 class="mt-1 text-lg font-black">Escolha a via possível mais simples</h3></div>
+            <div class="grid gap-3 p-5 md:grid-cols-2">
+              <div class="rounded-xl border-2 border-emerald-300 bg-emerald-50 p-4"><span class="rounded-full bg-emerald-700 px-2.5 py-1 text-xs font-black text-white">PREFERENCIAL</span><p class="mt-3 font-black text-emerald-950">Via oral</p><p class="mt-1"><strong>Prednisona ou prednisolona:</strong> 40–60 mg/dia por 5–7 dias.</p></div>
+              <div class="rounded-xl border border-violet-200 bg-violet-50 p-4"><span class="rounded-full bg-violet-200 px-2.5 py-1 text-xs font-black text-violet-950">SE VO INVIÁVEL</span><p class="mt-3 font-black text-violet-950">Via intravenosa</p><p class="mt-1">Reservar metilprednisolona IV para vômitos, incapacidade de deglutir ou impossibilidade prática da via oral.</p></div>
+            </div>
+            <div class="mx-5 mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><p><strong class="text-amber-950">Alternativa EV:</strong> Hidrocortisona 100 mg EV a cada 8 horas enquanto a via oral estiver indisponível. Migrar para VO assim que possível.</p></div>
           </div>
         </div>
       `,
@@ -1775,14 +1795,13 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Reclassificar resposta após broncodilatação e corticoide inicial.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <p><strong>Reavaliar:</strong> sintomas, fala, SatO2, FR, FC, PFE (%) e impressao clinica global.</p>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p><strong>Classificacao apos broncodilatador inicial:</strong></p>
-            <p><strong>Resposta marcada:</strong> pouco ou nenhum sintoma, sem broncodilatador na última hora, SatO2 acima de 92% e PFE/VEF1 acima de 70%.</p>
-            <p><strong>Resposta parcial:</strong> ainda há dispneia, necessidade frequente de broncodilatador, SatO2 abaixo de 92% ou PFE/VEF1 entre 50% e 70%.</p>
-            <p><strong>Piora:</strong> intensificação do esforço respiratório, queda da oximetria, alteração de consciência ou PFE/VEF1 abaixo de 50%.</p>
-            <p><strong>Ameaca a vida:</strong> SatO2 &lt; 90% com O2, bradicardia, hipotensao, confusao, torax silencioso, cianose.</p>
+        <div class="space-y-4 text-sm text-slate-700">
+          <div class="rounded-2xl border border-cyan-200 bg-gradient-to-r from-cyan-50 to-blue-50 p-5"><p class="text-xs font-black uppercase tracking-[0.18em] text-cyan-800">Reavaliação estruturada</p><h3 class="mt-1 text-lg font-black text-slate-950">Compare a resposta com o estado de entrada</h3><div class="mt-4 flex flex-wrap gap-2">${['Sintomas','Fala','SatO2','FR','FC','PFE opcional','Impressão global'].map((item) => `<span class="rounded-full border border-cyan-200 bg-white px-3 py-1.5 font-bold text-cyan-950">${item}</span>`).join('')}</div></div>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-2xl border border-emerald-200 bg-emerald-50 p-4"><p class="font-black text-emerald-950">Resposta marcada</p><p class="mt-1">Pouco ou nenhum sintoma, sem resgate na última hora, SatO2 acima de 92% e PFE/VEF1 acima de 70% quando medido.</p></div>
+            <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4"><p class="font-black text-amber-950">Resposta parcial</p><p class="mt-1">Dispneia persistente, broncodilatador frequente, SatO2 abaixo de 92% ou PFE/VEF1 entre 50% e 70%.</p></div>
+            <div class="rounded-2xl border border-orange-200 bg-orange-50 p-4"><p class="font-black text-orange-950">Piora</p><p class="mt-1">Maior esforço respiratório, queda da oximetria, alteração de consciência ou PFE/VEF1 abaixo de 50%.</p></div>
+            <div class="rounded-2xl border border-red-300 bg-red-50 p-4"><p class="font-black text-red-950">Ameaça à vida</p><p class="mt-1">SatO2 &lt; 90% com O2, bradicardia, hipotensão, confusão, tórax silencioso ou cianose.</p></div>
           </div>
         </div>
       `,
@@ -1807,8 +1826,10 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Resposta adequada após tratamento inicial.',
       type: 'question',
       content: `
-        <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
-          <p><strong>Boa resposta:</strong> PFE &gt; 70%, SatO2 &gt; 94% e melhora clínica.</p>
+        <div class="overflow-hidden rounded-2xl border border-emerald-200 bg-white text-sm shadow-sm">
+          <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-5 py-4 text-white"><p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">Resposta favorável</p><h3 class="mt-1 text-lg font-black">Tratamento inicial efetivo</h3></div>
+          <div class="grid gap-3 p-5 sm:grid-cols-3"><div class="rounded-xl bg-emerald-50 p-4 text-center"><p class="text-xs font-bold uppercase text-emerald-700">Clínica</p><p class="mt-1 font-black text-emerald-950">Melhora evidente</p></div><div class="rounded-xl bg-blue-50 p-4 text-center"><p class="text-xs font-bold uppercase text-blue-700">SatO2</p><p class="mt-1 text-xl font-black text-blue-950">&gt; 94%</p></div><div class="rounded-xl bg-cyan-50 p-4 text-center"><p class="text-xs font-bold uppercase text-cyan-700">PFE, se medido</p><p class="mt-1 text-xl font-black text-cyan-950">&gt; 70%</p></div></div>
+          <p class="mx-5 mb-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-700">Confirme estabilidade e prossiga para o checklist de alta segura.</p>
         </div>
       `,
       options: [
@@ -2057,10 +2078,9 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Confirmação final de segurança para alta.',
       type: 'question',
       content: `
-        <div class="space-y-2 text-sm">
-          <div class="bg-green-50 p-3 rounded border border-green-200">
-            <p><strong>Critérios de alta:</strong> sintomas mínimos, sem necessidade de resgate na última hora, SatO2 &gt; 92% em ar ambiente, PFE/VEF1 &gt; 70%, medicação disponível, técnica revisada e retorno seguro.</p>
-          </div>
+        <div class="rounded-2xl border border-emerald-200 bg-gradient-to-br from-white to-emerald-50 p-5 text-sm text-slate-700 shadow-sm">
+          <div class="flex items-start gap-4"><div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-xl font-black text-white">✓</div><div><p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Barreira de segurança</p><h3 class="mt-1 text-lg font-black text-slate-950">A alta depende da confirmação item a item</h3><p class="mt-1">Use o checklist interativo abaixo. O PFE é complementar e não bloqueia a decisão quando indisponível.</p></div></div>
+          <div class="mt-4 grid gap-2 sm:grid-cols-2"><p class="rounded-xl bg-white p-3"><strong>Sintomas:</strong> mínimos e estáveis</p><p class="rounded-xl bg-white p-3"><strong>Resgate:</strong> não necessário na última hora</p><p class="rounded-xl bg-white p-3"><strong>Oxigenação:</strong> SatO2 &gt; 92% em ar ambiente</p><p class="rounded-xl bg-white p-3"><strong>Continuidade:</strong> medicação, técnica e retorno seguros</p></div>
         </div>
       `,
       options: [
@@ -2074,22 +2094,25 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       description: 'Alta com plano terapêutico e retorno orientado.',
       type: 'result',
       content: `
-        <div class="space-y-3 text-sm">
-          <div class="bg-green-50 p-3 rounded border-l-4 border-green-600">
-            <p><strong>ALTA com plano terapêutico:</strong> 1) corticoide oral por 5–7 dias; 2) ICS-formoterol como medicação de alívio — ICS significa corticoide inalatório — ou ICS regular associado a SABA de resgate; <strong>SABA significa beta-2 agonista de curta ação, broncodilatador de alívio rápido, como o salbutamol</strong>; 3) plano de ação escrito personalizado; 4) retorno em 24–48 horas; 5) revisão da técnica inalatória, adesão e gatilhos.</p>
+        <div class="space-y-4 text-sm text-slate-700">
+          <div class="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm">
+            <div class="flex flex-col gap-3 bg-gradient-to-r from-emerald-700 to-teal-600 px-5 py-5 text-white sm:flex-row sm:items-center sm:justify-between"><div><p class="text-xs font-black uppercase tracking-[0.18em] text-emerald-100">Plano de saída</p><h3 class="mt-1 text-xl font-black">Alta segura após crise asmática</h3></div><span class="w-fit rounded-full bg-white/15 px-3 py-1.5 text-xs font-black">Retorno em 24–48 h</span></div>
+            <div class="grid gap-3 p-5 md:grid-cols-2">
+              <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><p class="font-black text-emerald-950">Tratamento de alta</p><p class="mt-1">Corticoide oral por 5–7 dias e estratégia inalatória individualizada com ICS-formoterol ou ICS regular associado a SABA de resgate.</p></div>
+              <div class="rounded-xl border border-blue-200 bg-blue-50 p-4"><p class="font-black text-blue-950">Entenda as siglas</p><p class="mt-1"><strong>ICS:</strong> corticoide inalatório. <strong>SABA significa beta-2 agonista de curta ação, broncodilatador de alívio rápido, como o salbutamol</strong>.</p></div>
+              <div class="rounded-xl border border-cyan-200 bg-cyan-50 p-4"><p class="font-black text-cyan-950">Antes de sair</p><p class="mt-1">Entregar plano escrito e revisar técnica inalatória, adesão, gatilhos e disponibilidade das medicações.</p></div>
+              <div class="rounded-xl border border-amber-200 bg-amber-50 p-4"><p class="font-black text-amber-950">Retorno e segurança</p><p class="mt-1">Orientar sinais de piora, quando procurar emergência e contatos úteis.</p></div>
+            </div>
           </div>
-          <div class="bg-emerald-50 p-3 rounded border border-emerald-200">
-            <p><strong>Plano de ação escrito:</strong> reconhecer piora, aumentar medicação, quando procurar emergência e contatos úteis.</p>
+          <div class="grid gap-3 md:grid-cols-2">
+            <div class="rounded-2xl border border-cyan-200 bg-cyan-50 p-5"><p class="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">Prevenção pós-crise</p><p class="mt-2">Otimizar manutenção, avaliar adesão e técnica, reduzir exposição a alérgenos ou irritantes e tratar comorbidades como rinite, DRGE e obesidade.</p></div>
+            <div class="rounded-2xl border border-violet-200 bg-violet-50 p-5"><p class="text-xs font-black uppercase tracking-[0.16em] text-violet-700">Plano de ação escrito</p><p class="mt-2">Registrar como reconhecer piora, ajustar a medicação conforme prescrição e quando procurar atendimento de emergência.</p></div>
           </div>
-          <div class="bg-cyan-50 p-3 rounded border border-cyan-200">
-            <p><strong>Prevenção pós-crise:</strong> otimizar manutenção, avaliar adesão/técnica, reduzir exposição a alérgenos/irritantes e tratar comorbidades (rinite, DRGE, obesidade).</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded border border-slate-200">
-            <p><strong>Track 1 (preferencial):</strong> ICS-formoterol em todas as etapas; resgate 1-2 inalações conforme sintomas.</p>
-            <p><strong>Track 2 (alternativa):</strong> ICS regular + SABA de resgate. SABA significa agonista beta-2 adrenérgico de curta ação, como o salbutamol; escalonar ICS/LABA e considerar tiotrópio/biológico conforme fenótipo.</p>
-            <p><strong>Zonas do plano:</strong> verde (PFE&gt;80%), amarela (PFE 50-80%), vermelha (PFE&lt;50% com procura imediata de emergência).</p>
-            <p><strong>Acompanhamento:</strong> retorno em 24-48h e revisão seriada ambulatorial.</p>
-            <p><em>Referências:</em> GINA 2024, SBPT 2012, ATS, O'Byrne 2018, Bateman 2018.</p>
+          <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <p class="text-xs font-black uppercase tracking-[0.16em] text-slate-500">Estratégias de manutenção</p>
+            <div class="mt-3 grid gap-3 md:grid-cols-2"><div class="rounded-xl bg-slate-50 p-4"><p><strong>Track 1 (preferencial):</strong> ICS-formoterol em todas as etapas; resgate de 1–2 inalações conforme sintomas.</p></div><div class="rounded-xl bg-slate-50 p-4"><p><strong>Track 2 (alternativa):</strong> ICS regular + SABA de resgate; escalonar ICS/LABA e considerar terapias adicionais conforme fenótipo.</p></div></div>
+            <div class="mt-3 flex flex-wrap gap-2"><span class="rounded-full bg-emerald-100 px-3 py-1.5 font-bold text-emerald-900">Zona verde: PFE &gt; 80%</span><span class="rounded-full bg-amber-100 px-3 py-1.5 font-bold text-amber-900">Zona amarela: PFE 50–80%</span><span class="rounded-full bg-red-100 px-3 py-1.5 font-bold text-red-900">Zona vermelha: PFE &lt; 50%</span></div>
+            <p class="mt-4 text-xs text-slate-500"><em>Referências:</em> GINA 2024, SBPT 2012, ATS, O'Byrne 2018, Bateman 2018.</p>
           </div>
           <button type="button" data-asthma-copy-discharge="true" class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-3 font-bold text-white hover:bg-slate-800">Copiar prescrição de alta</button>
         </div>
