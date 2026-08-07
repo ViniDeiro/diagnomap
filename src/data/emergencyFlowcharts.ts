@@ -2043,7 +2043,7 @@ export const asthmaFlowchart: EmergencyFlowchart = {
       type: 'question',
       content: `
         <div class="bg-green-50 p-3 rounded border-l-4 border-green-600 text-sm">
-          <p><strong>Prescrição literal sugerida para adulto:</strong> Prednisona 40 mg VO pela manhã por 5–7 dias. Para resgate, preferir esquema contendo corticoide inalatório; quando for utilizado SABA — agonista beta-2 adrenérgico de curta ação — usar Salbutamol 100 mcg: inalar 1–2 jatos com espaçador a cada 4–6 horas se falta de ar, conforme plano individual.</p>
+          <p><strong>Prescrição literal sugerida para adulto:</strong> Formoterol + budesonida 6/200 mcg/dose: inalar 1 jato a cada 4 horas se falta de ar, enxaguando a boca após o uso; associar prednisona 40 mg pela manhã por 5 dias. Conferir apresentação, dispositivo, contraindicações e tratamento de manutenção antes de assinar.</p>
           <p class="mt-2"><strong>Antes da alta:</strong> revisar alergias, contraindicações, tratamento de manutenção e técnica do dispositivo. Ajustar a receita para idade, gestação e comorbidades.</p>
         </div>
       `,

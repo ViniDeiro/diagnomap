@@ -300,7 +300,10 @@ for (const marker of [
   "['Avaliação', 'Gravidade', 'Tratamento', 'Reavaliação', 'Destino']",
   'Classificação objetiva da crise',
   'Achados de gravidade — selecione os presentes',
-  'Nova medida após a primeira hora'
+  'Nova medida após a primeira hora',
+  'Protocolo interativo de crise asmática',
+  'Decisão clínica guiada:',
+  "flowchart.id === 'asthma' && 'bg-gradient-to-br from-slate-50 via-cyan-50/45 to-blue-50'"
 ]) {
   assert.ok(emergencyComponentSource.includes(marker), `asma: experiência interativa ausente: ${marker}`)
 }
@@ -567,6 +570,7 @@ assert.match(flowSource, /Hidrocortisona 100 mg EV a cada 8 horas/, 'Asma deve o
 assert.match(emergencyComponentSource, /ASTHMA_MAGNESIUM_PRESCRIPTION/)
 assert.match(emergencyComponentSource, /data-asthma-copy-magnesium/)
 assert.match(emergencyComponentSource, /ASTHMA_ADULT_DISCHARGE_PRESCRIPTION/)
+assert.match(emergencyComponentSource, /USO INALATÓRIO[\s\S]*Formoterol \+ budesonida 6\/200 mcg\/dose[\s\S]*COMO USAR A BOMBINHA[\s\S]*USO ORAL[\s\S]*Prednisona 40 mg[\s\S]*ORIENTAÇÕES/, 'Asma: prescrição de alta deve trazer bombinha, corticoide oral, técnica e orientações')
 assert.match(emergencyComponentSource, /data-asthma-copy-discharge/)
 assert.match(emergencyComponentSource, /currentStepData\.id === 'asma_tratamento_1h_leve_moderada'/, 'Tela introdutória do tratamento moderado não deve exibir cópia de conduta genérica')
 assert.match(emergencyComponentSource, /nextStep === 'asma_alta_final'[\s\S]*replacePrescriptionsByPrescriber\(patient\.id, ASTHMA_PRESCRIBER/, 'Alta da asma deve registrar os medicamentos no prontuário')
@@ -706,7 +710,7 @@ assert.match(emergencyComponentSource, /isInlineCopyableConduct[\s\S]*antimicrob
 assert.match(emergencyComponentSource, /flowchart\.id === 'asthma'[\s\S]*saba\|ipratr\|cortico\|magnesio/, 'Asma: todos os ramos terapêuticos devem ativar cópia contextual')
 assert.match(flowSource, /SABA significa beta-2 agonista de curta ação, broncodilatador de alívio rápido, como o salbutamol/, 'Asma: a sigla SABA deve ser explicada no plano de alta')
 assert.match(flowSource, /SABA \(beta-2 agonista de curta ação, como salbutamol\)/, 'Asma\/DPOC: a primeira menção terapêutica de SABA deve trazer significado e exemplo')
-assert.match(emergencyComponentSource, /SABA significa beta-2 agonista adrenérgico de curta ação: é um broncodilatador de alívio rápido/, 'Asma: receita copiada deve explicar SABA em linguagem clínica clara')
+assert.doesNotMatch(emergencyComponentSource, /USO INALATÓRIO[^`]*SABA significa/, 'Asma: explicação educativa de SABA não deve poluir a prescrição literal de alta')
 assert.match(dengueSource, /hasCopyableConduct[\s\S]*InlineClinicalCopyButton/, 'Dengue: telas terapêuticas devem oferecer cópia contextual')
 assert.match(ituComponentSource, /hasCopyableConduct[\s\S]*InlineClinicalCopyButton/, 'ITU: telas terapêuticas devem oferecer cópia contextual')
 assert.match(hypertensionComponentSource, /hipertensao_emergencia_plano[\s\S]*hipertensao_alta_sem_loa[\s\S]*InlineClinicalCopyButton/, 'Hipertensão: planos IV e oral devem oferecer cópia contextual')

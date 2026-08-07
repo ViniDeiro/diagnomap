@@ -43,6 +43,7 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   const isAgitacao = livePatient.selectedFlowchart === 'agitacao_psicomotora'
   const isPepHiv = livePatient.selectedFlowchart === 'pep_hiv'
   const isAnaphylaxis = livePatient.selectedFlowchart === 'anafilaxia'
+  const isAsthma = livePatient.selectedFlowchart === 'asthma'
   const isPancreatitis = livePatient.selectedFlowchart === 'pancreatitis'
   const isCholangitis = livePatient.selectedFlowchart === 'cholangitis'
   const isCholecystitis = livePatient.selectedFlowchart === 'cholecystitis'
@@ -326,6 +327,46 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
   }
 
   const generatePrescriptionText = () => {
+    if (isAsthma) {
+      return [
+        'RECEITUÁRIO MÉDICO',
+        '',
+        `Paciente: ${patient.name}`,
+        `Idade: ${patient.age} anos`,
+        `Data: ${new Date().toLocaleDateString('pt-BR')}`,
+        '',
+        'Diagnóstico: Crise asmática no pronto-socorro',
+        '',
+        'USO INALATÓRIO',
+        '',
+        '1. Formoterol + budesonida 6/200 mcg/dose — 1 frasco.',
+        'Inalar 1 jato a cada 4 horas se falta de ar.',
+        'Após o uso, enxaguar a boca com água e/ou escovar os dentes.',
+        '',
+        'COMO USAR A BOMBINHA',
+        '',
+        '• Conferir o tipo de dispositivo e seguir a técnica indicada pelo fabricante.',
+        '• Se for aerossol dosimetrado: agitar, retirar a tampa, expirar antes do uso, posicionar o bocal entre os lábios, acionar 1 jato durante inspiração lenta e profunda e manter a respiração por até 10 segundos.',
+        '• Aguardar o intervalo recomendado antes de repetir outro jato, quando prescrito.',
+        '',
+        'USO ORAL',
+        '',
+        '2. Prednisona 40 mg — 5 comprimidos.',
+        'Tomar 1 comprimido pela manhã, uma vez ao dia, durante 5 dias.',
+        '',
+        'ORIENTAÇÕES',
+        '',
+        '• Manter os cuidados e o tratamento controlador prescritos durante a recuperação.',
+        '• Evitar exposição a poeira, fumaça, tabaco, perfumes, mofo, ácaros e outros gatilhos conhecidos.',
+        '• Retornar em 24–48 horas para revisão clínica, da técnica inalatória e do plano de manutenção.',
+        '• Procurar imediatamente uma unidade de emergência se houver piora da falta de ar, dificuldade para falar, sonolência, cianose, fraqueza intensa ou ausência de resposta à medicação.',
+        '',
+        'Assinatura do Médico:',
+        '__________________________________________________',
+        doctorSignatureLine
+      ].join('\n')
+    }
+
     if (isBell) {
       const mappedPrescriptions = allPrescriptions.map((prescription, index) => (
         `${index + 1}. ${prescription.medication}\n   Dosagem: ${prescription.dosage}\n   Frequência: ${prescription.frequency}\n   Duração: ${prescription.duration}${prescription.instructions ? `\n   Instruções: ${prescription.instructions}` : ''}`
@@ -977,7 +1018,38 @@ const MedicalPrescriptionViewer: React.FC<MedicalPrescriptionViewerProps> = ({ p
             {activeTab === 'prescriptions' && (
               <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-800 mb-6">Medicamentos Prescritos</h2>
-                {allPrescriptions.length > 0 ? (
+                {isAsthma && allPrescriptions.length > 0 ? (
+                  <div className="space-y-8 text-lg leading-relaxed text-slate-900">
+                    <section>
+                      <h3 className="mb-5 font-black uppercase tracking-wide">Uso inalatório</h3>
+                      <p><strong>1. Formoterol + budesonida 6/200 mcg/dose</strong> — 1 frasco.</p>
+                      <p>Inalar 1 jato a cada 4 horas se falta de ar.</p>
+                      <p>Após o uso, enxaguar a boca com água e/ou escovar os dentes.</p>
+                    </section>
+                    <section>
+                      <h3 className="mb-5 font-black uppercase tracking-wide">Como usar a bombinha</h3>
+                      <ul className="list-disc space-y-2 pl-6">
+                        <li>Conferir o tipo de dispositivo e seguir a técnica indicada pelo fabricante.</li>
+                        <li>Se for aerossol dosimetrado: agitar, retirar a tampa, expirar antes do uso, posicionar o bocal entre os lábios, acionar 1 jato durante inspiração lenta e profunda e manter a respiração por até 10 segundos.</li>
+                        <li>Aguardar o intervalo recomendado antes de repetir outro jato, quando prescrito.</li>
+                      </ul>
+                    </section>
+                    <section>
+                      <h3 className="mb-5 font-black uppercase tracking-wide">Uso oral</h3>
+                      <p><strong>2. Prednisona 40 mg</strong> — 5 comprimidos.</p>
+                      <p>Tomar 1 comprimido pela manhã, uma vez ao dia, durante 5 dias.</p>
+                    </section>
+                    <section className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+                      <h3 className="mb-3 font-black uppercase tracking-wide">Orientações</h3>
+                      <ul className="list-disc space-y-2 pl-6">
+                        <li>Manter os cuidados e o tratamento controlador prescritos durante a recuperação.</li>
+                        <li>Evitar exposição a poeira, fumaça, tabaco, perfumes, mofo, ácaros e outros gatilhos conhecidos.</li>
+                        <li>Retornar em 24–48 horas para revisão clínica, da técnica inalatória e do plano de manutenção.</li>
+                        <li>Procurar imediatamente uma unidade de emergência se houver piora da falta de ar, dificuldade para falar, sonolência, cianose, fraqueza intensa ou ausência de resposta à medicação.</li>
+                      </ul>
+                    </section>
+                  </div>
+                ) : allPrescriptions.length > 0 ? (
                   <div className="space-y-4">
                     {allPrescriptions.map((prescription, index) => (
                       <div key={prescription.id} className="border-l-4 border-slate-400 pl-6 text-lg">

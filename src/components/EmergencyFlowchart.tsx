@@ -1645,14 +1645,25 @@ const tvpWellsCriteria = [
   { id: 'diagnostico_alternativo', text: 'Diagnóstico alternativo pelo menos tão provável quanto TVP', score: -2 }
 ]
 
-const ASTHMA_ADULT_DISCHARGE_PRESCRIPTION = `USO ORAL
-1. Prednisona 40 mg — tomar 1 dose pela manhã, por 5 a 7 dias.
+const ASTHMA_ADULT_DISCHARGE_PRESCRIPTION = `USO INALATÓRIO
+1. Formoterol + budesonida 6/200 mcg/dose — 1 frasco.
+Inalar 1 jato a cada 4 horas se falta de ar.
+Após o uso, enxaguar a boca com água e/ou escovar os dentes.
 
-USO INALATÓRIO — RESGATE (quando SABA fizer parte do plano individual)
-SABA significa beta-2 agonista adrenérgico de curta ação: é um broncodilatador de alívio rápido. Neste esquema, corresponde ao salbutamol.
-2. Salbutamol 100 mcg/dose — inalar 1 a 2 jatos com espaçador a cada 4 a 6 horas se falta de ar.
+COMO USAR A BOMBINHA
+• Conferir o tipo de dispositivo e seguir a técnica indicada pelo fabricante.
+• Se for aerossol dosimetrado: agitar, retirar a tampa, expirar antes do uso, posicionar o bocal entre os lábios, acionar 1 jato durante inspiração lenta e profunda e manter a respiração por até 10 segundos.
+• Aguardar o intervalo recomendado antes de repetir outro jato, quando prescrito.
 
-Orientações: revisar técnica inalatória; manter o controlador prescrito; retornar em 24–48 horas; procurar emergência se houver piora, dificuldade para falar, sonolência, cianose ou ausência de resposta ao resgate. Ajustar esta sugestão às alergias, contraindicações, idade, gestação, comorbidades e tratamento de manutenção.`
+USO ORAL
+2. Prednisona 40 mg — 5 comprimidos.
+Tomar 1 comprimido pela manhã, uma vez ao dia, durante 5 dias.
+
+ORIENTAÇÕES
+• Manter os cuidados e o tratamento controlador prescritos durante a recuperação.
+• Evitar exposição a poeira, fumaça, tabaco, perfumes, mofo, ácaros e outros gatilhos conhecidos.
+• Retornar em 24–48 horas para revisão clínica, da técnica inalatória e do plano de manutenção.
+• Procurar imediatamente uma unidade de emergência se houver piora da falta de ar, dificuldade para falar, sonolência, cianose, fraqueza intensa ou ausência de resposta à medicação.`
 
 const ASTHMA_PRESCRIBER = 'Fluxograma Crise Asmática'
 const ASTHMA_DISCHARGE_CRITERIA_KEY = '__asthma_discharge_criteria'
@@ -1666,8 +1677,8 @@ const ASTHMA_DISCHARGE_CRITERIA = [
   'Plano de ação, retorno em 24–48 horas e acesso seguro à reavaliação'
 ]
 const buildAsthmaDischargePrescriptionItems = () => [
-  { medication: 'Prednisona', dosage: '40 mg VO', frequency: '1 vez pela manhã', duration: '5 a 7 dias', instructions: 'Confirmar contraindicações, comorbidades e tratamento já utilizado.', prescribedBy: ASTHMA_PRESCRIBER },
-  { medication: 'Salbutamol spray', dosage: '100 mcg/dose — 1 a 2 jatos com espaçador', frequency: 'a cada 4 a 6 horas se falta de ar', duration: 'conforme plano de ação e reavaliação', instructions: 'SABA de resgate. Revisar técnica inalatória e orientar procura imediata do PS se não houver resposta.', prescribedBy: ASTHMA_PRESCRIBER }
+  { medication: 'Formoterol + budesonida', dosage: '6/200 mcg/dose — 1 frasco', frequency: 'inalar 1 jato a cada 4 horas se falta de ar', duration: 'conforme plano de ação e reavaliação em 24–48 horas', instructions: 'Após o uso, enxaguar a boca com água e/ou escovar os dentes. Revisar a técnica conforme o dispositivo dispensado.', prescribedBy: ASTHMA_PRESCRIBER },
+  { medication: 'Prednisona', dosage: '40 mg — 5 comprimidos', frequency: 'tomar 1 comprimido pela manhã, uma vez ao dia', duration: '5 dias', instructions: '', prescribedBy: ASTHMA_PRESCRIBER }
 ]
 
 const ASTHMA_MAGNESIUM_PRESCRIPTION = `SULFATO DE MAGNÉSIO — CRISE ASMÁTICA GRAVE
@@ -8269,9 +8280,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   }
 
   return renderFlowContent(
-    <div className={clsx('min-h-screen pb-12', flowchart.id === 'geca' && 'bg-gradient-to-b from-slate-50 via-white to-cyan-50/40')}>
+    <div className={clsx(
+      'min-h-screen pb-12',
+      flowchart.id === 'geca' && 'bg-gradient-to-b from-slate-50 via-white to-cyan-50/40',
+      flowchart.id === 'asthma' && 'bg-gradient-to-br from-slate-50 via-cyan-50/45 to-blue-50'
+    )}>
       {/* Premium Medical Header */}
-      <div className={clsx("relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8", flowchart.id === 'geca' && 'hidden')}>
+      <div className={clsx("relative bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-glass border-b border-white/40 dark:border-slate-800/60 sticky top-0 z-50 mb-8", (flowchart.id === 'geca' || flowchart.id === 'asthma') && 'hidden')}>
         <div className="absolute inset-0 bg-gradient-to-r from-indigo-600/5 via-slate-50/5 to-indigo-600/5"></div>
 
         <div className="relative max-w-7xl mx-auto px-4 lg:px-8 py-6">
@@ -8363,6 +8378,37 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         </nav>
       )}
 
+      {flowchart.id === 'asthma' && (
+        <nav className="sticky top-0 z-50 border-b border-white/70 bg-white/92 shadow-lg shadow-slate-200/60 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-600 to-blue-700 text-white shadow-lg shadow-cyan-200">
+                <Activity className="h-6 w-6" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-lg font-black text-slate-950">{patient.name || 'Paciente sem nome'}</p>
+                <p className="truncate text-xs font-semibold text-slate-500">
+                  {patient.age ? `${patient.age} anos` : 'Idade não informada'} · Crise asmática · {asthmaJourney?.labels[(asthmaJourney?.phase || 1) - 1] || 'Avaliação'}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {onBack && (
+                <button type="button" onClick={onBack} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 hover:shadow-md">
+                  <ChevronLeft className="h-4 w-4" /><span>Dashboard</span>
+                </button>
+              )}
+              <button type="button" onClick={goBack} disabled={history.length === 0} className="inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-sm font-bold text-amber-950 shadow-sm transition hover:bg-amber-100 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400">
+                <ArrowLeft className="h-4 w-4" /><span>Voltar</span>
+              </button>
+              <button type="button" onClick={restart} className="inline-flex items-center gap-2 rounded-xl border border-cyan-300 bg-cyan-50 px-3.5 py-2.5 text-sm font-bold text-cyan-950 shadow-sm transition hover:bg-cyan-100">
+                <RotateCcw className="h-4 w-4" /><span>Reiniciar</span>
+              </button>
+            </div>
+          </div>
+        </nav>
+      )}
+
       {flowchart.id === 'geca' && (
         <header className={clsx('relative overflow-hidden px-5 py-7 text-white shadow-lg sm:px-8', currentStepData.critical ? 'bg-gradient-to-r from-red-700 via-rose-700 to-orange-600' : 'bg-gradient-to-r from-cyan-800 via-blue-700 to-indigo-700')}>
           <div className="mx-auto flex max-w-6xl items-center gap-4">
@@ -8378,14 +8424,44 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
         </header>
       )}
 
-      <div data-conduct-copy-source className={clsx('max-w-6xl mx-auto px-4 lg:px-8', flowchart.id === 'geca' && 'mt-7 sm:px-6')}>
+      {flowchart.id === 'asthma' && (
+        <header className={clsx(
+          'relative overflow-hidden px-5 py-8 text-white shadow-xl sm:px-8',
+          currentStepData.critical
+            ? 'bg-gradient-to-r from-rose-800 via-red-700 to-orange-600'
+            : 'bg-gradient-to-r from-blue-800 via-cyan-700 to-teal-600'
+        )}>
+          <div className="absolute inset-0 opacity-15 [background-image:radial-gradient(circle_at_80%_15%,white_0,transparent_34%)]" />
+          <div className="relative mx-auto flex max-w-7xl items-center gap-4">
+            <span className="rounded-2xl bg-white/15 p-3 ring-1 ring-white/25 shadow-inner">
+              {currentStepData.critical ? <AlertTriangle className="h-8 w-8" /> : <Activity className="h-8 w-8" />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-black uppercase tracking-[0.22em] text-white/75">Protocolo interativo de crise asmática · etapa {asthmaJourney?.phase || 1} de 5</p>
+              <h1 className="mt-1 text-2xl font-black leading-tight sm:text-3xl">{currentStepData.title}</h1>
+              <p className="mt-1 max-w-4xl text-sm leading-relaxed text-white/85 sm:text-base">{currentStepData.description}</p>
+            </div>
+            <div className="hidden shrink-0 text-right sm:block">
+              <strong className="text-2xl font-black">{Math.round(progress)}%</strong>
+              <p className="text-xs font-semibold text-white/70">do protocolo</p>
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 h-1.5 bg-white/45 transition-all duration-500" style={{ width: `${progress}%` }} />
+        </header>
+      )}
+
+      <div data-conduct-copy-source className={clsx(
+        'max-w-6xl mx-auto px-4 lg:px-8',
+        flowchart.id === 'geca' && 'mt-7 sm:px-6',
+        flowchart.id === 'asthma' && 'mt-7 max-w-7xl sm:px-6'
+      )}>
         
         {/* Progress Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className={clsx('flowchart-card p-6 mb-8', flowchart.id === 'geca' && 'hidden')}
+          className={clsx('flowchart-card p-6 mb-8', (flowchart.id === 'geca' || flowchart.id === 'asthma') && 'hidden')}
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0 mb-4">
             <div className="flex items-center space-x-3">
@@ -8436,13 +8512,17 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
-            className={clsx('flowchart-card overflow-hidden', flowchart.id === 'geca' && 'rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50')}
+            className={clsx(
+              'flowchart-card overflow-hidden',
+              flowchart.id === 'geca' && 'rounded-3xl border border-slate-200 bg-white shadow-xl shadow-slate-200/50',
+              flowchart.id === 'asthma' && 'rounded-3xl border border-slate-200/80 bg-white shadow-2xl shadow-cyan-950/10 ring-1 ring-white'
+            )}
           >
             {/* Header do Step */}
             <div className={clsx(
               "p-6 text-white",
               `bg-gradient-to-r ${getStepColor(currentStepData)}`,
-              flowchart.id === 'geca' && 'hidden'
+              (flowchart.id === 'geca' || flowchart.id === 'asthma') && 'hidden'
             )}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
@@ -8506,11 +8586,26 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
             </div>
 
             {/* Conteúdo do Step */}
-            <div className={clsx('p-6', flowchart.id === 'geca' && 'p-5 sm:p-7')}>
+            <div className={clsx(
+              'p-6',
+              flowchart.id === 'geca' && 'p-5 sm:p-7',
+              flowchart.id === 'asthma' && 'p-5 sm:p-7 lg:p-8'
+            )}>
               {flowchart.id === 'geca' && !flowchart.finalSteps.includes(currentStep) && (
                 <div className="mb-6 flex items-start gap-3 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-cyan-950">
                   <Droplets className="mt-0.5 h-5 w-5 shrink-0" />
                   <p className="text-sm"><strong>Decisão clínica guiada:</strong> registre os achados desta etapa e escolha somente a opção correspondente ao paciente. Hidratação, exames, tratamento e destino permanecem vinculados ao resumo clínico.</p>
+                </div>
+              )}
+              {flowchart.id === 'asthma' && !flowchart.finalSteps.includes(currentStep) && (
+                <div className={clsx(
+                  'mb-6 flex items-start gap-3 rounded-2xl border p-4',
+                  currentStepData.critical
+                    ? 'border-rose-200 bg-rose-50 text-rose-950'
+                    : 'border-cyan-200 bg-cyan-50 text-cyan-950'
+                )}>
+                  {currentStepData.critical ? <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" /> : <Activity className="mt-0.5 h-5 w-5 shrink-0" />}
+                  <p className="text-sm leading-relaxed"><strong>Decisão clínica guiada:</strong> registre os parâmetros atuais e selecione somente a conduta compatível. Gravidade, tratamento, resposta e destino permanecerão vinculados ao resumo clínico.</p>
                 </div>
               )}
               {isGecaReassessmentScreen && (
