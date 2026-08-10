@@ -407,9 +407,10 @@ for (const marker of ['GECA_ADULT_DISCHARGE_PRESCRIPTION', 'GECA_PEDIATRIC_DISCH
 for (const marker of ['GECA_PRESCRIBER', 'buildGecaStructuredPrescriptionItems', "nextStep === 'geca_alta_plano_a'", 'Sais para reidratação oral', 'Racecadotrila', 'Simeticona', 'Saccharomyces boulardii', 'Ondansetrona', 'ciprofloxacino_adulto', 'replacePrescriptionsByPrescriber']) {
   assert.ok(emergencyComponentSource.includes(marker), `GECA: registro estruturado no receituário ausente (${marker})`)
 }
-for (const marker of ['parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])', 'registeredLaboratoryResults', 'Resultados de exames registrados:', 'Interpretação, tendência e pendências:']) {
+for (const marker of ['formatUniversalLaboratoryRecord', 'Resultado laboratorial registrado:', 'Interpretação, tendência e pendências dos exames:', 'standardizeUniversalEvolution(buildGecaClinicalSummary(']) {
   assert.ok(clinicalSummarySource.includes(marker), `GECA: resultado laboratorial não integrado à evolução (${marker})`)
 }
+assert.match(emergencyComponentSource, /GECA_DIRECTED_EXAM_ITEMS[\s\S]*?\.filter\(\(item\) => selectedGecaDirectedExams\.includes\(item\.id\)\)[\s\S]*?persistUniversalLabNotebook/, 'GECA: exames selecionados na investigação dirigida devem criar automaticamente um registro pendente no caderno de resultados')
 assert.match(clinicalSummarySource, /parsePepBaselineForSummary/, 'PEP HIV: avaliação basal precisa aparecer no resumo clínico')
 assert.equal(pepHivFlowchart.steps.pep_inicio.options[0]?.nextStep, 'pep_material_risco', 'PEP HIV: contexto e material de risco devem ser registrados na mesma tela, sem etapa intermediária')
 for (const marker of ['isPepMaterialRiskStep', 'Grupo do tipo de exposição', 'persistPepExposureContext', 'Selecione primeiro o grupo do tipo de exposição']) {

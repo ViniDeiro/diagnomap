@@ -46,7 +46,7 @@ import HELLPFlowchartInteractive from './HELLPFlowchartInteractive'
 import AcuteAorticSyndromeFlowchartInteractive from './AcuteAorticSyndromeFlowchartInteractive'
 import AcuteCoronarySyndromeFlowchartInteractive from './AcuteCoronarySyndromeFlowchartInteractive'
 import SubarachnoidHemorrhageFlowchartInteractive from './SubarachnoidHemorrhageFlowchartInteractive'
-import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY } from './UniversalLabNotebook'
+import UniversalLabNotebook, { UNIVERSAL_LAB_RESULTS_KEY, parseUniversalLabNotebook } from './UniversalLabNotebook'
 import UniversalImagingNotebook, { UNIVERSAL_IMAGING_RESULTS_KEY } from './UniversalImagingNotebook'
 import AnxietyFlowchartInteractive from './AnxietyFlowchartInteractive'
 import UniversalCareTransition, { inferCareDestination, type CareTransitionData } from './UniversalCareTransition'
@@ -4652,6 +4652,27 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const isGecaHydrationClassificationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_classificacao_hidratacao'
   const isGecaExamIndicationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_indicacao_exames'
   const isGecaDirectedExamsStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_exames_dirigidos'
+  useEffect(() => {
+    if (!isGecaDirectedExamsStep || selectedGecaDirectedExams.length === 0) return
+    const notebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
+    const existingTests = new Set(notebook.entries.map((entry) => entry.test.trim().toLowerCase()))
+    const missingLabels = GECA_DIRECTED_EXAM_ITEMS
+      .filter((item) => selectedGecaDirectedExams.includes(item.id))
+      .map((item) => item.label)
+      .filter((label) => !existingTests.has(label.trim().toLowerCase()))
+    if (missingLabels.length === 0) return
+    const newEntries = missingLabels.map((label) => ({
+      id: `${Date.now()}-${Math.random().toString(36).slice(2)}-${label}`,
+      test: label,
+      value: '',
+      unit: '',
+      reference: '',
+      critical: false,
+      collectedAt: new Date().toISOString().slice(0, 16)
+    }))
+    persistUniversalLabNotebook(JSON.stringify({ ...notebook, entries: [...notebook.entries, ...newEntries], updatedAt: new Date().toISOString() }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGecaDirectedExamsStep, selectedGecaDirectedExams])
   const isGecaDiarrheaDurationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_diarreia_persistente'
   const isGecaAntibioticIndicationStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_indicacao_antibiotico'
   const isGecaStecScreeningStep = flowchart.id === 'geca' && currentStepData?.id === 'geca_triagem_stec'
@@ -12215,6 +12236,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     onChange={persistUniversalLabNotebook}
                     title={`Resultados laboratoriais · ${currentStepData.title}`}
                     suggestedTests={universalSuggestedLabs}
+                    defaultOpen={isGecaDirectedExamsStep}
                   />
                 </div>
               )}

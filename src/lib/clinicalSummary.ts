@@ -1657,17 +1657,6 @@ const buildGecaClinicalSummary = (
   const selectedDirectedExamLabels = Array.isArray(directedExamAnswer?.examesSelecionadosLabels)
     ? directedExamAnswer.examesSelecionadosLabels.filter((item): item is string => typeof item === 'string')
     : []
-  const laboratoryNotebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
-  const registeredLaboratoryResults = laboratoryNotebook.entries
-    .filter((entry) => entry.test.trim() && entry.value.trim())
-    .map((entry) => {
-      const result = `${entry.test.trim()}: ${entry.value.trim()}${entry.unit.trim() ? ` ${entry.unit.trim()}` : ''}`
-      const context = uniqueTextItems([
-        entry.reference.trim() ? `referência/tendência: ${entry.reference.trim()}` : null,
-        entry.critical ? 'resultado crítico sinalizado' : null
-      ])
-      return context.length > 0 ? `${result} (${context.join('; ')})` : result
-    })
   const diarrheaDurationAnswer = parseFlowAnswerForSummary(answers.geca_diarreia_persistente)
   const diarrheaDurationDecision = typeof diarrheaDurationAnswer?.decision === 'string'
     ? diarrheaDurationAnswer.decision
@@ -1817,9 +1806,6 @@ const buildGecaClinicalSummary = (
     answers.geca_indicacao_exames === 'exames_indicados' ? 'Houve indicação de investigação complementar dirigida.' : null,
     selectedDirectedExamLabels.length > 0
       ? `Exames complementares selecionados: ${selectedDirectedExamLabels.join('; ')}.`
-      : null,
-    registeredLaboratoryResults.length > 0
-      ? `Resultados de exames registrados: ${formatClinicalListText(registeredLaboratoryResults)}.${laboratoryNotebook.notes.trim() ? ` Interpretação, tendência e pendências: ${laboratoryNotebook.notes.trim()}.` : ''}`
       : null,
     diarrheaDurationDecision === 'persistente'
       ? `Duração igual ou superior a 14 dias${diarrheaDurationDays != null ? ` (${diarrheaDurationDays} dias)` : ''}, direcionando investigação de diarreia persistente.`
