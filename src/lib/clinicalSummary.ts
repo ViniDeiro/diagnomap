@@ -70,6 +70,25 @@ const formatUniversalChestXrayRecord = (answers: Record<string, string>): string
   ]).join('; ')
 }
 
+const formatUniversalLaboratoryRecord = (answers: Record<string, string>): string[] => {
+  const notebook = parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])
+  const results = notebook.entries
+    .filter((entry) => entry.test.trim() && entry.value.trim())
+    .map((entry) => {
+      const measuredValue = `${entry.test.trim()}: ${entry.value.trim()}${entry.unit.trim() ? ` ${entry.unit.trim()}` : ''}`
+      const qualifiers = uniqueTextItems([
+        entry.reference.trim() ? `referência/tendência: ${entry.reference.trim()}` : null,
+        entry.critical ? 'resultado crítico sinalizado' : null
+      ])
+      return qualifiers.length ? `${measuredValue} (${qualifiers.join('; ')})` : measuredValue
+    })
+
+  return uniqueTextItems([
+    ...results.map((result) => `Resultado laboratorial registrado: ${result}.`),
+    notebook.notes.trim() ? `Interpretação, tendência e pendências dos exames: ${notebook.notes.trim()}.` : null
+  ])
+}
+
 const houseBrackmannLabels: Record<string, string> = {
   house_i: 'Grau I',
   house_ii: 'Grau II',
@@ -2497,6 +2516,11 @@ const standardizeUniversalEvolution = (
     vitalSigns.capillaryRefill != null ? `Enchimento capilar: ${vitalSigns.capillaryRefill} s` : null
   ])
   const physicalExamItems = summarizeUniversalPhysicalExam(assessment?.exameFisico)
+  const laboratoryItems = formatUniversalLaboratoryRecord(answers)
+  const standardizedScoreLines = uniqueTextItems([
+    ...summary.scoreLines,
+    ...laboratoryItems
+  ])
   const standardizedExamination = uniqueTextItems([
     vitalItems.length ? `Sinais vitais: ${vitalItems.join(' / ')}` : null,
     ...physicalExamItems.map(item => `Exame físico - ${item}`)
@@ -2530,7 +2554,7 @@ const standardizeUniversalEvolution = (
     summary.historyLines.length ? summary.historyLines.join('\n') : 'Evolução clínica ainda sem informações estruturadas suficientes.',
     '',
     'EXAMES, CRITÉRIOS E ESTRATIFICAÇÃO',
-    summary.scoreLines.length ? summary.scoreLines.join('\n') : 'Sem resultados ou critérios complementares registrados.',
+    standardizedScoreLines.length ? standardizedScoreLines.join('\n') : 'Sem resultados ou critérios complementares registrados.',
     '',
     'IMPRESSÃO CLÍNICA',
     `${summary.finalTitle}. ${summary.finalDescription}`,
@@ -2546,6 +2570,7 @@ const standardizeUniversalEvolution = (
     ...summary,
     chiefComplaint,
     examinationLines: standardizedExamination,
+    scoreLines: standardizedScoreLines,
     continuousText: canonicalText,
     text: canonicalText
   }

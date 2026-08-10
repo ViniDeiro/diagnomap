@@ -77,12 +77,12 @@ export const summarizeUniversalPhysicalExam = (exam?: PhysicalExamData | null): 
       exam.temperature.status === 'afebril' ? 'afebril' : `febril${exam.temperature.value != null ? ` (${exam.temperature.value} °C)` : ''}`,
       exam.respiration.status === 'eupneico' ? 'eupneico' : exam.respiration.status === 'taquipneico' ? 'taquipneico' : `dispneico${grade(exam.respiration.grade)}`
     ].join(', ')}`,
-    `Neurológico: ${exam.neuro.altered?.trim() || 'consciente, contactuante, pupilas isofotorreagentes'}; Glasgow ${exam.neuro.glasgow ?? 'não informado'}`,
-    `Cardíaco: ${exam.cardiac.altered?.trim() || 'ACV em ritmo cardíaco regular em dois tempos, bulhas normofonéticas, sem sopros audíveis'}`,
-    `Pulmonar: ${exam.pulmonary.altered?.trim() || 'AP com murmúrio vesicular audível bilateralmente, sem ruídos adventícios'}`,
-    `Abdome: ${exam.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, indolor à palpação, sem massas ou visceromegalias e sem sinais de irritação peritoneal'}`,
-    `Extremidades: ${exam.extremities.altered?.trim() || 'simétricas, sem deformidades; pele íntegra, sem lesões ou alterações tróficas; ausência de edema; pulsos radiais, braquiais, femorais, poplíteos, tibiais posteriores e pediosos palpáveis, normais e simétricos'}`,
-    `Pele: ${exam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}`,
+    exam.neuro.notAssessed ? null : `Neurológico: ${exam.neuro.altered?.trim() || 'consciente, contactuante, pupilas isofotorreagentes'}; Glasgow ${exam.neuro.glasgow ?? 'não informado'}`,
+    exam.cardiac.notAssessed ? null : `Cardíaco: ${exam.cardiac.altered?.trim() || 'ACV em ritmo cardíaco regular em dois tempos, bulhas normofonéticas, sem sopros audíveis'}`,
+    exam.pulmonary.notAssessed ? null : `Pulmonar: ${exam.pulmonary.altered?.trim() || 'AP com murmúrio vesicular audível bilateralmente, sem ruídos adventícios'}`,
+    exam.abdomen.notAssessed ? null : `Abdome: ${exam.abdomen.altered?.trim() || 'plano, normotenso, ruídos hidroaéreos presentes, indolor à palpação, sem massas ou visceromegalias e sem sinais de irritação peritoneal'}`,
+    exam.extremities.notAssessed ? null : `Extremidades: ${exam.extremities.altered?.trim() || 'simétricas, sem deformidades; pele íntegra, sem lesões ou alterações tróficas; ausência de edema; pulsos radiais, braquiais, femorais, poplíteos, tibiais posteriores e pediosos palpáveis, normais e simétricos'}`,
+    exam.skin?.notAssessed ? null : `Pele: ${exam.skin?.altered?.trim() || 'íntegra, sem lesões cutâneas aparentes'}`,
     exam.additionalInformation?.trim() ? `Informações adicionais: ${exam.additionalInformation.trim()}` : null
   ].filter((item): item is string => Boolean(item))
 }

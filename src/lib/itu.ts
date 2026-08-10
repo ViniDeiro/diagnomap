@@ -97,8 +97,8 @@ const ituAntibioticPrescriptions: Record<string, PrescriptionDraft> = {
     medication: 'Amoxicilina-clavulanato',
     dosage: '875/125 mg',
     frequency: 'VO de 12/12 horas',
-    duration: '7 dias',
-    instructions: 'Revisar alergias e ajustar conforme função renal e urocultura/TSA.',
+    duration: '5–7 dias',
+    instructions: 'Tomar 1 comprimido por via oral a cada 12 horas por 5–7 dias. Revisar alergias e ajustar conforme função renal e urocultura/TSA.',
     prescribedBy: ITU_PRESCRIBER
   },
   cefalexina_gestacao: {
@@ -238,9 +238,20 @@ const ituCistiteSymptomaticPrescriptions: PrescriptionDraft[] = [
   }
 ]
 
+const ituPregnancySymptomaticPrescriptions: PrescriptionDraft[] = [
+  {
+    medication: 'Paracetamol',
+    dosage: '500 mg',
+    frequency: 'VO de 6/6 horas, se dor ou febre',
+    duration: 'Pelo menor tempo necessário',
+    instructions: 'Usar apenas se necessário, respeitando a dose diária máxima e revisando doença hepática, alergias e outros produtos que contenham paracetamol.',
+    prescribedBy: ITU_PRESCRIBER
+  }
+]
+
 const ituCistiteChoices = new Set(['fosfomicina', 'nitrofurantoina', 'cefuroxima', 'sulfametoxazol_trimetoprim'])
 
-export const buildItuPrescriptionItems = (choice?: string): PrescriptionDraft[] => {
+export const buildItuPrescriptionItems = (choice?: string, options: { pregnancy?: boolean } = {}): PrescriptionDraft[] => {
   if (choice === 'ampicilina_gentamicina') {
     return [{ ...ituAntibioticPrescriptions.ampicilina_ev }, { ...ituAntibioticPrescriptions.gentamicina_ev }]
   }
@@ -248,7 +259,10 @@ export const buildItuPrescriptionItems = (choice?: string): PrescriptionDraft[] 
   if (!prescription) return []
   const items = [{ ...prescription }]
   if (choice && ituCistiteChoices.has(choice)) {
-    items.push(...ituCistiteSymptomaticPrescriptions.map((item) => ({ ...item })))
+    const symptomaticItems = options.pregnancy
+      ? ituPregnancySymptomaticPrescriptions
+      : ituCistiteSymptomaticPrescriptions
+    items.push(...symptomaticItems.map((item) => ({ ...item })))
   }
   return items
 }

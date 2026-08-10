@@ -12,12 +12,12 @@ export interface PhysicalExamData {
   jaundice: { status: 'anicterico' | 'icterico'; grade?: 1 | 2 | 3 | 4 }
   temperature: { status: 'afebril' | 'febril'; value?: number }
   respiration: { status: 'eupneico' | 'taquipneico' | 'dispneico'; grade?: 1 | 2 | 3 | 4 }
-  neuro: { glasgow?: number; altered?: string }
-  cardiac: { altered?: string }
-  pulmonary: { altered?: string }
-  abdomen: { altered?: string }
-  extremities: { altered?: string }
-  skin?: { altered?: string }
+  neuro: { glasgow?: number; altered?: string; notAssessed?: boolean }
+  cardiac: { altered?: string; notAssessed?: boolean }
+  pulmonary: { altered?: string; notAssessed?: boolean }
+  abdomen: { altered?: string; notAssessed?: boolean }
+  extremities: { altered?: string; notAssessed?: boolean }
+  skin?: { altered?: string; notAssessed?: boolean }
   additionalInformation?: string
 }
 
@@ -47,22 +47,26 @@ const ExamSection: React.FC<{
   title: string
   standardText: string
   value?: string
+  notAssessed?: boolean
   onChange: (val: string) => void
+  onNotAssessedChange: (value: boolean) => void
   placeholder: string
-}> = ({ icon, title, standardText, value, onChange, placeholder }) => {
-  const [mode, setMode] = useState<'normal' | 'abnormal'>(
-    (value && value.length > 0) ? 'abnormal' : 'normal'
+}> = ({ icon, title, standardText, value, notAssessed, onChange, onNotAssessedChange, placeholder }) => {
+  const [mode, setMode] = useState<'normal' | 'abnormal' | 'not_assessed'>(
+    notAssessed ? 'not_assessed' : (value && value.length > 0) ? 'abnormal' : 'normal'
   )
 
   useEffect(() => {
-    if (value && value.length > 0) {
+    if (notAssessed) setMode('not_assessed')
+    else if (value && value.length > 0) {
       setMode('abnormal')
     }
-  }, [value])
+  }, [notAssessed, value])
 
-  const handleModeChange = (newMode: 'normal' | 'abnormal') => {
+  const handleModeChange = (newMode: 'normal' | 'abnormal' | 'not_assessed') => {
     setMode(newMode)
-    if (newMode === 'normal') {
+    onNotAssessedChange(newMode === 'not_assessed')
+    if (newMode !== 'abnormal') {
       onChange('')
     }
   }
@@ -103,9 +107,18 @@ const ExamSection: React.FC<{
           />
           <span className={clsx("font-medium transition-colors", mode === 'abnormal' ? "text-blue-700" : "text-slate-600 group-hover:text-slate-800")}>Anormal</span>
         </label>
+
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <input type="radio" checked={mode === 'not_assessed'} onChange={() => handleModeChange('not_assessed')} />
+          <span className={clsx("font-medium", mode === 'not_assessed' ? "text-slate-900" : "text-slate-600")}>Não avaliado</span>
+        </label>
       </div>
 
-      {mode === 'normal' ? (
+      {mode === 'not_assessed' ? (
+        <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600">
+          Este sistema será omitido da evolução clínica.
+        </div>
+      ) : mode === 'normal' ? (
         <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 text-sm">
           <span className="font-semibold text-slate-700">Padrão:</span> {standardText}
         </div>
@@ -443,6 +456,11 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 lg:col-span-2">
         <SectionTitle icon={<Brain className="w-5 h-5" />} title="Neurológico" subtitle="Glasgow e achados" />
+        <div className="mb-4 flex flex-wrap gap-4">
+          <label className="flex items-center gap-2"><input type="radio" checked={!value.neuro.notAssessed} onChange={() => update('neuro', { notAssessed: false })} /> Avaliado</label>
+          <label className="flex items-center gap-2"><input type="radio" checked={Boolean(value.neuro.notAssessed)} onChange={() => update('neuro', { notAssessed: true, glasgow: undefined, altered: '' })} /> Não avaliado</label>
+        </div>
+        {value.neuro.notAssessed ? <p className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-600">O exame neurológico será omitido da evolução clínica.</p> : <>
         {neurologicalAssessment && <div className="mb-5">{neurologicalAssessment}</div>}
         <div className="grid md:grid-cols-3 gap-4">
           {showGlasgowInput && <div>
@@ -469,6 +487,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
             <p className="text-xs text-slate-500 mt-1">Se vazio, assume: Consciente, contactuante, Pupilas iso-foto reagentes.</p>
           </div>
         </div>
+        </>}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:col-span-2">
@@ -477,7 +496,9 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           title="Cardíaco"
           standardText="ACV: ritmo cardíaco regular em dois tempos, bulhas normofonéticas, sem sopros audíveis."
           value={value.cardiac.altered}
+          notAssessed={value.cardiac.notAssessed}
           onChange={(v) => update('cardiac', { altered: v })}
+          onNotAssessedChange={(notAssessed) => update('cardiac', { notAssessed })}
           placeholder="Descreva alterações cardíacas (sopros, arritmias, etc.)"
         />
 
@@ -486,7 +507,9 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           title="Pulmonar"
           standardText="AP: murmúrio vesicular audível bilateralmente, sem ruídos adventícios."
           value={value.pulmonary.altered}
+          notAssessed={value.pulmonary.notAssessed}
           onChange={(v) => update('pulmonary', { altered: v })}
+          onNotAssessedChange={(notAssessed) => update('pulmonary', { notAssessed })}
           placeholder="Descreva alterações pulmonares (sibilos, estertores, etc.)"
         />
 
@@ -495,7 +518,9 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           title="Abdome"
           standardText="Plano, normotenso, ruídos hidroaéreos presentes, indolor à palpação, sem massas ou visceromegalias e sem sinais de irritação peritoneal."
           value={value.abdomen.altered}
+          notAssessed={value.abdomen.notAssessed}
           onChange={(v) => update('abdomen', { altered: v })}
+          onNotAssessedChange={(notAssessed) => update('abdomen', { notAssessed })}
           placeholder="Descreva alterações abdominais"
         />
 
@@ -504,7 +529,9 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           title="Extremidades"
           standardText="Simétricas, sem deformidades. Pele íntegra, sem lesões ou alterações tróficas. Ausência de edema. Pulsos radiais, braquiais, femorais, poplíteos, tibiais posteriores e pediosos palpáveis, normais e simétricos."
           value={value.extremities.altered}
+          notAssessed={value.extremities.notAssessed}
           onChange={(v) => update('extremities', { altered: v })}
+          onNotAssessedChange={(notAssessed) => update('extremities', { notAssessed })}
           placeholder="Descreva alterações em extremidades"
         />
 
@@ -513,7 +540,9 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
           title="Pele"
           standardText="Pele íntegra, sem lesões cutâneas aparentes."
           value={value.skin?.altered}
+          notAssessed={value.skin?.notAssessed}
           onChange={(v) => onChange({ ...value, skin: { ...(value.skin || {}), altered: v } })}
+          onNotAssessedChange={(notAssessed) => onChange({ ...value, skin: { ...(value.skin || {}), notAssessed } })}
           placeholder="Descreva lesões, erupções, equimoses, úlceras, alterações de temperatura, umidade ou outras alterações cutâneas"
         />
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
   Activity,
@@ -12,6 +13,7 @@ import {
   Clock3,
   FileText,
   HeartPulse,
+  Info,
   Pill,
   RotateCcw,
   ShieldAlert,
@@ -104,7 +106,7 @@ const measurementOptions = [
   ['cuff', 'Manguito compatível com a circunferência do braço'],
   ['position', 'Paciente sentado ou deitado, braço apoiado na altura do coração'],
   ['repeat', 'Medida repetida após alguns minutos'],
-  ['both_arms', 'Pressão conferida nos dois braços quando clinicamente pertinente'],
+  ['both_arms', 'Primeira avaliação feita nos dois braços; o maior valor foi adotado nas medidas seguintes'],
   ['medication', 'Adesão, interrupções e interações medicamentosas revisadas']
 ] as const
 
@@ -324,9 +326,11 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const pressureAfterTreatment = parseBloodPressure(data.pressureAfterTreatment)
   const persistentExtremePressure = isPersistentExtremeBloodPressure(pressureAfterRest.systolic ?? data.systolic, pressureAfterRest.diastolic ?? data.diastolic)
   const treatmentPressureStillExtreme = isPersistentExtremeBloodPressure(pressureAfterTreatment.systolic, pressureAfterTreatment.diastolic)
+  const treatmentPressureAboveDischargeTarget = (pressureAfterTreatment.systolic ?? 0) > 160 || (pressureAfterTreatment.diastolic ?? 0) > 100
   const treatmentPressureRecorded = pressureAfterTreatment.systolic != null && pressureAfterTreatment.diastolic != null
   const symptomChoiceMade = (data.symptoms || []).length > 0
   const hasSymptoms = (data.symptoms || []).some(item => item !== 'asymptomatic')
+  const hasSpecificSymptoms = (data.symptoms || []).some(item => !['asymptomatic', 'nonspecific'].includes(item))
   const hasOrganDamage = (data.organDamage || []).length > 0
   const hasTrigger = (data.triggers || []).length > 0
   const target = useMemo(() => {
@@ -372,6 +376,32 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
       ? new Set(['nitroglycerin', 'metoprolol', 'protocol_specific'])
       : null
   const contextualIVAgentOptions = allowedIVAgents ? ivAgentOptions.filter(([id]) => allowedIVAgents.has(id)) : ivAgentOptions
+  const visibleOrganDamageOptions = organDamageOptions.filter(([id]) => {
+    const selected = new Set(data.symptoms || [])
+    const links: Record<string, string[]> = {
+      neurologic: ['encephalopathy', 'stroke'],
+      chest: ['aorta', 'coronary'],
+      dyspnea: ['pulmonary_edema', 'aorta', 'coronary'],
+      visual: ['encephalopathy', 'stroke'],
+      renal: ['renal'],
+      pregnancy: ['pregnancy', 'encephalopathy']
+    }
+    return [...selected].some(symptom => links[symptom]?.includes(id))
+  })
+  const visibleScenarioOptions = scenarioOptions.filter(([id]) => {
+    const selected = new Set(data.organDamage || [])
+    const links: Record<string, HypertensionEmergencyScenario[]> = {
+      encephalopathy: ['encephalopathy'],
+      stroke: ['ischemic_stroke_lysis', 'ischemic_stroke_no_lysis', 'intracerebral_hemorrhage', 'subarachnoid_hemorrhage'],
+      aorta: ['aortic_syndrome'],
+      coronary: ['acute_coronary_syndrome'],
+      pulmonary_edema: ['pulmonary_edema'],
+      renal: ['other'],
+      pregnancy: ['pregnancy_emergency'],
+      catecholamine: ['catecholamine_crisis']
+    }
+    return [...selected].some(damage => links[damage]?.includes(id))
+  })
   const emergencyTreatmentReady = data.scenario === 'aortic_syndrome'
     ? Boolean(data.aorticBetaBlocker && data.aorticVasodilator)
     : Boolean(data.selectedIVAgent) && (data.scenario !== 'pregnancy_emergency' || Boolean(data.magnesiumRegimen) && (data.magnesiumSafety || []).length >= 4)
@@ -382,10 +412,18 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
   const selectHypertensionSymptom = (value: string) => setData(previous => {
     const current = previous.symptoms || []
     if (value === 'asymptomatic') {
-      return { ...previous, symptoms: current.includes(value) ? [] : ['asymptomatic'] }
+      return { ...previous, symptoms: current.includes(value) ? [] : ['asymptomatic'], organDamage: [], scenario: undefined }
     }
-    return { ...previous, symptoms: toggle(current.filter(item => item !== 'asymptomatic'), value) }
+    return { ...previous, symptoms: toggle(current.filter(item => item !== 'asymptomatic'), value), organDamage: [], scenario: undefined }
   })
+  const selectOrganDamage = (value: string) => setData(previous => ({
+    ...previous,
+    organDamage: toggle(previous.organDamage, value),
+    scenario: undefined,
+    selectedIVAgent: undefined,
+    aorticBetaBlocker: undefined,
+    aorticVasodilator: undefined
+  }))
 
   const persist = (nextStage: HypertensionStage, patch: Partial<HypertensionCaseData> = {}) => {
     const nextData = { ...data, ...patch, updatedAt: new Date().toISOString() }
@@ -465,7 +503,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
     if (data.systolic == null || data.diastolic == null || !symptomChoiceMade) { setNotice('Registre a pressão e selecione os sintomas presentes ou marque Assintomático.'); return }
     if (data.obstetricContext && markedElevation && !data.obstetricPressureConfirmed) { setNotice('Na gestação ou no puerpério, confirme se a PA grave persistiu por aproximadamente 15 minutos.'); return }
     const route = classifyHypertensionRoute({ systolic: data.systolic, diastolic: data.diastolic, hasSymptoms, hasAcuteOrganDamage: false, hasSituationalTrigger: false, obstetricContext: data.obstetricContext })
-    persist(route === 'chronic' ? 'hipertensao_cronica_alta' : 'hipertensao_lesao_orgao', { route })
+    persist(route === 'chronic' ? 'hipertensao_cronica_alta' : hasSpecificSymptoms ? 'hipertensao_lesao_orgao' : 'hipertensao_observacao', { route })
   }
 
   const continueFromDamage = () => {
@@ -514,11 +552,35 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
             <section className="rounded-2xl border border-violet-200 bg-violet-50 p-4"><Option selected={Boolean(data.obstetricContext)} title="Gestante com 20 semanas ou mais, ou paciente no puerpério" description="Ativa o limiar obstétrico: PAS ≥160 mmHg ou PAD ≥110 mmHg exige avaliação urgente quando persistente." danger onClick={() => update({ obstetricContext: !data.obstetricContext, obstetricPressureConfirmed: false })} />{data.obstetricContext && markedElevation && <div className="mt-3"><Option selected={Boolean(data.obstetricPressureConfirmed)} title="PA grave confirmada como persistente por aproximadamente 15 minutos" description="Não atrasar tratamento se houver deterioração materna, eclâmpsia ou outra ameaça imediata." danger onClick={() => update({ obstetricPressureConfirmed: !data.obstetricPressureConfirmed })} /></div>}</section>
             {data.systolic != null && data.diastolic != null && <div className={clsx('rounded-2xl border p-4 font-bold', markedElevation ? 'border-red-300 bg-red-50 text-red-950' : 'border-amber-300 bg-amber-50 text-amber-950')}>{markedElevation ? 'Elevação acentuada registrada. A próxima decisão procura lesão aguda de órgão-alvo.' : 'A medida está abaixo do limiar operacional do documento. O fluxo direcionará para hipertensão crônica/descompensada e avaliação longitudinal.'}</div>}
             <section><h2 className="mb-3 font-black text-slate-950">Sintomas associados</h2><p className="mb-3 text-sm text-slate-600">Selecione os achados presentes ou marque Assintomático. As opções são mutuamente exclusivas.</p><div className="grid gap-3 md:grid-cols-2">{symptomOptions.map(([id, label]) => <Option key={id} selected={(data.symptoms || []).includes(id)} title={label} danger={id !== 'nonspecific' && id !== 'asymptomatic'} onClick={() => selectHypertensionSymptom(id)} />)}</div></section>
-            <section><h2 className="mb-3 font-black text-slate-950">Conferência da aferição</h2><div className="grid gap-3 md:grid-cols-2">{measurementOptions.map(([id, label]) => <Option key={id} selected={(data.measurementChecks || []).includes(id)} title={label} onClick={() => selectMany('measurementChecks', id)} />)}</div></section>
+            <section>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="font-black text-slate-950">Conferência da aferição</h2>
+                <details className="group relative">
+                  <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-extrabold text-blue-900">
+                    <Info className="h-4 w-4" /> Técnica e ITB
+                  </summary>
+                  <div className="absolute right-0 z-20 mt-2 max-h-[72vh] w-[min(92vw,58rem)] overflow-y-auto rounded-2xl border border-blue-200 bg-white p-4 shadow-2xl">
+                    <p className="text-sm font-bold text-slate-950">Na avaliação inicial, medir ambos os braços e usar posteriormente o braço de maior PA. Diferença de PAS &gt;15 mmHg merece investigação clínica.</p>
+                    <p className="mt-2 text-sm text-slate-700">Membros inferiores não fazem parte da aferição rotineira. Se houver indicação vascular, calcular o ITB de cada lado: PAS do tornozelo ÷ maior PAS braquial.</p>
+                    <div className="mt-4 grid gap-4 md:grid-cols-2">
+                      <figure>
+                        <Image src="/clinical-guides/afericao-pressao-arterial.jpeg" alt="Guia visual para aferição correta da pressão arterial" width={1144} height={1599} className="h-auto w-full rounded-xl border border-slate-200" />
+                        <figcaption className="mt-2 text-xs font-semibold text-slate-600">Técnica de aferição e escolha do braço de referência.</figcaption>
+                      </figure>
+                      <figure>
+                        <Image src="/clinical-guides/indice-tornozelo-braquial.jpeg" alt="Guia visual para cálculo e interpretação do índice tornozelo-braquial" width={1145} height={1377} className="h-auto w-full rounded-xl border border-slate-200" />
+                        <figcaption className="mt-2 text-xs font-semibold text-slate-600">ITB somente quando houver indicação vascular específica.</figcaption>
+                      </figure>
+                    </div>
+                  </div>
+                </details>
+              </div>
+              <div className="grid gap-3 md:grid-cols-2">{measurementOptions.map(([id, label]) => <Option key={id} selected={(data.measurementChecks || []).includes(id)} title={label} onClick={() => selectMany('measurementChecks', id)} />)}</div>
+            </section>
             <button type="button" onClick={continueFromConfirmation} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white">Classificar medida e continuar <ChevronRight /></button>
           </div>}
 
-          {stage === 'hipertensao_lesao_orgao' && <div className="space-y-5"><div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-red-950"><div className="flex gap-3"><ShieldAlert className="h-6 w-6 shrink-0" /><p><strong>Emergência é uma definição clínica:</strong> selecione somente lesão nova ou em progressão. Sintomas inespecíficos isolados não bastam.</p></div></div><div className="grid gap-3 md:grid-cols-2">{organDamageOptions.map(([id, label]) => <Option key={id} selected={(data.organDamage || []).includes(id)} title={label} danger onClick={() => selectMany('organDamage', id)} />)}</div><div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={!hasOrganDamage} onClick={continueFromDamage} className="rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Há lesão aguda: emergência</button><button type="button" disabled={hasOrganDamage} onClick={continueFromDamage} className="rounded-xl border border-blue-300 bg-blue-50 px-5 py-4 font-extrabold text-blue-950 disabled:opacity-40">Sem lesão aguda demonstrada</button></div></div>}
+          {stage === 'hipertensao_lesao_orgao' && <div className="space-y-5"><div className="rounded-2xl border border-red-300 bg-red-50 p-5 text-red-950"><div className="flex gap-3"><ShieldAlert className="h-6 w-6 shrink-0" /><p><strong>Emergência é uma definição clínica:</strong> selecione somente lesão nova ou em progressão. A lista abaixo foi limitada aos órgãos compatíveis com os sintomas já registrados.</p></div></div><div className="grid gap-3 md:grid-cols-2">{visibleOrganDamageOptions.map(([id, label]) => <Option key={id} selected={(data.organDamage || []).includes(id)} title={label} danger onClick={() => selectOrganDamage(id)} />)}</div><div className="grid gap-3 sm:grid-cols-2"><button type="button" disabled={!hasOrganDamage} onClick={continueFromDamage} className="rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Há lesão aguda: emergência</button><button type="button" disabled={hasOrganDamage} onClick={continueFromDamage} className="rounded-xl border border-blue-300 bg-blue-50 px-5 py-4 font-extrabold text-blue-950 disabled:opacity-40">Sem lesão aguda demonstrada</button></div></div>}
 
           {stage === 'hipertensao_observacao' && <div className="space-y-5"><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950"><span className="text-xs font-black uppercase tracking-wider text-blue-600">Pressão trazida da avaliação inicial</span><strong className="mt-1 block text-2xl">{data.systolic}/{data.diastolic} mmHg</strong></div><div className="grid gap-3 md:grid-cols-2">{observationOptions.map(([id, label]) => <Option key={id} selected={(data.observationMeasures || []).includes(id)} title={label} onClick={() => selectMany('observationMeasures', id)} />)}</div><label className="block rounded-2xl border border-slate-200 bg-slate-50 p-4 font-black">Nova pressão após repouso<input value={data.pressureAfterRest || ''} onChange={event => update({ pressureAfterRest: event.target.value })} placeholder={`PA inicial ${data.systolic}/${data.diastolic}; registre a nova medida`} className="mt-3 w-full rounded-xl border border-slate-300 bg-white px-4 py-3" /></label><div className="grid gap-3 sm:grid-cols-2"><Option selected={data.symptomsImproved === true} title="Pressão reduziu ou sintomas melhoraram" onClick={() => update({ symptomsImproved: true })} /><Option selected={data.symptomsImproved === false} title="Permanece elevada e/ou sintomática" danger onClick={() => update({ symptomsImproved: false })} /></div><button type="button" disabled={(data.observationMeasures || []).length < 3 || data.symptomsImproved == null || !data.pressureAfterRest} onClick={() => persist('hipertensao_classificacao_sem_loa')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Interpretar reavaliação <ChevronRight /></button></div>}
 
@@ -526,7 +588,7 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
 
           {stage === 'hipertensao_emergencia_preparo' && <div className="space-y-6"><div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5 text-red-950"><h2 className="flex items-center gap-2 text-xl font-black"><AlertTriangle /> Lesão aguda presente</h2><p className="mt-2 text-sm">Indicar tratamento intravenoso titulável e internação monitorizada. A queda aleatória ou excessiva pode causar isquemia.</p></div><section><h2 className="mb-3 flex items-center gap-2 font-black"><Activity className="h-5 w-5" /> Preparação imediata</h2><div className="grid gap-3 md:grid-cols-2">{emergencyMeasureOptions.map(([id, label]) => <Option key={id} selected={(data.emergencyMeasures || []).includes(id)} title={label} danger={id === 'icu'} onClick={() => selectMany('emergencyMeasures', id)} />)}</div></section><section><h2 className="mb-3 flex items-center gap-2 font-black"><TestTube2 className="h-5 w-5" /> Exames iniciais sem atrasar tratamento</h2><div className="grid gap-3 md:grid-cols-2">{examOptions.map(([id, label]) => <Option key={id} selected={(data.exams || []).includes(id)} title={label} onClick={() => selectMany('exams', id)} />)}</div></section><UniversalLabNotebook value={answers[UNIVERSAL_LAB_RESULTS_KEY]} onChange={persistLabNotebook} title="Anotar resultados da emergência hipertensiva" suggestedTests={(data.exams || []).map(id => labels[id]).filter(Boolean)} /><button type="button" disabled={(data.emergencyMeasures || []).length < 4 || (data.exams || []).length < 4} onClick={() => persist('hipertensao_emergencia_cenario')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Definir lesão predominante e meta <ChevronRight /></button></div>}
 
-          {stage === 'hipertensao_emergencia_cenario' && <div className="space-y-5"><div className="grid gap-3 md:grid-cols-2">{scenarioOptions.map(([id, label, description]) => <Option key={id} selected={data.scenario === id} title={label} description={description} danger onClick={() => update({ scenario: id, selectedIVAgent: undefined, aorticBetaBlocker: undefined, aorticVasodilator: undefined })} />)}</div><button type="button" disabled={!data.scenario} onClick={() => persist('hipertensao_emergencia_plano')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar meta específica <ChevronRight /></button></div>}
+          {stage === 'hipertensao_emergencia_cenario' && <div className="space-y-5"><div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-950">Selecione o cenário que corresponde à lesão de órgão-alvo confirmada. Opções incompatíveis com a etapa anterior foram ocultadas.</div><div className="grid gap-3 md:grid-cols-2">{visibleScenarioOptions.map(([id, label, description]) => <Option key={id} selected={data.scenario === id} title={label} description={description} danger onClick={() => update({ scenario: id, selectedIVAgent: undefined, aorticBetaBlocker: undefined, aorticVasodilator: undefined })} />)}</div><button type="button" disabled={!data.scenario} onClick={() => persist('hipertensao_emergencia_plano')} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300">Aplicar meta específica <ChevronRight /></button></div>}
 
           {stage === 'hipertensao_emergencia_plano' && <div className="space-y-6">
             <div className="sticky top-3 z-10 overflow-hidden rounded-3xl border-2 border-red-500 bg-gradient-to-r from-red-700 to-rose-700 p-5 text-white shadow-xl shadow-red-200">
@@ -564,9 +626,9 @@ const HypertensionFlowchartInteractive: React.FC<Props> = ({ patient, initialSte
             <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="text-sm font-bold text-slate-600">Conduta registrada</p><p className="mt-1 font-black text-slate-950">{labels[data.selectedOralPlan || ''] || 'Plano oral individualizado'}</p></div>
             <label className="block rounded-2xl border border-slate-200 bg-white p-5"><span className="font-black text-slate-950">PA após tratamento e observação</span><span className="mt-1 block text-sm text-slate-600">Registre no formato 160/100 após nova aferição com técnica adequada.</span><input value={data.pressureAfterTreatment || ''} onChange={(event) => update({ pressureAfterTreatment: event.target.value })} inputMode="numeric" placeholder="Ex.: 180/100" className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-3 text-lg font-bold outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" /></label>
             <div className="grid gap-3 md:grid-cols-2">{safetyReassessmentOptions.map(([id, label]) => <Option key={id} selected={(data.safetyReassessment || []).includes(id)} title={label} onClick={() => selectMany('safetyReassessment', id)} />)}</div>
-            {treatmentPressureRecorded && treatmentPressureStillExtreme && <div className="rounded-2xl border-2 border-red-500 bg-red-50 p-5 text-red-950"><strong className="block text-lg">PA ainda em faixa extrema ({data.pressureAfterTreatment} mmHg)</strong><p className="mt-2 text-sm">A alta permanece bloqueada. Mantenha observação monitorizada, revise a investigação de lesão aguda e faça a passagem formal do cuidado.</p></div>}
+            {treatmentPressureRecorded && treatmentPressureAboveDischargeTarget && <div className="rounded-2xl border-2 border-red-500 bg-red-50 p-5 text-red-950"><strong className="block text-lg">PA ainda acima da meta de saída segura ({data.pressureAfterTreatment} mmHg)</strong><p className="mt-2 text-sm">A alta permanece bloqueada. Continue observação, tratamento oral individualizado e reavaliações; se houver piora ou suspeita de lesão aguda, migre imediatamente para o ramo de emergência.</p></div>}
             {treatmentPressureRecorded && !treatmentPressureStillExtreme && <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Faixa extrema superada.</strong> Isso não significa normalização nem encerra a avaliação; confirme todos os itens de segurança e organize seguimento em 1–7 dias.</div>}
-            {treatmentPressureRecorded && treatmentPressureStillExtreme ? <UniversalCareTransition destination="observation" context="hipertensao:pressao_extrema_persistente" value={observationTransition} onChange={persistObservationTransition} onConfirmed={(transition) => finish('Transferência para observação por pressão extrema persistente, sem alta direta', transition)} /> : <button type="button" disabled={!treatmentPressureRecorded || (data.safetyReassessment || []).length < safetyReassessmentOptions.length} onClick={() => finish(`Alta após tratamento, observação e reavaliação pressórica (${data.pressureAfterTreatment} mmHg), com seguimento em 1–7 dias`)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300"><CheckCircle2 /> Confirmar segurança e finalizar</button>}
+            {treatmentPressureRecorded && treatmentPressureAboveDischargeTarget ? <UniversalCareTransition destination="observation" context="hipertensao:pressao_acima_meta_saida" value={observationTransition} onChange={persistObservationTransition} onConfirmed={(transition) => finish('Transferência para observação por pressão ainda acima da meta de saída, sem alta direta', transition)} /> : <button type="button" disabled={!treatmentPressureRecorded || (data.safetyReassessment || []).length < safetyReassessmentOptions.length} onClick={() => finish(`Alta após tratamento, observação e reavaliação pressórica (${data.pressureAfterTreatment} mmHg), com seguimento em 1–7 dias`)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-700 px-5 py-4 font-extrabold text-white disabled:bg-slate-300"><CheckCircle2 /> Confirmar segurança e finalizar</button>}
           </div>}
 
           {stage === 'hipertensao_cronica_alta' && <div className="space-y-6"><div className="rounded-2xl border border-blue-300 bg-blue-50 p-5 text-blue-950"><h2 className="text-xl font-black">Sem critério operacional de crise no caminho atual</h2><p className="mt-2 text-sm">A aferição e os sintomas registrados não preencheram simultaneamente o ponto de entrada do fluxograma. Avalie causas crônicas, adesão, drogas que elevam a pressão e risco cardiovascular global.</p></div><div className="grid gap-3 md:grid-cols-3"><div className="rounded-2xl border border-slate-200 p-4"><Stethoscope className="text-blue-700" /><strong className="mt-3 block">Reavaliar</strong><p className="mt-1 text-sm text-slate-600">Repetir a medida e examinar sinais que mudem a classificação.</p></div><div className="rounded-2xl border border-slate-200 p-4"><Pill className="text-blue-700" /><strong className="mt-3 block">Reconciliar</strong><p className="mt-1 text-sm text-slate-600">Checar adesão, interrupções, automedicação e interações.</p></div><div className="rounded-2xl border border-slate-200 p-4"><Clock3 className="text-blue-700" /><strong className="mt-3 block">Acompanhar</strong><p className="mt-1 text-sm text-slate-600">Garantir seguimento e retorno diante de sinais de alarme.</p></div></div><button type="button" onClick={() => finish('Alta/encaminhamento por hipertensão crônica mal controlada, sem emergência demonstrada')} className="w-full rounded-xl bg-blue-700 px-5 py-4 font-extrabold text-white">Registrar orientação e finalizar</button></div>}

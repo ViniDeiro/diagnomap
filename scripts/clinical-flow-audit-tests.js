@@ -483,6 +483,16 @@ for (const flowId of ['tvp', 'influenza', 'pneumonia', 'tep', 'pep_hiv', 'crise_
 for (const marker of ['HD (Hipótese Diagnóstica)', 'diagnosticHypothesis', 'QUEIXA PRINCIPAL', 'SINAIS VITAIS', 'EXAME FÍSICO', "vitalItems.join(' / ')", 'Sem medidas registradas.']) {
   assert.ok(clinicalSummarySource.includes(marker), `Resumo clínico universal: seção obrigatória ausente (${marker})`)
 }
+for (const marker of [
+  'formatUniversalLaboratoryRecord',
+  'parseUniversalLabNotebook(answers[UNIVERSAL_LAB_RESULTS_KEY])',
+  'Resultado laboratorial registrado:',
+  'Interpretação, tendência e pendências dos exames:',
+  'scoreLines: standardizedScoreLines'
+]) {
+  assert.ok(clinicalSummarySource.includes(marker), `Resumo clínico universal: resultado laboratorial registrado não integrado (${marker})`)
+}
+assert.match(ituComponentSource, /\[UNIVERSAL_LAB_RESULTS_KEY\]: serialized/, 'ITU: caderno laboratorial deve persistir os resultados na chave universal')
 assert.doesNotMatch(
   clinicalSummarySource.match(/const standardizeUniversalEvolution[\s\S]*?export function buildClinicalSummary/)?.[0] || '',
   /Fluxograma:/,

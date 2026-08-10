@@ -51,7 +51,7 @@ interface ItuImagingRecord {
   ctProtocol: '' | 'sem_contraste' | 'com_contraste' | 'outro'
   ctReport: string
   findings: string[]
-  urologyAction: '' | 'nao_indicada' | 'avaliar' | 'acionada'
+  urologyAction: '' | 'nao_indicada' | 'avaliar' | 'acionada' | 'indisponivel'
   notes: string
 }
 
@@ -108,7 +108,11 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   const progress = isFinal ? 100 : Math.min(94, 12 + history.length * 8)
   const StepIcon = iconForStep(step)
   const phase = phaseByStep(stage)
-  const selectedPrescriptions = useMemo(() => buildItuPrescriptionItems(selectedValue), [selectedValue])
+  const isPregnancyPrescriptionStage = stage === 'itu_gestacao_antibiotico'
+  const selectedPrescriptions = useMemo(
+    () => buildItuPrescriptionItems(selectedValue, { pregnancy: isPregnancyPrescriptionStage }),
+    [isPregnancyPrescriptionStage, selectedValue]
+  )
   const hasCopyableConduct = /antibiotico|antifungico|candiduria_resistente|cistite_(fos|nitro|cef|sulfa)|estabilizacao|gestacao_pielo|urologia|cateter_manejo|controle_foco|criterios_alta|manutencao/.test(stage)
   const displayedOptions = useMemo(() => {
     const options = step.options || []
@@ -130,7 +134,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
   const moveTo = (nextStep: string, value?: string, additionalAnswers: Record<string, string> = {}) => {
     const nextHistory = [...history, stage]
     const nextAnswers = { ...answers, ...additionalAnswers, ...(value ? { [stage]: value } : {}) }
-    const prescriptionItems = buildItuPrescriptionItems(value)
+    const prescriptionItems = buildItuPrescriptionItems(value, { pregnancy: stage === 'itu_gestacao_antibiotico' })
     if (prescriptionItems.length > 0) patientService.replacePrescriptionsByPrescriber(patient.id, ITU_PRESCRIBER, prescriptionItems)
     setHistory(nextHistory); setAnswers(nextAnswers); setStage(nextStep); setSelectedValue(nextAnswers[nextStep] || ''); setNotice(''); setShowCompletion(false)
     onUpdate(patient.id, nextStep, nextHistory, nextAnswers, ituFlowchart.finalSteps.includes(nextStep) ? 100 : Math.min(94, progress + 8), riskLabel(nextStep))
@@ -180,7 +184,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
     }
     if (imagingRecord.ultrasoundStatus === 'realizado' && !imagingRecord.ultrasoundReport.trim()) { setNotice('Informe o resultado do ultrassom realizado.'); return }
     if (imagingRecord.ctStatus === 'realizado' && !imagingRecord.ctReport.trim()) { setNotice('Informe o resultado da tomografia realizada.'); return }
-    if (imagingRecord.findings.some(item => ['obstrucao', 'pionefrose', 'abscesso'].includes(item)) && imagingRecord.urologyAction === 'nao_indicada') { setNotice('Obstrução, pionefrose ou abscesso exigem avaliação urológica/controle do foco. Revise a decisão registrada.'); return }
+    if (imagingRecord.findings.some(item => ['obstrucao', 'pionefrose', 'abscesso'].includes(item)) && ['nao_indicada', 'indisponivel'].includes(imagingRecord.urologyAction)) { setNotice('Obstrução, pionefrose ou abscesso exigem avaliação urológica e controle do foco. Acione regulação/transferência se o recurso não estiver disponível.'); return }
     moveTo('itu_criterios_internacao', 'imagem_registrada', { [ITU_IMAGING_RECORD_KEY]: JSON.stringify(imagingRecord) })
   }
 
@@ -242,7 +246,7 @@ const ITUFlowchartInteractive: React.FC<Props> = ({ patient, initialStep, initia
             <section className="rounded-2xl border border-violet-200 bg-violet-50 p-5"><h2 className="font-black text-violet-950">Tomografia de abdome e pelve</h2><label className="mt-4 block text-sm font-bold text-slate-800">Situação do exame<select value={imagingRecord.ctStatus} onChange={event => setImagingRecord(current => ({ ...current, ctStatus: event.target.value as ImagingStatus }))} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-4 py-3"><option value="">Selecione</option><option value="nao_indicado">Não indicada neste momento</option><option value="solicitado">Solicitada</option><option value="pendente">Aguardando resultado</option><option value="realizado">Realizada</option><option value="indisponivel">Indisponível no serviço</option></select></label><label className="mt-4 block text-sm font-bold text-slate-800">Protocolo<select value={imagingRecord.ctProtocol} onChange={event => setImagingRecord(current => ({ ...current, ctProtocol: event.target.value as ItuImagingRecord['ctProtocol'] }))} className="mt-2 w-full rounded-xl border border-violet-200 bg-white px-4 py-3"><option value="">Não registrado</option><option value="sem_contraste">Sem contraste — suspeita predominante de cálculo</option><option value="com_contraste">Com contraste — avaliar complicação/abscesso</option><option value="outro">Outro protocolo</option></select></label><label className="mt-4 block text-sm font-bold text-slate-800">Resultado/laudo<textarea value={imagingRecord.ctReport} onChange={event => setImagingRecord(current => ({ ...current, ctReport: event.target.value }))} rows={4} placeholder="Descreva cálculo, obstrução, pionefrose, abscesso ou outro achado" className="mt-2 w-full rounded-xl border border-violet-200 bg-white p-3" /></label></section>
           </div>
           <section className="rounded-2xl border border-amber-200 bg-amber-50 p-5"><h2 className="font-black text-amber-950">Achados estruturados</h2><div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{[['sem_alteracao_aguda','Sem alteração aguda'],['hidronefrose','Hidronefrose'],['calculo','Cálculo urinário'],['obstrucao','Obstrução urinária'],['pionefrose','Pionefrose'],['abscesso','Abscesso renal/perinefrético'],['retencao','Retenção/resíduo elevado'],['alteracao_enxerto','Alteração do enxerto renal'],['outro','Outro achado']].map(([value,label]) => <button key={value} type="button" aria-pressed={imagingRecord.findings.includes(value)} onClick={() => toggleImagingFinding(value)} className={clsx('rounded-xl border px-4 py-3 text-left text-sm font-bold transition', imagingRecord.findings.includes(value) ? 'border-amber-600 bg-amber-600 text-white' : 'border-amber-200 bg-white text-amber-950 hover:border-amber-400')}>{label}</button>)}</div></section>
-          <section className="rounded-2xl border border-red-200 bg-red-50 p-5"><h2 className="font-black text-red-950">Decisão sobre urologia e controle do foco</h2><div className="mt-4 grid gap-3 sm:grid-cols-3">{([['nao_indicada','Sem indicação atual'],['avaliar','Avaliação solicitada'],['acionada','Urologia acionada / drenagem em organização']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setImagingRecord(current => ({ ...current, urologyAction: value }))} className={clsx('rounded-xl border px-4 py-3 text-left text-sm font-bold', imagingRecord.urologyAction === value ? 'border-red-700 bg-red-700 text-white' : 'border-red-200 bg-white text-red-950')}>{label}</button>)}</div><textarea value={imagingRecord.notes} onChange={event => setImagingRecord(current => ({ ...current, notes: event.target.value }))} rows={3} placeholder="Conduta, horário do contato, drenagem proposta ou justificativa para acompanhamento" className="mt-4 w-full rounded-xl border border-red-200 bg-white p-3 text-sm" /></section>
+          <section className="rounded-2xl border border-red-200 bg-red-50 p-5"><h2 className="font-black text-red-950">Decisão sobre urologia e controle do foco</h2><div className="mt-4 grid gap-3 sm:grid-cols-2">{([['nao_indicada','Sem indicação atual'],['avaliar','Avaliação solicitada'],['acionada','Urologia acionada / drenagem em organização'],['indisponivel','Urologia indisponível — seguir ou regular conforme gravidade']] as const).map(([value,label]) => <button key={value} type="button" onClick={() => setImagingRecord(current => ({ ...current, urologyAction: value }))} className={clsx('rounded-xl border px-4 py-3 text-left text-sm font-bold', imagingRecord.urologyAction === value ? 'border-red-700 bg-red-700 text-white' : 'border-red-200 bg-white text-red-950')}>{label}</button>)}</div><textarea value={imagingRecord.notes} onChange={event => setImagingRecord(current => ({ ...current, notes: event.target.value }))} rows={3} placeholder="Conduta, horário do contato, drenagem proposta ou justificativa para acompanhamento" className="mt-4 w-full rounded-xl border border-red-200 bg-white p-3 text-sm" /></section>
           <button type="button" onClick={confirmImagingRecord} className="flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-800 px-5 py-4 font-extrabold text-white hover:bg-cyan-900">Registrar imagem e definir destino <ChevronRight className="h-5 w-5" /></button>
         </div>}
 
