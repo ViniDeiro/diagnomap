@@ -416,18 +416,28 @@ export const gecaFlowchart: EmergencyFlowchart = {
     geca_investigacao_persistente: {
       id: 'geca_investigacao_persistente',
       title: 'Investigação de Diarreia Persistente',
-      description: 'Encaminhar para investigação etiológica e tratamento específico; não prescrever antiparasitário empírico indiscriminadamente.',
+      description: 'Investigação ambulatorial orientada por exposição, imunidade e padrão das fezes; não prescrever antiparasitário empírico indiscriminadamente. Internar/transferir apenas se houver sinais de alarme.',
       type: 'result',
       content: `
         <div class="space-y-3 text-sm">
           <div class="rounded-lg border-l-4 border-violet-600 bg-violet-50 p-4 text-violet-950">
             <p class="font-bold">Conduta</p>
             <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Paciente hidratado e estável: alta com encaminhamento ambulatorial para investigação e seguimento.</li>
               <li>Garantir hidratação e suporte nutricional.</li>
               <li>Solicitar investigação orientada por exposição, imunidade e padrão das fezes.</li>
               <li>Tratar agente identificado; revisar fármacos e causas inflamatórias/malabsortivas.</li>
-              <li>Encaminhar/internar se menor de 6 meses, desidratação, perda ponderal, imunossupressão ou comprometimento sistêmico.</li>
+              <li>Internar/transferir apenas se: menor de 6 meses, desidratação, perda ponderal, imunossupressão ou comprometimento sistêmico.</li>
             </ul>
+          </div>
+          <div class="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-blue-950">
+            <p class="font-bold">Receita de alta assistida</p>
+            <p class="mt-1">Escolha o modelo correspondente ao paciente para registrar e copiar a prescrição de suporte sintomático.</p>
+            <div class="mt-3 grid gap-2 sm:grid-cols-2">
+              <button type="button" data-geca-copy-adult="true" class="rounded-xl bg-blue-700 px-4 py-3 font-bold text-white hover:bg-blue-800">Copiar prescrição adulta</button>
+              <button type="button" data-geca-copy-pediatric="true" class="rounded-xl border border-blue-300 bg-white px-4 py-3 font-bold text-blue-900 hover:bg-blue-100">Copiar prescrição pediátrica</button>
+            </div>
+            <p class="mt-3 text-xs">A hidratação oral e a alimentação são o tratamento central. Sintomáticos dependem de idade, peso, alergias, gestação, comorbidades e contraindicações. Não prescrever antibiótico ou antiparasitário empírico nesta etapa.</p>
           </div>
         </div>
       `,

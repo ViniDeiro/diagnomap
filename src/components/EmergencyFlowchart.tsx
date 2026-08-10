@@ -1690,6 +1690,14 @@ Opção com MgSO4 a 50% (500 mg/mL): aspirar 4 mL, correspondentes a 2 g, e adic
 
 Confirmar a concentração disponível antes do preparo. Monitorizar pressão arterial, frequência cardíaca, resposta clínica e sinais de toxicidade; revisar função renal e contraindicações.`
 
+const ASTHMA_NEBULIZATION_PRESCRIPTION = `BRONCODILATAÇÃO COMBINADA — NEBULIZAÇÃO (ADULTO)
+Fenoterol 5 mg/mL, 10–20 gotas, ou Salbutamol 5 mg/mL, 10–20 gotas.
+Associar brometo de ipratrópio 0,25 mg/mL, 20–40 gotas.
+Diluir em 5 mL de SF 0,9%.
+
+Repetir a cada 20 minutos na primeira hora (até 3 doses).
+Revisar técnica, resposta clínica e sinais vitais a cada administração.`
+
 const GECA_ADULT_DISCHARGE_PRESCRIPTION = `RECEITA MÉDICA — GECA / PLANO A — ADULTO
 
 USO ORAL
@@ -1755,12 +1763,20 @@ const buildGecaStructuredPrescriptionItems = (
     const weight = patient.weight
     const antibiotics: Record<string, typeof items[number] | undefined> = {
       azitromicina_pediatrica: { medication: 'Azitromicina', dosage: weight ? `${Math.round(weight * 10)} mg no dia 1; ${Math.round(weight * 5)} mg/dia nos dias 2–5` : '10 mg/kg no dia 1; 5 mg/kg/dia nos dias 2–5', frequency: 'VO uma vez ao dia', duration: '5 dias', instructions: 'Dose calculada pelo peso. Confirmar indicação, alergias, função hepática, QT, interações e protocolo local.', prescribedBy: GECA_PRESCRIBER },
-      ceftriaxona_pediatrica: { medication: 'Ceftriaxona', dosage: weight ? `${Math.round(weight * 50)} mg` : '50 mg/kg', frequency: 'IM uma vez ao dia', duration: '3–5 dias', instructions: 'Confirmar peso, alergias, apresentação, diluição, dose máxima e protocolo institucional.', prescribedBy: GECA_PRESCRIBER },
+      ceftriaxona_pediatrica: { medication: 'Ceftriaxona', dosage: (weight && patient.age < 18) ? `${Math.round(weight * 50)} mg` : '50 mg/kg (uso pediátrico)', frequency: 'IM uma vez ao dia', duration: '3–5 dias', instructions: 'Confirmar peso, alergias, apresentação, diluição, dose máxima e protocolo institucional. Esquema pediátrico: não usar cálculo por peso em adultos.', prescribedBy: GECA_PRESCRIBER },
       ciprofloxacino_adulto: { medication: 'Ciprofloxacino', dosage: '500 mg', frequency: 'VO de 12/12 horas', duration: '3 dias', instructions: 'Usar somente quando a indicação clínica estiver confirmada. Rever gestação, função renal, QT, interações, cultura e resistência local.', prescribedBy: GECA_PRESCRIBER },
-      ceftriaxona_alto_risco_hospitalar: { medication: 'Ceftriaxona', dosage: weight ? `${Math.round(weight * 50)}–${Math.round(weight * 100)} mg/dia` : '50–100 mg/kg/dia', frequency: 'EV ou IM conforme protocolo hospitalar', duration: 'Definir conforme diagnóstico, cultura e resposta', instructions: 'Esquema hospitalar: confirmar peso, dose máxima, alergias, função renal/hepática, apresentação, diluição e protocolo institucional.', prescribedBy: GECA_PRESCRIBER }
+      ceftriaxona_alto_risco_hospitalar: patient.age >= 18
+        ? { medication: 'Ceftriaxona', dosage: '1–2 g/dia', frequency: 'EV ou IM uma vez ao dia, conforme gravidade e protocolo hospitalar', duration: 'Definir conforme diagnóstico, cultura e resposta', instructions: 'Dose adulta fixa (não calcular por peso). Confirmar alergias, função renal/hepática, apresentação, diluição e protocolo institucional.', prescribedBy: GECA_PRESCRIBER }
+        : { medication: 'Ceftriaxona', dosage: weight ? `${Math.round(weight * 50)}–${Math.round(weight * 100)} mg/dia` : '50–100 mg/kg/dia', frequency: 'EV ou IM conforme protocolo hospitalar', duration: 'Definir conforme diagnóstico, cultura e resposta', instructions: 'Esquema pediátrico de alto risco: confirmar peso, dose máxima, alergias, função renal/hepática, apresentação, diluição e protocolo institucional.', prescribedBy: GECA_PRESCRIBER }
     }
     const selected = saved.esquemaSelecionado ? antibiotics[saved.esquemaSelecionado] : undefined
-    if (selected) items.push(selected)
+    if (selected) {
+      // Antidiarreico (racecadotrila) é contraindicado quando há indicação de antibiótico
+      // (diarreia inflamatória/disentérica ou suspeita de agente invasivo).
+      const racecadotrilaIndex = items.findIndex((item) => item.medication === 'Racecadotrila')
+      if (racecadotrilaIndex >= 0) items.splice(racecadotrilaIndex, 1)
+      items.push(selected)
+    }
   } catch {
     // Mantém a receita de suporte se o registro legado de antibiótico estiver inválido.
   }
@@ -1793,7 +1809,10 @@ const buildGecaDischargePrescription = (
     if (!saved.esquemaSelecionado) return basePrescription
 
     let regimen = saved.posologia || 'Revisar dose, via e duração conforme o esquema selecionado.'
-    if (patient.weight) {
+    const isAdultForDosing = patient.age >= 18
+    if (saved.esquemaSelecionado === 'ceftriaxona_alto_risco_hospitalar' && isAdultForDosing) {
+      regimen = '1 a 2 g/dia EV ou IM (dose adulta fixa, não calcular por peso), conforme gravidade e protocolo hospitalar.'
+    } else if (patient.weight && !isAdultForDosing) {
       if (saved.esquemaSelecionado === 'azitromicina_pediatrica') {
         regimen = `${Math.round(patient.weight * 10)} mg VO no dia 1; depois ${Math.round(patient.weight * 5)} mg VO uma vez ao dia, do dia 2 ao dia 5.`
       } else if (saved.esquemaSelecionado === 'ceftriaxona_pediatrica') {
@@ -1804,7 +1823,16 @@ const buildGecaDischargePrescription = (
     }
 
     const antibioticBlock = `\n\nANTIBIOTICOTERAPIA SELECIONADA NO FLUXO\n${saved.esquemaSelecionadoLabel || 'Esquema antimicrobiano selecionado'}\n${regimen}\n\nConfirmar indicação, alergias, função renal/hepática, gestação, interações, resistência local e disponibilidade da apresentação antes de assinar.`
-    return `${basePrescription}${antibioticBlock}`
+    // Antidiarreico (racecadotrila) é contraindicado quando há indicação de antibiótico
+    // (diarreia inflamatória/disentérica ou suspeita de agente invasivo): remover do modelo
+    // de receita e renumerar os itens restantes.
+    const withoutRacecadotrila = basePrescription
+      .replace(/1\. Racecadotrila[\s\S]*?contraindicação clínica\.\n\n/, '')
+      .replace(/^2\. /m, '1. ')
+      .replace(/^3\. /m, '2. ')
+      .replace(/^4\. /m, '3. ')
+      .replace(/^5\. /m, '4. ')
+    return `${withoutRacecadotrila}${antibioticBlock}`
   } catch {
     return basePrescription
   }
@@ -4681,6 +4709,13 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const selectedGecaDurationOption = isGecaDiarrheaDurationStep
     ? currentStepData.options?.find((option) => option.value === selectedGecaDurationRoute)
     : undefined
+  useEffect(() => {
+    if (isGecaDiarrheaDurationStep && !gecaDiarrheaDurationDays && gecaEntryDurationDays) {
+      setGecaDiarrheaDurationDays(gecaEntryDurationDays)
+      setSelectedGecaDurationRoute(gecaEntryDurationNumber >= 14 ? 'persistente' : 'aguda')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGecaDiarrheaDurationStep])
   const selectedGecaAntibioticOption = isGecaAntibioticIndicationStep
     ? currentStepData.options?.find((option) => option.value === (
         selectedGecaAntibioticCriteria.length > 0
@@ -10391,7 +10426,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                           Há quantos dias começou a diarreia?
                         </label>
                         <p className="mt-1 text-sm text-slate-600">
-                          Informe a duração para classificar automaticamente o quadro.
+                          Pré-preenchido com a duração já informada no início do atendimento; ajuste se necessário.
                         </p>
                       </div>
                       <div className="relative w-full sm:w-44">
@@ -10848,8 +10883,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                     </div>
 
                     <div className="grid gap-4 lg:grid-cols-2" role="radiogroup" aria-label="Esquema de antibioticoterapia">
-                      {GECA_ANTIBIOTIC_SCHEMES.map((scheme) => {
+                      {GECA_ANTIBIOTIC_SCHEMES.filter((scheme) => {
+                        const isAdultPatient = patient.age >= 18
+                        if (isAdultPatient) return scheme.id !== 'azitromicina_pediatrica' && scheme.id !== 'ceftriaxona_pediatrica'
+                        return scheme.id !== 'ciprofloxacino_adulto'
+                      }).map((scheme) => {
                         const selected = selectedGecaAntibioticScheme === scheme.id
+                        const isAdultPatient = patient.age >= 18
                         const isPediatricStandard = patient.age >= 0.25 && patient.age <= 10 && Boolean(patient.weight && patient.weight <= 30)
                         const isOlderOrHigherWeight = patient.age > 10 || Boolean(patient.weight && patient.weight > 30)
                         const recommendation = scheme.id === 'azitromicina_pediatrica' && isPediatricStandard
@@ -10860,8 +10900,13 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                               ? 'Compatível com idade/peso'
                               : scheme.id === 'ceftriaxona_alto_risco_hospitalar' && patient.age < 0.25
                                 ? 'Faixa etária de alto risco'
-                                : ''
-                        const calculatedDose = patient.weight
+                                : scheme.id === 'ceftriaxona_alto_risco_hospitalar' && isAdultPatient
+                                  ? 'Dose adulta fixa'
+                                  : ''
+                        const effectiveRegimen = scheme.id === 'ceftriaxona_alto_risco_hospitalar' && isAdultPatient
+                          ? '1–2 g/dia EV ou IM (dose adulta fixa), conforme gravidade e protocolo institucional.'
+                          : scheme.regimen
+                        const calculatedDose = patient.weight && !isAdultPatient
                           ? scheme.id === 'azitromicina_pediatrica'
                             ? `Estimativa pelo peso: ${Math.round(patient.weight * 10)} mg no dia 1; ${Math.round(patient.weight * 5)} mg/dia nos dias 2–5.`
                             : scheme.id === 'ceftriaxona_pediatrica'
@@ -10906,7 +10951,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                                   )}
                                 </span>
                                 <span className="mt-2 block text-sm leading-relaxed"><strong>Indicação:</strong> {scheme.indication}</span>
-                                <span className="mt-2 block rounded-lg bg-white/75 p-3 text-sm font-bold leading-relaxed">{scheme.regimen}</span>
+                                <span className="mt-2 block rounded-lg bg-white/75 p-3 text-sm font-bold leading-relaxed">{effectiveRegimen}</span>
                                 {calculatedDose && (
                                   <span className="mt-2 block text-xs font-semibold leading-relaxed opacity-80">{calculatedDose}</span>
                                 )}
@@ -12312,6 +12357,16 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         void navigator.clipboard.writeText(ASTHMA_MAGNESIUM_PRESCRIPTION).then(() => {
                           setAsthmaMagnesiumCopied(true)
                           window.setTimeout(() => setAsthmaMagnesiumCopied(false), 1800)
+                        })
+                      }
+                      const asthmaNebulizationCopyButton = target.closest('[data-asthma-copy-nebulization="true"]') as HTMLButtonElement | null
+                      if (asthmaNebulizationCopyButton) {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        void navigator.clipboard.writeText(ASTHMA_NEBULIZATION_PRESCRIPTION).then(() => {
+                          const previousText = asthmaNebulizationCopyButton.textContent
+                          asthmaNebulizationCopyButton.textContent = 'Prescrição copiada'
+                          window.setTimeout(() => { asthmaNebulizationCopyButton.textContent = previousText }, 1800)
                         })
                       }
                       const gecaAdultCopyButton = target.closest('[data-geca-copy-adult="true"]') as HTMLButtonElement | null
