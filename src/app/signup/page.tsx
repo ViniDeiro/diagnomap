@@ -7,8 +7,20 @@ import { UserPlus, Mail, Lock, MapPin, FileText, Building2, Briefcase } from 'lu
 import { signUpDoctor, signInDoctor, getCurrentDoctor, updateDoctorProfile } from '@/services/doctorRepo'
 import { supabase } from '@/services/supabaseClient'
 import MedicalResponsibilityTerm, { MedicalTermDoctorInfo } from '@/components/MedicalResponsibilityTerm'
+import ConfidentialityTerm from '@/components/ConfidentialityTerm'
+import {
+  CONFIDENTIALITY_TERM_VERSION,
+  ConfidentialitySignature,
+  ConfidentialitySigner,
+  persistConfidentialityAgreement
+} from '@/lib/confidentialityTerm'
 
 type Municipality = { id: number; name: string; uf?: string }
+const ALL_UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback
+}
 
 export default function SignupPage() {
   const router = useRouter()
@@ -20,15 +32,14 @@ export default function SignupPage() {
   const [unit, setUnit] = useState('')
   const [company, setCompany] = useState('')
   const [pendingTermDoctor, setPendingTermDoctor] = useState<MedicalTermDoctorInfo | null>(null)
+  const [pendingConfidentialitySigner, setPendingConfidentialitySigner] = useState<ConfidentialitySigner | null>(null)
   const [termLoading, setTermLoading] = useState(false)
   const [municipalities, setMunicipalities] = useState<Municipality[]>([])
   const [ufs, setUfs] = useState<string[]>([])
   const [selectedUf, setSelectedUf] = useState<string>('')
   const [municipalityId, setMunicipalityId] = useState<number | null>(null)
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadingMunicipalities, setLoadingMunicipalities] = useState(false)
-  const ALL_UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
   const configured = !!process.env.NEXT_PUBLIC_SUPABASE_URL && !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   useEffect(() => {
@@ -41,7 +52,7 @@ export default function SignupPage() {
         const { data, error } = await supabase.from('municipalities').select('uf').order('uf', { ascending: true })
         let distinct: string[] = []
         if (!error && Array.isArray(data)) {
-          distinct = Array.from(new Set((data as any[]).map(r => String((r as any).uf || '').trim()).filter(Boolean)))
+          distinct = Array.from(new Set((data as Array<{ uf?: string | null }>).map((row) => String(row.uf || '').trim()).filter(Boolean)))
         }
         const union = Array.from(new Set([...distinct, ...ALL_UFS])).sort()
         setUfs(union)
@@ -50,7 +61,7 @@ export default function SignupPage() {
       }
     }
     loadUfs()
-  }, [])
+  }, [configured])
 
   useEffect(() => {
     const loadMunicipalitiesByUf = async (uf: string) => {
@@ -114,7 +125,6 @@ export default function SignupPage() {
             const sigla = String(cols[idxUfSigla] || '').toUpperCase()
             if (codigo && sigla) ufSiglas.set(codigo, sigla)
           })
-          const idxCodigoIbge = municipios.idx['codigo_ibge']
           const idxNome = municipios.idx['nome']
           const idxCodigoUfMunicipio = municipios.idx['codigo_uf']
           const filtered: Municipality[] = []
@@ -199,7 +209,6 @@ export default function SignupPage() {
           const sigla = String(cols[idxUfSigla] || '').toUpperCase()
           if (codigo && sigla) ufSiglas.set(codigo, sigla)
         })
-        const idxCodigoIbge = municipios.idx['codigo_ibge']
         const idxNome = municipios.idx['nome']
         const idxCodigoUfMunicipio = municipios.idx['codigo_uf']
         const filtered: Municipality[] = []
@@ -220,25 +229,47 @@ export default function SignupPage() {
       }
     }
     if (selectedUf) loadMunicipalitiesByUf(selectedUf)
-  }, [selectedUf])
+  }, [configured, selectedUf])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    setLoading(true)
+    if (!configured) {
+      setError('Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.')
+      return
+    }
+    setPendingConfidentialitySigner({ name, crm: crmUf, email, cpf, unit, company })
+  }
+
+  const handleSignConfidentialityTerm = async (signature: ConfidentialitySignature) => {
+    setError(null)
+    setTermLoading(true)
     try {
-      if (!configured) {
-        setError('Supabase não configurado. Defina NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.')
-        setLoading(false)
-        return
+      let signed
+      try {
+        signed = await signInDoctor(email, password)
+      } catch {
+        await signUpDoctor(email, password, {
+          name,
+          full_name: name,
+          confidentiality_term: {
+            version: CONFIDENTIALITY_TERM_VERSION,
+            acceptedAt: signature.signedAt,
+            signature: signature.signatureName,
+            pendingDocument: true
+          },
+          medical_responsibility_term: {
+            name,
+            crmUf,
+            cpf,
+            unit,
+            company,
+            email
+          }
+        })
+        signed = await signInDoctor(email, password)
       }
-      await signUpDoctor(email, password)
-      const signed = await signInDoctor(email, password)
-      if (!signed?.user?.id) {
-        setError('Confirme seu email para concluir o cadastro e tente novamente.')
-        setLoading(false)
-        return
-      }
+      if (!signed?.user?.id) throw new Error('Confirme seu e-mail para concluir o cadastro e tente novamente.')
       const doctor = await getCurrentDoctor()
       if (doctor?.id) {
         await updateDoctorProfile(doctor.id, {
@@ -254,12 +285,20 @@ export default function SignupPage() {
       } else {
         throw new Error('Não foi possível criar o perfil médico para este usuário.')
       }
+      const agreement = await persistConfidentialityAgreement(signed.user.id, doctor.id, signature)
       const currentMetadata = signed.user.user_metadata || {}
       await supabase.auth.updateUser({
         data: {
           ...currentMetadata,
           name,
           full_name: name,
+          confidentiality_term: {
+            version: CONFIDENTIALITY_TERM_VERSION,
+            acceptedAt: signature.signedAt,
+            signature: signature.signatureName,
+            agreementId: agreement.id,
+            pdfSha256: agreement.pdf_sha256
+          },
           medical_responsibility_term: {
             ...((currentMetadata.medical_responsibility_term || {}) as Record<string, unknown>),
             name,
@@ -279,10 +318,11 @@ export default function SignupPage() {
         company,
         email
       })
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao cadastrar')
+      setPendingConfidentialitySigner(null)
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Erro ao criar a conta e registrar o termo de confidencialidade'))
     } finally {
-      setLoading(false)
+      setTermLoading(false)
     }
   }
 
@@ -315,8 +355,8 @@ export default function SignupPage() {
         localStorage.setItem('medical_responsibility_term', JSON.stringify(termPayload))
       }
       router.push('/')
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao registrar aceite do termo')
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'Erro ao registrar aceite do termo'))
     } finally {
       setTermLoading(false)
     }
@@ -328,6 +368,18 @@ export default function SignupPage() {
         doctor={pendingTermDoctor}
         loading={termLoading}
         onAccept={handleAcceptTerm}
+      />
+    )
+  }
+
+  if (pendingConfidentialitySigner) {
+    return (
+      <ConfidentialityTerm
+        signer={pendingConfidentialitySigner}
+        loading={termLoading}
+        error={error}
+        onBack={() => { setError(null); setPendingConfidentialitySigner(null) }}
+        onSign={handleSignConfidentialityTerm}
       />
     )
   }
@@ -502,10 +554,10 @@ export default function SignupPage() {
 
           <button
             type="submit"
-            disabled={loading || !configured}
+            disabled={!configured}
             className="w-full bg-gradient-to-r from-blue-600 to-slate-700 text-white py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-200"
           >
-            {loading ? 'Cadastrando...' : 'Cadastrar'}
+            Ler e assinar termo para cadastrar
           </button>
         </form>
 

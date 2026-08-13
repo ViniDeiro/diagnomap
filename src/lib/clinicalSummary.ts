@@ -2081,9 +2081,14 @@ const buildAsthmaClinicalSummary = (
     reValues.pfeRe != null ? `PFE após uma hora ${reValues.pfeRe}%` : null
   ])
   const examLines = uniqueTextItems([universal.vitalItems.length ? `sinais vitais: ${universal.vitalItems.join(', ')}` : null, ...universal.examItems, initialMeasures.length ? initialMeasures.join(', ') : null, reMeasures.length ? reMeasures.join(', ') : null])
+  const bronchodilationRoute = answers.asma_nebulizacao_grave_vida === 'saba_ipratropio_mdi'
+    ? 'salbutamol e ipratrópio administrados por bombinha com espaçador'
+    : answers.asma_nebulizacao_grave_vida === 'saba_ipratropio_nebulizacao'
+      ? 'salbutamol e ipratrópio administrados por nebulização'
+      : null
   const treatmentItems = uniqueTextItems([
-    path.has('asma_saba_leve_moderada') || path.has('asma_nebulizacao_grave_vida') ? 'beta-2 agonista de curta duração em doses repetidas' : null,
-    path.has('asma_nebulizacao_grave_vida') ? 'ipratrópio associado na primeira hora' : null,
+    bronchodilationRoute || (path.has('asma_saba_leve_moderada') || path.has('asma_nebulizacao_grave_vida') ? 'beta-2 agonista de curta duração em doses repetidas' : null),
+    path.has('asma_nebulizacao_grave_vida') && !bronchodilationRoute ? 'ipratrópio associado na primeira hora' : null,
     [...path].some(step => step.includes('corticoide')) ? 'corticoide sistêmico precoce' : null,
     [...path].some(step => step.includes('o2_')) ? 'oxigênio suplementar titulado' : null,
     path.has('asma_magnesio_grave_vida') || path.has('asma_resgate_magnesio') ? 'sulfato de magnésio 2 g EV' : null,

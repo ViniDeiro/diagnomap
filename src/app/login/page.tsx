@@ -7,6 +7,13 @@ import { LogIn, Mail, Lock } from 'lucide-react'
 import { getCurrentDoctor, signInDoctor } from '@/services/doctorRepo'
 import { supabase } from '@/services/supabaseClient'
 import MedicalResponsibilityTerm, { MedicalTermDoctorInfo } from '@/components/MedicalResponsibilityTerm'
+import ConfidentialityTerm from '@/components/ConfidentialityTerm'
+import {
+  CONFIDENTIALITY_TERM_VERSION,
+  ConfidentialitySignature,
+  ConfidentialitySigner,
+  persistConfidentialityAgreement
+} from '@/lib/confidentialityTerm'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -15,6 +22,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pendingTermDoctor, setPendingTermDoctor] = useState<MedicalTermDoctorInfo | null>(null)
+  const [pendingConfidentialitySigner, setPendingConfidentialitySigner] = useState<ConfidentialitySigner | null>(null)
   const [termLoading, setTermLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,6 +31,19 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const signed = await signInDoctor(email, password)
+      const confidentialityTerm = (signed.user?.user_metadata?.confidentiality_term || {}) as Record<string, unknown>
+      if (confidentialityTerm.acceptedAt && !confidentialityTerm.agreementId) {
+        const doctor = await getCurrentDoctor()
+        setPendingConfidentialitySigner({
+          name: doctor?.name || signed.user?.user_metadata?.name || signed.user?.email || '',
+          crm: doctor?.crm || '',
+          email: signed.user?.email || email,
+          cpf: doctor?.cpf || null,
+          unit: doctor?.unit || null,
+          company: doctor?.company || null
+        })
+        return
+      }
       const accepted = Boolean(signed.user?.user_metadata?.medical_responsibility_term?.acceptedAt)
       if (!accepted) {
         const doctor = await getCurrentDoctor()
@@ -34,10 +55,53 @@ export default function LoginPage() {
         return
       }
       router.push('/')
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao fazer login')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao fazer login')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handlePersistPendingConfidentialityTerm = async (signature: ConfidentialitySignature) => {
+    setError(null)
+    setTermLoading(true)
+    try {
+      const { data: userResult } = await supabase.auth.getUser()
+      if (!userResult.user) throw new Error('Sessão não encontrada. Entre novamente para concluir o cadastro.')
+      const doctor = await getCurrentDoctor()
+      if (!doctor?.id) throw new Error('Perfil médico não encontrado para vincular o documento.')
+      const agreement = await persistConfidentialityAgreement(userResult.user.id, doctor.id, signature)
+      const currentMetadata = userResult.user.user_metadata || {}
+      await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          confidentiality_term: {
+            version: CONFIDENTIALITY_TERM_VERSION,
+            acceptedAt: signature.signedAt,
+            signature: signature.signatureName,
+            agreementId: agreement.id,
+            pdfSha256: agreement.pdf_sha256
+          }
+        }
+      })
+      setPendingConfidentialitySigner(null)
+      const acceptedResponsibility = Boolean(currentMetadata.medical_responsibility_term && (currentMetadata.medical_responsibility_term as Record<string, unknown>).acceptedAt)
+      if (!acceptedResponsibility) {
+        setPendingTermDoctor({
+          name: doctor.name,
+          crmUf: doctor.crm || null,
+          cpf: doctor.cpf || null,
+          unit: doctor.unit || null,
+          company: doctor.company || null,
+          email: doctor.email || signature.email
+        })
+        return
+      }
+      router.push('/')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao concluir o registro do termo de confidencialidade')
+    } finally {
+      setTermLoading(false)
     }
   }
 
@@ -70,8 +134,8 @@ export default function LoginPage() {
         localStorage.setItem('medical_responsibility_term', JSON.stringify(termPayload))
       }
       router.push('/')
-    } catch (err: any) {
-      setError(err?.message || 'Erro ao registrar aceite do termo')
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Erro ao registrar aceite do termo')
     } finally {
       setTermLoading(false)
     }
@@ -83,6 +147,17 @@ export default function LoginPage() {
         doctor={pendingTermDoctor}
         loading={termLoading}
         onAccept={handleAcceptTerm}
+      />
+    )
+  }
+
+  if (pendingConfidentialitySigner) {
+    return (
+      <ConfidentialityTerm
+        signer={pendingConfidentialitySigner}
+        loading={termLoading}
+        error={error}
+        onSign={handlePersistPendingConfidentialityTerm}
       />
     )
   }

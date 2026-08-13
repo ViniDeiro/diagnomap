@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "incremental": false
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/app/login/page.tsx",
+    "src/app/signup/page.tsx",
+    "src/components/AdminActivityPanel.tsx",
+    "src/components/ConfidentialityTerm.tsx",
+    "src/components/MedicalResponsibilityTerm.tsx",
+    "src/lib/confidentialityTerm.ts",
+    "src/services/activityAudit.ts",
+    "src/services/doctorRepo.ts",
+    "src/services/supabaseClient.ts"
+  ],
+  "exclude": ["node_modules"]
+}

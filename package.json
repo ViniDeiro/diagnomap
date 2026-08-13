@@ -17,7 +17,9 @@
     "test:gasometry-formulas": "node scripts/gasometry-formula-tests.js",
     "test:wells-usability": "node scripts/wells-usability-tests.js",
     "test:clinical-flows": "node scripts/clinical-flow-audit-tests.js",
-    "test:clinical-routing": "node scripts/clinical-routing-tests.js"
+    "test:clinical-routing": "node scripts/clinical-routing-tests.js",
+    "test:confidentiality": "node scripts/confidentiality-registration-tests.js",
+    "test:confidentiality:types": "tsc -p tsconfig.confidentiality.json"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.87.1",

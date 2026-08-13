@@ -1703,27 +1703,20 @@ export const asthmaFlowchart: EmergencyFlowchart = {
           </div>
           <div class="p-5">
             <p><strong>SABA</strong> significa agonista beta-2 adrenérgico de curta ação. Neste protocolo, corresponde ao <strong>salbutamol</strong>, broncodilatador de resgate.</p>
-            <p class="mt-3 border-t border-slate-200 pt-3">Em exacerbações moderadas ou graves, associe o ipratrópio e escolha abaixo a forma de administração que será realmente utilizada. A seleção ficará registrada no resumo clínico.</p>
-            <div class="mt-4 rounded-xl bg-cyan-50 p-4 text-cyan-950">
-              <p class="font-black">Preparo para nebulização no adulto</p>
-              <p class="mt-2"><strong>Beta-2 agonista:</strong> fenoterol 5 mg/mL, 10–20 gotas, <strong>ou</strong> salbutamol 5 mg/mL, 10–20 gotas.</p>
-              <p class="mt-1"><strong>Associar:</strong> brometo de ipratrópio 0,25 mg/mL, 20–40 gotas, diluídos em SF 0,9% até o volume de 5 mL.</p>
-              <p class="mt-2 border-t border-cyan-200 pt-2 font-bold">Repetir a cada 20 minutos na primeira hora.</p>
-              <button type="button" data-asthma-copy-nebulization="true" class="mt-3 w-full rounded-xl bg-cyan-700 px-4 py-3 text-sm font-bold text-white hover:bg-cyan-800 sm:w-auto">Copiar prescrição sugerida</button>
-            </div>
+            <p class="mt-3 border-t border-slate-200 pt-3">Em exacerbações moderadas ou graves, associe o ipratrópio. Marque abaixo a forma de administração que será realmente utilizada e confirme a escolha para continuar. A seleção ficará registrada no resumo clínico.</p>
           </div>
         </div>
       `,
       options: [
         {
           text: 'Bombinha com espaçador',
-          description: 'Salbutamol spray 100 mcg/dose: 4–8 jatos com espaçador a cada 20 minutos durante a primeira hora; associar ipratrópio conforme a gravidade.',
+          description: 'Salbutamol spray 100 mcg/dose: 4–8 jatos com espaçador + ipratrópio spray 20 mcg/dose: 4–8 jatos. Repetir a cada 20 minutos durante a primeira hora, por até 3 doses.',
           nextStep: 'asma_corticoide_grave_vida',
           value: 'saba_ipratropio_mdi'
         },
         {
           text: 'Nebulização',
-          description: 'Fenoterol 5 mg/mL, 10–20 gotas, ou salbutamol 5 mg/mL, 10–20 gotas + ipratrópio 0,25 mg/mL, 20–40 gotas; diluídos em 5 mL de SF 0,9%. Repetir a cada 20 min na primeira hora.',
+          description: 'Para nebulizar: fenoterol 5 mg/mL, 10–20 gotas, ou salbutamol 5 mg/mL, 10–20 gotas + ipratrópio 0,25 mg/mL, 20–40 gotas; diluídos em SF 0,9% até o volume de 5 mL. Repetir a cada 20 minutos na primeira hora.',
           nextStep: 'asma_corticoide_grave_vida',
           value: 'saba_ipratropio_nebulizacao'
         }

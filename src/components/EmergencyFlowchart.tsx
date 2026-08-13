@@ -2683,6 +2683,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
   const [asthmaSoundInfoOpen, setAsthmaSoundInfoOpen] = useState(false)
   const [asthmaDischargeCopied, setAsthmaDischargeCopied] = useState(false)
   const [asthmaMagnesiumCopied, setAsthmaMagnesiumCopied] = useState(false)
+  const [selectedAsthmaBronchodilationRoute, setSelectedAsthmaBronchodilationRoute] = useState('')
   const [inlineConductCopied, setInlineConductCopied] = useState(false)
   const [influenzaSeveritySigns, setInfluenzaSeveritySigns] = useState<string[]>([])
   const [influenzaRiskFactors, setInfluenzaRiskFactors] = useState<string[]>([])
@@ -4141,6 +4142,7 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
     (flowchart.id === 'influenza' && ['influenza_painel_viral_enfermaria', 'influenza_painel_viral_uti'].includes(currentStep))
   )
   const isAsthmaDischargeCriteriaStep = flowchart.id === 'asthma' && currentStep === 'asma_criterios_alta'
+  const isAsthmaBronchodilationChoiceStep = flowchart.id === 'asthma' && currentStep === 'asma_nebulizacao_grave_vida'
   const asthmaDischargeCriteria = useMemo(() => {
     try {
       const parsed = JSON.parse(answers[ASTHMA_DISCHARGE_CRITERIA_KEY] || '[]')
@@ -7201,6 +7203,19 @@ const EmergencyFlowchart: React.FC<EmergencyFlowchartProps> = ({
       setAsthmaReevalFlags(savedAsthmaReeval.flags)
     }
   }, [isAsthmaFlow, currentStepData?.id, savedAsthmaReeval])
+
+  useEffect(() => {
+    if (!isAsthmaBronchodilationChoiceStep) {
+      setSelectedAsthmaBronchodilationRoute('')
+      return
+    }
+    const savedRoute = answers.asma_nebulizacao_grave_vida
+    setSelectedAsthmaBronchodilationRoute(
+      savedRoute === 'saba_ipratropio_mdi' || savedRoute === 'saba_ipratropio_nebulizacao'
+        ? savedRoute
+        : ''
+    )
+  }, [answers.asma_nebulizacao_grave_vida, isAsthmaBronchodilationChoiceStep])
 
   useEffect(() => {
     if (!isTVPLegSelection) {
@@ -12445,6 +12460,64 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                   >
                     <div dangerouslySetInnerHTML={{ __html: currentStepData.content }} />
                   </div>
+                  {isAsthmaBronchodilationChoiceStep && (
+                    <section className="mt-5 rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4 sm:p-5">
+                      <div>
+                        <h3 className="font-extrabold text-slate-950">Marque a forma de administração</h3>
+                        <p className="mt-1 text-sm text-slate-600">Escolha uma opção. O fluxo só continuará depois da confirmação.</p>
+                      </div>
+                      <div className="mt-4 grid gap-3 md:grid-cols-2">
+                        {(currentStepData.options || []).map((option) => {
+                          const selected = selectedAsthmaBronchodilationRoute === option.value
+                          return (
+                            <button
+                              key={option.value || option.text}
+                              type="button"
+                              aria-pressed={selected}
+                              onClick={() => setSelectedAsthmaBronchodilationRoute(option.value || '')}
+                              className={clsx(
+                                'flex items-start gap-3 rounded-xl border-2 p-4 text-left transition-all',
+                                selected
+                                  ? 'border-cyan-700 bg-cyan-700 text-white shadow-sm'
+                                  : 'border-slate-200 bg-white text-slate-800 hover:border-cyan-400 hover:bg-cyan-50'
+                              )}
+                            >
+                              <span className={clsx(
+                                'mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 text-sm font-black',
+                                selected ? 'border-white bg-white text-cyan-700' : 'border-slate-300 bg-white text-transparent'
+                              )}>
+                                ✓
+                              </span>
+                              <span>
+                                <span className="block font-extrabold">{option.text}</span>
+                                {option.description && <span className="mt-1 block text-sm leading-relaxed opacity-90">{option.description}</span>}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                      {selectedAsthmaBronchodilationRoute === 'saba_ipratropio_nebulizacao' && (
+                        <button
+                          type="button"
+                          data-asthma-copy-nebulization="true"
+                          className="mt-4 w-full rounded-xl border border-cyan-300 bg-white px-4 py-3 text-sm font-bold text-cyan-900 shadow-sm hover:bg-cyan-50 sm:w-auto"
+                        >
+                          Copiar prescrição da nebulização
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        disabled={!selectedAsthmaBronchodilationRoute}
+                        onClick={() => {
+                          const option = currentStepData.options?.find((item) => item.value === selectedAsthmaBronchodilationRoute)
+                          if (option) handleOptionSelect(option)
+                        }}
+                        className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-cyan-700 px-5 py-4 font-extrabold text-white shadow-sm transition-colors hover:bg-cyan-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        Confirmar forma de administração <ChevronRight className="h-5 w-5" />
+                      </button>
+                    </section>
+                  )}
                   {isInlineCopyableConduct && (
                     <div className="mt-3 flex justify-end">
                       <button
@@ -19092,7 +19165,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                         : flowchart.id === 'pneumonia' && currentStepData.id === 'pac_destino_protocolo' && (pneumoniaAtsIdsaSevere || pneumoniaCurbIndicatesHospitalization)
                           ? currentStepData.options?.filter((option) => option.value !== 'ambulatorio')
                           : currentStepData.options
-                if (!(displayedOptions && displayedOptions.length > 0) || isAsthmaDischargeCriteriaStep || isPepInteractiveAssessmentStep || isPepMaterialRiskStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
+                if (!(displayedOptions && displayedOptions.length > 0) || isAsthmaDischargeCriteriaStep || isAsthmaBronchodilationChoiceStep || isPepInteractiveAssessmentStep || isPepMaterialRiskStep || isGecaPlanCReassessmentStep || isGecaPlanCStep || isGecaEntryStep || isGecaDiarrheaProfileStep || isGecaImmediateAlarmStep || isGecaHydrationClassificationStep || isGecaExamIndicationStep || isGecaDirectedExamsStep || isGecaDiarrheaDurationStep || isGecaAntibioticIndicationStep || isGecaStecScreeningStep || isGecaAntibioticSelectionStep || isGecaSupportStep || isGecaDispositionStep || isTVPLegSelection || isTVPPhysicalExamStep || isTEPAssessmentStep || isBellSideSelection || isBellPhysicalExamStep || isBellCriteriaStep || isBellSupportStep || isBellRedFlagsStep || isBellHouseStep || isBellTreatmentStep || isBellDynamicDocumentStep || isTVPWellsScore || isTVPContraCheck || isTVPTreatmentInitial || isDpocSinaisGravidade || isDpocAnthonisen || isInfluenzaSeverityStep || isInfluenzaRiskStep || isInfluenzaICUStep || isAnaphylaxisRecognitionStep || isAnaphylaxisPreparationStep || isAnaphylaxisCriteriaStep || isAnaphylaxisAdjunctStep || isAnaphylaxisAirwayStep || isAnaphylaxisObservationStratificationStep || isPancreatitisBisapStep || isPancreatitisMarshallStep || isCholangitisDiagnosisStep || isCholangitisSeverityStep || isCholecystitisSeverityStep || isAppendicitisAlvaradoStep || isLombalgiaRiskStep) return null
                 return (
                 <div className="grid gap-4">
                   {displayedOptions.map((option, index) => (
