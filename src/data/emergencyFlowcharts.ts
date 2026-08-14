@@ -3850,19 +3850,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       description: 'Sinais de gravidade definem transição para SRAG e necessidade de avaliação hospitalar.',
       type: 'question',
       critical: true,
-      content: `
-        <div class="space-y-3 text-sm">
-          <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
-            <p class="font-semibold text-amber-900">Considerar gravidade quando houver:</p>
-            <ul class="list-disc pl-5 mt-2 space-y-1 text-amber-900">
-              <li>SpO2 &lt;95% (ar ambiente)</li>
-              <li>Desconforto / Insuficiência respiratória</li>
-              <li>Dispneia</li>
-              <li>Exacerbação de doenças pré-existentes</li>
-            </ul>
-          </div>
-        </div>
-      `,
+      content: '',
       options: []
     },
     influenza_fatores_risco: {
