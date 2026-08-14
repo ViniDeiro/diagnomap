@@ -3646,6 +3646,7 @@ const influenzaViralPanelContent = `
       <h4 class="font-bold text-cyan-950">Investigação laboratorial do paciente hospitalizado com SRAG</h4>
       <p class="mt-2">Todo paciente hospitalizado por SRAG deve ter coleta precoce de amostra respiratória para investigação laboratorial, preferencialmente logo na admissão, sem atrasar o início do tratamento.</p>
       <p class="mt-2 font-semibold">A coleta para RT-PCR ou painel viral multiplex não deve atrasar oseltamivir, oxigenoterapia, antibioticoterapia quando indicada ou demais medidas terapêuticas.</p>
+      <p class="mt-2 font-semibold text-cyan-950">Notificar o caso hospitalizado no SIVEP-Gripe.</p>
     </div>
 
     <div class="grid gap-4 lg:grid-cols-3">
@@ -3681,6 +3682,7 @@ const influenzaViralPanelContent = `
           <li>Cultura de escarro quando houver amostra adequada.</li>
           <li>Aspirado traqueal ou lavado broncoalveolar nos pacientes intubados quando indicado.</li>
           <li>Hemograma, função renal, eletrólitos, função hepática, gasometria, lactato e marcadores inflamatórios.</li>
+          <li>CPK e DHL conforme gravidade, mialgia importante, suspeita de miosite ou lesão tecidual; interpretar em conjunto com a evolução clínica.</li>
           <li>Radiografia de tórax e, quando necessário, tomografia ou ultrassom pulmonar.</li>
         </ul>
         <button type="button" data-influenza-request-exams="true" class="mt-4 inline-flex items-center justify-center rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-800">
@@ -3691,7 +3693,7 @@ const influenzaViralPanelContent = `
 
     <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
       <h5 class="font-bold text-amber-950">Mensagem prática</h5>
-      <p class="mt-2">Todo paciente hospitalizado com SRAG deve ter coleta precoce de amostra respiratória para RT-PCR, ou painel viral multiplex quando disponível. A investigação etiológica organiza o cuidado e a vigilância, mas não pode atrasar o início do oseltamivir nem as medidas de suporte indicadas.</p>
+      <p class="mt-2">Todo paciente hospitalizado com SRAG deve ser notificado no SIVEP-Gripe e ter coleta precoce de amostra respiratória para RT-PCR, ou painel viral multiplex quando disponível. A investigação etiológica organiza o cuidado e a vigilância, mas não pode atrasar o início do oseltamivir nem as medidas de suporte indicadas.</p>
     </div>
   </div>
 `
@@ -3724,7 +3726,7 @@ const influenzaBoardingCareContent = `
 
       <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
         <h5 class="font-bold text-violet-950">Exames seriados e hidratação</h5>
-        <p class="mt-2">Conforme gravidade, acompanhar hemograma, função renal, eletrólitos, gasometria, lactato, PCR, procalcitonina quando disponível e imagem pulmonar para reavaliação.</p>
+        <p class="mt-2">Conforme gravidade, acompanhar hemograma, função renal, eletrólitos, gasometria, lactato, PCR, CPK, DHL, procalcitonina quando disponível e imagem pulmonar para reavaliação.</p>
         <p class="mt-2">Evitar excesso de volume pelo risco de SDRA; reavaliar perfusão frequentemente e adotar estratégia conservadora após estabilização hemodinâmica.</p>
       </div>
 
@@ -3756,8 +3758,8 @@ const influenzaWardDeteriorationPreventionContent = `
       <h5 class="font-bold">Reavaliação para UTI</h5>
       <span class="rounded-full bg-red-700 px-2.5 py-1 text-xs font-bold text-white">UTI</span>
     </div>
-    <p class="mt-2">A cada reavaliação, perguntar se o paciente está respirando mais rápido, precisando de mais oxigênio, ficando sonolento, hipotenso, com lactato em elevação, diurese em queda, gasometria piorando ou trabalho respiratório aumentando.</p>
-    <p class="mt-2 font-semibold">Se qualquer resposta for sim, reclassificar imediatamente, acionar a equipe responsável e avaliar transferência para UTI.</p>
+    <p class="mt-2">A cada reavaliação, realizar avaliação clínica objetiva e comparar com os registros anteriores: aferir e registrar frequência respiratória (irpm), SpO2, dispositivo e fluxo ou FiO2 ofertada, pressão arterial e nível de consciência; avaliar trabalho respiratório, diurese, tendência do lactato e evolução gasométrica. Perguntar ao paciente se percebe piora da falta de ar como dado complementar.</p>
+    <p class="mt-2 font-semibold">Na presença de aumento da frequência ou do trabalho respiratório, necessidade crescente de oxigênio, alteração do nível de consciência, hipotensão, lactato em elevação, queda da diurese ou piora gasométrica, reclassificar imediatamente, acionar a equipe responsável e avaliar transferência para UTI.</p>
   </div>
 `
 
@@ -3801,25 +3803,18 @@ export const influenzaFlowchart: EmergencyFlowchart = {
             <p class="font-semibold text-red-800">Notificação e cuidados iniciais importantes</p>
             <ul class="list-disc pl-5 mt-2 space-y-1 text-red-900">
               <li>Considerar isolamento por gotículas e máscara cirúrgica para o paciente.</li>
-              <li>Priorizar influenza A(H1N1)pdm09, A(H3N2) e influenza B/Victoria como agentes de maior relevância clínica e epidemiológica no fluxo.</li>
-              <li>Oseltamivir deve ser priorizado em pacientes hospitalizados ou com fatores de risco para complicações.</li>
+              <li><strong>SRAG hospitalizada ou óbito por SRAG:</strong> realizar notificação compulsória no SIVEP-Gripe e coletar amostra respiratória conforme o fluxo de vigilância.</li>
+              <li>Não aguardar confirmação laboratorial para iniciar oseltamivir quando indicado.</li>
             </ul>
           </div>
           <details class="rounded-xl border border-slate-200 bg-white p-4">
-            <summary class="cursor-pointer font-semibold text-slate-800">Ver pontos que não podem passar despercebidos</summary>
-            <div class="mt-3 space-y-2 text-slate-700">
-              <p>A influenza acomete vias aéreas superiores e inferiores e pode evoluir com <strong>síndrome respiratória aguda grave (SRAG)</strong>.</p>
-              <p>No Brasil, os vírus influenza com maior relevância clínica e epidemiológica hoje são principalmente os do tipo A, especialmente <strong>Influenza A(H1N1)pdm09</strong> e <strong>Influenza A(H3N2)</strong>. Em menor grau, mas ainda importante, entram os vírus influenza B, sobretudo da linhagem Victoria.</p>
-              <p>Os surtos variam bastante ano a ano. Nas últimas temporadas brasileiras, A(H1N1)pdm09 e A(H3N2) alternaram protagonismo. O H3N2 costuma causar ondas fortes em idosos e maior pressão hospitalar; o H1N1 frequentemente tem impacto importante em adultos mais jovens, obesos, gestantes e pacientes com comorbidades.</p>
-              <p>Apesar da incubação clássica de 1 a 4 dias, muitos pacientes iniciam sintomas de forma abrupta cerca de 48 horas após exposição significativa.</p>
-              <p>No Brasil, a sazonalidade varia por região: Sul e Sudeste têm pico mais clássico entre outono e inverno; Norte e Nordeste podem ter circulação mais prolongada e associada ao período chuvoso.</p>
-              <p>Desde a pandemia de COVID, a sazonalidade do influenza ficou mais irregular, com surtos fora do inverno em vários anos, inclusive epidemias importantes de H3N2 em dezembro/janeiro.</p>
-              <p>Do ponto de vista de gravidade em UTI, H1N1 chama atenção por <strong>SDRA viral primária</strong>; H3N2 por descompensação de fragilidade prévia e coinfecção bacteriana; influenza B geralmente é mais brando, mas pode causar miocardite e encefalite, especialmente em jovens.</p>
-              <p>Febre alta abrupta, mialgia intensa, cefaleia, tosse seca, linfopenia e pró-calcitonina baixa inicialmente mantêm forte suspeita clínica de influenza A, especialmente H1N1.</p>
-              <p>A principal complicação é a <strong>pneumonia viral</strong>, podendo haver coinfecção bacteriana associada.</p>
-              <p>O tratamento antiviral indicado inclui <strong>oseltamivir</strong> ou <strong>zanamivir</strong>, com maior benefício quando iniciado nas primeiras 48 horas.</p>
-              <p>Pacientes graves com pneumonia podem necessitar de <strong>antibioticoterapia de amplo espectro</strong> conforme avaliação clínica.</p>
-            </div>
+            <summary class="cursor-pointer font-semibold text-slate-800">Resumo clínico essencial</summary>
+            <ul class="mt-3 list-disc space-y-1.5 pl-5 text-slate-700">
+              <li>Suspeitar de influenza diante de síndrome gripal compatível, sobretudo durante circulação de vírus respiratórios.</li>
+              <li>Dispneia, desconforto respiratório, SpO2 &lt;95% em ar ambiente ou cianose indicam avaliação imediata para SRAG.</li>
+              <li>Pneumonia viral, coinfecção bacteriana, SDRA, sepse, miocardite e encefalite são complicações possíveis.</li>
+              <li>Iniciar oseltamivir precocemente nos casos indicados; em hospitalizados, não deixar de tratar apenas porque passaram mais de 48 horas do início dos sintomas.</li>
+            </ul>
           </details>
           <details class="rounded-xl border border-cyan-200 bg-cyan-50 p-4">
             <summary class="cursor-pointer font-semibold text-cyan-900">Esquema antiviral de referência</summary>
@@ -3873,22 +3868,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
       description: 'Definir nível de internação quando o paciente já apresenta sinais de gravidade.',
       type: 'question',
       critical: true,
-      content: `
-        <div class="space-y-3 text-sm">
-          <div class="rounded-xl border border-rose-200 bg-rose-50 p-4">
-            <p class="font-semibold text-rose-900">Critérios que favorecem UTI:</p>
-            <ul class="list-disc pl-5 mt-2 space-y-1 text-rose-900">
-              <li>Saturação &lt;90% apesar de oxigênio suplementar</li>
-              <li>FR &gt;30 irpm persistente</li>
-              <li>Uso de musculatura acessória</li>
-              <li>Alteração do nível de consciência</li>
-              <li>Hipotensão ou lactato elevado</li>
-              <li>Necessidade de ventilação não invasiva ou cânula nasal de alto fluxo</li>
-              <li>Choque ou falência orgânica</li>
-            </ul>
-          </div>
-        </div>
-      `,
+      content: '',
       options: []
     },
     influenza_ambulatorial_sintomaticos: {
@@ -4074,7 +4054,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
 
           <div class="rounded-xl border border-slate-200 bg-white p-4">
             <h5 class="font-bold text-slate-950">Exames laboratoriais iniciais</h5>
-            <p class="mt-2">Solicitar hemograma completo, ureia, creatinina, sódio, potássio, TGO, TGP, PCR e glicemia.</p>
+            <p class="mt-2">Solicitar hemograma completo, ureia, creatinina, sódio, potássio, TGO, TGP, PCR e glicemia. Acrescentar CPK e DHL conforme gravidade, mialgia importante, suspeita de miosite ou lesão tecidual.</p>
             <p class="mt-2">Solicitar gasometria arterial ou venosa se hipoxemia, lactato se suspeita de sepse e coagulograma em casos moderados/graves.</p>
             <p class="mt-2">Conforme disponibilidade: teste para Influenza, RT-PCR viral ou painel viral respiratório.</p>
           </div>
@@ -4083,6 +4063,7 @@ export const influenzaFlowchart: EmergencyFlowchart = {
             <h5 class="font-bold text-amber-950">Exames de imagem</h5>
             <p class="mt-2"><strong>Radiografia de tórax:</strong> solicitar se dispneia, saturação &lt;95%, ausculta pulmonar alterada, febre persistente, suspeita de pneumonia ou necessidade de internação.</p>
             <p class="mt-2"><strong>Tomografia de tórax:</strong> considerar se RX inconclusivo, hipoxemia desproporcional aos achados do RX, suspeita de complicações, imunossupressão, piora clínica sem causa evidente ou suspeita de tromboembolismo pulmonar.</p>
+            <p class="mt-2"><strong>Ultrassom pulmonar:</strong> considerar à beira-leito para avaliar padrão intersticial, consolidações e derrame pleural. Quando utilizado protocolo de 12 zonas, registrar o escore LUS total (0-36) e sua evolução; o resultado complementa, mas não substitui isoladamente, RX/TC e avaliação clínica.</p>
           </div>
 
           <div class="rounded-xl border border-red-200 bg-red-50 p-4">
@@ -4192,13 +4173,14 @@ export const influenzaFlowchart: EmergencyFlowchart = {
           <div class="grid gap-4 lg:grid-cols-2">
             <div class="rounded-xl border border-slate-200 bg-white p-4">
               <h5 class="font-bold text-slate-950">Exames laboratoriais na admissão</h5>
-              <p class="mt-2">Hemograma completo, ureia, creatinina, sódio, potássio, magnésio, TGO, TGP, bilirrubinas, PCR, gasometria arterial, lactato, coagulograma e glicemia.</p>
+              <p class="mt-2">Hemograma completo, ureia, creatinina, sódio, potássio, magnésio, TGO, TGP, bilirrubinas, PCR, CPK, DHL, gasometria arterial, lactato, coagulograma e glicemia.</p>
               <p class="mt-2">Troponina se indicada. Considerar hemoculturas antes dos antibióticos, pesquisa para Influenza, RT-PCR viral e painel respiratório.</p>
             </div>
             <div class="rounded-xl border border-violet-200 bg-violet-50 p-4">
               <h5 class="font-bold text-violet-950">Exames de imagem</h5>
               <p class="mt-2"><strong>Radiografia de tórax:</strong> solicitar para todo paciente com SRAG internado ou com indicação de UTI, pesquisando pneumonia, consolidações, derrame pleural e progressão radiológica.</p>
               <p class="mt-2"><strong>Tomografia de tórax:</strong> considerar se RX inconclusivo, hipoxemia desproporcional, suspeita de complicações, imunossupressão, piora sem explicação ou suspeita de tromboembolismo pulmonar.</p>
+              <p class="mt-2"><strong>Ultrassom pulmonar:</strong> usar quando disponível para avaliação e seguimento à beira-leito. Se aplicado o protocolo de 12 zonas, registrar escore LUS total de 0 a 36, além dos achados e da comparação seriada.</p>
             </div>
           </div>
 

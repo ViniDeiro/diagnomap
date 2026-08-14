@@ -71,7 +71,13 @@ vm.runInNewContext(compiledClinicalSummary, {
     }
     if (request.includes('UniversalImagingNotebook')) return {
       UNIVERSAL_IMAGING_RESULTS_KEY: '__universal_imaging_results',
-      parseUniversalImagingRecord: raw => raw ? JSON.parse(raw) : { chestXrayStatus: '', chestXrayReport: '', chestXrayImpression: '', notes: '' }
+      parseUniversalImagingRecord: raw => ({
+        chestXrayStatus: '', chestXrayReport: '', chestXrayImpression: '',
+        chestCtStatus: '', chestCtReport: '', chestCtImpression: '',
+        lungUltrasoundStatus: '', lungUltrasoundReport: '', lungUltrasoundImpression: '', lungUltrasoundScore: '',
+        notes: '',
+        ...(raw ? JSON.parse(raw) : {})
+      })
     }
     if (request.includes('clinicalText')) return {
       formatChiefComplaintWithDuration: (complaint, duration, fallback = 'motivo do atendimento não informado') => {
@@ -601,9 +607,9 @@ assert.match(flowSource, /asma_tratamento_1h_grave_vida:[\s\S]*Prioridade máxim
 assert.match(flowSource, /asma_checar_anafilaxia:[\s\S]*Diagnóstico que muda a prioridade[\s\S]*Procure reação sistêmica associada/, 'Triagem de anafilaxia na asma deve manter o novo desenho sem ação genérica de cópia')
 assert.match(emergencyComponentSource, /nextStep === 'asma_alta_final'[\s\S]*replacePrescriptionsByPrescriber\(patient\.id, ASTHMA_PRESCRIBER/, 'Alta da asma deve registrar os medicamentos no prontuário')
 assert.match(emergencyComponentSource, /ASTHMA_DISCHARGE_CRITERIA[\s\S]*Confirmar critérios e gerar receita/, 'Alta da asma deve exigir checklist individual')
-assert.match(emergencyComponentSource, /shouldShowUniversalImagingNotebook[\s\S]*UniversalImagingNotebook/, 'PAC e síndrome gripal devem permitir registrar RX')
-assert.match(imagingNotebookSource, /Situação do RX de tórax[\s\S]*Impressão diagnóstica[\s\S]*Resultado\/laudo/, 'Registro de RX deve conter situação, laudo e impressão')
-assert.match(clinicalSummarySource, /formatUniversalChestXrayRecord[\s\S]*Radiografia de tórax/, 'Resultado do RX deve seguir para a evolução clínica')
+assert.match(emergencyComponentSource, /shouldShowUniversalImagingNotebook[\s\S]*UniversalImagingNotebook/, 'PAC e síndrome gripal devem permitir registrar exames de imagem')
+assert.match(imagingNotebookSource, /label: 'RX'[\s\S]*label: 'TC'[\s\S]*label: 'US pulmonar'[\s\S]*Escore LUS[\s\S]*Resultado\/laudo/, 'Registro de imagem deve conter abas de RX, TC e US pulmonar, com escore LUS')
+assert.match(clinicalSummarySource, /formatUniversalImagingRecord[\s\S]*Radiografia de tórax[\s\S]*Tomografia de tórax[\s\S]*Ultrassonografia pulmonar/, 'Resultados de RX, TC e US devem seguir para a evolução clínica')
 assert.match(anaphylaxisLogicSource, /age !== null && age > 12[\s\S]*doseMg: 0\.5/, 'Dose adulta de adrenalina deve prevalecer sobre peso inconsistente')
 assert.match(clinicalSummarySource, /buildDengueClinicalSummary/, 'Dengue deve possuir resumo clínico próprio')
 assert.match(clinicalSummarySource, /flowchart\.id === 'dengue'[\s\S]*buildDengueClinicalSummary/, 'Dengue ainda está usando o resumo genérico')
@@ -657,8 +663,8 @@ const narrativeCases = [
   },
   {
     id: 'influenza', flow: influenzaFlowchart, step: 'influenza_painel_viral_enfermaria', history: ['influenza_sinais_gravidade', 'influenza_painel_viral_enfermaria'],
-    answers: { __avaliacao_clinica_inicial: universalAnswer, influenza_sinais_gravidade: JSON.stringify({ classificadoComoSRAG: true, sinaisGravidadeSelecionados: ['hipoxemia'] }), __universal_imaging_results: JSON.stringify({ chestXrayStatus: 'realizado', chestXrayReport: 'opacidade em base direita', chestXrayImpression: 'consolidação lobar', notes: '' }) },
-    expected: [/Radiografia de tórax realizada/, /opacidade em base direita/, /consolidação lobar/]
+    answers: { __avaliacao_clinica_inicial: universalAnswer, influenza_sinais_gravidade: JSON.stringify({ classificadoComoSRAG: true, sinaisGravidadeSelecionados: ['hipoxemia'] }), __universal_imaging_results: JSON.stringify({ chestXrayStatus: 'realizado', chestXrayReport: 'opacidade em base direita', chestXrayImpression: 'consolidação lobar', chestCtStatus: 'pendente', chestCtReport: '', chestCtImpression: '', lungUltrasoundStatus: 'realizado', lungUltrasoundReport: 'linhas B confluentes bilateralmente', lungUltrasoundImpression: 'síndrome intersticial', lungUltrasoundScore: '18', notes: '' }) },
+    expected: [/Radiografia de tórax realizada/, /opacidade em base direita/, /consolidação lobar/, /Tomografia de tórax solicitada, com resultado pendente/, /Ultrassonografia pulmonar realizada/, /escore LUS \(12 zonas\): 18\/36/, /SIVEP-Gripe/]
   },
   {
     id: 'pneumonia', flow: pneumoniaFlowchart, step: 'pac_resultados_exames', history: ['pac_inicio', 'pac_solicitacao_exames', 'pac_resultados_exames'],

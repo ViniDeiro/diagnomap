@@ -1252,6 +1252,8 @@ const influenzaExamRequestGroups = [
       'Sódio, potássio e magnésio',
       'Função hepática e bilirrubinas',
       'Proteína C Reativa (PCR)',
+      'Creatinofosfoquinase (CPK)',
+      'Desidrogenase lática (DHL)',
       'Procalcitonina',
       'Gasometria arterial',
       'Lactato sérico',
@@ -1278,6 +1280,8 @@ const influenzaDefaultRequestedExams = [
   'Sódio, potássio e magnésio',
   'Função hepática e bilirrubinas',
   'Proteína C Reativa (PCR)',
+  'Creatinofosfoquinase (CPK)',
+  'Desidrogenase lática (DHL)',
   'Gasometria arterial',
   'Lactato sérico',
   'Coagulograma',
@@ -19148,7 +19152,7 @@ Descrita em 1821 por Sir Charles Bell, é a forma mais comum de paralisia facial
                 <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-3 text-sm font-bold text-emerald-900">Preparo do sulfato de magnésio copiado.</div>
               )}
               {shouldShowUniversalImagingNotebook && (
-                <div className="mb-6"><UniversalImagingNotebook value={answers[UNIVERSAL_IMAGING_RESULTS_KEY]} onChange={persistUniversalImagingNotebook} title={flowchart.id === 'pneumonia' ? 'RX de tórax · Pneumonia adquirida na comunidade' : 'RX de tórax · Síndrome gripal / SRAG'} /></div>
+                <div className="mb-6"><UniversalImagingNotebook value={answers[UNIVERSAL_IMAGING_RESULTS_KEY]} onChange={persistUniversalImagingNotebook} title={flowchart.id === 'pneumonia' ? 'Exames de imagem · Pneumonia adquirida na comunidade' : 'Exames de imagem · Síndrome gripal / SRAG'} /></div>
               )}
 
               {/* Opções */}

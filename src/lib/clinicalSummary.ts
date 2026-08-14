@@ -52,7 +52,7 @@ type PneumoniaExamSummary = {
   additionalInformation?: string
 }
 
-const formatUniversalChestXrayRecord = (answers: Record<string, string>): string | null => {
+const formatUniversalImagingRecord = (answers: Record<string, string>): string | null => {
   const imaging = parseUniversalImagingRecord(answers[UNIVERSAL_IMAGING_RESULTS_KEY])
   const statusLabels = {
     solicitado: 'solicitada',
@@ -60,14 +60,37 @@ const formatUniversalChestXrayRecord = (answers: Record<string, string>): string
     realizado: 'realizada',
     indisponivel: 'indicada, porém indisponível no serviço'
   } as const
-  const status = imaging.chestXrayStatus
-  if (!status && !imaging.chestXrayReport.trim() && !imaging.chestXrayImpression.trim() && !imaging.notes.trim()) return null
+  const formatStudy = (
+    label: string,
+    status: keyof typeof statusLabels | '',
+    report: string,
+    impression: string,
+    extra?: string | null
+  ) => {
+    if (!status && !report.trim() && !impression.trim() && !extra) return null
+    return uniqueTextItems([
+      `${label} ${status ? statusLabels[status] : 'registrada'}`,
+      report.trim() ? `laudo/achados: ${report.trim()}` : null,
+      impression.trim() ? `impressão: ${impression.trim()}` : null,
+      extra
+    ]).join('; ')
+  }
+  const studies = uniqueTextItems([
+    formatStudy('Radiografia de tórax', imaging.chestXrayStatus, imaging.chestXrayReport, imaging.chestXrayImpression),
+    formatStudy('Tomografia de tórax', imaging.chestCtStatus, imaging.chestCtReport, imaging.chestCtImpression),
+    formatStudy(
+      'Ultrassonografia pulmonar',
+      imaging.lungUltrasoundStatus,
+      imaging.lungUltrasoundReport,
+      imaging.lungUltrasoundImpression,
+      imaging.lungUltrasoundScore.trim() ? `escore LUS (12 zonas): ${imaging.lungUltrasoundScore.trim()}/36` : null
+    )
+  ])
+  if (!studies.length && !imaging.notes.trim()) return null
   return uniqueTextItems([
-    `Radiografia de tórax ${status ? statusLabels[status] : 'registrada'}`,
-    imaging.chestXrayReport.trim() ? `laudo/achados: ${imaging.chestXrayReport.trim()}` : null,
-    imaging.chestXrayImpression.trim() ? `impressão: ${imaging.chestXrayImpression.trim()}` : null,
-    imaging.notes.trim() ? `observações: ${imaging.notes.trim()}` : null
-  ]).join('; ')
+    ...studies,
+    imaging.notes.trim() ? `Observações dos exames de imagem: ${imaging.notes.trim()}` : null
+  ]).join('. ')
 }
 
 const formatUniversalLaboratoryRecord = (answers: Record<string, string>): string[] => {
@@ -1098,7 +1121,7 @@ const buildInfluenzaClinicalSummary = (
   const requestedExams = Array.isArray(viralPanel?.examesSolicitados)
     ? uniqueTextItems(viralPanel.examesSolicitados.map(String))
     : []
-  const chestXrayRecord = formatUniversalChestXrayRecord(answers)
+  const imagingRecord = formatUniversalImagingRecord(answers)
   const severityDecision = String(severity?.decision || answers.influenza_sinais_gravidade || '')
   const icuDecision = String(icu?.decision || answers.influenza_criterios_uti || '')
   const hasSRAG = severity?.classificadoComoSRAG === true
@@ -1201,11 +1224,11 @@ const buildInfluenzaClinicalSummary = (
   ].filter(Boolean).join('. ') + '.'
   const investigationSentence = uniqueTextItems([
     requestedExams.length ? `Coleta respiratória e solicitação de ${formatClinicalListText(requestedExams)}` : null,
-    chestXrayRecord,
-    !requestedExams.length && !chestXrayRecord && hasSRAG
+    imagingRecord,
+    !requestedExams.length && !imagingRecord && hasSRAG
       ? 'Em razão da classificação como SRAG, recomenda-se coleta respiratória precoce para RT-PCR ou painel viral e investigação laboratorial e radiológica conforme gravidade'
       : null
-  ]).join('. ') + (requestedExams.length || chestXrayRecord || hasSRAG ? '.' : '')
+  ]).join('. ') + (requestedExams.length || imagingRecord || hasSRAG ? '.' : '')
 
   const prescribedItems = uniqueTextItems(
     patient.treatment.prescriptions
@@ -1259,7 +1282,9 @@ const buildInfluenzaClinicalSummary = (
     muc,
     exam: formatRichExamFields(exam, vitalItems),
     hd,
-    conduct: [conductSentence],
+    conduct: hasSRAG
+      ? [conductSentence, 'Realizar notificação compulsória do caso hospitalizado de SRAG no SIVEP-Gripe e registrar a coleta de amostra respiratória.']
+      : [conductSentence],
     therapeuticPlan: [treatmentSentence],
     finalTitle: current?.title || flowchart.name,
     finalDescription: current?.description || flowchart.description
@@ -1400,7 +1425,7 @@ const buildPneumoniaClinicalSummary = (
   ])
 
   const requestedExams = Array.isArray(examRequest?.examesSelecionados) ? examRequest.examesSelecionados.map(String) : []
-  const chestXrayRecord = formatUniversalChestXrayRecord(answers)
+  const imagingRecord = formatUniversalImagingRecord(answers)
   const recordedLabs = Object.entries(labResults)
     .filter(([, value]) => String(value ?? '').trim())
     .map(([name, value]) => `${name}: ${String(value).trim()}`)
@@ -1442,7 +1467,7 @@ const buildPneumoniaClinicalSummary = (
   const investigationLines = uniqueTextItems([
     requestedExams.length ? `exames solicitados: ${requestedExams.join('; ')}` : null,
     recordedLabs.length ? `resultados disponíveis: ${recordedLabs.join('; ')}` : null,
-    chestXrayRecord
+    imagingRecord
   ])
   const investigationSentence = investigationLines.length
     ? `Investigação complementar: ${investigationLines.join('; ')}.`
