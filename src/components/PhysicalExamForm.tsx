@@ -25,6 +25,7 @@ interface PhysicalExamFormProps {
   value: PhysicalExamData
   onChange: (v: PhysicalExamData) => void
   showGlasgowInput?: boolean
+  showTemperature?: boolean
   neurologicalAssessment?: React.ReactNode
 }
 
@@ -136,7 +137,7 @@ const ExamSection: React.FC<{
   )
 }
 
-const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, showGlasgowInput = true, neurologicalAssessment }) => {
+const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, showGlasgowInput = true, showTemperature = true, neurologicalAssessment }) => {
   const [photoGuidanceOpen, setPhotoGuidanceOpen] = useState(false)
   const update = <K extends keyof PhysicalExamData>(key: K, patch: Partial<PhysicalExamData[K]>) => {
     const current = value[key]
@@ -361,7 +362,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
+      {showTemperature && <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
         <SectionTitle icon={<Thermometer className="w-5 h-5" />} title="Temperatura" />
         <div className="flex flex-wrap gap-3 items-center">
           <button
@@ -398,7 +399,7 @@ const PhysicalExamForm: React.FC<PhysicalExamFormProps> = ({ value, onChange, sh
             />
           </div>
         </div>
-      </div>
+      </div>}
 
       <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5">
         <SectionTitle icon={<Activity className="w-5 h-5" />} title="Respiração" />

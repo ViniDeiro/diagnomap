@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Activity, ArrowLeft, CheckCircle2, ChevronRight, ClipboardCheck, HeartPulse, Stethoscope } from 'lucide-react'
+import { Activity, ArrowLeft, CheckCircle2, HeartPulse, Stethoscope } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { Patient } from '@/types/patient'
 import PhysicalExamForm, { type PhysicalExamData } from './PhysicalExamForm'
@@ -74,7 +74,6 @@ export const summarizeUniversalPhysicalExam = (exam?: PhysicalExamData | null): 
       exam.hydration.status === 'hidratado' ? 'hidratado' : `desidratado${grade(exam.hydration.grade)}`,
       exam.cyanosis.status === 'acianotico' ? 'acianótico' : `cianótico${grade(exam.cyanosis.grade)}`,
       exam.jaundice.status === 'anicterico' ? 'anictérico' : `ictérico${grade(exam.jaundice.grade)}`,
-      exam.temperature.status === 'afebril' ? 'afebril' : `febril${exam.temperature.value != null ? ` (${exam.temperature.value} °C)` : ''}`,
       exam.respiration.status === 'eupneico' ? 'eupneico' : exam.respiration.status === 'taquipneico' ? 'taquipneico' : `dispneico${grade(exam.respiration.grade)}`
     ].join(', ')}`,
     exam.neuro.notAssessed ? null : `Neurológico: ${exam.neuro.altered?.trim() || 'consciente, contactuante, pupilas isofotorreagentes'}; Glasgow ${exam.neuro.glasgow ?? 'não informado'}`,
@@ -139,7 +138,6 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
   onBack
 }) => {
   const saved = useMemo(() => parseUniversalClinicalAssessment(savedValue), [savedValue])
-  const [stage, setStage] = useState<'vitals' | 'exam'>('vitals')
   const [vitals, setVitals] = useState<UniversalVitalSigns>(() => ({ ...fromPatient(patient), ...(saved?.sinaisVitais || {}) }))
   const [physicalExam, setPhysicalExam] = useState<PhysicalExamData>(() => saved?.exameFisico || defaultPhysicalExam())
   const [glasgowValues, setGlasgowValues] = useState<GlasgowValues>(() => saved?.glasgowDetalhes || (physicalExam.neuro.glasgow === 15 ? { eyes: 4, verbal: 5, motor: 6 } : {}))
@@ -163,38 +161,40 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 ring-1 ring-white/25">
-                {stage === 'vitals' ? <HeartPulse className="h-7 w-7" /> : <Stethoscope className="h-7 w-7" />}
+                <HeartPulse className="h-7 w-7" />
               </div>
               <div>
                 <p className="text-xs font-extrabold uppercase tracking-[0.2em] text-cyan-100">Avaliação clínica inicial</p>
-                <h1 className="mt-1 text-2xl font-black sm:text-3xl">{stage === 'vitals' ? 'Sinais vitais' : 'Exame físico'}</h1>
+                <h1 className="mt-1 text-2xl font-black sm:text-3xl">Sinais vitais e exame físico</h1>
                 <p className="mt-1 text-sm text-blue-50">{flowchartName} · {patient.name || 'Paciente em atendimento'}</p>
               </div>
             </div>
-            <span className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold ring-1 ring-white/25">
-              {stage === 'vitals' ? '1 de 2' : '2 de 2'}
-            </span>
+            <span className="hidden rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold ring-1 ring-white/25 sm:inline-flex">Uma única etapa</span>
           </div>
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <div className={clsx('h-2 rounded-full', stage === 'vitals' || stage === 'exam' ? 'bg-white' : 'bg-white/25')} />
-            <div className={clsx('h-2 rounded-full transition-colors', stage === 'exam' ? 'bg-white' : 'bg-white/25')} />
+          <div className="mt-5 flex flex-wrap gap-2 text-xs font-bold text-white">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 ring-1 ring-white/25"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-blue-700">1</span>Sinais vitais</span>
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 ring-1 ring-white/25"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-cyan-700">2</span>Exame físico</span>
           </div>
         </header>
 
         <main className="p-5 sm:p-8">
-          {stage === 'vitals' ? (
-            <motion.section initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }}>
-              <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <h2 className="font-extrabold text-blue-950">Registre o estado fisiológico de entrada</h2>
-                  <p className="mt-1 text-sm text-blue-800">Campos sem medida podem ficar em branco; alterações críticas devem ser manejadas sem esperar o preenchimento da tela.</p>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+            <section aria-labelledby="universal-vitals-title" className="rounded-3xl border border-blue-200 bg-gradient-to-b from-blue-50/80 to-white p-4 shadow-sm sm:p-6">
+              <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-700 text-white shadow-md shadow-blue-200"><HeartPulse className="h-6 w-6" /></div>
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-blue-600">1 · Dados objetivos</p>
+                    <h2 id="universal-vitals-title" className="mt-1 text-xl font-black text-blue-950">Sinais vitais</h2>
+                    <p className="mt-1 text-sm text-blue-800">Registre primeiro o estado fisiológico de entrada. Campos sem medida podem ficar em branco.</p>
+                  </div>
                 </div>
-                <span className="whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-blue-800 shadow-sm">{measuredCount} registrado(s)</span>
+                <span className="self-start whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-blue-800 shadow-sm ring-1 ring-blue-100 sm:self-auto">{measuredCount} registrado(s)</span>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {vitalFields.map(field => (
-                  <label key={field.key} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 transition-colors focus-within:border-blue-400 focus-within:bg-white focus-within:ring-4 focus-within:ring-blue-100">
+                  <label key={field.key} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-colors focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
                     <span className="flex items-center justify-between gap-2 text-sm font-extrabold text-slate-800">
                       {field.label}
                       <span className="text-xs font-semibold text-slate-500">{field.unit}</span>
@@ -208,32 +208,21 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                       value={vitals[field.key] ?? ''}
                       onChange={event => updateVital(field, event.target.value)}
                       placeholder={field.placeholder}
-                      className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-950 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      className="mt-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 font-semibold text-slate-950 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-200"
                     />
                   </label>
                 ))}
               </div>
+              <p className="mt-4 text-xs leading-relaxed text-slate-500">Alterações críticas devem ser manejadas imediatamente, sem esperar a conclusão do preenchimento.</p>
+            </section>
 
-              <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                {onBack ? (
-                  <button type="button" onClick={onBack} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700 hover:bg-slate-50">
-                    <ArrowLeft className="h-5 w-5" /> Voltar
-                  </button>
-                ) : <span />}
-                <button type="button" onClick={() => setStage('exam')} className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-700 to-cyan-600 px-6 py-3 font-extrabold text-white shadow-lg shadow-blue-200 hover:shadow-xl">
-                  Continuar para exame físico <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-            </motion.section>
-          ) : (
-            <motion.section initial={{ opacity: 0, x: 18 }} animate={{ opacity: 1, x: 0 }}>
-              <div className="mb-6 rounded-2xl border border-cyan-200 bg-cyan-50 p-4">
-                <div className="flex items-start gap-3">
-                  <ClipboardCheck className="mt-0.5 h-6 w-6 shrink-0 text-cyan-700" />
-                  <div>
-                    <h2 className="font-extrabold text-cyan-950">Exame geral e por sistemas</h2>
-                    <p className="mt-1 text-sm text-cyan-900">Selecione o padrão observado e descreva somente as alterações. O registro seguirá para o relatório clínico.</p>
-                  </div>
+            <section aria-labelledby="universal-exam-title" className="rounded-3xl border border-cyan-200 bg-gradient-to-b from-cyan-50/70 to-white p-4 shadow-sm sm:p-6">
+              <div className="mb-6 flex items-start gap-3">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-700 text-white shadow-md shadow-cyan-200"><Stethoscope className="h-6 w-6" /></div>
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-700">2 · Avaliação por sistemas</p>
+                  <h2 id="universal-exam-title" className="mt-1 text-xl font-black text-cyan-950">Exame físico</h2>
+                  <p className="mt-1 text-sm text-cyan-900">Selecione o padrão observado e descreva apenas as alterações. A temperatura já foi registrada nos sinais vitais.</p>
                 </div>
               </div>
 
@@ -241,6 +230,7 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                 value={physicalExam}
                 onChange={setPhysicalExam}
                 showGlasgowInput={false}
+                showTemperature={false}
                 neurologicalAssessment={
                   <GlasgowCalculator value={glasgowValues} onChange={(next, total) => {
                     setGlasgowValues(next)
@@ -248,8 +238,10 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                   }} />
                 }
               />
+            </section>
 
-              <label className={clsx('mt-7 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all', reviewed ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-amber-300 bg-amber-50')}>
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 sm:p-6">
+              <label className={clsx('flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all', reviewed ? 'border-emerald-300 bg-emerald-50 ring-2 ring-emerald-100' : 'border-amber-300 bg-amber-50')}>
                 <input type="checkbox" checked={reviewed} onChange={event => setReviewed(event.target.checked)} className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" />
                 <span>
                   <span className="block font-extrabold text-slate-950">Revisei sinais vitais e exame físico</span>
@@ -257,10 +249,8 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                 </span>
               </label>
 
-              <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <button type="button" onClick={() => setStage('vitals')} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-5 py-3 font-bold text-slate-700 hover:bg-slate-50">
-                  <ArrowLeft className="h-5 w-5" /> Revisar sinais vitais
-                </button>
+              <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {onBack ? <button type="button" onClick={onBack} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft className="h-5 w-5" /> Voltar</button> : <span />}
                 <button
                   type="button"
                   disabled={!reviewed}
@@ -270,8 +260,8 @@ const UniversalClinicalAssessment: React.FC<UniversalClinicalAssessmentProps> = 
                   <CheckCircle2 className="h-5 w-5" /> Salvar e iniciar fluxograma
                 </button>
               </div>
-            </motion.section>
-          )}
+            </div>
+          </motion.div>
         </main>
 
         <footer className="flex items-center gap-2 border-t border-slate-100 bg-slate-50 px-5 py-4 text-xs text-slate-500 sm:px-8">
