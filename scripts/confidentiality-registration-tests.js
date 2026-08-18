@@ -33,6 +33,15 @@ assert.match(termLib, /\.from\('confidentiality_agreements'\)[\s\S]*\.insert/, '
 
 assert.match(admin, /Termos de confidencialidade assinados/, 'Painel administrativo deve listar os termos')
 assert.match(admin, /createConfidentialityPdfDownload/, 'Painel administrativo deve permitir baixar o PDF')
+assert.doesNotMatch(admin, /Usuários ativos/, 'Painel administrativo não deve exibir a antiga métrica de usuários ativos')
+assert.match(admin, /Usuários que testaram/, 'Painel administrativo deve exibir usuários únicos que testaram')
+assert.match(admin, /\['flowchart_started', 'flowchart_progress', 'flowchart_completed'\]/, 'Teste deve exigir atividade real dentro de um fluxograma')
+assert.match(admin, /testedDoctorIds\.add\(doctorId\)/, 'Métrica deve deduplicar testes pelo cadastro do usuário')
+assert.match(admin, /cada usuário conta uma única vez/i, 'Painel deve explicar a deduplicação da métrica')
+assert.match(admin, /onClick=\{\(\) => setTesterListOpen\(true\)\}/, 'Card de usuários testadores deve abrir a lista detalhada')
+assert.match(admin, /testedUsers\.map\(\(doctor, index\)/, 'Lista deve renderizar cada usuário testador deduplicado')
+assert.match(admin, /doctor\.name[\s\S]*doctor\.email/, 'Lista de testadores deve identificar usuário por nome e e-mail')
+assert.match(admin, /role="dialog"[\s\S]*aria-modal="true"/, 'Lista de testadores deve abrir em diálogo acessível')
 
 assert.match(schema, /'confidentiality-terms',[\s\S]*false,/, 'Bucket de documentos deve ser privado')
 assert.match(schema, /confidentiality_agreements_select_own_or_admin/, 'Tabela deve permitir leitura apenas pelo titular ou administrador')

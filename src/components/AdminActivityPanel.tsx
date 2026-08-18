@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowLeft, CheckCircle2, Clock3, Download, FileSignature, RefreshCw, ShieldCheck, Stethoscope, Users } from 'lucide-react'
+import { Activity, ArrowLeft, CheckCircle2, Clock3, Download, FileSignature, RefreshCw, ShieldCheck, Stethoscope, UserCheck, X } from 'lucide-react'
 import { isAdminEmail, isVisibleAdminPanelUser } from '@/services/activityAudit'
 import { getFlowchartById } from '@/data/emergencyFlowcharts'
 import { supabase } from '@/services/supabaseClient'
@@ -9,6 +9,7 @@ import { ConfidentialityAgreementRow, createConfidentialityPdfDownload } from '@
 
 type AuditRow = {
   id: string
+  doctor_id: string | null
   doctor_name: string | null
   user_email: string
   flowchart_id: string | null
@@ -48,6 +49,7 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
   const [downloadingAgreementId, setDownloadingAgreementId] = useState<string | null>(null)
   const [agreementError, setAgreementError] = useState<string | null>(null)
   const [doctorFilter, setDoctorFilter] = useState('all')
+  const [testerListOpen, setTesterListOpen] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -77,6 +79,10 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
 
   const panelDoctors = useMemo(() => doctors.filter(isVisibleAdminPanelUser), [doctors])
   const doctorMap = useMemo(() => new Map(panelDoctors.map((doctor) => [doctor.id, doctor])), [panelDoctors])
+  const doctorIdByEmail = useMemo(
+    () => new Map(panelDoctors.flatMap((doctor) => doctor.email ? [[doctor.email.trim().toLowerCase(), doctor.id] as const] : [])),
+    [panelDoctors]
+  )
   const panelDoctorIds = useMemo(() => new Set(panelDoctors.map((doctor) => doctor.id)), [panelDoctors])
   const panelDoctorEmails = useMemo(
     () => new Set(panelDoctors.flatMap((doctor) => doctor.email ? [doctor.email.trim().toLowerCase()] : [])),
@@ -107,7 +113,29 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
   const today = new Date().toDateString()
   const eventsToday = visibleEvents.filter((event) => new Date(event.occurred_at).toDateString() === today).length
   const completed = visiblePatients.filter((patient) => patient.status === 'discharged').length
-  const activeDoctors = new Set(visibleEvents.map((event) => event.user_email)).size
+  const visibleUserCount = doctorFilter === 'all' ? panelDoctors.length : panelDoctors.some((doctor) => doctor.id === doctorFilter) ? 1 : 0
+  const testedDoctorIds = new Set<string>()
+  visibleEvents
+    .filter((event) => ['flowchart_started', 'flowchart_progress', 'flowchart_completed'].includes(event.event_type))
+    .forEach((event) => {
+      const doctorId = event.doctor_id && panelDoctorIds.has(event.doctor_id)
+        ? event.doctor_id
+        : doctorIdByEmail.get(event.user_email.trim().toLowerCase())
+      if (doctorId) testedDoctorIds.add(doctorId)
+    })
+  visiblePatients
+    .filter((patient) => (
+      patient.status === 'discharged'
+      || (patient.flowchart_state?.progress ?? 0) > 0
+      || Boolean(patient.flowchart_state?.currentStep && patient.flowchart_state.currentStep !== 'start')
+    ))
+    .forEach((patient) => {
+      if (patient.assigned_doctor_id) testedDoctorIds.add(patient.assigned_doctor_id)
+    })
+  const usersWhoTested = testedDoctorIds.size
+  const testedUsers = panelDoctors
+    .filter((doctor) => testedDoctorIds.has(doctor.id) && (doctorFilter === 'all' || doctor.id === doctorFilter))
+    .sort((first, second) => first.name.localeCompare(second.name, 'pt-BR'))
 
   const downloadAgreement = async (agreement: ConfidentialityAgreementRow) => {
     setAgreementError(null)
@@ -142,7 +170,14 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
         </div>
 
         <section className="grid gap-4 md:grid-cols-5">
-          {[[Activity, eventsToday, 'Eventos hoje'], [Users, activeDoctors, 'Usuários ativos'], [FileSignature, visibleAgreements.length, 'Termos assinados'], [Stethoscope, visiblePatients.length, 'Atendimentos salvos'], [CheckCircle2, completed, 'Fluxos concluídos']].map(([Icon, value, label]) => { const CardIcon = Icon as typeof Activity; return <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><CardIcon className="mb-4 h-6 w-6 text-blue-600"/><p className="text-3xl font-bold text-slate-950">{String(value)}</p><p className="mt-1 text-sm text-slate-500">{String(label)}</p></div> })}
+          {[[Activity, eventsToday, 'Eventos hoje'], [UserCheck, usersWhoTested, 'Usuários que testaram'], [FileSignature, visibleAgreements.length, 'Termos assinados'], [Stethoscope, visiblePatients.length, 'Atendimentos salvos'], [CheckCircle2, completed, 'Fluxos concluídos']].map(([Icon, value, label]) => {
+            const CardIcon = Icon as typeof Activity
+            const isTesterCard = label === 'Usuários que testaram'
+            const cardContent = <><CardIcon className="mb-4 h-6 w-6 text-blue-600"/><p className="text-3xl font-bold text-slate-950">{String(value)}</p><p className="mt-1 text-sm text-slate-500">{String(label)}</p>{isTesterCard && <p className="mt-1 text-xs text-slate-400">de {visibleUserCount} cadastrado{visibleUserCount === 1 ? '' : 's'} · cada usuário conta uma única vez</p>}</>
+            return isTesterCard
+              ? <button key={String(label)} type="button" onClick={() => setTesterListOpen(true)} className="rounded-2xl border border-blue-200 bg-white p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-blue-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500" aria-haspopup="dialog">{cardContent}<span className="mt-3 block text-xs font-bold text-blue-700">Ver lista de usuários</span></button>
+              : <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">{cardContent}</div>
+          })}
         </section>
 
         <section className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
@@ -167,6 +202,20 @@ export default function AdminActivityPanel({ onBack }: { onBack: () => void }) {
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="text-lg font-bold text-slate-900">Atividade detalhada</h2><p className="mb-6 text-sm text-slate-500">Eventos registrados a partir desta versão.</p><div className="max-h-[620px] space-y-4 overflow-y-auto pr-2">{visibleEvents.map((event) => <div key={event.id} className="flex gap-3 rounded-2xl border border-slate-100 p-4"><div className="mt-1 rounded-lg bg-blue-50 p-2"><Clock3 className="h-4 w-4 text-blue-600"/></div><div className="min-w-0"><p className="font-semibold text-slate-900">{labels[event.event_type] ?? event.event_type}</p><p className="truncate text-sm text-slate-600">{event.doctor_name ?? event.user_email} · {event.flowchart_name ?? event.flowchart_id ?? 'Atendimento'}</p><p className="mt-1 text-xs text-slate-400">{new Date(event.occurred_at).toLocaleString('pt-BR')}{event.progress !== null ? ` · ${event.progress}%` : ''}</p></div></div>)}{!loading && visibleEvents.length === 0 && <p className="rounded-2xl bg-slate-50 p-6 text-center text-sm text-slate-500">A trilha detalhada começará a aparecer conforme os novos testes forem realizados.</p>}</div></div>
         </section>
       </div>
+
+      {testerListOpen && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="presentation" onClick={() => setTesterListOpen(false)}>
+        <section className="w-full max-w-lg overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="tested-users-title" onClick={(event) => event.stopPropagation()}>
+          <header className="flex items-start justify-between gap-4 border-b border-slate-200 bg-blue-50 p-5">
+            <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-blue-700">Teste unitário por usuário</p><h2 id="tested-users-title" className="mt-1 text-xl font-bold text-slate-950">Usuários que testaram</h2><p className="mt-1 text-sm text-slate-600">{usersWhoTested} de {visibleUserCount} usuário{visibleUserCount === 1 ? '' : 's'} cadastrado{visibleUserCount === 1 ? '' : 's'}.</p></div>
+            <button type="button" onClick={() => setTesterListOpen(false)} className="rounded-xl border border-blue-200 bg-white p-2 text-slate-600 hover:text-blue-800" aria-label="Fechar lista de usuários"><X className="h-5 w-5"/></button>
+          </header>
+          <div className="max-h-[60vh] overflow-y-auto p-5">
+            {testedUsers.length > 0
+              ? <ul className="space-y-3">{testedUsers.map((doctor, index) => <li key={doctor.id} className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-800">{index + 1}</span><div className="min-w-0"><p className="font-bold text-slate-900">{doctor.name}</p><p className="truncate text-sm text-slate-500">{doctor.email ?? 'E-mail não informado'}</p></div></li>)}</ul>
+              : <div className="rounded-2xl bg-slate-50 p-6 text-center"><UserCheck className="mx-auto h-8 w-8 text-slate-400"/><p className="mt-3 font-semibold text-slate-700">Nenhum usuário testou um fluxograma neste filtro.</p></div>}
+          </div>
+        </section>
+      </div>}
     </main>
   )
 }
